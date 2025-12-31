@@ -10,7 +10,7 @@ const detectBackend = () => {
       return 'http://localhost:3000';
     }
   }
-  return 'https://freeflow-backend.vercel.app';
+  return 'https://backend-one-gilt-89.vercel.app';
 };
 
 export const CONFIG = {
