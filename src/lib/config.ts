@@ -30,7 +30,7 @@ export const CONFIG = {
 // Funkcja do budowania URL API
 export function getApiUrl(path: string): string {
   // Sprawdź aktualny hostname (dla Cloudflare tunnel)
-  let baseUrl = CONFIG.BACKEND_URL;
+  let baseUrl = CONFIG.BACKEND_URL.replace(/\/$/, "");
 
   if (typeof window !== 'undefined') {
     const h = window.location.hostname;
