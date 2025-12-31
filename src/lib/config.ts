@@ -27,10 +27,9 @@ export const CONFIG = {
   USE_BRAIN_V2: true, // Switch to modular pipeline (ETAP 6 Substitution)
 };
 
-// Funkcja do budowania URL API
 export function getApiUrl(path: string): string {
   // Sprawdź aktualny hostname (dla Cloudflare tunnel)
-  let baseUrl = CONFIG.BACKEND_URL.replace(/\/+$/, "");
+  let baseUrl = CONFIG.BACKEND_URL;
 
   if (typeof window !== 'undefined') {
     const h = window.location.hostname;
@@ -40,9 +39,13 @@ export function getApiUrl(path: string): string {
     }
   }
 
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  // Ensure no double slashes in output (except protocol)
-  const url = `${baseUrl}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1/");
+  // Remove trailing slashes from baseUrl
+  const safeBase = baseUrl.replace(/\/+$/, '');
+  // Remove leading slashes from path
+  const safePath = path.replace(/^\/+/, '');
+
+  // Join with single slash, or just return path if base is empty
+  const url = safeBase ? `${safeBase}/${safePath}` : `/${safePath}`;
 
   if (CONFIG.DEBUG) {
     console.log('🔗 getApiUrl:', { hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A', baseUrl, path, finalUrl: url });
