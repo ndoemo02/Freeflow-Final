@@ -30,7 +30,7 @@ export const CONFIG = {
 // Funkcja do budowania URL API
 export function getApiUrl(path: string): string {
   // Sprawdź aktualny hostname (dla Cloudflare tunnel)
-  let baseUrl = CONFIG.BACKEND_URL.replace(/\/$/, "");
+  let baseUrl = CONFIG.BACKEND_URL.replace(/\/+$/, "");
 
   if (typeof window !== 'undefined') {
     const h = window.location.hostname;
@@ -41,7 +41,8 @@ export function getApiUrl(path: string): string {
   }
 
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const url = `${baseUrl}${cleanPath}`;
+  // Ensure no double slashes in output (except protocol)
+  const url = `${baseUrl}${cleanPath}`.replace(/([^:]\/)\/+/g, "$1/");
 
   if (CONFIG.DEBUG) {
     console.log('🔗 getApiUrl:', { hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A', baseUrl, path, finalUrl: url });
