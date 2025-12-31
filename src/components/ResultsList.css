@@ -1,0 +1,40 @@
+.results-container {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.result-card {
+  background: rgba(0,0,0,0.55);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  backdrop-filter: blur(6px);
+  transition: transform 0.25s ease, opacity 0.25s ease, background 0.15s ease;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.result-card:hover {
+  transform: scale(1.02);
+  background: rgba(0,0,0,0.65);
+}
+
+.result-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #ff6a00; /* pomarańcz FreeFlow */
+}
+
+.result-sub {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+

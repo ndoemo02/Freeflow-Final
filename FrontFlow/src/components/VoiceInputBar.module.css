@@ -1,0 +1,272 @@
+/* VoiceInputBar - Glassmorphism z inteligentn​ym przyciskiem */
+
+.voiceInputBar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    
+    width: 90%;
+    max-width: 700px;
+    height: 70px;
+    
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    
+    /* Glassmorphism */
+    background: rgba(30, 30, 40, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    
+    border: 1px solid rgba(255, 165, 0, 0.2);
+    border-radius: 40px;
+    
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    
+    z-index: 1000;
+    
+    transition: all 0.3s ease;
+}
+
+.voiceInputBar:hover {
+    border-color: rgba(255, 165, 0, 0.4);
+    box-shadow: 
+        0 12px 40px rgba(255, 165, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Avatar po lewej stronie */
+.avatar {
+    flex-shrink: 0;
+}
+
+.avatarCircle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(255, 136, 34, 0.2));
+    border: 1px solid rgba(255, 165, 0, 0.3);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    font-size: 20px;
+    
+    transition: all 0.3s ease;
+}
+
+.avatarCircle:hover {
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.3), rgba(255, 136, 34, 0.3));
+    transform: scale(1.05);
+}
+
+.avatarIcon {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Pole tekstowe (środek) */
+.input {
+    flex: 1;
+    height: 100%;
+    
+    background: transparent;
+    border: none;
+    outline: none;
+    
+    color: #ffffff;
+    font-size: 16px;
+    font-family: inherit;
+    
+    padding: 0 16px;
+    
+    transition: all 0.3s ease;
+}
+
+.input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.input:focus::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Inteligentny przycisk (prawa strona) */
+.actionButton {
+    flex-shrink: 0;
+    
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    
+    background: linear-gradient(135deg, #ff8822, #ffa500);
+    border: none;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    position: relative;
+    
+    cursor: pointer;
+    
+    box-shadow: 
+        0 4px 16px rgba(255, 136, 34, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.actionButton:hover {
+    transform: scale(1.1);
+    box-shadow: 
+        0 6px 24px rgba(255, 136, 34, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.actionButton:active {
+    transform: scale(0.95);
+}
+
+/* Ikony */
+.icon {
+    width: 24px;
+    height: 24px;
+    color: #ffffff;
+    
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Tryb mikrofonu - ikona widoczna */
+.actionButton.mic .micIcon {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+}
+
+.actionButton.mic .sendIcon {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5) rotate(-45deg);
+}
+
+/* Tryb wysyłki - ikona widoczna */
+.actionButton.send .micIcon {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5) rotate(45deg);
+}
+
+.actionButton.send .sendIcon {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+}
+
+/* Efekt pulsacji podczas nagrywania */
+.recordingPulse {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    
+    border-radius: 50%;
+    border: 2px solid #ff4444;
+    
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Stan nagrywania - czerwone tło */
+.actionButton.recording {
+    background: linear-gradient(135deg, #ff4444, #ff6666);
+    animation: recordingGlow 1.5s ease-in-out infinite;
+}
+
+@keyframes recordingGlow {
+    0%, 100% {
+        box-shadow: 
+            0 4px 16px rgba(255, 68, 68, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    50% {
+        box-shadow: 
+            0 6px 32px rgba(255, 68, 68, 0.8),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+    .voiceInputBar {
+        bottom: 10px;
+        width: 95%;
+        height: 60px;
+        padding: 0 12px;
+        gap: 8px;
+    }
+    
+    .avatarCircle {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .input {
+        font-size: 15px;
+        padding: 0 12px;
+    }
+    
+    .actionButton {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .icon {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .voiceInputBar {
+        height: 56px;
+        gap: 6px;
+    }
+    
+    .avatarCircle {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
+    .input {
+        font-size: 14px;
+    }
+    
+    .actionButton {
+        width: 46px;
+        height: 46px;
+    }
+    
+    .icon {
+        width: 20px;
+        height: 20px;
+    }
+}

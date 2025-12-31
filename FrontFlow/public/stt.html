@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>FreeFlow STT Test</title>
+  <style>
+    body { 
+      font-family: sans-serif; 
+      background: #0b0b0b; 
+      color: #eee; 
+      text-align: center; 
+      padding-top: 80px; 
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #transcript { 
+      margin-top: 20px; 
+      font-size: 1.2em; 
+      color: #0f0; 
+      min-height: 50px;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+    button { 
+      background: #333; 
+      color: #fff; 
+      padding: 15px 30px; 
+      border: none; 
+      border-radius: 10px; 
+      cursor: pointer; 
+      font-size: 16px;
+      margin: 10px;
+    }
+    button:hover { background: #555; }
+    button:active { background: #777; }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .success { background: #0a4a0a; color: #0f0; }
+    .error { background: #4a0a0a; color: #f00; }
+    .info { background: #0a0a4a; color: #00f; }
+    .history {
+      margin-top: 30px;
+      text-align: left;
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #333;
+    }
+    .history h3 { margin-top: 0; }
+    .history-item {
+      padding: 10px;
+      margin: 5px 0;
+      background: #2a2a2a;
+      border-radius: 5px;
+      border-left: 3px solid #0f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎤 FreeFlow STT Web Test</h1>
+    <p>Test rozpoznawania mowy i integracji z systemem zamówień</p>
+    
+    <button id="start">🎙️ Start nagrywania</button>
+    <button id="clear">🗑️ Wyczyść</button>
+    
+    <div id="transcript">Kliknij "Start nagrywania" i mów...</div>
+    
+    <div id="status"></div>
+    
+    <div class="history">
+      <h3>📝 Historia komend:</h3>
+      <div id="history"></div>
+    </div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById("start");
+    const transcriptEl = document.getElementById("transcript");
+    const statusEl = document.getElementById("status");
+    const historyEl = document.getElementById("history");
+    const clearBtn = document.getElementById("clear");
+    
+    let recognizing = false;
+    let recognition;
+    let history = [];
+
+    // Sprawdź obsługę STT
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      showStatus("Twoja przeglądarka nie obsługuje SpeechRecognition 😢 Użyj Chrome lub Edge", "error");
+    } else {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = "pl-PL";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        showStatus("🎤 Nagrywanie rozpoczęte...", "info");
+        startBtn.textContent = "🛑 Stop nagrywania";
+        recognizing = true;
+      };
+
+      recognition.onresult = async (event) => {
+        let interimText = "";
+        let finalText = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            finalText += result[0].transcript;
+          } else {
+            interimText += result[0].transcript;
+          }
+        }
+
+        // Pokaż tekst na żywo
+        transcriptEl.textContent = finalText + (interimText ? " " + interimText : "");
+
+        // Jeśli mamy finalny tekst, wyślij do backendu
+        if (finalText.trim()) {
+          console.log("Final STT:", finalText);
+          await processVoiceCommand(finalText.trim());
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Błąd STT:", e.error);
+        showStatus(`Błąd STT: ${e.error}`, "error");
+        recognizing = false;
+        startBtn.textContent = "🎙️ Start nagrywania";
+      };
+
+      recognition.onend = () => {
+        recognizing = false;
+        startBtn.textContent = "🎙️ Start nagrywania";
+        showStatus("Nagrywanie zakończone", "info");
+      };
+
+      startBtn.onclick = () => {
+        if (recognizing) {
+          recognition.stop();
+        } else {
+          recognition.start();
+        }
+      };
+    }
+
+    clearBtn.onclick = () => {
+      transcriptEl.textContent = "Kliknij 'Start nagrywania' i mów...";
+      history = [];
+      historyEl.innerHTML = "";
+      showStatus("Historia wyczyszczona", "info");
+    };
+
+    async function processVoiceCommand(message) {
+      try {
+        showStatus("🔄 Przetwarzanie komendy...", "info");
+        
+        // Dodaj do historii
+        addToHistory(message, "user");
+        
+        // Wyślij do backendu (używamy istniejącego endpointu)
+        const response = await fetch("/api/dialogflow-freeflow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fulfillmentInfo: { tag: "voice_command" },
+            sessionInfo: { 
+              parameters: { 
+                user_message: message,
+                user_email: "test@freeflow.ai"
+              } 
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log("Backend response:", data);
+        
+        const responseText = data.fulfillment_response?.messages?.[0]?.text?.text?.[0] || "Brak odpowiedzi";
+        
+        showStatus("✅ Komenda przetworzona", "success");
+        addToHistory(responseText, "assistant");
+        
+        // Wyczyść pole tekstowe
+        transcriptEl.textContent = "Kliknij 'Start nagrywania' i mów...";
+        
+      } catch (error) {
+        console.error("Error processing voice command:", error);
+        showStatus(`❌ Błąd: ${error.message}`, "error");
+        addToHistory(`Błąd: ${error.message}`, "error");
+      }
+    }
+
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+      
+      // Ukryj status po 3 sekundach
+      setTimeout(() => {
+        statusEl.textContent = "";
+        statusEl.className = "";
+      }, 3000);
+    }
+
+    function addToHistory(message, type) {
+      const item = document.createElement("div");
+      item.className = "history-item";
+      
+      const timestamp = new Date().toLocaleTimeString();
+      const icon = type === "user" ? "👤" : type === "assistant" ? "🤖" : "❌";
+      
+      item.innerHTML = `
+        <strong>${icon} ${type === "user" ? "Ty" : type === "assistant" ? "Asystent" : "Błąd"}</strong> 
+        <small>(${timestamp})</small><br>
+        ${message}
+      `;
+      
+      historyEl.insertBefore(item, historyEl.firstChild);
+      history.push({ message, type, timestamp });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TTS Simple Test</title>
+</head>
+<body>
+    <h1>TTS Simple Test</h1>
+    <button onclick="testWebSpeech()">Test Web Speech API</button>
+    <div id="log"></div>
+
+    <script>
+        function log(message) {
+            document.getElementById('log').innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+
+        function testWebSpeech() {
+            log('🎤 Testing Web Speech API...');
+            
+            if (!('speechSynthesis' in window)) {
+                log('❌ Web Speech API not supported');
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance("Test TTS z Web Speech API");
+            utterance.lang = 'pl-PL';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+
+            utterance.onstart = () => log('🎤 Started speaking');
+            utterance.onend = () => log('✅ Finished speaking');
+            utterance.onerror = (event) => log('❌ Error: ' + event.error);
+
+            speechSynthesis.speak(utterance);
+            log('🎤 Speaking...');
+        }
+    </script>
+</body>
+</html>

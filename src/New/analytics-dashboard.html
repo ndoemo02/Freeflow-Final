@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeFlow - Panel Analityczny</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .date-selector {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .date-btn {
+            padding: 8px 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .date-btn.active {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .kpi-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .kpi-value {
+            font-size: 42px;
+            font-weight: 800;
+            color: #2d3748;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .kpi-unit {
+            font-size: 18px;
+            color: #718096;
+            font-weight: 400;
+        }
+
+        .kpi-label {
+            color: #4a5568;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .kpi-change {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .kpi-change.positive {
+            color: #38a169;
+        }
+
+        .kpi-change.negative {
+            color: #e53e3e;
+        }
+
+        .trend-arrow {
+            font-size: 16px;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .chart-subtitle {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .chart-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chart-option {
+            padding: 6px 15px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .chart-option.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+        }
+
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .ranking-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-position {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .ranking-info {
+            flex: 1;
+            margin-left: 15px;
+        }
+
+        .ranking-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 3px;
+        }
+
+        .ranking-details {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .ranking-value {
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .ranking-metric {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-section, .bottom-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .chart-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📊 FreeFlow Analytics</div>
+            <div class="date-selector">
+                <button class="date-btn">Dziś</button>
+                <button class="date-btn active">7 dni</button>
+                <button class="date-btn">30 dni</button>
+                <button class="date-btn">90 dni</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-value">
+                    26,840
+                    <span class="kpi-unit">zł</span>
+                </div>
+                <div class="kpi-label">Całkowity Przychód</div>
+                <div class="kpi-change positive">
+                    <span class="trend-arrow">↗</span>
+                    <span>+15.3% vs poprzedni tydzień</span>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-value">
+                    1,247
+                    <span class="kpi-unit">zamówień</span>
+                </div>
+                <div class="kpi-label">Liczba Zamówień</div>
+                <div class="kpi-change positive">
+                    <span class="trend-arrow">↗</span>
+                    <span>+12.7% vs poprzedni tydzień</span>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-value">
+                    21.52
+                    <span class="kpi-unit">zł</span>
+                </div>
+                <div class="kpi-label">Średnia Wartość Zamówienia</div>
+                <div class="kpi-change positive">
+                    <span class="trend-arrow">↗</span>
+                    <span>+2.1% vs poprzedni tydzień</span>
+                </div>
+            </div>
+            
+            <div class="kpi-card">
+                <div class="kpi-value">
+                    97.3
+                    <span class="kpi-unit">%</span>
+                </div>
+                <div class="kpi-label">Zadowolenie Klientów</div>
+                <div class="kpi-change negative">
+                    <span class="trend-arrow">↘</span>
+                    <span>-0.8% vs poprzedni tydzień</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Główne wykresy -->
+        <div class="charts-section">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Krzywa Zamówień</div>
+                        <div class="chart-subtitle">Trend zamówień w czasie rzeczywistym</div>
+                    </div>
+                    <div class="chart-options">
+                        <button class="chart-option active">Dzienna</button>
+                        <button class="chart-option">Godzinowa</button>
+                        <button class="chart-option">Tygodniowa</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Rozkład Godzinowy</div>
+                        <div class="chart-subtitle">Kiedy jest największy ruch</div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekcja dolna -->
+        <div class="bottom-section">
+            <div class="ranking-card">
+                <div class="chart-title" style="margin-bottom: 25px;">Top Dania</div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">1</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Pizza Margherita</div>
+                        <div class="ranking-details">Klasyczna, z mozzarellą</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">342</div>
+                        <div class="ranking-metric">zamówień</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">2</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Pizza Pepperoni</div>
+                        <div class="ranking-details">Z salami pepperoni</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">287</div>
+                        <div class="ranking-metric">zamówień</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">3</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Kebab w picie</div>
+                        <div class="ranking-details">Z sosem czosnkowym</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">156</div>
+                        <div class="ranking-metric">zamówień</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">4</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Sałatka Cezar</div>
+                        <div class="ranking-details">Z kurczakiem grillowanym</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">134</div>
+                        <div class="ranking-metric">zamówień</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">5</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Frytki</div>
+                        <div class="ranking-details">Chrupiące, solone</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">98</div>
+                        <div class="ranking-metric">zamówień</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ranking-card">
+                <div class="chart-title" style="margin-bottom: 25px;">Top Restauracje</div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">1</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Pizzeria Calzone</div>
+                        <div class="ranking-details">Piekary Śląskie</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">8,540 zł</div>
+                        <div class="ranking-metric">przychód</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">2</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Kebab King</div>
+                        <div class="ranking-details">Centrum miasta</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">6,280 zł</div>
+                        <div class="ranking-metric">przychód</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">3</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Sushi Yama</div>
+                        <div class="ranking-details">Osiedle Słoneczne</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">5,920 zł</div>
+                        <div class="ranking-metric">przychód</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">4</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Burger House</div>
+                        <div class="ranking-details">Galeria handlowa</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">4,670 zł</div>
+                        <div class="ranking-metric">przychód</div>
+                    </div>
+                </div>
+                
+                <div class="ranking-item">
+                    <div class="ranking-position">5</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">Pasta Milano</div>
+                        <div class="ranking-details">Stare miasto</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="ranking-value">3,850 zł</div>
+                        <div class="ranking-metric">przychód</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Konfiguracja Chart.js
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.color = '#4a5568';
+
+        // Krzywa zamówień
+        const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+        const ordersChart = new Chart(ordersCtx, {
+            type: 'line',
+            data: {
+                labels: ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sb', 'Nd'],
+                datasets: [{
+                    label: 'Liczba zamówień',
+                    data: [156, 178, 142, 195, 234, 298, 187],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 3,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f1f5f9'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverRadius: 8
+                    }
+                }
+            }
+        });
+
+        // Rozkład godzinowy
+        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+        const hourlyChart = new Chart(hourlyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['11:00-14:00', '17:00-20:00', '20:00-23:00', 'Inne'],
+                datasets: [{
+                    data: [45, 35, 15, 5],
+                    backgroundColor: [
+                        '#667eea',
+                        '#764ba2',
+                        '#f093fb',
+                        '#e2e8f0'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+
+        // Obsługa przełączników dat
+        document.querySelectorAll('.date-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // Tutaj będzie logika aktualizacji danych
+            });
+        });
+
+        // Obsługa opcji wykresów
+        document.querySelectorAll('.chart-option').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const parent = this.parentElement;
+                parent.querySelectorAll('.chart-option').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // Tutaj będzie logika aktualizacji wykresu
+            });
+        });
+
+        console.log('Panel analityczny załadowany!');
+    </script>
+</body>
+</html>

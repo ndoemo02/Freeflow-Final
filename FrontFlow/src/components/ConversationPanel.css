@@ -1,0 +1,48 @@
+.conversation-container {
+  /* Kluczowe: musi się rozciągać, żeby wypełnić przestrzeń i mieć scroll */
+  flex-grow: 1; 
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column; /* Wiadomości jedna pod drugą */
+  gap: 0.75rem; /* Odstęp między dymkami */
+}
+
+/* To jest wrapper od motion.div, który ustawi pozycję */
+.bubble-wrapper {
+  display: flex;
+}
+
+/* Dymek użytkownika (po prawej) */
+.bubble-wrapper.user {
+  justify-content: flex-end; /* Wypycha dymek na prawo */
+}
+.bubble-wrapper.user .bubble {
+  background: #007aff; /* Kolor "iMessage" niebieski */
+  color: white;
+  /* Mały "dziubek" dla stylu */
+  border-bottom-right-radius: 0.5rem; 
+}
+
+/* Dymek Amber (po lewej) */
+.bubble-wrapper.amber {
+  justify-content: flex-start; /* Trzyma dymek po lewej */
+}
+.bubble-wrapper.amber .bubble {
+  background: #333; /* Ciemnoszary */
+  color: white;
+  /* "Dziubek" w drugą stronę */
+  border-bottom-left-radius: 0.5rem;
+}
+
+/* Podstawowy styl samego dymka */
+.bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 1.25rem;
+  max-width: 75%; /* Dymek nie zajmuje całej szerokości */
+  line-height: 1.4;
+  word-wrap: break-word; /* Łamanie długich słów */
+}
+
+
+

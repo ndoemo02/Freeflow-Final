@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Remove undefined utilities like backdrop-blur-md; rely on static CSS in public/ui.css */
+.ff-card { @apply rounded-2xl border border-white/10; }
+.ff-btn { @apply px-4 py-2 rounded-xl font-medium transition hover:opacity-90; }
+.ff-btn--primary { @apply bg-[#ff8a2a] text-black; }
+.ff-input { @apply border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none; }
+.ff-badge { @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-white/5 border border-white/10; }
+
+
+/* ===== Drawer (menu) cosmetic styles ===== */
+.ff-drawer{ position: fixed; right: 16px; top: 80px; width: 320px; background: rgba(18,18,22,.85);
+  border: 1px solid rgba(255,255,255,.08); border-radius: 16px; backdrop-filter: blur(10px); padding: 12px; z-index: 50; }
+.ff-drawer__header{ padding: 6px 8px 10px; }
+.ff-drawer__title{ font-weight: 600; color: #fff; opacity:.9; }
+.ff-drawer__list{ display: grid; gap: 4px; margin: 6px 0 10px; }
+.ff-drawer__item{ display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:12px;
+  color:#e8e8ea; background: transparent; border:1px solid transparent; cursor:pointer; }
+.ff-drawer__item:hover{ background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.08); }
+.ff-drawer__icon{ display:grid; place-items:center; width:24px; height:24px; opacity:.9; }
+.ff-drawer__label{ flex:1; text-align:left; }
+.ff-drawer__footer{ margin-top: 8px; }
+.ff-drawer__logout,.ff-drawer__login{ width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,80,0,.35);
+  color:#fff; background: rgba(255,80,0,.08); }
+.ff-drawer__logout:hover,.ff-drawer__login:hover{ background: rgba(255,80,0,.14); }

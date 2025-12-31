@@ -1,0 +1,39 @@
+/* Plik: logo.css */
+
+.ff-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    /* Daje fajny cień całości */
+    filter: drop-shadow(0 6px 22px rgba(0, 0, 0, 0.5));
+  }
+
+  .ff-svg-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ff-svg-container svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    /* Kluczowe: pozwala warstwom świecić "przez siebie" i na tło */
+    mix-blend-mode: normal; /* Zmieniono z screen na normal */
+    /* Ważne, aby poświata nie była ucięta */
+    overflow: visible;
+  }
+
+  .ff-svg {
+    width: 100%;
+    height: auto;
+    /* Kluczowe: pozwala warstwom świecić "przez siebie" i na tło */
+    mix-blend-mode: screen;
+    /* Ważne, aby poświata nie była ucięta */
+    overflow: visible;
+  }

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TTS Fallback Test</title>
+</head>
+<body>
+    <h1>TTS Fallback Test</h1>
+    <button onclick="testTTSFallback()">Test TTS Fallback</button>
+    <div id="log"></div>
+
+    <script>
+        function log(message) {
+            document.getElementById('log').innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+
+        async function testTTSFallback() {
+            log('🎤 Testing TTS Fallback...');
+            
+            try {
+                // Test Google TTS (should fail)
+                log('🎤 Trying Google Cloud TTS...');
+                const res = await fetch('http://localhost:3000/api/tts', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        text: "Test TTS Fallback",
+                        languageCode: 'pl-PL',
+                        voice: 'pl-PL-Standard-A'
+                    }),
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    log('❌ Google TTS failed: ' + errorData.message);
+                    throw new Error(`TTS API error: ${errorData.message}`);
+                }
+
+                log('✅ Google TTS succeeded');
+            } catch (googleError) {
+                log('⚠️ Google TTS failed, trying Web Speech API...');
+                
+                try {
+                    // Test Web Speech API fallback
+                    if (!('speechSynthesis' in window)) {
+                        throw new Error('Web Speech API not supported');
+                    }
+
+                    const utterance = new SpeechSynthesisUtterance("Test TTS z Web Speech API - Fallback działa!");
+                    utterance.lang = 'pl-PL';
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.0;
+
+                    utterance.onstart = () => log('🎤 Web Speech API: Started speaking');
+                    utterance.onend = () => log('✅ Web Speech API: Finished speaking');
+                    utterance.onerror = (event) => log('❌ Web Speech API: Error - ' + event.error);
+
+                    speechSynthesis.speak(utterance);
+                    log('🎤 Web Speech API: Speaking...');
+                    
+                } catch (webSpeechError) {
+                    log('❌ Web Speech API also failed: ' + webSpeechError.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+

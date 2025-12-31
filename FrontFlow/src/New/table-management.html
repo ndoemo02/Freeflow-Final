@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeFlow - Zarządzanie Salą</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .restaurant-info {
+            text-align: right;
+        }
+
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f7fafc;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .floor-plan {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            position: relative;
+            min-height: 600px;
+        }
+
+        .floor-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .floor-subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        .floor-canvas {
+            border: 2px dashed #e2e8f0;
+            border-radius: 10px;
+            position: relative;
+            height: 500px;
+            background: linear-gradient(45deg, #f8fafc 25%, transparent 25%, transparent 75%, #f8fafc 75%), 
+                        linear-gradient(45deg, #f8fafc 25%, transparent 25%, transparent 75%, #f8fafc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            overflow: hidden;
+        }
+
+        .table-item {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .table-available {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .table-occupied {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .table-reserved {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        }
+
+        .table-maintenance {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+        }
+
+        .table-square {
+            border-radius: 10px;
+            width: 100px;
+            height: 60px;
+        }
+
+        .table-rectangular {
+            border-radius: 15px;
+            width: 120px;
+            height: 60px;
+        }
+
+        .add-table-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            transition: all 0.2s;
+        }
+
+        .add-table-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+
+        .table-details {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-top: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+
+        .detail-value {
+            color: #2d3748;
+        }
+
+        .qr-code {
+            width: 120px;
+            height: 120px;
+            background: #f7fafc;
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #718096;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-available { background: #f0fff4; color: #38a169; }
+        .status-occupied { background: #fed7d7; color: #e53e3e; }
+        .status-reserved { background: #feebc8; color: #dd6b20; }
+        .status-maintenance { background: #edf2f7; color: #718096; }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            
+            .control-panel {
+                min-width: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🪑 FreeFlow - Zarządzanie Salą</div>
+            <div class="restaurant-info">
+                <div style="font-size: 18px; font-weight: 600;">Pizzeria Calzone</div>
+                <div style="font-size: 14px; opacity: 0.9;">Piekary Śląskie</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar z kontrolkami -->
+        <div class="sidebar">
+            <!-- Panel dodawania stolika -->
+            <div class="control-panel">
+                <div class="panel-title">Dodaj Stolik</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Numer stolika</label>
+                    <input type="text" class="control-input" id="tableNumber" placeholder="np. T1, A5">
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Liczba miejsc</label>
+                    <select class="control-input" id="tableSeats">
+                        <option value="2">2 miejsca</option>
+                        <option value="4" selected>4 miejsca</option>
+                        <option value="6">6 miejsc</option>
+                        <option value="8">8 miejsc</option>
+                        <option value="10">10 miejsc</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Kształt stolika</label>
+                    <select class="control-input" id="tableShape">
+                        <option value="round" selected>Okrągły</option>
+                        <option value="square">Kwadratowy</option>
+                        <option value="rectangular">Prostokątny</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary" onclick="addTable()">
+                    ➕ Dodaj Stolik
+                </button>
+            </div>
+            
+            <!-- Panel zarządzania -->
+            <div class="control-panel">
+                <div class="panel-title">Zarządzanie</div>
+                
+                <button class="btn btn-secondary" onclick="generateAllQRCodes()">
+                    📱 Generuj Kody QR
+                </button>
+                
+                <button class="btn btn-secondary" onclick="exportLayout()">
+                    💾 Eksportuj Układ
+                </button>
+                
+                <button class="btn btn-secondary" onclick="importLayout()">
+                    📂 Importuj Układ
+                </button>
+                
+                <button class="btn btn-secondary" onclick="resetLayout()">
+                    🔄 Resetuj Salę
+                </button>
+            </div>
+            
+            <!-- Szczegóły wybranego stolika -->
+            <div class="table-details" id="tableDetails" style="display: none;">
+                <div class="panel-title">Szczegóły Stolika</div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Numer:</span>
+                    <span class="detail-value" id="detailNumber">-</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Miejsca:</span>
+                    <span class="detail-value" id="detailSeats">-</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value" id="detailStatus">-</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Kod QR:</span>
+                    <div class="qr-code" id="detailQR">
+                        QR Code<br>
+                        <small>Kliknij aby wygenerować</small>
+                    </div>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="deleteTable()" style="margin-top: 15px;">
+                    🗑️ Usuń Stolik
+                </button>
+            </div>
+        </div>
+
+        <!-- Główny plan sali -->
+        <div class="floor-plan">
+            <div class="floor-title">Plan Sali Restauracji</div>
+            <div class="floor-subtitle">Przeciągnij stoliki aby zmienić ich położenie</div>
+            
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color table-available"></div>
+                    <span>Dostępny</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color table-occupied"></div>
+                    <span>Zajęty</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color table-reserved"></div>
+                    <span>Zarezerwowany</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color table-maintenance"></div>
+                    <span>Serwis</span>
+                </div>
+            </div>
+            
+            <!-- Canvas sali -->
+            <div class="floor-canvas" id="floorCanvas">
+                <!-- Przykładowe stoliki -->
+                <div class="table-item table-available" style="top: 50px; left: 100px;" data-table="T1" data-seats="4" data-status="available">
+                    T1
+                </div>
+                <div class="table-item table-occupied" style="top: 50px; left: 250px;" data-table="T2" data-seats="4" data-status="occupied">
+                    T2
+                </div>
+                <div class="table-item table-reserved" style="top: 200px; left: 100px;" data-table="T3" data-seats="6" data-status="reserved">
+                    T3
+                </div>
+                <div class="table-item table-available table-rectangular" style="top: 200px; left: 300px;" data-table="T4" data-seats="8" data-status="available">
+                    T4
+                </div>
+                <div class="table-item table-maintenance" style="top: 350px; left: 150px;" data-table="T5" data-seats="2" data-status="maintenance">
+                    T5
+                </div>
+            </div>
+            
+            <button class="add-table-btn" onclick="quickAddTable()">+</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedTable = null;
+        let tableCounter = 6; // Następny numer stolika
+        let draggedElement = null;
+
+        // Inicjalizacja
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTables();
+        });
+
+        function initializeTables() {
+            const tables = document.querySelectorAll('.table-item');
+            tables.forEach(table => {
+                makeDraggable(table);
+                table.addEventListener('click', selectTable);
+            });
+        }
+
+        function makeDraggable(element) {
+            element.draggable = true;
+            
+            element.addEventListener('dragstart', function(e) {
+                draggedElement = this;
+                this.style.opacity = '0.5';
+            });
+            
+            element.addEventListener('dragend', function(e) {
+                this.style.opacity = '1';
+                draggedElement = null;
+            });
+        }
+
+        // Obsługa drop na canvas
+        const canvas = document.getElementById('floorCanvas');
+        canvas.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (draggedElement) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left - 40; // Wyśrodkuj
+                const y = e.clientY - rect.top - 40;
+                
+                // Ogranicz do granic canvas
+                const maxX = canvas.clientWidth - 80;
+                const maxY = canvas.clientHeight - 80;
+                
+                draggedElement.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+                draggedElement.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+            }
+        });
+
+        function selectTable(event) {
+            // Usuń poprzednie zaznaczenie
+            document.querySelectorAll('.table-item').forEach(t => {
+                t.style.border = 'none';
+            });
+            
+            // Zaznacz aktualny stolik
+            this.style.border = '3px solid #667eea';
+            selectedTable = this;
+            
+            // Pokaż szczegóły
+            showTableDetails(this);
+        }
+
+        function showTableDetails(table) {
+            const details = document.getElementById('tableDetails');
+            const number = table.dataset.table;
+            const seats = table.dataset.seats;
+            const status = table.dataset.status;
+            
+            document.getElementById('detailNumber').textContent = number;
+            document.getElementById('detailSeats').textContent = seats + ' miejsc';
+            
+            const statusBadge = document.getElementById('detailStatus');
+            statusBadge.textContent = getStatusText(status);
+            statusBadge.className = 'detail-value status-badge status-' + status;
+            
+            details.style.display = 'block';
+        }
+
+        function getStatusText(status) {
+            const statusTexts = {
+                'available': 'Dostępny',
+                'occupied': 'Zajęty', 
+                'reserved': 'Zarezerwowany',
+                'maintenance': 'Serwis'
+            };
+            return statusTexts[status] || status;
+        }
+
+        function addTable() {
+            const number = document.getElementById('tableNumber').value || `T${tableCounter}`;
+            const seats = document.getElementById('tableSeats').value;
+            const shape = document.getElementById('tableShape').value;
+            
+            createTable(number, seats, shape, 50, 50);
+            
+            // Wyczyść formularz
+            document.getElementById('tableNumber').value = '';
+            tableCounter++;
+        }
+
+        function quickAddTable() {
+            const number = `T${tableCounter}`;
+            createTable(number, 4, 'round', 200, 200);
+            tableCounter++;
+        }
+
+        function createTable(number, seats, shape, x, y) {
+            const canvas = document.getElementById('floorCanvas');
+            const table = document.createElement('div');
+            
+            table.className = `table-item table-available table-${shape}`;
+            table.style.left = x + 'px';
+            table.style.top = y + 'px';
+            table.dataset.table = number;
+            table.dataset.seats = seats;
+            table.dataset.status = 'available';
+            table.textContent = number;
+            
+            makeDraggable(table);
+            table.addEventListener('click', selectTable);
+            
+            canvas.appendChild(table);
+        }
+
+        function deleteTable() {
+            if (selectedTable) {
+                selectedTable.remove();
+                document.getElementById('tableDetails').style.display = 'none';
+                selectedTable = null;
+            }
+        }
+
+        function generateAllQRCodes() {
+            const tables = document.querySelectorAll('.table-item');
+            let message = `Wygenerowano ${tables.length} kodów QR:\n\n`;
+            
+            tables.forEach(table => {
+                const qrCode = `QR_${table.dataset.table}_${Date.now()}`;
+                message += `${table.dataset.table}: ${qrCode}\n`;
+            });
+            
+            alert(message);
+        }
+
+        function exportLayout() {
+            const tables = [];
+            document.querySelectorAll('.table-item').forEach(table => {
+                tables.push({
+                    number: table.dataset.table,
+                    seats: table.dataset.seats,
+                    status: table.dataset.status,
+                    x: parseInt(table.style.left),
+                    y: parseInt(table.style.top),
+                    shape: table.classList.contains('table-rectangular') ? 'rectangular' : 
+                           table.classList.contains('table-square') ? 'square' : 'round'
+                });
+            });
+            
+            const layout = JSON.stringify(tables, null, 2);
+            const blob = new Blob([layout], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sala_layout.json';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+
+        function importLayout() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const layout = JSON.parse(e.target.result);
+                            loadLayout(layout);
+                        } catch (error) {
+                            alert('Błąd wczytywania pliku: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            
+            input.click();
+        }
+
+        function loadLayout(layout) {
+            // Wyczyść aktualny układ
+            const canvas = document.getElementById('floorCanvas');
+            canvas.querySelectorAll('.table-item').forEach(table => table.remove());
+            
+            // Dodaj stoliki z układu
+            layout.forEach(tableData => {
+                createTable(
+                    tableData.number, 
+                    tableData.seats, 
+                    tableData.shape, 
+                    tableData.x, 
+                    tableData.y
+                );
+            });
+        }
+
+        function resetLayout() {
+            if (confirm('Czy na pewno chcesz usunąć wszystkie stoliki?')) {
+                document.querySelectorAll('.table-item').forEach(table => table.remove());
+                document.getElementById('tableDetails').style.display = 'none';
+                selectedTable = null;
+                tableCounter = 1;
+            }
+        }
+
+        // Symulacja zmiany statusu stolików (w prawdziwej aplikacji będzie to WebSocket)
+        setInterval(() => {
+            const tables = document.querySelectorAll('.table-item');
+            if (tables.length > 0 && Math.random() < 0.1) { // 10% szans co sekundę
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                const statuses = ['available', 'occupied', 'reserved'];
+                const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                
+                // Zmień status
+                randomTable.dataset.status = newStatus;
+                randomTable.className = `table-item table-${newStatus}`;
+                
+                // Jeśli to wybrany stolik, aktualizuj szczegóły
+                if (randomTable === selectedTable) {
+                    showTableDetails(randomTable);
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

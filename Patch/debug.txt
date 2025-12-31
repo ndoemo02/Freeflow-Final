@@ -1,0 +1,781 @@
+
+🚀 Booting FreeFlow Serverless...
+🧠 ENV OK
+🔑 SUPABASE_URL: ✅
+🔑 OPENAI_API_KEY: ✅
+🧠 FreeFlow Brain running locally on http://localhost:3000
+GET /api/health 200 154 - 556.673 ms
+GET /api/health 200 154 - 243.319 ms
+GET /api/health 200 154 - 236.196 ms
+GET /api/health 200 154 - 261.925 ms
+GET /api/health 200 154 - 236.667 ms
+GET /api/health 200 154 - 246.306 ms
+GET /api/health 200 154 - 237.714 ms
+GET /api/health 200 154 - 235.958 ms
+GET /api/health 200 154 - 238.046 ms
+GET /api/health 200 154 - 224.515 ms
+GET /api/health 200 154 - 235.600 ms
+GET /api/health 200 154 - 473.536 ms
+GET /api/health 200 154 - 254.002 ms
+GET /api/health 200 154 - 234.447 ms
+GET /api/health 200 154 - 229.618 ms
+GET /api/health 200 154 - 230.218 ms
+✅ Supabase client initialized (singleton mode)
+[brainRouter] 🚀 Handler called
+[Supabase] Creating client with URL: https://ezemaacyyvbpjlagchds.supabase.co
+🧠 [DEBUG] Handler called with: {
+  sessionId: 'session-1765704807460',
+  text: 'Pokaż miejsca w Piekarach',
+  method: 'POST',
+  body: {
+    text: 'Pokaż miejsca w Piekarach',
+    sessionId: 'session-1765704807460',
+    lat: 52.2297,
+    lng: 21.0122,
+    includeTTS: false
+  },
+  hasText: true,
+  textLength: 25
+}
+🧠 [DEBUG] Current session state: {
+  sessionId: 'session-1765704807460',
+  session: {
+    expectedContext: 'neutral',
+    lastIntent: null,
+    lastRestaurant: null,
+    lastRestaurantsList: [],
+    lastRestaurants: [],
+    lastRestaurantsTimestamp: null,
+    lastMenu: [],
+    locationOverride: null,
+    history: []
+  },
+  hasExpectedContext: true,
+  expectedContextValue: 'neutral',
+  hasLastRestaurant: false,
+  lastRestaurantName: undefined,
+  hasLastLocation: false,
+  lastLocation: undefined,
+  hasPendingOrder: false,
+  lastIntent: null,
+  sessionKeys: [
+    'expectedContext',
+    'lastIntent',
+    'lastRestaurant',
+    'lastRestaurantsList',
+    'lastRestaurants',
+    'lastRestaurantsTimestamp',
+    'lastMenu',
+    'locationOverride',
+    'history'
+  ]
+}
+🧭 GeoContext Layer activated for: "Piekary"
+🗺️ Found 9 restaurants in "Piekary"
+💾 Cache SAVED for location: "Piekary"
+✅ GeoContext: 9 restaurants found in "Piekary" — asking for confirmation
+POST /api/brain 200 4057 - 872.068 ms
+GET /api/health 200 154 - 232.205 ms
+GET /api/health 200 154 - 238.701 ms
+GET /api/health 200 154 - 247.699 ms
+GET /api/health 200 154 - 240.748 ms
+GET /api/health 200 154 - 228.003 ms
+GET /api/health 200 154 - 248.567 ms
+[brainRouter] 🚀 Handler called
+🧠 [DEBUG] Handler called with: {
+  sessionId: 'session-1765704807460',
+  text: 'Pokaż restauracje w Piekarach Śląskich',
+  method: 'POST',
+  body: {
+    text: 'Pokaż restauracje w Piekarach Śląskich',
+    sessionId: 'session-1765704807460',
+    lat: 52.2297,
+    lng: 21.0122,
+    includeTTS: false
+  },
+  hasText: true,
+  textLength: 38
+}
+🧠 [DEBUG] Current session state: {
+  sessionId: 'session-1765704807460',
+  session: {
+    expectedContext: 'confirm_show_restaurants_city',
+    lastIntent: 'find_nearby',
+    lastRestaurant: null,
+    lastRestaurantsList: [],
+    lastRestaurants: [],
+    lastRestaurantsTimestamp: null,
+    lastMenu: [],
+    locationOverride: null,
+    history: [],
+    locationCache: { piekary_all: [Object] },
+    last_location: 'Piekary',
+    lastUpdated: 1765708054017,
+    last_restaurants_list: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ]
+  },
+  hasExpectedContext: true,
+  expectedContextValue: 'confirm_show_restaurants_city',
+  hasLastRestaurant: false,
+  lastRestaurantName: undefined,
+  hasLastLocation: true,
+  lastLocation: 'Piekary',
+  hasPendingOrder: false,
+  lastIntent: 'find_nearby',
+  sessionKeys: [
+    'expectedContext',
+    'lastIntent',
+    'lastRestaurant',
+    'lastRestaurantsList',
+    'lastRestaurants',
+    'lastRestaurantsTimestamp',
+    'lastMenu',
+    'locationOverride',
+    'history',
+    'locationCache',
+    'last_location',
+    'lastUpdated',
+    'last_restaurants_list'
+  ]
+}
+🧭 GeoContext Layer activated for: "Piekary Śląskie"
+🗺️ Found 9 restaurants in "Piekary Śląskie"
+💾 Cache SAVED for location: "Piekary Śląskie"
+✅ GeoContext: 9 restaurants found in "Piekary Śląskie" — asking for confirmation
+POST /api/brain 200 5842 - 485.532 ms
+GET /api/health 200 154 - 573.360 ms
+GET /api/health 200 154 - 240.985 ms
+GET /api/health 200 154 - 224.416 ms
+GET /api/health 200 154 - 243.385 ms
+GET /api/health 200 154 - 236.149 ms
+GET /api/health 200 154 - 234.317 ms
+GET /api/health 200 154 - 246.410 ms
+GET /api/health 200 154 - 247.633 ms
+[brainRouter] 🚀 Handler called
+🧠 [DEBUG] Handler called with: {
+  sessionId: 'session-1765704807460',
+  text: 'co polecisz najwyżej w pobliżu',
+  method: 'POST',
+  body: {
+    text: 'co polecisz najwyżej w pobliżu',
+    sessionId: 'session-1765704807460',
+    lat: 52.2297,
+    lng: 21.0122,
+    includeTTS: false
+  },
+  hasText: true,
+  textLength: 30
+}
+🧠 [DEBUG] Current session state: {
+  sessionId: 'session-1765704807460',
+  session: {
+    expectedContext: 'confirm_show_restaurants_city',
+    lastIntent: 'find_nearby',
+    lastRestaurant: null,
+    lastRestaurantsList: [],
+    lastRestaurants: [],
+    lastRestaurantsTimestamp: null,
+    lastMenu: [],
+    locationOverride: null,
+    history: [],
+    locationCache: { piekary_all: [Object], 'piekary śląskie_all': [Object] },
+    last_location: 'Piekary Śląskie',
+    lastUpdated: 1765708065965,
+    last_restaurants_list: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ]
+  },
+  hasExpectedContext: true,
+  expectedContextValue: 'confirm_show_restaurants_city',
+  hasLastRestaurant: false,
+  lastRestaurantName: undefined,
+  hasLastLocation: true,
+  lastLocation: 'Piekary Śląskie',
+  hasPendingOrder: false,
+  lastIntent: 'find_nearby',
+  sessionKeys: [
+    'expectedContext',
+    'lastIntent',
+    'lastRestaurant',
+    'lastRestaurantsList',
+    'lastRestaurants',
+    'lastRestaurantsTimestamp',
+    'lastMenu',
+    'locationOverride',
+    'history',
+    'locationCache',
+    'last_location',
+    'lastUpdated',
+    'last_restaurants_list'
+  ]
+}
+[brainRouter] 🧠 Calling detectIntent with: {
+  text: 'co polecisz najwyżej w pobliżu',
+  sessionId: 'session-1765704807460'
+}
+[brainRouter] 🧠 Current session: {
+  expectedContext: 'confirm_show_restaurants_city',
+  lastIntent: 'find_nearby',
+  lastRestaurant: null,
+  lastRestaurantsList: [],
+  lastRestaurants: [],
+  lastRestaurantsTimestamp: null,
+  lastMenu: [],
+  locationOverride: null,
+  history: [],
+  locationCache: {
+    piekary_all: { data: [Array], timestamp: 1765708053780 },
+    'piekary śląskie_all': { data: [Array], timestamp: 1765708065728 }
+  },
+  last_location: 'Piekary Śląskie',
+  lastUpdated: 1765708065965,
+  last_restaurants_list: [
+    {
+      id: '1fc1e782-bac6-47b2-978a-f6f2b38000cd',
+      name: 'Restauracja Stara Kamienica',
+      address: 'ul. Bytomska 61',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Polska',
+      lat: 50.3856,
+      lng: 18.94886
+    },
+    {
+      id: '4d27fbe3-20d0-4eb4-b003-1935be53af25',
+      name: 'Rezydencja Luxury Hotel',
+      address: 'ul. Stara 1',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Międzynarodowa',
+      lat: 50.39352,
+      lng: 18.94742
+    },
+    {
+      id: '569a7d29-57be-4224-bdf3-09c483415cea',
+      name: 'Klaps Burgers',
+      address: 'ul. Piotra Skargi 15',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Amerykańska',
+      lat: 50.38643,
+      lng: 18.95422
+    },
+    {
+      id: '70842598-1632-43f6-8015-706d5adf182f',
+      name: 'Vien-Thien',
+      address: 'ul. Diamentowa 4',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Wietnamska',
+      lat: 50.39883,
+      lng: 18.95574
+    },
+    {
+      id: '8b00b05e-72f7-4a5f-b50c-5630a75d6312',
+      name: 'Bar Praha',
+      address: 'ul. Bytomska 139',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Czeska / Polska',
+      lat: 50.38807,
+      lng: 18.93657
+    },
+    {
+      id: 'bd9f2244-7618-4071-aa96-52616a7b4c70',
+      name: 'Callzone',
+      address: 'ul. Księdza Piotra Skargi 3',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Pizzeria',
+      lat: 50.38594,
+      lng: 18.95647
+    },
+    {
+      id: 'af8448ef-974b-46c8-a4ae-b04b8dc7c9f8',
+      name: 'Dwór Hubertus',
+      address: 'ul. Inwalidów Wojennych 72',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Śląska / Europejska',
+      lat: 50.39233,
+      lng: 18.94243
+    },
+    {
+      id: 'fc844513-2869-4f42-b04f-c21e1e4cceb7',
+      name: 'Tasty King Kebab',
+      address: 'ul. Bytomska 70',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Kebab',
+      lat: 50.38587,
+      lng: 18.94712
+    },
+    {
+      id: '83566974-1017-4408-90ee-2571ccc06978',
+      name: 'Pizzeria Monte Carlo',
+      address: 'Ul. Stanisława Maczka 22',
+      city: 'Piekary Śląskie',
+      cuisine_type: null,
+      lat: null,
+      lng: null
+    }
+  ]
+}
+🔬 Starting Smart Intent Layer...
+[intent-router] 🚀 detectIntent called with: { text: 'co polecisz najwyżej w pobliżu', sessionId: undefined }
+[intent-router] 🔍 Starting early dish detection for text: co polecisz najwyżej w pobliżu
+[intent-router] 🔍 Normalized text: co polecisz najwyżej w pobliżu
+[intent-router] 🔍 Session restaurant: NONE
+[intent-router] 🔍 Restaurant indicators in text: true
+[intent-router] 🔍 Searching for restaurant in text (reason: no session restaurant)
+[intent-router] 🔍 Checking 9 restaurants for fuzzy match
+[loadMenuCatalog] 🔍 Session: default
+[loadMenuCatalog] 🔍 lastRestaurant: undefined
+[loadMenuCatalog] 🔍 lastId: undefined
+[loadMenuCatalog] ⚠️ Loading all menu items (no restaurant in session)
+[loadMenuCatalog] ✅ Loaded 246 menu items from 9 restaurants
+[loadMenuCatalog] ✅ Sample items: Pizza Šunková, Pizza Ekkluzivne, Pizza Láska Nebeská
+[intent-router] Catalog loaded: 246 items
+[intent-router] 🔍 Calling parseOrderItems...
+[intent-router] 🔍 Catalog items: Pizza Šunková, Pizza Ekkluzivne, Pizza Láska Nebeská, Rumcajsowy Burger, Golonka confit, Sałatka z halloumi, Zupa pomidorowa, Kofola klasyczna, Hawajska, Coca-Cola, Coca-Cola Zero, Fanta Pomarańczowa, Sprite, Coca-Cola, Fanta, Piwo Tyskie, Pizza Margherita 33cm, Pizza Pepperoni 33cm, Pizza Hawajska 33cm, Pizza Capricciosa 33cm, Pizza Vege 33cm, Bacon Burger, Better Than Drwal - Wołowina, Cheddar Burger, Vege Burger, Spicy Burger, Bowl Gyros-Halloumi, Bowl z Dynią, Bowl Kurczak Zapiekany z Serem, Filet Grillowany, Pulled Pork Bowl Pikantny, Zapiekaniec, Cappy Jabłko, Krem z Cebuli i Czosnku, Sałatka Cezar Callzone, Sałatka Grillowany Kurczak, Sałatka Halloumi, Sałatka z Serem Camembert, Sałatka z Serem Feta, Sałatka z Dynią, Szarlotka, Sernik z Musem Malinowym, Ciasto Marchewkowe, Pepsi 0.85L, Kawa Czarna, Kawa Biała, Flat White, Cappuccino, Latte, Sos Tzatziki, Sos Pikantny, Sos Jogurtowy, Gęsie żołądki, Camembert z żurawiną, Deska zakąsek dla dwojga, Wodzionka, Żur śląski w chlebie, Żur śląski na talerzu, Krem borowikowy, Zupa pomidorowa, Barszcz z tortellini, Flaki z indyka, Burger wołowy z frytkami i surówką, Burger wegetariański z Camembertem, frytkami oraz zestawem surówek, Gyros z frytkami i tzatziki, Żeberka wieprzowe z frytkami, Kotlety czopskie, Dzikie placki, Wątróbka drobiowa, Grillowany filet z kurczaka, Kurczak po parysku, Ćwiartka kaczki, Rolada wieprzowa, Kotlet schabowy, Polędwica wieprzowa, Kotlet po szwajcarsku, Rolada wołowa, Ozór wołowy, Miruna w panierce, Zupa z kaczki, Zupa Won Ton, Tagliatelle ze szpinakiem, suszonymi pomidorami i płatkami migdałów, Rosół z makaronem, Naleśniki z serem na słodko z bitą śmietaną, Carbonara a'la Hubertus, Filet z łososia na szpinaku, Stek z halibuta smażony na maśle, Pstrąg na ziołowo, Pierogi z mięsem, Pierogi ruskie, Kluski z sosem pieczeniowym, Sałatka Hubertusa z pieczywem czosnkowym, Sałatka grecka z pieczywem czosnkowym, Kluski śląskie, Ziemniaki z wody, Bratkartoffel, Kapusta modra, Kapusta zasmażana, Nuggetsy z frytkami oraz surówką z marchewki, Cappy Pomarańcza, Woda Mineralna, Tiramisu, Panna Cotta, Brownie, Lody waniliowe z sosem karmelowym, Kosmiczne Jaja Double, Wegetrix Double, Żwirek i Muchomorek Standard, Zupa krabowa, Sajgonki 3 szt., Sajgonki z ryżem, Sajgonki z surówką, Sajgonki z ryżem i surówką, Pierogi Ho Cao z ryżem i surówką, Grzybiarz z Piekaryhill, MrDrwal, Onionator, Hot-dog by KLAPS, Krem z dyni z białą czekoladą, Siekany tatar z polędwicy wołowej, Wędzony pstrąg, Carpaccio z kaczki marynowanej w grzańcu, BUFFAL, Kartacze z dzikiem, Sałatka z dynią marynowaną w musztardzie, Grzanka z krupniokiem, Tagliatelle z krewetkami, Makaron ryżowy z warzywami, Zupa dnia, Rosół z makaronem, Tradycyjny schabowy, Schab po beskidzku, Naleśnik z kurczakiem i warzywami, Naleśnik ze szpinakiem i serem feta, Lody z gorącymi malinami i bitą śmietaną, Fondant czekoladowy z lodami i bitą śmietaną, Coca-Cola, Fanta, Sprite, Cappy (200 ml), Woda mineralna (330 ml), Filet z kurczaka tradycyjny (panierowany), Filet z kurczaka po hawajsku, Grillowany filet z kurczaka, Kroket (z kapustą i grzybami/bądź z mięsem) 1 szt., Placki ziemniaczane 4 szt., Kluski śląskie 7 szt., Rolada wołowa (na zamówienie), Pieczeń wieprzowa, Wątróbka drobiowa, Gulasz wieprzowy po węgiersku, Pierogi (ruskie lub z mięsem) 6 szt., Jajecznica z 2 szt. jaj, Placki po węgiersku z gulaszem wieprzowym, Naleśnik z dżemem truskawkowym lub wiśniowym, Naleśnik z nutellą, bananami, bitą śmietaną, Margherita, Capricciosa, Diavola, Quattro Formaggi, Vegetariana, Prosciutto e Funghi, Salami, Pollo, Spinaci, Wegetrix Standard, Milczenie Wola Standard, Milczenie Wola Double, Halloween Standard, Halloween Double, Smak Vegas, Klaps Fiction Standard, Klaps Fiction Double, Desperado Standard, Desperado Double, Rodzina Serano Standard, Rodzina Serano Double, Głodzilla, Kosmiczne Jaja Standard, Zupa wietnamska, Zupa z kurczakiem, Zupa łajska, Pierogi SiuMai z ryżem i surówką, Kurczak z warzywami, Kurczak słodko-kwaśny, Kurczak pikantny, Kurczak po chińsku, Kurczak po tajsku, Kurczak na gorącym półmisku, Kurczak w cieście słodko-kwaśny, Kurczak w cieście pikantny, Kurczak w cieście curry, Kurczak w cieście pięciu smaków, Wieprzowina z warzywami, Wieprzowina słodko-kwaśna, Wieprzowina pikantna, Wieprzowina Curry, Wieprzowina pięciu smaków, Wieprzowina po tajsku, Wołowina z warzywami, Wołowina pikantna, Wołowina Curry, Wołowina 5 smaków, Wołowina po tajsku, Wołowina na gorącym półmisku, Kaczka z warzywami, Kaczka pikantna, Kaczka słodko-kwaśna, Kaczka po chińsku, Kaczka po tajsku, Kaczka na gorącym półmisku, Krewetki z warzywami, Krewetki pikantne, Krewetki Curry, Krewetki po tajsku, Krewetki na gorącym półmisku, Kalmary chrupiące słodko-kwaśne, Kalmary chrupiące pikantne, Kalmary chrupiące Curry, Kalmary chrupiące w pięciu smakach, Kalmary po tajsku, Kalmary na gorącym półmisku, Pita Rollo, Pita Rollo z serem, Pita Rollo same mięso, Tortilla kebab, Tortilla kebab z serem, Kebab amerykański, Kebab box, Kebab box z serem, Nuggets box, Kebab talerz, Kebab w bułce, Falafel, Frytki z serem, Frytki z Indii masala, Sałatka grecka, Sos, Baklava, Sok Cappy, Coca-Cola 0,85l, Coca-Cola 0,5l, Coca-Cola 0,3l, Pepsi / Mirinda / 7up, Monster Energy Drink, Ayran Turecki, Mango Sok, Oshee, Burn
+[parseOrderItems] 📊 Summary:
+  - requestedNames: []
+  - availableNames: []
+  - unavailableNames: []
+  - matched.length: 0
+  - clarifications.length: 0
+[intent-router] ✅ Parsed result: {
+  "any": false,
+  "groups": [],
+  "clarify": [],
+  "available": [],
+  "unavailable": [
+    "co polecisz najwyżej w pobliżu"
+  ],
+  "needsClarification": true,
+  "unknownItems": [
+    {
+      "name": "co polecisz najwyżej w pobliżu",
+      "reason": "no_alias_match"
+    }
+  ]
+}
+[intent-router] 🔍 parsed.any = false
+[intent-router] 🔍 parsed.groups.length = 0
+⚠️ Unavailable items detected: co polecisz najwyżej w pobliżu in tym menu
+🔍 Checking if text contains restaurant name (using cached list): "co polecisz najwyżej w pobliżu"
+🔍 Debug session updated: {
+  intent: 'clarify_order',
+  restaurant: 'tym menu',
+  sessionId: null,
+  confidence: 0.9
+}
+✅ SmartIntent Resolved: clarify_order (0.90) via classic
+🧠 [DEBUG] Hybrid intent detection complete: {
+  ruleIntent: 'clarify_order',
+  ruleConfidence: 0.9,
+  llmIntent: null,
+  llmConfidence: 0,
+  finalIntent: 'clarify_order',
+  finalConfidence: 0.9,
+  source: 'classic',
+  hasRestaurant: false,
+  restaurantName: undefined,
+  hasParsedOrder: true,
+  parsedOrderDetails: { any: false, groupsCount: 0, groups: [] }
+}
+🧠 [DEBUG] Calling boostIntent with: {
+  text: 'co polecisz najwyżej w pobliżu',
+  hybridIntent: 'clarify_order',
+  confidence: 0.9,
+  session: {
+    expectedContext: 'confirm_show_restaurants_city',
+    lastRestaurant: undefined,
+    lastIntent: 'find_nearby'
+  }
+}
+🧠 [DEBUG] boostIntent result: {
+  originalIntent: 'clarify_order',
+  boostedIntent: 'co polecisz najwyżej w pobliżu',
+  isContextLocked: false
+}
+🌟 SmartContext: intent changed from "clarify_order" → "co polecisz najwyżej w pobliżu"
+GET /api/health 200 154 - 235.773 ms
+🧠 GPT Reasoner: {
+  searchRestaurants: true,
+  searchMenu: false,
+  askClarification: false,
+  completeOrder: false,
+  reasoning: 'Wybrano searchRestaurants ponieważ użytkownik prosi o rekomendacje restauracji w pobliżu, co odpowiada na jego zapytanie dotyczące lokalnych opcji gastronomicznych.'
+}
+📋 Parsed: { dish: null, restaurant: null }
+✅ User confirmed seeing city restaurants
+🚀 RELOADED! show_city_results: displaying limited results from 9 found.
+POST /api/brain 200 6422 - 5172.912 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Znalazłam 9. Oto top 3 propozycje w Piekary Śląskie:...
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 35136 - 2040.095 ms
+GET /api/health 200 154 - 240.811 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Restauracja Stara Kamienica. Polska....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+GET /api/health 200 154 - 243.026 ms
+POST /api/tts 200 23808 - 1389.317 ms
+GET /api/health 200 154 - 233.749 ms
+GET /api/health 200 154 - 235.049 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Rezydencja Luxury Hotel. Międzynarodowa....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 25728 - 1286.676 ms
+GET /api/health 200 154 - 235.747 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Klaps Burgers. Amerykańska....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 19968 - 992.741 ms
+GET /api/health 200 154 - 235.268 ms
+GET /api/health 200 154 - 243.487 ms
+[brainRouter] 🚀 Handler called
+🧠 [DEBUG] Handler called with: {
+  sessionId: 'session-1765704807460',
+  text: 'wybieram stare Kamienica',
+  method: 'POST',
+  body: {
+    text: 'wybieram stare Kamienica',
+    sessionId: 'session-1765704807460',
+    lat: 52.2297,
+    lng: 21.0122,
+    includeTTS: false
+  },
+  hasText: true,
+  textLength: 24
+}
+🧠 [DEBUG] Current session state: {
+  sessionId: 'session-1765704807460',
+  session: {
+    expectedContext: null,
+    lastIntent: 'find_nearby',
+    lastRestaurant: null,
+    lastRestaurantsList: [],
+    lastRestaurants: [],
+    lastRestaurantsTimestamp: null,
+    lastMenu: [],
+    locationOverride: null,
+    history: [],
+    locationCache: { piekary_all: [Object], 'piekary śląskie_all': [Object] },
+    last_location: 'Piekary Śląskie',
+    lastUpdated: 1765708094812,
+    last_restaurants_list: [
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object], [Object],
+      [Object]
+    ]
+  },
+  hasExpectedContext: false,
+  expectedContextValue: null,
+  hasLastRestaurant: false,
+  lastRestaurantName: undefined,
+  hasLastLocation: true,
+  lastLocation: 'Piekary Śląskie',
+  hasPendingOrder: false,
+  lastIntent: 'find_nearby',
+  sessionKeys: [
+    'expectedContext',
+    'lastIntent',
+    'lastRestaurant',
+    'lastRestaurantsList',
+    'lastRestaurants',
+    'lastRestaurantsTimestamp',
+    'lastMenu',
+    'locationOverride',
+    'history',
+    'locationCache',
+    'last_location',
+    'lastUpdated',
+    'last_restaurants_list'
+  ]
+}
+🧭 GeoContext Layer activated for: "Kamienica"
+⚙️ GeoContext: brak wyników w "Kamienica"
+⚙️ GeoContext: brak wyników w "Kamienica" — kontynuuj normalny flow
+[brainRouter] 🧠 Calling detectIntent with: {
+  text: 'wybieram stare Kamienica',
+  sessionId: 'session-1765704807460'
+}
+[brainRouter] 🧠 Current session: {
+  expectedContext: null,
+  lastIntent: 'find_nearby',
+  lastRestaurant: null,
+  lastRestaurantsList: [],
+  lastRestaurants: [],
+  lastRestaurantsTimestamp: null,
+  lastMenu: [],
+  locationOverride: null,
+  history: [],
+  locationCache: {
+    piekary_all: { data: [Array], timestamp: 1765708053780 },
+    'piekary śląskie_all': { data: [Array], timestamp: 1765708065728 }
+  },
+  last_location: 'Piekary Śląskie',
+  lastUpdated: 1765708094812,
+  last_restaurants_list: [
+    {
+      id: '1fc1e782-bac6-47b2-978a-f6f2b38000cd',
+      name: 'Restauracja Stara Kamienica',
+      address: 'ul. Bytomska 61',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Polska',
+      lat: 50.3856,
+      lng: 18.94886
+    },
+    {
+      id: '4d27fbe3-20d0-4eb4-b003-1935be53af25',
+      name: 'Rezydencja Luxury Hotel',
+      address: 'ul. Stara 1',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Międzynarodowa',
+      lat: 50.39352,
+      lng: 18.94742
+    },
+    {
+      id: '569a7d29-57be-4224-bdf3-09c483415cea',
+      name: 'Klaps Burgers',
+      address: 'ul. Piotra Skargi 15',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Amerykańska',
+      lat: 50.38643,
+      lng: 18.95422
+    },
+    {
+      id: '70842598-1632-43f6-8015-706d5adf182f',
+      name: 'Vien-Thien',
+      address: 'ul. Diamentowa 4',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Wietnamska',
+      lat: 50.39883,
+      lng: 18.95574
+    },
+    {
+      id: '8b00b05e-72f7-4a5f-b50c-5630a75d6312',
+      name: 'Bar Praha',
+      address: 'ul. Bytomska 139',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Czeska / Polska',
+      lat: 50.38807,
+      lng: 18.93657
+    },
+    {
+      id: 'bd9f2244-7618-4071-aa96-52616a7b4c70',
+      name: 'Callzone',
+      address: 'ul. Księdza Piotra Skargi 3',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Pizzeria',
+      lat: 50.38594,
+      lng: 18.95647
+    },
+    {
+      id: 'af8448ef-974b-46c8-a4ae-b04b8dc7c9f8',
+      name: 'Dwór Hubertus',
+      address: 'ul. Inwalidów Wojennych 72',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Śląska / Europejska',
+      lat: 50.39233,
+      lng: 18.94243
+    },
+    {
+      id: 'fc844513-2869-4f42-b04f-c21e1e4cceb7',
+      name: 'Tasty King Kebab',
+      address: 'ul. Bytomska 70',
+      city: 'Piekary Śląskie',
+      cuisine_type: 'Kebab',
+      lat: 50.38587,
+      lng: 18.94712
+    },
+    {
+      id: '83566974-1017-4408-90ee-2571ccc06978',
+      name: 'Pizzeria Monte Carlo',
+      address: 'Ul. Stanisława Maczka 22',
+      city: 'Piekary Śląskie',
+      cuisine_type: null,
+      lat: null,
+      lng: null
+    }
+  ]
+}
+🔬 Starting Smart Intent Layer...
+[intent-router] 🚀 detectIntent called with: { text: 'wybieram stare Kamienica', sessionId: undefined }
+[intent-router] 🔍 Starting early dish detection for text: wybieram stare Kamienica
+[intent-router] 🔍 Normalized text: wybieram stare kamienica
+[intent-router] 🔍 Session restaurant: NONE
+[intent-router] 🔍 Restaurant indicators in text: false
+[intent-router] 🔍 Searching for restaurant in text (reason: no session restaurant)
+[intent-router] 🔍 Checking 9 restaurants for fuzzy match
+[intent-router] 🏪 Restaurant detected in text (fuzzy): Restauracja Stara Kamienica (matched: 2/3)
+[loadMenuCatalog] 🔍 Session: {
+  lastRestaurant: {
+    id: '1fc1e782-bac6-47b2-978a-f6f2b38000cd',
+    name: 'Restauracja Stara Kamienica'
+  }
+}
+[loadMenuCatalog] 🔍 lastRestaurant: {
+  id: '1fc1e782-bac6-47b2-978a-f6f2b38000cd',
+  name: 'Restauracja Stara Kamienica'
+}
+[loadMenuCatalog] 🔍 lastId: 1fc1e782-bac6-47b2-978a-f6f2b38000cd
+[loadMenuCatalog] ✅ Loading menu for restaurant: 1fc1e782-bac6-47b2-978a-f6f2b38000cd (Restauracja Stara Kamienica)
+[loadMenuCatalog] ✅ Loaded 25 menu items from 1 restaurants
+[loadMenuCatalog] ✅ Sample items: Zupa dnia, Rosół z makaronem, Tradycyjny schabowy
+[intent-router] Catalog loaded: 25 items
+[intent-router] 🔍 Calling parseOrderItems...
+[intent-router] 🔍 Catalog items: Zupa dnia, Rosół z makaronem, Tradycyjny schabowy, Schab po beskidzku, Naleśnik z kurczakiem i warzywami, Naleśnik ze szpinakiem i serem feta, Lody z gorącymi malinami i bitą śmietaną, Fondant czekoladowy z lodami i bitą śmietaną, Coca-Cola, Fanta, Sprite, Cappy (200 ml), Woda mineralna (330 ml), Filet z kurczaka tradycyjny (panierowany), Filet z kurczaka po hawajsku, Grillowany filet z kurczaka, Kroket (z kapustą i grzybami/bądź z mięsem) 1 szt., Placki ziemniaczane 4 szt., Kluski śląskie 7 szt., Rolada wołowa (na zamówienie), Pieczeń wieprzowa, Wątróbka drobiowa, Gulasz wieprzowy po węgiersku, Pierogi (ruskie lub z mięsem) 6 szt., Jajecznica z 2 szt. jaj, Placki po węgiersku z gulaszem wieprzowym, Naleśnik z dżemem truskawkowym lub wiśniowym, Naleśnik z nutellą, bananami, bitą śmietaną
+[parseOrderItems] 📊 Summary:
+  - requestedNames: []
+  - availableNames: []
+  - unavailableNames: []
+  - matched.length: 0
+  - clarifications.length: 0
+[intent-router] ✅ Parsed result: {
+  "any": false,
+  "groups": [],
+  "clarify": [],
+  "available": [],
+  "unavailable": [
+    "wybieram stare kamienica"
+  ],
+  "needsClarification": true,
+  "unknownItems": [
+    {
+      "name": "wybieram stare kamienica",
+      "reason": "no_alias_match"
+    }
+  ]
+}
+[intent-router] 🔍 parsed.any = false
+[intent-router] 🔍 parsed.groups.length = 0
+⚠️ Unavailable items detected: wybieram stare kamienica in tym menu
+🔍 Checking if text contains restaurant name (using cached list): "wybieram stare kamienica"
+✅ Text contains restaurant name: Restauracja Stara Kamienica — skipping clarify_order
+[intent-router] ❌ No dishes matched in catalog (parsed.any = false)
+[intent-router] ❌ Continuing to KROK 4 (targetRestaurant check)...
+GET /api/health 200 154 - 526.799 ms
+[intent-router] 🔍 KROK 4: Checking targetRestaurant: {
+  id: '1fc1e782-bac6-47b2-978a-f6f2b38000cd',
+  name: 'Restauracja Stara Kamienica'
+}
+[intent-router] 🏪 KROK 4: Restaurant found in early detection: Restauracja Stara Kamienica, checking keywords...
+[intent-router] 🔍 KROK 4: Lower text: "wybieram stare kamienica"
+[intent-router] 🔍 KROK 4: Menu keywords: [
+  'menu',             'co moge zjesc',
+  'co maja',          'pokaz menu',
+  'pokaż menu',       'co jest w menu',
+  'dania',            'potrawy',
+  'co serwuja',       'co podaja',
+  'karta dan',        'karta dań',
+  'co jest dostepne', 'co dostepne',
+  'co maja w menu'
+]
+[intent-router] 🔍 KROK 4: Order keywords: [
+  'zamow',
+  'poprosze',
+  'prosze',
+  'chce zamowic',
+  'zloz zamowienie',
+  'zamowic cos',
+  'dodaj do zamowienia',
+  'zloz',
+  'wybieram',
+  'biore',
+  'wezme'
+]
+[intent-router] ✅ Order keyword found, returning create_order
+🔍 Debug session updated: {
+  intent: 'create_order',
+  restaurant: 'Restauracja Stara Kamienica',
+  sessionId: null,
+  confidence: 0.9
+}
+✅ SmartIntent Resolved: confirm_order (0.90) via llm
+🧠 [DEBUG] Hybrid intent detection complete: {
+  ruleIntent: 'confirm_order',
+  ruleConfidence: 0.9,
+  llmIntent: 'confirm_order',
+  llmConfidence: 0.9,
+  finalIntent: 'confirm_order',
+  finalConfidence: 0.9,
+  source: 'llm',
+  hasRestaurant: true,
+  restaurantName: 'Restauracja Stara Kamienica',
+  hasParsedOrder: false,
+  parsedOrderDetails: null
+}
+🧠 [DEBUG] Calling boostIntent with: {
+  text: 'wybieram stare Kamienica',
+  hybridIntent: 'confirm_order',
+  confidence: 0.9,
+  session: {
+    expectedContext: null,
+    lastRestaurant: undefined,
+    lastIntent: 'find_nearby'
+  }
+}
+🧠 [DEBUG] boostIntent result: {
+  originalIntent: 'confirm_order',
+  boostedIntent: 'wybieram stare Kamienica',
+  isContextLocked: false
+}
+🌟 SmartContext: intent changed from "confirm_order" → "wybieram stare Kamienica"
+GET /api/health 200 154 - 248.925 ms
+🧠 GPT Reasoner: {
+  searchRestaurants: true,
+  searchMenu: false,
+  askClarification: false,
+  completeOrder: false,
+  reasoning: "Wybrano searchRestaurants ponieważ użytkownik wybrał restaurację 'Stara Kamienica', co sugeruje potrzebę potwierdzenia dostępności tej restauracji w wynikach wyszukiwania."
+}
+📋 Parsed: { dish: null, restaurant: null }
+🧠 find_nearby intent detected
+📍 Detected location: Kamienica
+🧭 GeoContext active: searching in "Kamienica"
+⚙️ GeoContext: brak wyników w "Kamienica"
+💬 Generating GPT reply for intent: find_nearby
+✅ Final response: intent=find_nearby, confidence=0.9, fallback=false
+POST /api/brain 200 10293 - 9185.884 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Niestety, nie znalazłam restauracji "Stara Kamienica" ani w jej okolicy....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 43008 - 1885.570 ms
+GET /api/health 200 154 - 280.155 ms
+GET /api/health 200 154 - 237.236 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Restauracja Stara Kamienica. Polska....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 23808 - 873.162 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Rezydencja Luxury Hotel. Międzynarodowa....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 25728 - 399.499 ms
+GET /api/health 200 154 - 235.597 ms
+✅ Allowed origin: http://localhost:5173
+[TTS] Generating: Klaps Burgers. Amerykańska....
+✅ Using GOOGLE_APPLICATION_CREDENTIALS (local)
+✅ Google access token obtained successfully
+🔊 Using Chirp HD TTS (pl-PL-Wavenet-A, MP3)
+POST /api/tts 200 19968 - 475.948 ms
+GET /api/health 200 154 - 246.100 ms

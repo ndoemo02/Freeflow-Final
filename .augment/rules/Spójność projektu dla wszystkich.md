@@ -1,0 +1,88 @@
+System poleceń — FreeFlow Patch Crew
+🎯 Cel:
+
+Utrzymać pełen kontekst projektu FreeFlow Voice-to-Order, bez przeciążania pamięci systemu.
+Każdy patcher raportuje swoje działania w sposób krótki, zwięzły, ale treściwy.
+Raporty służą do analizy zmian, szybkiej synchronizacji i iteracyjnego podejmowania decyzji.
+
+⚙️ Zasady pracy:
+
+Nie klep kodu w ciemno.
+Jeśli coś jest niejasne → wypisz jawne założenia techniczne i działaj dalej.
+
+Nie opisuj oczywistości.
+Wpisy mają być rzeczowe — co zrobiłeś, jaki efekt, co dalej.
+
+Każdy patch kończysz checklistą (poniżej).
+Wpisz tylko fakty, nie eseje.
+
+Raportuj tylko własny zakres.
+Jeśli zmieniasz backend – nie opisuj frontu, chyba że coś z nim koliduje.
+
+Nie resetuj kontekstu.
+Zachowuj numerację iteracji i opis głównego celu (to trzyma projekt w ryzach).
+
+✅ Template raportu patchera (do wklejenia po każdym patchu):
+### 🧩 FreeFlow Iteration Report
+
+**Iteracja:** [np. Amber Parser v1.3 / Dedup Fix]  
+**Cel:** [krótko, np. usunięcie duplikatów dań w zamówieniach]  
+**Zakres:** [backend / frontend / supabase / voice / ui]  
+**Pliki:** [np. intent-router.js, parseOrderItems.js]  
+
+---
+
+**Działania:**
+- [x] [krótki opis zmiany 1]
+- [x] [krótki opis zmiany 2]
+- [x] [jeśli coś nie zadziałało – wyraźnie oznacz]
+
+**Test lokalny:** [TAK/NIE]  
+**Wynik:** [1 zdanie + najważniejszy output/log]  
+**Status:** [✅ działa / ⚙️ częściowo / ❌ nie działa]  
+
+**Kolejny krok:** [1–2 zdania: co sprawdzić / wdrożyć dalej]  
+
+🧭 Przykład (dobrze wypełniony):
+### 🧩 FreeFlow Iteration Report
+
+**Iteracja:** Amber Parser v1.2  
+**Cel:** Uspójnienie aliasów i eliminacja duplikatów  
+**Zakres:** backend  
+**Pliki:** intent-router.js, helpers/parseOrderItems.js  
+
+---
+
+**Działania:**
+- [x] Dodano aliasy: czosnkowa → zupa czosnkowa, margerita → margherita  
+- [x] Dodano extractSizeSafe z fallbackiem „standard”  
+- [x] Testy deduplikacji: 5x → 1x pozycja  
+
+**Test lokalny:** TAK  
+**Wynik:** „zamów dwie czosnkowe” → intent:create_order ✅  
+**Status:** ✅ działa  
+
+**Kolejny krok:** przetestować voice-order z Amber dla zamówień złożonych (frytki + cola).
+
+🚨 Zasady raportowania do kierownika 😆 (GPT-5):
+
+Po każdym patchu wrzuć checklistę w komentarzu lub wątku.
+
+Nie modyfikuj kodu głównego bez wcześniejszego checka lub review.
+
+Kierownik 😆 (GPT-5) sprawdza iteracyjnie:
+
+spójność logiki,
+
+poprawność intencji,
+
+potencjalne błędy regresji,
+
+czy projekt nie traci kontekstu między patchami.
+
+💡 Tip dla patcherów:
+
+Jeśli nie masz pewności, czy coś „wejdzie w kontekst” →
+dodaj sekcję Założenia: z 1–2 punktami. Kierownik-Gie 😆 to wychwyci przy review i doprecyzuje w kolejnej iteracji.---
+alwaysApply: true
+---

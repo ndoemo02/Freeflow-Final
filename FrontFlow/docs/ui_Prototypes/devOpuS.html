@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Analytics Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        
+        :root {
+            --glass-bg: rgba(15, 23, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --neon-primary: #3b82f6;
+            --neon-success: #10b981;
+            --neon-warning: #f59e0b;
+            --neon-error: #ef4444;
+            --neon-purple: #8b5cf6;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+        }
+
+        .light-mode {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.1);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --bg-primary: #f1f5f9;
+            --bg-secondary: #e2e8f0;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: var(--glass-shadow), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .status-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.4s ease forwards;
+        }
+
+        .fade-in-delay-1 { animation-delay: 0.05s; opacity: 0; }
+        .fade-in-delay-2 { animation-delay: 0.1s; opacity: 0; }
+        .fade-in-delay-3 { animation-delay: 0.15s; opacity: 0; }
+        .fade-in-delay-4 { animation-delay: 0.2s; opacity: 0; }
+        .fade-in-delay-5 { animation-delay: 0.25s; opacity: 0; }
+
+        .tab-active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+            border-color: var(--neon-primary);
+            color: var(--neon-primary);
+        }
+
+        .log-row {
+            transition: background 0.2s ease;
+        }
+
+        .log-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--neon-primary);
+            border-radius: 3px;
+        }
+
+        .trend-up { color: var(--neon-success); }
+        .trend-down { color: var(--neon-error); }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        @media (max-width: 1280px) {
+            .kpi-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+
+        @media (max-width: 768px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 lg:p-6">
+    <!-- Background gradient -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative z-10 max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6 fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-semibold" style="color: var(--text-primary)">Admin Analytics</h1>
+                    <p class="text-xs" style="color: var(--text-secondary)">Production Environment</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-400 status-dot"></span>
+                    Live
+                </span>
+                <button id="themeToggle" class="glass-panel p-2 rounded-lg hover:scale-105 transition-transform">
+                    <svg id="moonIcon" class="w-5 h-5" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                    <svg id="sunIcon" class="w-5 h-5 hidden" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid grid grid-cols-5 gap-3 mb-6">
+            <!-- Total Requests -->
+            <div class="glass-panel rounded-xl p-4 fade-in fade-in-delay-1">
+                <div class="flex items-start justify-between">
+                    <div class="p-2 rounded-lg bg-blue-500/20">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <span class="trend-up text-xs flex items-center gap-0.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        12%
+                    </span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-2xl font-semibold" style="color: var(--text-primary)">2.4M</p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-secondary)">Total Requests</p>
+                </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="glass-panel rounded-xl p-4 fade-in fade-in-delay-2">
+                <div class="flex items-start justify-between">
+                    <div class="p-2 rounded-lg bg-purple-500/20">
+                        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                        </svg>
+                    </div>
+                    <span class="trend-up text-xs flex items-center gap-0.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                        </svg>
+                        8%
+                    </span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-2xl font-semibold" style="color: var(--text-primary)">1,847</p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-secondary)">Active Sessions</p>
+                </div>
+            </div>
+
+            <!-- Avg Latency -->
+            <div class="glass-panel rounded-xl p-4 fade-in fade-in-delay-3">
+                <div class="flex items-start justify-between">
+                    <div class="p-2 rounded-lg bg-green-500/20">
+                        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="trend-down text-xs flex items-center gap-0.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                        5%
+                    </span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-2xl font-semibold" style="color: var(--text-primary)">42<span class="text-sm font-normal">ms</span></p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-secondary)">Avg Latency</p>
+                </div>
+            </div>
+
+            <!-- Error Rate -->
+            <div class="glass-panel rounded-xl p-4 fade-in fade-in-delay-4">
+                <div class="flex items-start justify-between">
+                    <div class="p-2 rounded-lg bg-amber-500/20">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <span class="trend-down text-xs flex items-center gap-0.5">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                        </svg>
+                        2%
+                    </span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-2xl font-semibold" style="color: var(--text-primary)">0.12<span class="text-sm font-normal">%</span></p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-secondary)">Error Rate</p>
+                </div>
+            </div>
+
+            <!-- System Status -->
+            <div class="glass-panel rounded-xl p-4 fade-in fade-in-delay-5">
+                <div class="flex items-start justify-between">
+                    <div class="p-2 rounded-lg bg-emerald-500/20">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 status-dot"></span>
+                </div>
+                <div class="mt-3">
+                    <p class="text-2xl font-semibold text-emerald-400">Online</p>
+                    <p class="text-xs mt-0.5" style="color: var(--text-secondary)">System Status</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="grid grid-cols-12 gap-4">
+            <!-- Left Panel - Charts -->
+            <div class="col-span-12 lg:col-span-8">
+                <div class="glass-panel rounded-xl p-4 fade-in">
+                    <!-- Tabs -->
+                    <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+                        <button class="tab-btn tab-active px-4 py-2 rounded-lg text-sm font-medium border border-transparent transition-all" data-tab="overview">Overview</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium border border-transparent transition-all hover:bg-white/5" style="color: var(--text-secondary)" data-tab="traffic">Traffic</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium border border-transparent transition-all hover:bg-white/5" style="color: var(--text-secondary)" data-tab="latency">Latency</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium border border-transparent transition-all hover:bg-white/5" style="color: var(--text-secondary)" data-tab="errors">Errors</button>
+                        <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium border border-transparent transition-all hover:bg-white/5" style="color: var(--text-secondary)" data-tab="logs">Logs</button>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div id="tab-overview" class="tab-content">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Requests Over Time</h3>
+                                <div class="chart-container">
+                                    <canvas id="requestsChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Latency Distribution</h3>
+                                <div class="chart-container">
+                                    <canvas id="latencyOverviewChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Error Distribution</h3>
+                                <div class="chart-container">
+                                    <canvas id="errorDonutChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Endpoint Usage</h3>
+                                <div class="chart-container">
+                                    <canvas id="endpointChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-traffic" class="tab-content hidden">
+                        <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Traffic Analysis</h3>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="trafficChart"></canvas>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3 mt-4">
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">Peak Hour</p>
+                                <p class="text-lg font-semibold" style="color: var(--text-primary)">14:00</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">Requests/sec</p>
+                                <p class="text-lg font-semibold" style="color: var(--text-primary)">847</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">Unique IPs</p>
+                                <p class="text-lg font-semibold" style="color: var(--text-primary)">12.4K</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">Bandwidth</p>
+                                <p class="text-lg font-semibold" style="color: var(--text-primary)">2.8GB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-latency" class="tab-content hidden">
+                        <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Latency Over Time</h3>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="latencyDetailChart"></canvas>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3 mt-4">
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">P50</p>
+                                <p class="text-lg font-semibold text-green-400">28ms</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">P90</p>
+                                <p class="text-lg font-semibold text-yellow-400">67ms</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">P99</p>
+                                <p class="text-lg font-semibold text-orange-400">124ms</p>
+                            </div>
+                            <div class="p-3 rounded-lg bg-white/5">
+                                <p class="text-xs" style="color: var(--text-secondary)">Max</p>
+                                <p class="text-lg font-semibold text-red-400">342ms</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-errors" class="tab-content hidden">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Errors by Type</h3>
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="errorTypeChart"></canvas>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Errors Over Time</h3>
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="errorTimeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary)">Recent Errors</h3>
+                            <div class="space-y-2 max-h-32 overflow-y-auto">
+                                <div class="flex items-center gap-3 p-2 rounded-lg bg-red-500/10 text-sm">
+                                    <span class="text-red-400 text-xs">500</span>
+                                    <span style="color: var(--text-secondary)" class="text-xs">14:32:15</span>
+                                    <span style="color: var(--text-primary)">Database connection timeout - /api/users</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-2 rounded-lg bg-amber-500/10 text-sm">
+                                    <span class="text-amber-400 text-xs">429</span>
+                                    <span style="color: var(--text-secondary)" class="text-xs">14:31:42</span>
+                                    <span style="color: var(--text-primary)">Rate limit exceeded - /api/search</span>
+                                </div>
+                                <div class="flex items-center gap-3 p-2 rounded-lg bg-red-500/10 text-sm">
+                                    <span class="text-red-400 text-xs">503</span>
+                                    <span style="color: var(--text-secondary)" class="text-xs">14:28:03</span>
+                                    <span style="color: var(--text-primary)">Service unavailable - /api/payments</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-logs" class="tab-content hidden">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="relative flex-1">
+                                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style="color: var(--text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="logSearch" placeholder="Search logs..." class="w-full pl-10 pr-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-blue-500/50" style="color: var(--text-primary)">
+                            </div>
+                            <select id="logFilter" class="px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm focus:outline-none focus:border-blue-500/50" style="color: var(--text-primary)">
+                                <option value="all">All Levels</option>
+                                <option value="info">Info</option>
+                                <option value="warn">Warning</option>
+                                <option value="error">Error</option>
+                            </select>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer" style="color: var(--text-secondary)">
+                                <input type="checkbox" id="autoScroll" checked class="w-4 h-4 rounded">
+                                Auto-scroll
+                            </label>
+                        </div>
+                        <div id="logsContainer" class="h-80 overflow-y-auto rounded-lg bg-black/20 font-mono text-xs">
+                            <table class="w-full">
+                                <thead class="sticky top-0 bg-slate-900/90">
+                                    <tr style="color: var(--text-secondary)">
+                                        <th class="text-left p-2 w-24">Time</th>
+                                        <th class="text-left p-2 w-16">Level</th>
+                                        <th class="text-left p-2 w-20">Source</th>
+                                        <th class="text-left p-2">Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Dev Widgets -->
+            <div class="col-span-12 lg:col-span-4 space-y-4">
+                <!-- System Health -->
+                <div class="glass-panel rounded-xl p-4 fade-in">
+                    <h3 class="text-sm font-medium mb-4" style="color: var(--text-secondary)">System Health</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span>
+                                <span class="text-sm" style="color: var(--text-primary)">WebSocket</span>
+                            </div>
+                            <span class="text-xs text-green-400">Connected</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span>
+                                <span class="text-sm" style="color: var(--text-primary)">API Gateway</span>
+                            </div>
+                            <span class="text-xs text-green-400">Healthy</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-green-400 status-dot"></span>
+                                <span class="text-sm" style="color: var(--text-primary)">Database</span>
+                            </div>
+                            <span class="text-xs text-green-400">Healthy</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 status-dot"></span>
+                                <span class="text-sm" style="color: var(--text-primary)">Cache</span>
+                            </div>
+                            <span class="text-xs text-amber-400">Warming</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resource Usage -->
+                <div class="glass-panel rounded-xl p-4 fade-in">
+                    <h3 class="text-sm font-medium mb-4" style="color: var(--text-secondary)">Resource Usage</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm" style="color: var(--text-primary)">CPU</span>
+                                <span class="text-xs text-blue-400">34%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-400" style="width: 34%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm" style="color: var(--text-primary)">Memory</span>
+                                <span class="text-xs text-purple-400">67%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full bg-gradient-to-r from-purple-500 to-purple-400" style="width: 67%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm" style="color: var(--text-primary)">Disk</span>
+                                <span class="text-xs text-green-400">52%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full bg-gradient-to-r from-green-500 to-green-400" style="width: 52%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm" style="color: var(--text-primary)">Network I/O</span>
+                                <span class="text-xs text-amber-400">78%</span>
+                            </div>
+                            <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400" style="width: 78%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queue Status -->
+                <div class="glass-panel rounded-xl p-4 fade-in">
+                    <h3 class="text-sm font-medium mb-4" style="color: var(--text-secondary)">Queue Status</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                            <span class="text-sm" style="color: var(--text-primary)">Request Queue</span>
+                            <span class="text-sm font-mono text-blue-400">142</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                            <span class="text-sm" style="color: var(--text-primary)">Job Queue</span>
+                            <span class="text-sm font-mono text-purple-400">38</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                            <span class="text-sm" style="color: var(--text-primary)">Email Queue</span>
+                            <span class="text-sm font-mono text-green-400">7</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                            <span class="text-sm" style="color: var(--text-primary)">Dead Letter</span>
+                            <span class="text-sm font-mono text-red-400">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="glass-panel rounded-xl p-4 fade-in">
+                    <h3 class="text-sm font-medium mb-4" style="color: var(--text-secondary)">Quick Actions</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="p-2 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors">
+                            Clear Cache
+                        </button>
+                        <button class="p-2 rounded-lg bg-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/30 transition-colors">
+                            Restart Workers
+                        </button>
+                        <button class="p-2 rounded-lg bg-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors">
+                            Health Check
+                        </button>
+                        <button class="p-2 rounded-lg bg-amber-500/20 text-amber-400 text-xs font-medium hover:bg-amber-500/30 transition-colors">
+                            Export Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-6 text-center fade-in">
+            <p class="text-xs" style="color: var(--text-secondary)">Last updated: <span id="lastUpdate"></span> • Refresh rate: 5s</p>
+        </footer>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const moonIcon = document.getElementById('moonIcon');
+        const sunIcon = document.getElementById('sunIcon');
+        let isDark = true;
+
+        themeToggle.addEventListener('click', () => {
+            isDark = !isDark;
+            document.body.classList.toggle('light-mode');
+            moonIcon.classList.toggle('hidden');
+            sunIcon.classList.toggle('hidden');
+            updateChartTheme();
+        });
+
+        // Tab Navigation
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => {
+                    b.classList.remove('tab-active');
+                    b.style.color = 'var(--text-secondary)';
+                });
+                btn.classList.add('tab-active');
+                btn.style.color = '';
+                
+                const tabId = btn.dataset.tab;
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+                // Initialize charts when tab becomes visible
+                if (tabId === 'traffic') initTrafficChart();
+                if (tabId === 'latency') initLatencyDetailChart();
+                if (tabId === 'errors') initErrorCharts();
+            });
+        });
+
+        // Chart.js Configuration
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+        Chart.defaults.font.family = 'Inter';
+
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 750,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#94a3b8',
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 10
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: { size: 10 }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)'
+                    },
+                    ticks: {
+                        font: { size: 10 }
+                    }
+                }
+            }
+        };
+
+        // Generate time labels
+        const timeLabels = Array.from({length: 12}, (_, i) => {
+            const h = (8 + i) % 24;
+            return `${h.toString().padStart(2, '0')}:00`;
+        });
+
+        // Requests Chart
+        const requestsCtx = document.getElementById('requestsChart').getContext('2d');
+        const requestsGradient = requestsCtx.createLinearGradient(0, 0, 0, 200);
+        requestsGradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+        requestsGradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+        new Chart(requestsCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    data: [120, 180, 220, 280, 320, 380, 420, 390, 350, 400, 450, 480],
+                    borderColor: '#3b82f6',
+                    backgroundColor: requestsGradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#3b82f6'
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Latency Overview Chart
+        const latencyOverviewCtx = document.getElementById('latencyOverviewChart').getContext('2d');
+        new Chart(latencyOverviewCtx, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    data: [35, 42, 38, 45, 52, 48, 40, 38, 44, 50, 46, 42],
+                    borderColor: '#10b981',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 4,
+                    pointHoverBackgroundColor: '#10b981'
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Error Donut Chart
+        const errorDonutCtx = document.getElementById('errorDonutChart').getContext('2d');
+        new Chart(errorDonutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['4xx Errors', '5xx Errors', 'Timeouts', 'Other'],
+                datasets: [{
+                    data: [45, 25, 20, 10],
+                    backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'],
+                    borderWidth: 0,
+                    spacing: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 10,
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Endpoint Chart
+        const endpointCtx = document.getElementById('endpointChart').getContext('2d');
+        new Chart(endpointCtx, {
+            type: 'bar',
+            data: {
+                labels: ['/api/users', '/api/search', '/api/auth', '/api/data', '/api/events'],
+                datasets: [{
+                    data: [850, 720, 540, 380, 220],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(236, 72, 153, 0.8)'
+                    ],
+                    borderRadius: 4,
+                    barThickness: 16
+                }]
+            },
+            options: {
+                ...chartOptions,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 9 } }
+                    }
+                }
+            }
+        });
+
+        // Traffic Chart (lazy init)
+        let trafficChart;
+        function initTrafficChart() {
+            if (trafficChart) return;
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
+            gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
+
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Requests',
+                        data: [1200, 1800, 2200, 2800, 3200, 3800, 4200, 3900, 3500, 4000, 4500, 4800],
+                        borderColor: '#8b5cf6',
+                        backgroundColor: gradient,
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#8b5cf6'
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        // Latency Detail Chart (lazy init)
+        let latencyDetailChart;
+        function initLatencyDetailChart() {
+            if (latencyDetailChart) return;
+            const ctx = document.getElementById('latencyDetailChart').getContext('2d');
+            
+            latencyDetailChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [
+                        {
+                            label: 'P50',
+                            data: [25, 28, 26, 30, 32, 29, 27, 26, 28, 31, 29, 28],
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'P90',
+                            data: [55, 62, 58, 68, 72, 65, 60, 58, 64, 70, 66, 67],
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'P99',
+                            data: [110, 125, 118, 135, 142, 130, 120, 115, 128, 138, 132, 124],
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    plugins: {
+                        ...chartOptions.plugins,
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { boxWidth: 12, padding: 15, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Error Charts (lazy init)
+        let errorTypeChart, errorTimeChart;
+        function initErrorCharts() {
+            if (!errorTypeChart) {
+                const ctx = document.getElementById('errorTypeChart').getContext('2d');
+                errorTypeChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['400', '401', '403', '404', '500', '502', '503'],
+                        datasets: [{
+                            data: [45, 30, 15, 120, 25, 8, 12],
+                            backgroundColor: [
+                                '#f59e0b', '#f59e0b', '#f59e0b', '#f59e0b',
+                                '#ef4444', '#ef4444', '#ef4444'
+                            ],
+                            borderRadius: 4,
+                            barThickness: 20
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+
+            if (!errorTimeChart) {
+                const ctx = document.getElementById('errorTimeChart').getContext('2d');
+                errorTimeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            data: [12, 8, 15, 22, 18, 25, 20, 14, 10, 16, 12, 8],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: chartOptions
+                });
+            }
+        }
+
+        // Logs
+        const logsData = [
+            { time: '14:32:15', level: 'error', source: 'DB', message: 'Connection pool exhausted, retrying...' },
+            { time: '14:32:14', level: 'info', source: 'API', message: 'Request processed: GET /api/users (42ms)' },
+            { time: '14:32:12', level: 'warn', source: 'NLU', message: 'Intent confidence below threshold: 0.65' },
+            { time: '14:32:10', level: 'info', source: 'TTS', message: 'Audio synthesized: 2.3s duration' },
+            { time: '14:32:08', level: 'info', source: 'Frontend', message: 'WebSocket connection established' },
+            { time: '14:32:05', level: 'error', source: 'API', message: 'Rate limit exceeded for IP 192.168.1.45' },
+            { time: '14:32:03', level: 'info', source: 'DB', message: 'Query executed: SELECT users (12ms)' },
+            { time: '14:32:01', level: 'warn', source: 'API', message: 'Slow response detected: 850ms' },
+            { time: '14:31:58', level: 'info', source: 'NLU', message: 'Entity extracted: location="New York"' },
+            { time: '14:31:55', level: 'info', source: 'Frontend', message: 'Session started: user_id=12847' },
+        ];
+
+        const logsBody = document.getElementById('logsBody');
+        const logFilter = document.getElementById('logFilter');
+        const logSearch = document.getElementById('logSearch');
+
+        function getLevelColor(level) {
+            switch(level) {
+                case 'error': return 'text-red-400';
+                case 'warn': return 'text-amber-400';
+                default: return 'text-blue-400';
+            }
+        }
+
+        function renderLogs() {
+            const filter = logFilter.value;
+            const search = logSearch.value.toLowerCase();
+            
+            const filtered = logsData.filter(log => {
+                const matchLevel = filter === 'all' || log.level === filter;
+                const matchSearch = log.message.toLowerCase().includes(search) || 
+                                   log.source.toLowerCase().includes(search);
+                return matchLevel && matchSearch;
+            });
+
+            logsBody.innerHTML = filtered.map(log => `
+                <tr class="log-row border-b border-white/5">
+                    <td class="p-2" style="color: var(--text-secondary)">${log.time}</td>
+                    <td class="p-2 ${getLevelColor(log.level)} uppercase font-medium">${log.level}</td>
+                    <td class="p-2 text-purple-400">${log.source}</td>
+                    <td class="p-2" style="color: var(--text-primary)">${log.message}</td>
+                </tr>
+            `).join('');
+        }
+
+        logFilter.addEventListener('change', renderLogs);
+        logSearch.addEventListener('input', renderLogs);
+        renderLogs();
+
+        // Simulate live logs
+        const sources = ['API', 'DB', 'NLU', 'TTS', 'Frontend'];
+        const messages = [
+            'Request processed successfully',
+            'Cache hit: user_preferences',
+            'Background job completed',
+            'Session heartbeat received',
+            'Query optimized: 15ms improvement',
+            'WebSocket message sent',
+            'Intent recognized with high confidence'
+        ];
+
+        setInterval(() => {
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const newLog = {
+                time,
+                level: Math.random() > 0.9 ? 'error' : Math.random() > 0.8 ? 'warn' : 'info',
+                source: sources[Math.floor(Math.random() * sources.length)],
+                message: messages[Math.floor(Math.random() * messages.length)]
+            };
+            logsData.unshift(newLog);
+            if (logsData.length > 100) logsData.pop();
+            
+            if (document.getElementById('autoScroll').checked) {
+                renderLogs();
+            }
+        }, 3000);
+
+        // Update timestamp
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Update chart theme
+        function updateChartTheme() {
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+            
+            Chart.defaults.color = textColor;
+            Chart.defaults.borderColor = gridColor;
+            
+            // Update all charts
+            Chart.helpers.each(Chart.instances, (chart) => {
+                chart.options.scales.x.ticks.color = textColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.y.grid.color = gridColor;
+                chart.update('none');
+            });
+        }
+
+        // Animate resource bars on load
+        setTimeout(() => {
+            document.querySelectorAll('.progress-bar').forEach(bar => {
+                const width = bar.style.width;
+                bar.style.width = '0%';
+                setTimeout(() => bar.style.width = width, 100);
+            });
+        }, 500);
+    </script>
+</body>
+</html>
