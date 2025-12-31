@@ -87,7 +87,6 @@ export default function LogoFreeFlow() {
           <span className="flow">Flow</span>
         </div>
       </div>
-      <div className="subtitle">Voice to order</div>
     </LoaderWrapper>
   );
 }

@@ -498,10 +498,7 @@
 
 /* Tablet i małe laptopy */
 @media (max-width: 1024px) {
-  .header-left p {
-    display: none;
-    /* Ukryj podtytuł na mniejszych ekranach */
-  }
+  /* .header-left p { display: none; } - Removed to show subtitle on mobile */
 }
 
 /* Mobile landscape i małe tablety */

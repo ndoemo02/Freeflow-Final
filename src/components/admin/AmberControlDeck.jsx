@@ -77,6 +77,7 @@ export default function AmberControlDeck({ adminToken }) {
           streaming: cfg.streaming?.enabled ?? prev.streaming,
           cache_enabled: cfg.cache_enabled ?? prev.cache_enabled,
           speech_style: cfg.speech_style || prev.speech_style,
+          tts_enabled: typeof cfg.tts_enabled === 'boolean' ? cfg.tts_enabled : prev.tts_enabled,
           env: cfg.env || prev.env,
         }));
       }
@@ -127,6 +128,7 @@ export default function AmberControlDeck({ adminToken }) {
           streaming: cfg.streaming?.enabled ?? prev.streaming,
           cache_enabled: cfg.cache_enabled ?? prev.cache_enabled,
           speech_style: cfg.speech_style || prev.speech_style,
+          tts_enabled: typeof cfg.tts_enabled === 'boolean' ? cfg.tts_enabled : prev.tts_enabled,
           env: cfg.env || prev.env,
         }));
       } else {
@@ -344,6 +346,13 @@ export default function AmberControlDeck({ adminToken }) {
             </div>
 
             <div className="flex flex-col gap-2">
+              <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+                <span className="flex items-center gap-2">
+                  <span>Włącz TTS</span>
+                  {config.tts_enabled && <span className="flex size-2 bg-green-500 rounded-full animate-pulse"></span>}
+                </span>
+                <input type="checkbox" checked={!!config.tts_enabled} onChange={(e) => saveConfig('tts_enabled', e.target.checked)} className="accent-[var(--neon)]" />
+              </label>
               <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
                 <span>Cache aktywny</span>
                 <input type="checkbox" checked={!!config.cache_enabled} onChange={(e) => saveConfig('cache_enabled', e.target.checked)} className="accent-[var(--neon)]" />
