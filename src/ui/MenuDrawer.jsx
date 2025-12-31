@@ -160,6 +160,7 @@ export default function MenuDrawer() {
                   <MenuItem icon="🙍" text="Panel Klienta" route="/panel/customer" isSubItem requiresAuth />
                   <MenuItem icon="🏢" text="Panel Biznesowy" route="/panel/business" isSubItem requiresAuth />
                   <MenuItem icon="🆕" text="Panel Biznesowy v2" route="/panel/business-v2" isSubItem requiresAuth />
+                  <MenuItem icon="🚗" text="Panel Kierowcy" route="/driver" isSubItem requiresAuth />
                   <MenuItem icon="📈" text="Analytics" route="/admin" isSubItem requiresAuth />
                 </ExpandableSection>
 
