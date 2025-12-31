@@ -12,8 +12,14 @@ const LoaderWrapper = styled.div`
   font-weight: 700;
   font-style: italic;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+
+  .logo-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 
   /* Kontenery dla poszczególnych słów - potrzebne żeby miały własne ::before/::after */
   .word-wrapper {
@@ -41,7 +47,7 @@ const LoaderWrapper = styled.div`
     width: 100%;
     height: 3px;
     background-color: #ff7b00; /* Orange FreeFlow */
-    bottom: -4px; /* Na dole */
+    bottom: 2px; /* Przybliżone */
     left: 0;
     z-index: 1;
     box-shadow: 0 0 10px rgba(255, 123, 0, 0.5);
@@ -54,22 +60,34 @@ const LoaderWrapper = styled.div`
     width: 100%;
     height: 3px;
     background-color: #f2fff0; /* Biały */
-    top: -4px; /* Na górze */
+    top: 0px; /* Przybliżone */
     left: 0;
     z-index: 1;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  }
+
+  .subtitle {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--muted, #9ca3af);
+    letter-spacing: 2px;
+    margin-top: -5px;
+    text-transform: uppercase;
   }
 `;
 
 export default function LogoFreeFlow() {
   return (
     <LoaderWrapper className="loader">
-      <div className="word-wrapper free-wrap">
-        <span className="free">Free</span>
+      <div className="logo-main">
+        <div className="word-wrapper free-wrap">
+          <span className="free">Free</span>
+        </div>
+        <div className="word-wrapper flow-wrap">
+          <span className="flow">Flow</span>
+        </div>
       </div>
-      <div className="word-wrapper flow-wrap">
-        <span className="flow">Flow</span>
-      </div>
+      <div className="subtitle">Voice to order</div>
     </LoaderWrapper>
   );
 }

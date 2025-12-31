@@ -115,20 +115,27 @@ export default function VoiceCommandCenterV2({
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
+                    className="w-full bg-transparent border-none text-white placeholder-white/40 focus:ring-0 text-lg tracking-wide h-full px-6"
+                    style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}
                   />
                 )}
 
                 {/* ORB AREA (Inside Panel, Right Side) */}
                 <div
-                  className="voice-cc-animation-container cursor-pointer"
-                  title="Kliknij, aby rozmawiać"
-                  onClick={onMicClick}
+                  className="voice-cc-animation-container cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center w-[60px] h-[60px]"
+                  title={inputValue.trim() ? "Wyślij wiadomość" : "Kliknij, aby rozmawiać"}
+                  onClick={inputValue.trim() ? handleSubmit : onMicClick}
                 >
-                  {/* We place the AmberIndicator here. 
-                             Usually 56px, we can let it scale via its internal logic or wrapper.
-                             This wrapper has display flex.
-                          */}
-                  <AmberIndicator status={amberStatus} className="w-12 h-12" />
+                  {inputValue.trim() ? (
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--neon)] text-black shadow-[0_0_15px_var(--neon)]">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                    </div>
+                  ) : (
+                    <AmberIndicator status={amberStatus === 'listening' ? 'listening' : 'idle'} className="w-12 h-12" />
+                  )}
                 </div>
 
                 {/* Typing/Processing Indicator */}
@@ -138,16 +145,6 @@ export default function VoiceCommandCenterV2({
                   </div>
                 )}
               </div>
-
-              {/* SEND BUTTON (Outside) */}
-              <button id="voice-cc-send-button" onClick={handleSubmit} disabled={!inputValue.trim()} title="Wyślij">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" stroke="currentColor"
-                    d="M22 2L11 13"></path>
-                  <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" stroke="currentColor"
-                    d="M22 2L15 22L11 13L2 9L22 2Z"></path>
-                </svg>
-              </button>
             </div>
           </div>
         </motion.div>

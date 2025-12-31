@@ -179,10 +179,49 @@ export default function ConversationViewer({ adminToken }) {
         return 0;
     }, [selectedId, selectedConv, timeline]);
 
+    const deleteConversation = async (e, id) => {
+        e.stopPropagation();
+        if (!window.confirm('Usunąć tę rozmowę?')) return;
+
+        try {
+            const res = await fetch(getApiUrl(`/api/admin/conversation?id=${id}`), {
+                method: 'DELETE',
+                headers: { 'x-admin-token': adminToken }
+            });
+            const json = await res.json();
+            if (json.ok) {
+                setConversations(prev => prev.filter(c => c.id !== id));
+                if (selectedId === id) setSelectedId(null);
+            } else {
+                alert('Błąd: ' + (json.error || 'Nieznany błąd'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Wystąpił błąd podczas usuwania.');
+        }
+    };
+
+    const exportConversation = () => {
+        if (!selectedConv || !timeline) return;
+        const data = {
+            conversation: selectedConv,
+            timeline: timeline
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conversation-${selectedId}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     return (
-        <div className="flex flex-col gap-4 fade-in">
+        <div className="flex flex-col gap-4 fade-in h-full">
             {/* 🕒 TIMELINE TOGGLE & VIEW */}
-            <div className="flex justify-end items-center mb-1">
+            <div className="flex justify-end items-center mb-1 flex-shrink-0">
                 <label className="flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--fg0)]">
                     <input type="checkbox" checked={showTimeline} onChange={(e) => setShowTimeline(e.target.checked)} className="accent-[var(--neon)]" />
                     Show Timeline
@@ -190,7 +229,7 @@ export default function ConversationViewer({ adminToken }) {
             </div>
 
             {showTimeline && (
-                <div className="w-full overflow-x-auto pb-4 mb-2 tiny-scroll">
+                <div className="w-full overflow-x-auto pb-4 mb-2 tiny-scroll flex-shrink-0">
                     <div className="flex items-center gap-6 min-w-max px-2">
                         {conversations.slice(0, 15).map((c, idx) => {
                             const { color, stage } = getModel(c);
@@ -230,26 +269,35 @@ export default function ConversationViewer({ adminToken }) {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
                 {/* List of Conversations */}
-                <div className="md:col-span-1 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col">
-                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center">
+                <div className="md:col-span-1 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col min-h-0">
+                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center z-10">
                         <span>Ostatnie rozmowy</span>
                         <div className="flex items-center gap-3">
                             <button onClick={clearLogs} className="group flex items-center gap-1 text-[10px] text-red-500 hover:text-red-400 transition-colors">
                                 <Trash2 size={12} className="group-hover:scale-110 transition-transform" />
-                                <span>Wyczyść</span>
+                                <span>Wyczyść wszystko</span>
                             </button>
                             <button onClick={refreshList} className="text-[10px] text-[var(--neon)] hover:underline">Odśwież</button>
                         </div>
                     </div>
-                    <div className="overflow-auto flex-1 tiny-scroll p-2 space-y-2">
+                    <div className="overflow-y-auto flex-1 tiny-scroll p-2 space-y-2">
                         {conversations.length === 0 && <div className="text-[var(--muted)] text-center p-4 text-xs">Brak zarejestrowanych rozmów (V2).</div>}
                         {conversations.map(c => (
-                            <div key={c.id} onClick={() => setSelectedId(c.id)} className={`p-3 rounded-lg cursor-pointer border transition-all ${selectedId === c.id ? 'bg-[rgba(91,124,255,0.1)] border-[var(--neon)]' : 'border-transparent hover:bg-white/5'}`}>
+                            <div key={c.id} onClick={() => setSelectedId(c.id)} className={`p-3 rounded-lg cursor-pointer border transition-all group/item ${selectedId === c.id ? 'bg-[rgba(91,124,255,0.1)] border-[var(--neon)]' : 'border-transparent hover:bg-white/5'}`}>
                                 <div className="flex justify-between text-xs mb-1">
                                     <span className="font-mono text-[var(--muted)] font-bold" title={c.id}>{c.id.substring(0, 8)}...</span>
-                                    <span className="text-[var(--muted)]">{new Date(c.created_at || c.started_at).toLocaleTimeString()}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[var(--muted)]">{new Date(c.created_at || c.started_at).toLocaleTimeString()}</span>
+                                        <button
+                                            onClick={(e) => deleteConversation(e, c.id)}
+                                            className="text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                                            title="Usuń"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <div className={`text-xs px-2 py-0.5 rounded-full border ${c.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-gray-700 text-gray-500 bg-gray-800'}`}>
@@ -262,14 +310,23 @@ export default function ConversationViewer({ adminToken }) {
                 </div>
 
                 {/* Conversation Details Timeline */}
-                <div className="md:col-span-2 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col relative">
-                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center">
-                        {selectedId ? <span className="font-mono text-xs">{selectedId}</span> : <span>Szczegóły rozmowy</span>}
-                        {selectedConv?.status && (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded border ${selectedConv.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-white/10 text-[var(--muted)]'}`}>
-                                {selectedConv.status.toUpperCase()}
-                            </span>
-                        )}
+                <div className="md:col-span-2 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col relative min-h-0">
+                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center z-10">
+                        <div className="flex items-center gap-2">
+                            {selectedId ? <span className="font-mono text-xs text-[var(--neon)]">{selectedId}</span> : <span>Szczegóły rozmowy</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {selectedId && (
+                                <button onClick={exportConversation} className="text-[10px] glass px-2 py-1 rounded border border-[var(--border)] hover:bg-white/5 flex items-center gap-1">
+                                    <span>Export JSON</span>
+                                </button>
+                            )}
+                            {selectedConv?.status && (
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded border ${selectedConv.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-white/10 text-[var(--muted)]'}`}>
+                                    {selectedConv.status.toUpperCase()}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {/* Wizualna oś etapów */}
@@ -281,12 +338,13 @@ export default function ConversationViewer({ adminToken }) {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.3 }}
+                                className="flex-shrink-0"
                             >
                                 <ConversationStageTimeline stage={currentStageValue} />
                             </motion.div>
                         )}
                     </AnimatePresence>
-                    <div className="overflow-auto flex-1 tiny-scroll p-4 space-y-0 relative">
+                    <div className="overflow-y-auto flex-1 tiny-scroll p-4 space-y-0 relative">
                         {!selectedId && <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] text-sm">Wybierz rozmowę z listy po lewej</div>}
 
                         {loading && <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20 backdrop-blur-sm"><div className="text-[var(--neon)] animate-pulse font-bold">Ładowanie zdarzeń...</div></div>}
