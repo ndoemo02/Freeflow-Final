@@ -15,17 +15,18 @@
     gap: 12px;
     padding: 0 16px;
 
-    /* Ultimate Glassmorphism */
-    background: rgba(10, 10, 10, 0.15);
-    /* Ultra transparent dark glass */
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    /* Crystal Clear Glass */
+    background: rgba(0, 0, 0, 0.2);
+    /* Very subtle dark tint */
+    backdrop-filter: blur(8px);
+    /* Light blur to keep it "glassy" but transparent */
+    -webkit-backdrop-filter: blur(8px);
 
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 40px;
 
     box-shadow:
-        0 8px 32px 0 rgba(0, 0, 0, 0.37),
+        0 4px 24px -1px rgba(0, 0, 0, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
     z-index: 1000;
@@ -34,10 +35,12 @@
 }
 
 .voiceInputBar:hover {
-    background: rgba(10, 10, 10, 0.25);
+    background: rgba(0, 0, 0, 0.3);
     border-color: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 8px 32px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -224,7 +227,7 @@
 @media (max-width: 768px) {
     .voiceInputBar {
         bottom: 10px;
-        width: 95%;
+        width: 80%;
         height: 60px;
         padding: 0 12px;
         gap: 8px;
