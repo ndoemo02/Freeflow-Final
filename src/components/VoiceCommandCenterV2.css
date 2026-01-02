@@ -107,8 +107,8 @@
     font-size: 16px;
     position: relative;
     z-index: 2;
-    caret-color: #a855f7;
-    caret-color: var(--animation-color, #a855f7);
+    caret-color: #ca6f00;
+    caret-color: var(--animation-color, #fa8600);
     flex: 1;
     /* Take available header space */
 }
