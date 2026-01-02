@@ -152,6 +152,12 @@ export async function speakTts(text: string, opts: TtsOptions = {}): Promise<HTM
     console.log("🎤 TTS: Attempting Google Cloud TTS...");
     return await speakWithGoogleTTS(text, defaultOpts);
   } catch (googleError) {
+    // If TTS is globally disabled (423 from backend), do NOT use fallback
+    if (googleError instanceof Error && /disabled/i.test(googleError.message)) {
+      console.warn("🎤 TTS: Globally disabled by system config. Skipping fallback.");
+      throw googleError;
+    }
+
     console.warn("🎤 TTS: Google Cloud TTS failed, falling back to Web Speech API:", googleError);
 
     try {
