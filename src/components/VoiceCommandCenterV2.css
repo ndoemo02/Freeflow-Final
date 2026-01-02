@@ -7,14 +7,14 @@
 }
 
 .vcc-input-wrapper :root {
-    --primary-color: #7e22ce;
-    --secondary-color: #4c1d95;
-    --accent-color: #d946ef;
-    --text-color: #00ffcc;
+    --primary-color: #ff7e00;
+    --secondary-color: #cc5500;
+    --accent-color: #ffa500;
+    --text-color: #ffffff;
     --bg-color: #1e1e1e;
-    --input-bg: #2d2d2d;
-    --animation-color: #a855f7;
-    --glow-color: rgba(168, 85, 247, 0.6);
+    --input-bg: rgba(0, 0, 0, 0.2);
+    --animation-color: #ff9900;
+    --glow-color: rgba(255, 126, 0, 0.6);
 }
 
 /* We adapt .ai-input .container to be our main wrapper */
