@@ -38,12 +38,15 @@ export const useSpeech = (options = {}) => {
       };
 
       recognition.onerror = (e) => {
+        if (e.error === 'no-speech') {
+          // Silence is expected, do not treat as breaking error
+          setIsListening(false);
+          return;
+        }
         console.error("Speech recognition error:", e);
         setError(e.error);
         setIsListening(false);
-        if (onError) {
-          onError(e);
-        }
+        if (onError) onError(e);
       };
 
       recognition.onend = () => {

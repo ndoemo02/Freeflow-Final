@@ -73,6 +73,11 @@ export function useSpeechRecognition({ onTranscriptChange }) {
     };
 
     recognition.onerror = (event) => {
+      if (event.error === 'no-speech') {
+        // Treat as natural end of input, don't show as error
+        setRecording(false);
+        return;
+      }
       console.error("Speech error:", event.error);
       setRecording(false);
     };
