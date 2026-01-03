@@ -172,7 +172,12 @@ export function CartProvider({ children }) {
   // Calculate total
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Submit order
+  /**
+   * @DEPRECATED for Voice flow - zamówienia głosowe są zapisywane w backend/ConfirmOrderHandler
+   * 
+   * Ta funkcja jest przeznaczona TYLKO dla manualnego checkout przez UI.
+   * Voice/Brain V2 używają: api/brain/domains/food/confirmHandler.js → persistOrderToDB()
+   */
   const submitOrder = async (deliveryInfo) => {
     console.log('🛒 submitOrder called with user:', user);
 
