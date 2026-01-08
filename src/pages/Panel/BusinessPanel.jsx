@@ -4,6 +4,7 @@ import { useAuth } from '../../state/auth'
 import { supabase } from '../../lib/supabase'
 import { Dialog, Transition } from '@headlessui/react'
 import PanelHeader from '../../components/PanelHeader'
+import { getApiUrl } from '../../lib/config'
 
 export default function BusinessPanel() {
 	const { user } = useAuth()
@@ -118,7 +119,7 @@ export default function BusinessPanel() {
 			setLoadingOrders(true)
 
 			try {
-				const response = await fetch(`/api/orders?restaurant_id=${restaurantId}`);
+				const response = await fetch(getApiUrl(`/api/orders?restaurant_id=${restaurantId}`));
 				if (!response.ok) {
 					throw new Error(`HTTP error! status: ${response.status}`);
 				}
@@ -202,7 +203,7 @@ export default function BusinessPanel() {
 	const updateOrderStatus = async (orderId, newStatus) => {
 		try {
 			// Use backend API to update order status
-			const response = await fetch(`/api/orders/${orderId}`, {
+			const response = await fetch(getApiUrl(`/api/orders/${orderId}`), {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json',
@@ -215,7 +216,7 @@ export default function BusinessPanel() {
 			}
 
 			// Refresh orders via backend API
-			const ordersResponse = await fetch(`/api/orders?restaurant_id=${restaurantId}`);
+			const ordersResponse = await fetch(getApiUrl(`/api/orders?restaurant_id=${restaurantId}`));
 			if (ordersResponse.ok) {
 				const data = await ordersResponse.json();
 				setOrders(data.orders || []);

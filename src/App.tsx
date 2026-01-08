@@ -37,8 +37,10 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/panel/customer" element={<CustomerPanel />} />
           <Route path="/panel/business" element={<BusinessPanel />} />
+          <Route path="/business-panel" element={<BusinessPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/panel/admin" element={<AdminPanel />} />
+          <Route path="/admin-panel" element={<AdminPanel />} />
           <Route path="/driver" element={<DriverPanel />} />
           {/* reszta tras */}
         </Routes >
