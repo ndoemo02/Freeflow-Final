@@ -199,9 +199,31 @@ export function CartProvider({ children }) {
     setIsSubmitting(true);
 
     try {
+      // Fix for "unknown-sync" ID (when cart is synced from voice without full restaurant object)
+      let finalRestaurantId = restaurant.id;
+      if (!finalRestaurantId || finalRestaurantId === 'unknown-sync') {
+        console.log(`🔍 Resolving restaurant ID for name: "${restaurant.name}"...`);
+        const { data: restData, error: restErr } = await supabase
+          .from('restaurants')
+          .select('id')
+          .ilike('name', restaurant.name)
+          .limit(1)
+          .maybeSingle();
+
+        if (restData?.id) {
+          finalRestaurantId = restData.id;
+          // Update local state to avoid re-fetching
+          setRestaurant(prev => ({ ...prev, id: finalRestaurantId }));
+          console.log(`✅ Resolved restaurant ID: ${finalRestaurantId}`);
+        } else {
+          console.error("❌ Could not resolve restaurant ID", restErr);
+          throw new Error('Nie można zidentyfikować restauracji. Spróbuj odświeżyć stronę.');
+        }
+      }
+
       const orderData = {
         user_id: user?.id || null,
-        restaurant_id: restaurant.id,
+        restaurant_id: finalRestaurantId,
         restaurant_name: restaurant.name,
         items: cart.map(item => ({
           menu_item_id: item.id,
