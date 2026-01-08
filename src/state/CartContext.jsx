@@ -254,26 +254,39 @@ export function CartProvider({ children }) {
         created_at: new Date().toISOString()
       };
 
-      console.log('🛒 Submitting order', orderData);
-      const response = await fetch(getApiUrl('/api/orders'), {
+      const apiUrl = getApiUrl('/api/orders');
+      console.log('🛒 Submitting order to:', apiUrl);
+      console.log('🛒 Order data:', JSON.stringify(orderData, null, 2));
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
       });
 
+      console.log('🛒 Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        const errorText = await response.text();
+        console.error('🛒 Error response body:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('🛒 Order created successfully:', data);
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
       clearCart();
       setIsOpen(false);
       return data;
     } catch (error) {
-      console.error('Failed to submit order', error);
-      push('Błąd podczas składania zamówienia', 'error');
+      console.error('❌ Failed to submit order:', error.message, error);
+      push(`Błąd: ${error.message}`, 'error');
       return false;
     } finally {
       setIsSubmitting(false);
