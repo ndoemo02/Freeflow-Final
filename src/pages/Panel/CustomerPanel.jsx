@@ -1502,7 +1502,7 @@ function CartTab() {
       )}
 
       <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
-        <span className="text-lg font-bold text-white">Razem: {(total / 100).toFixed(2)} zł</span>
+        <span className="text-lg font-bold text-white">Razem: {total.toFixed(2)} zł</span>
         <button
           onClick={() => {
             const deliveryInfo = {
