@@ -199,10 +199,23 @@ export function CartProvider({ children }) {
     setIsSubmitting(true);
 
     try {
-      // Fix for "unknown-sync" ID (when cart is synced from voice without full restaurant object)
+      // UUID validation helper
+      const isValidUUID = (id) => {
+        if (!id || typeof id !== 'string') return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(id);
+      };
+
+      // Fix for invalid restaurant IDs (when cart is synced from voice without full restaurant object)
       let finalRestaurantId = restaurant.id;
-      if (!finalRestaurantId || finalRestaurantId === 'unknown-sync') {
-        console.log(`🔍 Resolving restaurant ID for name: "${restaurant.name}"...`);
+
+      // Check if ID is missing, placeholder, or not a valid UUID
+      const needsLookup = !finalRestaurantId ||
+        finalRestaurantId === 'unknown-sync' ||
+        !isValidUUID(finalRestaurantId);
+
+      if (needsLookup) {
+        console.log(`🔍 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${restaurant.name}"...`);
         const { data: restData, error: restErr } = await supabase
           .from('restaurants')
           .select('id')
