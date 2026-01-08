@@ -215,22 +215,57 @@ export function CartProvider({ children }) {
         !isValidUUID(finalRestaurantId);
 
       if (needsLookup) {
-        console.log(`🔍 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${restaurant.name}"...`);
-        const { data: restData, error: restErr } = await supabase
+        const searchName = (restaurant.name || '').trim();
+        console.log(`🔍 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${searchName}"...`);
+
+        if (!searchName) {
+          throw new Error('Brak nazwy restauracji w koszyku. Proszę dodać produkty ponownie.');
+        }
+
+        // Try exact match first
+        let { data: restData, error: restErr } = await supabase
           .from('restaurants')
-          .select('id')
-          .ilike('name', restaurant.name)
+          .select('id, name')
+          .ilike('name', searchName)
           .limit(1)
           .maybeSingle();
+
+        // If no exact match, try partial match (contains)
+        if (!restData?.id) {
+          console.log(`🔍 No exact match, trying partial match for: "${searchName}"`);
+          const partialResult = await supabase
+            .from('restaurants')
+            .select('id, name')
+            .ilike('name', `%${searchName}%`)
+            .limit(1)
+            .maybeSingle();
+          restData = partialResult.data;
+          restErr = partialResult.error;
+        }
+
+        // If still no match, try searching by alias field (if exists)
+        if (!restData?.id) {
+          console.log(`🔍 No partial match, trying aliases for: "${searchName}"`);
+          const aliasResult = await supabase
+            .from('restaurants')
+            .select('id, name')
+            .ilike('aliases', `%${searchName}%`)
+            .limit(1)
+            .maybeSingle();
+          // Don't overwrite with error if aliases column doesn't exist
+          if (aliasResult.data?.id) {
+            restData = aliasResult.data;
+          }
+        }
 
         if (restData?.id) {
           finalRestaurantId = restData.id;
           // Update local state to avoid re-fetching
-          setRestaurant(prev => ({ ...prev, id: finalRestaurantId }));
-          console.log(`✅ Resolved restaurant ID: ${finalRestaurantId}`);
+          setRestaurant(prev => ({ ...prev, id: finalRestaurantId, name: restData.name }));
+          console.log(`✅ Resolved restaurant "${searchName}" → ID: ${finalRestaurantId}, DB Name: "${restData.name}"`);
         } else {
-          console.error("❌ Could not resolve restaurant ID", restErr);
-          throw new Error('Nie można zidentyfikować restauracji. Spróbuj odświeżyć stronę.');
+          console.error("❌ Could not resolve restaurant ID. Searched for:", searchName, "Error:", restErr);
+          throw new Error(`Nie można znaleźć restauracji "${searchName}" w bazie. Spróbuj wybrać restaurację ponownie.`);
         }
       }
 
