@@ -7,6 +7,7 @@ import { CartProvider } from "./state/CartContext";
 import Cart from "./components/Cart";
 import CustomerPanel from "./pages/Panel/CustomerPanel";
 import BusinessPanel from "./pages/Panel/BusinessPanel";
+import BusinessPanelV2 from "./pages/Panel/BusinessPanelV2";
 import AdminPanel from "./pages/AdminPanel";
 import DriverPanel from "./pages/DriverPanel";
 import AuthModal from "./components/AuthModal";
@@ -37,6 +38,7 @@ function AppContent() {
           <Route path="/" element={<Home />} />
           <Route path="/panel/customer" element={<CustomerPanel />} />
           <Route path="/panel/business" element={<BusinessPanel />} />
+          <Route path="/panel/business-v2" element={<BusinessPanelV2 />} />
           <Route path="/business-panel" element={<BusinessPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/panel/admin" element={<AdminPanel />} />
