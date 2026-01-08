@@ -95,7 +95,7 @@ export default function BusinessPanelV2() {
 
         // 2. Fetch Menu (for context)
         const { data: menuData } = await supabase
-          .from('menu_items')
+          .from('menu_items_v2')
           .select('*')
           .eq('restaurant_id', restaurantId);
 
@@ -229,7 +229,7 @@ export default function BusinessPanelV2() {
                   >
                     {/* Status Strip */}
                     <div className={`w-1.5 self-stretch rounded-full ${order.status === 'pending' ? 'bg-yellow-500 shadow-[0_0_10px_orange]' :
-                        order.status === 'preparing' ? 'bg-blue-500' : 'bg-emerald-500'
+                      order.status === 'preparing' ? 'bg-blue-500' : 'bg-emerald-500'
                       }`} />
 
                     {/* Info */}
@@ -326,7 +326,7 @@ export default function BusinessPanelV2() {
                   {items.map(item => (
                     <li key={item.id} className="flex justify-between text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0">
                       <span className="text-gray-300">{item.name}</span>
-                      <span className="font-mono text-brand-400">{item.price} zł</span>
+                      <span className="font-mono text-brand-400">{item.price ?? item.price_pln} zł</span>
                     </li>
                   ))}
                 </ul>
