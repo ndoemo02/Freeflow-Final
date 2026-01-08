@@ -231,7 +231,8 @@ export function CartProvider({ children }) {
           unit_price_cents: Math.round(item.price * 100),
           qty: item.quantity
         })),
-        total_price: Math.round(total * 100),
+        total_price: total,
+        total_cents: Math.round(total * 100),
         status: 'pending',
         customer_name: deliveryInfo.name || user?.user_metadata?.first_name || user?.email || 'Gość',
         customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
