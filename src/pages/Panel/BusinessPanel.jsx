@@ -60,9 +60,9 @@ export default function BusinessPanel() {
 			// TODO: Add owner_id column to restaurants table or implement proper ownership
 			const { data: restaurants, error: restaurantsError } = await supabase
 				.from('restaurants')
-				.select('id,name')
-				.order('name')
-				.limit(10) // Limit to first 10 restaurants for testing
+				.select('id,name,created_at')
+				.order('created_at', { ascending: false }) // Show newest first
+				.limit(10)
 
 			if (!alive) return
 			if (restaurantsError) {
