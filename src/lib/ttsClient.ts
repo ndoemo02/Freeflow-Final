@@ -1,6 +1,5 @@
 // src/lib/ttsClient.ts
 import { getApiUrl } from './config';
-// @ts-ignore
 import { voiceStateManager } from '../managers/VoiceStateManager';
 
 export interface TtsOptions {
@@ -164,9 +163,10 @@ export async function speakTts(text: string, opts: TtsOptions = {}): Promise<HTM
       // Fallback to Web Speech API
       console.log("🎤 TTS: Attempting Web Speech API...");
       return await speakWithWebSpeechAPI(text, defaultOpts);
-    } catch (webSpeechError) {
+    } catch (webSpeechError: unknown) {
       console.error("🎤 TTS: Both TTS methods failed:", { googleError, webSpeechError });
-      throw new Error(`TTS failed: ${webSpeechError.message}`);
+      const errorMessage = webSpeechError instanceof Error ? webSpeechError.message : 'Unknown error';
+      throw new Error(`TTS failed: ${errorMessage}`);
     }
   }
 }

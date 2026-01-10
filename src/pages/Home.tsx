@@ -1,18 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUI } from "../state/ui"
-// @ts-ignore
 import { useCart } from "../state/CartContext"
-// @ts-ignore
 import Cart from "../components/Cart"
-// @ts-ignore
 import { useTheme } from '../state/ThemeContext';
-// @ts-ignore
 import MenuDrawer from "../ui/MenuDrawer"
 import VoiceCommandCenterV2 from '../components/VoiceCommandCenterV2';
 import Switch from "../components/Switch"
 import LogoFreeFlow from "../components/LogoFreeFlow.jsx"
-// @ts-ignore
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
 import freeflowLogo from '../assets/Freeflowlogo.png';
 import "./Home.css"
@@ -50,8 +45,7 @@ export default function Home() {
   const [isThinking, setIsThinking] = useState(false)   // API Request in progress
 
   const openDrawer = useUI((s) => s.openDrawer)
-  // @ts-ignore
-  const { setIsOpen, addToCart, syncCart } = useCart()
+  const { setIsOpen, addToCart, syncCart } = useCart() as any
 
   // Audio Ref to stop playback
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
