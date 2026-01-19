@@ -1,510 +1,164 @@
-import { useState, useEffect, useCallback, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { useUI } from "../state/ui"
-import { useCart } from "../state/CartContext"
-import Cart from "../components/Cart"
-import { useTheme } from '../state/ThemeContext';
-import MenuDrawer from "../ui/MenuDrawer"
-import VoiceCommandCenterV2 from '../components/VoiceCommandCenterV2';
-import Switch from "../components/Switch"
-import LogoFreeFlow from "../components/LogoFreeFlow.jsx"
-import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
-import freeflowLogo from '../assets/Freeflowlogo.png';
-import "./Home.css"
-import { CONFIG, ENABLE_IMMERSIVE_MODE, getApiUrl } from "../lib/config"
-import { LLMContract, PresentationStep, UIMode } from "../lib/llmContract"
-import { renderFromLLM, UIController } from "../lib/renderEngine"
-import { speakTts } from "../lib/ttsClient"
-import { logger } from "../lib/logger"
-import ContextualIsland from "../components/ContextualIsland"
-import MenuRightList from '../components/MenuRightList';
+/**
+ * Home.tsx - Thin Orchestration Layer
+ * 
+ * Responsibilities:
+ * 1. Collect text/voice input (via VoiceCommandCenterV2)
+ * 2. Call POST /api/brain/v2 (via useBrainSession)
+ * 3. Pass response to UI router (BrainUIPanelRouter)
+ * 4. Trigger TTS (via useTTS)
+ * 
+ * STRICTLY NO BUSINESS LOGIC OR INTENT INSPECTION HERE.
+ */
 
+import { useState, useCallback, useEffect } from "react";
+import { useBrainSession } from "../hooks/useBrainSession";
+import { useVoiceInput } from "../hooks/useVoiceInput";
+import { useUIPanels } from "../hooks/useUIPanels";
+import { useTTS } from "../hooks/useTTS";
+import { deriveUIHints } from "../lib/brainUiUtils";
+import UIPanelRouter from "../components/UIPanelRouter";
+import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
+import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
+import Cart from "../components/Cart";
+import MenuDrawer from "../ui/MenuDrawer";
+import { useUI } from "../state/ui";
+import { useCart } from "../state/CartContext";
+import freeflowLogo from '../assets/Freeflowlogo.png';
+import "./Home.css";
 
 export default function Home() {
-  const { theme } = useTheme();
+  // --- Hooks ---
+  // Using lastFullResponse to access strict data contract including 'tts' object
+  // startNewConversation: Manual conversation reset (optional UI feature)
+  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, startNewConversation } = useBrainSession();
+  const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
+  const { uiHints, setHints } = useUIPanels();
+  const { play, stop, isSpeaking } = useTTS();
 
-  // UI State from Zustand
-  // UI State from Zustand
-  const {
-    mode, setMode,
-    presentationItems,
-    setPresentationItems,
-    setHighlightedCardId,
-    clearPresentation
-  } = useUI();
+  // --- Legacy UI state for drawers (Presentation Only) ---
+  const openDrawer = useUI((s) => s.openDrawer);
+  const { setIsOpen } = useCart() as any;
 
-  const [showTextPanel, setShowTextPanel] = useState(true);
-  const [immersive, setImmersive] = useState(false)
-  const [voiceQuery, setVoiceQuery] = useState("")
-  const [amberResponse, setAmberResponse] = useState("") // Just text for UI
-  const [userMessage, setUserMessage] = useState("")
-  const preloadedAudioRef = useRef<{ text: string, base64: string } | null>(null);
-
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false) // Blocks UI interaction (RenderEngine)
-  const [isThinking, setIsThinking] = useState(false)   // API Request in progress
-
-  const openDrawer = useUI((s) => s.openDrawer)
-  const { setIsOpen, addToCart, syncCart } = useCart() as any
-
-  // Audio Ref to stop playback
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const [sessionId] = useState(() => {
-    const stored = localStorage.getItem("amber-session-id")
-    if (stored) return stored
-    const newId = `session-${Date.now()}`
-    localStorage.setItem("amber-session-id", newId)
-    return newId
-  })
-
-  const lastMessageRef = useRef("")
-  const [isSending, setIsSending] = useState(false);
-
-  // UI View Mode (Bar vs Island/Tiles)
-  const [viewMode, setViewMode] = useState<'bar' | 'island'>('bar');
-
-  // Auto-switch view mode based on presentation state
+  // --- Effect: Handle Brain Response ---
+  // When lastFullResponse updates, we derive UI hints and trigger TTS
   useEffect(() => {
-    const isBarMode =
-      mode === 'restaurant_presentation' ||
-      mode === 'menu_presentation' ||
-      mode === 'cart_summary' ||
-      mode === 'confirmation';
+    if (lastFullResponse) {
+      // 1. Update UI Panels based on response
+      const hints = deriveUIHints(lastFullResponse);
+      setHints(hints);
 
-    // Jeśli mamy wyniki wyszukiwania (ale nie wybraliśmy konkretnej), pokaż kafelki
-    if ((presentationItems?.length || 0) > 0 && !isBarMode) {
-      setViewMode('island');
+      // 2. Trigger TTS if text available (Once per response)
+      // Check for structured TTS object first, then fallback to tts_text, then legacy text
+      if (lastFullResponse.tts?.text) {
+        play(lastFullResponse.tts.text);
+      } else if (lastFullResponse.tts_text) {
+        play(lastFullResponse.tts_text);
+      } else if (lastFullResponse.text) {
+        play(lastFullResponse.text);
+      }
     }
-    // Jeśli wchodzimy w tryb prezentacji (konkretna restauracja, menu, koszyk), pokaż Voice Bar
-    if (isBarMode) {
-      setViewMode('bar');
-    }
-  }, [mode, presentationItems]);
+  }, [lastFullResponse, setHints, play]);
 
-  const WARSAW_COORDS = { lat: 52.2297, lng: 21.0122 };
-  const [coords, setCoords] = useState<{ lat: number | null; lng: number | null }>(WARSAW_COORDS);
+  // --- Handlers ---
 
-  useEffect(() => {
-    if (!('geolocation' in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const isInPoland = latitude >= 49 && latitude <= 55 && longitude >= 14 && longitude <= 25;
-        if (isInPoland) setCoords({ lat: latitude, lng: longitude });
-      },
-      (err) => logger.warn('📍 Geolocation error:', err.message),
-      { enableHighAccuracy: true, maximumAge: 30000, timeout: 8000 }
-    );
-  }, [])
-
-  const {
-    recording,
-    interimText,
-    finalText,
-    setFinalText,
-    startRecording,
-    stopRecording,
-  } = useSpeechRecognition({
-    onTranscriptChange: (transcript: string) => setVoiceQuery(transcript),
-  })
-
-  // Switch kontroluje widoczność paska (Bar vs Island/Tiles)
-  const toggleUI = (checked: boolean) => {
-    setViewMode(checked ? 'bar' : 'island');
-    // setShowTextPanel(checked); // Opcjonalnie zachowaj dla kompatybilności
-  }
-
-  const handleLogoClick = () => {
-    // if (ENABLE_IMMERSIVE_MODE) setImmersive(true) - User requested logo to stay put
-    if (recording) {
-      stopRecording()
+  const handleMicClick = useCallback(() => {
+    if (isListening) {
+      stopListening();
     } else {
-      startRecording()
-      if (!showTextPanel) {
-        setShowTextPanel(true)
-        toggleUI(true)
-      }
+      stop(); // Stop any current TTS
+      resetTranscript();
+      startListening();
     }
-  }
+  }, [isListening, stopListening, startListening, stop, resetTranscript]);
 
-  // 🧠 UI Controller Implementation
-  const uiController = useCallback((): UIController => ({
-    setUIMode: (m) => setMode(m),
+  const handleTextSubmit = useCallback(async (text: string) => {
+    stop(); // Stop TTS
+    await sendMessage(text);
+  }, [sendMessage, stop]);
 
-    playTTS: async (text: string) => {
-      setIsPlayingAudio(true);
-      try {
-        let audio: HTMLAudioElement;
-
-        // 🚀 Check for Pre-generated Audio (Optimization)
-        const cached = preloadedAudioRef.current;
-        logger.debug(`🔊 [playTTS] Incoming: "${text.substring(0, 20)}...", Cached: "${cached?.text?.substring(0, 20)}..."`);
-
-        const matches = cached && (
-          cached.text.trim() === text.trim() ||
-          text.includes(cached.text.substring(0, 15)) ||
-          cached.text.includes(text.substring(0, 15))
-        );
-
-        if (matches && cached) {
-          logger.info("🔊 [Home] Playing PRELOADED audio from backend cache");
-          audio = new Audio(`data:audio/mp3;base64,${cached.base64}`);
-          preloadedAudioRef.current = null; // Use once
-        } else {
-          logger.info("🔊 [Home] Fetching TTS for text:", text.substring(0, 40) + "...");
-          // Speed up list items and narratives (narrations) to feel less "slow"
-          const isNarrative = text.includes('.') && text.length < 100 && !text.includes('?');
-          const speakingRate = isNarrative ? 1.15 : 1.05;
-
-          audio = await speakTts(text, {
-            voiceName: 'pl-PL-Wavenet-A',
-            speakingRate: speakingRate
-          });
-        }
-
-        currentAudioRef.current = audio;
-
-        // 🔥 CRITICAL: Must await play and end!
-        await audio.play();
-
-        if (!audio.paused || !audio.ended) {
-          await new Promise<void>(resolve => {
-            audio.onended = () => resolve();
-            audio.onerror = (e) => {
-              logger.error("Audio playback error:", e);
-              resolve();
-            };
-          });
-        }
-        logger.info("✅ [Home] Audio playback finished");
-      } catch (e) {
-        logger.error("TTS Output Error:", e);
-      } finally {
-        setIsPlayingAudio(false);
-        currentAudioRef.current = null;
-      }
-    },
-
-    stopAllTTS: () => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-      setIsPlayingAudio(false);
-    },
-
-    highlightCard: (cardId) => setHighlightedCardId(cardId),
-    unhighlightCard: () => setHighlightedCardId(null),
-    scrollToCard: (cardId) => setHighlightedCardId(cardId), // Highlight handles scroll via effect
-    clearHighlights: () => setHighlightedCardId(null),
-
-    lockUserInput: () => setIsProcessing(true), // Or specific lock state
-    unlockUserInput: () => setIsProcessing(false),
-    openMicrophone: () => {
-      if (!recording) startRecording();
-    }
-  }), [setMode, setHighlightedCardId, recording, startRecording, setIsProcessing]);
-
-
-  const sendToAmberBrain = useCallback(async (text: string) => {
-    if (isSending) return
-    if (text.trim() === lastMessageRef.current) return
-    lastMessageRef.current = text.trim()
-
-    setIsSending(true)
-    setIsThinking(true)
-    setAmberResponse("") // Clear old response so we don't show it during thinking
-    setUserMessage(text)
-    // Clear previous presentation on new request
-    // clearPresentation(); // Optional: RenderEngine will clear it anyway
-
-    try {
-      const isV2 = CONFIG.USE_BRAIN_V2;
-      const apiUrl = getApiUrl(isV2 ? '/api/brain/v2' : '/api/brain')
-
-      // Request body based on backend version (ETAP 6 Substitution)
-      const body = isV2 ? {
-        session_id: sessionId,
-        input: text,
-        includeTTS: true,
-        tts: true,
-        meta: {
-          lat: coords.lat,
-          lng: coords.lng,
-          channel: 'voice' // Enforce 'voice' to trigger backend logic
-        }
-      } : {
-        text: text,
-        sessionId: sessionId,
-        lat: coords.lat,
-        lng: coords.lng,
-        includeTTS: true,
-        tts: true,
-        channel: 'voice'
-      };
-
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setIsThinking(false);
-      logger.info("🧠 Amber Data:", data);
-
-      // Save audio for RenderEngine (Task 1)
-      if (data.audioContent) {
-        // Use tts_text if available (V2 optimized), fallback to full reply
-        preloadedAudioRef.current = {
-          text: data.tts_text || data.reply || data.text,
-          base64: data.audioContent
-        };
-      }
-
-      setAmberResponse(data.reply || "");
-
-      // 🛠️ Construct LLM Contract from Backend Data (V2 Adapter)
-      let ui_mode: UIMode = 'standard_chat';
-      let items: any[] = [];
-      let sequence: PresentationStep[] = [];
-
-      const effectiveMenuItems = data.menuItems || data.menu;
-      const effectiveRestaurants = data.restaurants;
-
-      // Detect Mode
-      const isMenuIntent = data.intent === 'menu_request' || data.intent === 'show_menu' || data.intent === 'menu_presentation';
-      const isConfirmIntent = data.intent === 'confirm_order' || (data.intent === 'create_order' && data.meta?.addedToCart);
-
-      // 🛒 Cart Sync (Voice -> Frontend)
-      if (data.meta?.cart) {
-        syncCart(data.meta.cart.items, data.meta.llm_refinement?.targetRestaurant || 'Restauracja');
-      }
-
-      // ⚡ Handle Backend Actions (Task 3)
-      if (data.actions && Array.isArray(data.actions)) {
-        const showCartAction = data.actions.find((a: any) => a.type === 'SHOW_CART');
-        if (showCartAction) {
-          logger.info("⚡ [Action] SHOW_CART detected! Transitioning mode...");
-          ui_mode = 'confirmation';
-          items = data.meta?.cart?.items || [];
-          // Note: setIsOpen(true) moved to after await renderFromLLM
-        }
-
-        const closeCartAction = data.actions.find((a: any) => a.type === 'CLOSE_CART');
-        if (closeCartAction) {
-          logger.info("⚡ [Action] CLOSE_CART detected! Closing cart...");
-          setIsOpen(false);
-        }
-      }
-
-      if (isConfirmIntent) {
-        logger.info("🛒 [Mode] Switching to Confirmation Mode");
-        ui_mode = 'confirmation';
-        items = data.meta?.cart?.items || data.meta?.lastOrder?.items || [];
-      } else if (isMenuIntent && (effectiveMenuItems?.length || 0) > 0) {
-        ui_mode = 'menu_presentation';
-        items = effectiveMenuItems;
-      } else if ((effectiveRestaurants?.length || 0) > 0) {
-        logger.info("🍽️ [Mode] Switching to Restaurant Presentation Mode");
-        ui_mode = 'restaurant_presentation';
-        items = effectiveRestaurants;
-      } else if ((effectiveMenuItems?.length || 0) > 0) {
-        logger.info("🍔 [Mode] Switching to Menu Presentation Mode");
-        ui_mode = 'menu_presentation';
-        items = effectiveMenuItems;
-      } else if (data.meta?.cart) {
-        logger.info("🛒 [Mode] Switching to Cart Summary Mode");
-        ui_mode = 'cart_summary';
-        items = data.meta.cart.items || [];
-      }
-
-      logger.info(`🎭 [UI] Final calculated mode: ${ui_mode}`);
-
-      setPresentationItems(items || []);
-      setMode(ui_mode);
-
-      let cleanReply = data.reply || "";
-      let closingQuestion = data.closing_question || "";
-
-      if (items.length > 0 && (ui_mode === 'restaurant_presentation' || ui_mode === 'menu_presentation' || ui_mode === 'cart_summary')) {
-        const splitByLine = cleanReply.split('\n');
-        if (splitByLine.length > 0) {
-          let firstLine = splitByLine[0].trim();
-          // If first line is too short, merge with next
-          if (firstLine.length < 5 && splitByLine.length > 1) {
-            firstLine = splitByLine[1].trim();
-          }
-          cleanReply = firstLine;
-        }
-
-        // Extract closing question if not provided but exists in last line
-        if (!closingQuestion && splitByLine.length > 1) {
-          const lastLine = splitByLine[splitByLine.length - 1].trim();
-          if (lastLine.includes('?') || lastLine.length < 50) {
-            closingQuestion = lastLine;
-          }
-        }
-
-        if (cleanReply.length > 150) {
-          const dotIndex = cleanReply.indexOf('.');
-          if (dotIndex > 10 && dotIndex < 150) cleanReply = cleanReply.substring(0, dotIndex + 1);
-          else cleanReply = cleanReply.substring(0, 120) + "...";
-        }
-        if (!cleanReply.endsWith(':') && !cleanReply.endsWith('.') && !cleanReply.endsWith('?')) cleanReply += ":";
-      }
-
-      setAmberResponse(cleanReply);
-
-      if (items.length > 0) {
-        // Limit voice presentation to top 3 items for restaurants/menu to avoid long narrations (Task 3)
-        const itemsToRead = (ui_mode === 'restaurant_presentation' || ui_mode === 'menu_presentation')
-          ? items.slice(0, 3)
-          : items;
-
-        sequence = itemsToRead.map((item: any, idx: number) => ({
-          step_index: idx,
-          card_id: item.id || item.menuItemId,
-          tts_narrative: `${item.name}.` // Concise version to minimize gaps
-        }));
-      }
-
-      const contract: LLMContract = {
-        ui_mode: ui_mode as any,
-        voice_intro: cleanReply,
-        presentation_sequence: sequence,
-        closing_question: closingQuestion,
-        expect_selection: !isConfirmIntent && (data.intent !== 'confirm_order')
-      };
-
-      logger.info("🎬 [Render V3] Contract Ready:", contract);
-
-      // 🎬 EXECUTE ENGINE
-      await renderFromLLM(contract, uiController());
-
-      // 🛒 Post-render Actions (Task 2: Sync with TTS End)
-      if (data.actions && Array.isArray(data.actions)) {
-        const showCartAction = data.actions.find((a: any) => a.type === 'SHOW_CART');
-        if (showCartAction) {
-          logger.info("🏁 [Home] AI finished presentation. Opening cart as requested by SHOW_CART action.");
-          setIsOpen(true);
-        }
-      }
-
-    } catch (error) {
-      logger.error("Communication Error:", error);
-      setAmberResponse("Błąd komunikacji.");
-    } finally {
-      setIsSending(false)
-      setIsThinking(false)
-    }
-  }, [sessionId, coords, isSending, uiController, setPresentationItems, recording, renderFromLLM])
-
-  const handleManualSubmit = useCallback((text: string) => {
-    const trimmed = (text || "").trim()
-    if (!trimmed) return
-    sendToAmberBrain(trimmed)
-  }, [sendToAmberBrain])
-
-  const handleCardSelect = useCallback((item: any) => {
-    console.log("👉 Card Selected:", item);
-
-    // 1. Stop Audio immediately
-    const ui = uiController();
-    ui.stopAllTTS();
-
-    // 2. Clear Presentation State to remove UI overlap
-    setPresentationItems([]);
-    setMode('idle'); // or standard_chat
-    setHighlightedCardId(null);
-
-    // 3. Send selection to Brain
-    handleManualSubmit(item.name);
-  }, [handleManualSubmit, uiController, setPresentationItems, setMode, setHighlightedCardId]);
-
-  // Speech Recognition Auto-Send
+  // Handle voice transcript finalization
   useEffect(() => {
-    const trimmedFinal = finalText?.trim();
-    if (!recording && trimmedFinal && trimmedFinal !== lastMessageRef.current) {
-      sendToAmberBrain(trimmedFinal);
-      setFinalText("");
+    if (!isListening && transcript) {
+      handleTextSubmit(transcript);
     }
-  }, [finalText, recording, sendToAmberBrain, setFinalText]);
+  }, [isListening, transcript, handleTextSubmit]);
 
+
+  // --- Render ---
   return (
-    <div className={`home-page freeflow ${immersive ? 'immersive' : ''}`}>
-      <picture>
-        <source media="(max-width: 768px)" srcSet="/images/background.png" />
-        <img src="/images/desk.png" alt="" className="bg" />
-      </picture>
-      <span className="flow">Flow</span>
+    <div className="home-page freeflow relative min-h-screen overflow-hidden text-slate-100">
 
-      <Switch onToggle={toggleUI} amberReady={!recording} initial={true} />
+      {/* Background provided by App.tsx (RestaurantBackground) */}
 
-      <header className="top-header">
-        <div className="header-left">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-50">
+        <div className="flex items-center gap-3">
           <LogoFreeFlow />
-          <p>Voice to order — Złóż zamówienie<br />Restauracja, taxi albo hotel?</p>
+          <div className="hidden sm:flex flex-col justify-center">
+            <p className="text-sm font-medium text-white/90 leading-tight">Voice to order — Złóż zamówienie</p>
+            <p className="text-xs text-white/60 leading-tight">Restauracja, taxi albo hotel?</p>
+          </div>
         </div>
-        <div className="header-right">
-          <button onClick={() => setIsOpen(true)} className="cart-btn" title="Koszyk">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m6-5v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" /></svg>
+        <div className="flex gap-4">
+          <button onClick={() => setIsOpen(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
+            <i className="fas fa-shopping-cart text-white" />
           </button>
-          <button onClick={openDrawer} className="menu-btn">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          <button onClick={openDrawer} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
+            <i className="fas fa-bars text-white" />
           </button>
         </div>
       </header>
 
-      <div className="main-wrapper">
-        <div className="hero-stack">
-          <div className="logo-container" onClick={handleLogoClick}>
-            <img src={freeflowLogo} alt="FreeFlow" className={`logo ${recording ? 'recording' : ''}`} style={{ filter: recording ? 'drop-shadow(0 0 20px rgba(255, 50, 150, 0.6))' : 'none' }} />
+      {/* Main Content Area */}
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pb-32 w-full max-w-7xl mx-auto">
+
+        {/* Brain UI Router - Renders "Configurable Islands" */}
+        <div className="w-full mb-8">
+          <UIPanelRouter
+            uiHints={uiHints}
+            data={lastFullResponse || {}}
+          />
+        </div>
+
+        {/* Logo/Brand Centerpiece (Empty State for Panels) */}
+        {uiHints.panel === 'none' && (
+          <div className="hero-stack">
+            <div className={`logo-container ${isListening ? 'recording' : ''}`} onClick={handleMicClick}>
+              <img
+                src={freeflowLogo}
+                alt="FreeFlow"
+                className={`logo ${isListening ? 'recording' : ''}`}
+              />
+              {isListening && (
+                <div className="recording-indicator">
+                  Nasłuchiwanie...
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div className={`tiles ${(viewMode === 'bar' || immersive) ? 'hidden' : ''}`}>
-        <div className="tile" onClick={() => handleManualSubmit("Zamawiam jedzenie")}>
-          <img src="/icons/food.png" alt="Jedzenie" />
-        </div>
-        <div className="tile" onClick={() => handleManualSubmit("Zamawiam taxi")}>
-          <img src="/icons/car.png" alt="Transport" />
-        </div>
-        <div className="tile" onClick={() => handleManualSubmit("Szukam hotelu")}>
-          <img src="/icons/hotel.png" alt="Hotel" />
-        </div>
-      </div>
+      </main>
 
-      <div className="chat-wrapper">
-        {/* 🗣️ Voice Panel - Jedyne źródło prawdy o dialogu (user + amber) */}
-        {/* 🏝️ Floating Contextual Widget (Right Side) - Zawsze w drzewie, sam zarządza widocznością */}
+      {/* Voice Command Center (Input) */}
+      <VoiceCommandCenterV2
+        recording={isListening}
+        isProcessing={isThinking}
+        isSpeaking={isSpeaking}
+        interimText={transcript}
+        finalText={transcript}
+        amberResponse={lastResponse || lastFullResponse?.reply || ''}
+        onMicClick={handleMicClick}
+        onTextSubmit={handleTextSubmit}
+        onClearResponse={() => { }}
+        visible={true}
+        isPresenting={uiHints.panel !== 'none'} // Adjust layout if presenting
+      />
 
-        {/* 🏝️ Floating Contextual Widget (Left/Right Island) */}
-        <ContextualIsland onSelect={handleCardSelect} />
-
-        {/* 📜 Floating Menu List (Deprecated - Unified into ContextualIsland) */}
-        {/* <MenuRightList /> */}
-
-        <VoiceCommandCenterV2
-          recording={recording}
-          isProcessing={isThinking}
-          isSpeaking={isPlayingAudio}
-          interimText={interimText}
-          finalText={finalText || voiceQuery}
-          amberResponse={amberResponse}
-          onClearResponse={() => setAmberResponse("")}
-          onMicClick={handleLogoClick}
-          onTextSubmit={handleManualSubmit}
-          isPresenting={mode === 'restaurant_presentation' || mode === 'menu_presentation'}
-          visible={viewMode === 'bar'}
-        />
-      </div>
-
+      {/* Drawers */}
       <MenuDrawer />
       <Cart />
+
     </div>
-  )
+  );
 }

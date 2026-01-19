@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ServiceHub - Panel Klienta</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .sidebar-active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .service-card { transition: all 0.3s ease; }
+        .service-card:hover { transform: scale(1.02); }
+        .service-card:active { transform: scale(0.98); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #667eea; border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        .animate-fade { animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .notification-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .bottom-nav-active { color: #667eea; }
+        .bottom-nav-active::after { content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #667eea; border-radius: 50%; }
+        @media (max-width: 640px) {
+            .mobile-card { padding: 1rem; }
+            .mobile-text-sm { font-size: 0.875rem; }
+            .mobile-text-xs { font-size: 0.75rem; }
+        }
+        input, select, button { font-size: 16px; }
+        @supports (-webkit-touch-callout: none) {
+            .min-h-screen { min-height: -webkit-fill-available; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-gray-200 safe-area-top">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button onclick="toggleSidebar()" class="p-2.5 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors">
+                <i class="fas fa-bars text-gray-700 text-lg"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cube text-white text-sm"></i>
+                </div>
+                <span class="font-bold text-gray-800">ServiceHub</span>
+            </div>
+            <button onclick="showSection('orders')" class="p-2.5 rounded-xl hover:bg-gray-100 active:bg-gray-200 transition-colors relative">
+                <i class="fas fa-bell text-gray-700 text-lg"></i>
+                <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full notification-badge border-2 border-white"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-gray-200 safe-area-bottom">
+        <div class="flex items-center justify-around py-2 px-2">
+            <button onclick="showSection('dashboard')" class="bottom-nav-item flex flex-col items-center gap-1 p-2 min-w-[60px] relative bottom-nav-active" data-nav="dashboard">
+                <i class="fas fa-th-large text-lg"></i>
+                <span class="text-[10px] font-medium">Start</span>
+            </button>
+            <button onclick="showSection('food')" class="bottom-nav-item flex flex-col items-center gap-1 p-2 min-w-[60px] relative text-gray-500" data-nav="food">
+                <i class="fas fa-utensils text-lg"></i>
+                <span class="text-[10px] font-medium">Jedzenie</span>
+            </button>
+            <button onclick="showSection('taxi')" class="bottom-nav-item flex flex-col items-center gap-1 p-2 min-w-[60px] relative text-gray-500" data-nav="taxi">
+                <i class="fas fa-car text-lg"></i>
+                <span class="text-[10px] font-medium">Taxi</span>
+            </button>
+            <button onclick="showSection('hotels')" class="bottom-nav-item flex flex-col items-center gap-1 p-2 min-w-[60px] relative text-gray-500" data-nav="hotels">
+                <i class="fas fa-hotel text-lg"></i>
+                <span class="text-[10px] font-medium">Hotele</span>
+            </button>
+            <button onclick="showSection('profile')" class="bottom-nav-item flex flex-col items-center gap-1 p-2 min-w-[60px] relative text-gray-500" data-nav="profile">
+                <i class="fas fa-user text-lg"></i>
+                <span class="text-[10px] font-medium">Profil</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="flex">
+        <!-- Sidebar (Desktop) -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-72 sm:w-64 bg-white border-r border-gray-200 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 overflow-hidden">
+            <div class="flex flex-col h-full">
+                <!-- Logo -->
+                <div class="p-5 sm:p-6 border-b border-gray-100">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 sm:w-10 sm:h-10 gradient-bg rounded-xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-cube text-white text-lg sm:text-base"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-gray-800 text-lg sm:text-base">ServiceHub</h1>
+                            <p class="text-xs text-gray-500">Panel Klienta</p>
+                        </div>
+                        <button onclick="toggleSidebar()" class="lg:hidden ml-auto p-2 hover:bg-gray-100 rounded-lg">
+                            <i class="fas fa-times text-gray-500"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto hide-scrollbar">
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Menu główne</p>
+                    
+                    <button onclick="showSection('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all sidebar-active text-white" data-section="dashboard">
+                        <i class="fas fa-th-large w-5 text-center"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </button>
+                    
+                    <button onclick="showSection('food')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="food">
+                        <i class="fas fa-utensils w-5 text-center"></i>
+                        <span class="font-medium">Jedzenie</span>
+                    </button>
+                    
+                    <button onclick="showSection('taxi')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="taxi">
+                        <i class="fas fa-car w-5 text-center"></i>
+                        <span class="font-medium">Taxi</span>
+                    </button>
+                    
+                    <button onclick="showSection('hotels')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="hotels">
+                        <i class="fas fa-hotel w-5 text-center"></i>
+                        <span class="font-medium">Hotele</span>
+                    </button>
+                    
+                    <button onclick="showSection('orders')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="orders">
+                        <i class="fas fa-clipboard-list w-5 text-center"></i>
+                        <span class="font-medium">Zamówienia</span>
+                        <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">3</span>
+                    </button>
+
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-6 px-2">Ustawienia</p>
+                    
+                    <button onclick="showSection('payments')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="payments">
+                        <i class="fas fa-credit-card w-5 text-center"></i>
+                        <span class="font-medium">Płatności</span>
+                    </button>
+                    
+                    <button onclick="showSection('profile')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="profile">
+                        <i class="fas fa-user-cog w-5 text-center"></i>
+                        <span class="font-medium">Profil</span>
+                    </button>
+                    
+                    <button onclick="showSection('settings')" class="nav-btn w-full flex items-center gap-3 px-4 py-3.5 sm:py-3 rounded-xl text-left transition-all text-gray-600 hover:bg-gray-100 active:bg-gray-200" data-section="settings">
+                        <i class="fas fa-cog w-5 text-center"></i>
+                        <span class="font-medium">Ustawienia</span>
+                    </button>
+                </nav>
+
+                <!-- User Profile -->
+                <div class="p-4 border-t border-gray-100">
+                    <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+                        <img src="https://ui-avatars.com/api/?name=Jan+Kowalski&background=667eea&color=fff" class="w-11 h-11 sm:w-10 sm:h-10 rounded-full">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-gray-800 truncate">Jan Kowalski</p>
+                            <p class="text-xs text-gray-500 truncate">jan@email.com</p>
+                        </div>
+                        <button class="p-2.5 hover:bg-gray-200 rounded-lg transition-colors">
+                            <i class="fas fa-sign-out-alt text-gray-500"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Overlay -->
+        <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden transition-opacity"></div>
+
+        <!-- Main Content -->
+        <main class="flex-1 lg:ml-0 pt-14 pb-20 lg:pt-0 lg:pb-0 min-h-screen w-full">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 animate-fade">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 lg:mb-8 gap-3">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Witaj, Jan! 👋</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Co chciałbyś dzisiaj zamówić?</p>
+                    </div>
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="relative flex-1 sm:flex-none">
+                            <input type="text" placeholder="Szukaj usług..." class="w-full sm:w-52 lg:w-64 pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <button class="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 relative hidden lg:flex items-center justify-center">
+                            <i class="fas fa-bell text-gray-600"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Services -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                    <button onclick="showSection('food')" class="service-card p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-xl sm:rounded-2xl text-white shadow-lg text-left">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-4">
+                            <i class="fas fa-utensils text-lg sm:text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-base sm:text-lg">Jedzenie</h3>
+                        <p class="text-white/80 text-xs sm:text-sm">150+ restauracji</p>
+                    </button>
+                    
+                    <button onclick="showSection('taxi')" class="service-card p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl sm:rounded-2xl text-white shadow-lg text-left">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-4">
+                            <i class="fas fa-car text-lg sm:text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-base sm:text-lg">Taxi</h3>
+                        <p class="text-white/80 text-xs sm:text-sm">Dostępne 24/7</p>
+                    </button>
+                    
+                    <button onclick="showSection('hotels')" class="service-card p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl sm:rounded-2xl text-white shadow-lg text-left">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-4">
+                            <i class="fas fa-hotel text-lg sm:text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-base sm:text-lg">Hotele</h3>
+                        <p class="text-white/80 text-xs sm:text-sm">80+ obiektów</p>
+                    </button>
+                    
+                    <button onclick="showSection('orders')" class="service-card p-4 sm:p-5 lg:p-6 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl sm:rounded-2xl text-white shadow-lg text-left">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-4">
+                            <i class="fas fa-history text-lg sm:text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-base sm:text-lg">Zamówienia</h3>
+                        <p class="text-white/80 text-xs sm:text-sm">3 aktywne</p>
+                    </button>
+                </div>
+
+                <!-- Stats & Activity -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6 lg:mb-8">
+                    <!-- Stats Cards -->
+                    <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <span class="text-gray-500 text-xs sm:text-sm">Wydatki</span>
+                                <span class="text-green-500 text-xs font-medium">+12%</span>
+                            </div>
+                            <p class="text-lg sm:text-2xl font-bold text-gray-800">1,245 zł</p>
+                            <p class="text-xs text-gray-400">Ten miesiąc</p>
+                        </div>
+                        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <span class="text-gray-500 text-xs sm:text-sm">Zamówienia</span>
+                                <span class="text-green-500 text-xs font-medium">+8</span>
+                            </div>
+                            <p class="text-lg sm:text-2xl font-bold text-gray-800">24</p>
+                            <p class="text-xs text-gray-400">Ten miesiąc</p>
+                        </div>
+                        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <span class="text-gray-500 text-xs sm:text-sm">Punkty</span>
+                                <span class="text-purple-500 text-xs font-medium">Gold</span>
+                            </div>
+                            <p class="text-lg sm:text-2xl font-bold text-gray-800">2,480</p>
+                            <p class="text-xs text-gray-400 truncate">Do następnego: 520</p>
+                        </div>
+                        <div class="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <span class="text-gray-500 text-xs sm:text-sm">Oszczędności</span>
+                                <span class="text-orange-500 text-xs font-medium">🔥</span>
+                            </div>
+                            <p class="text-lg sm:text-2xl font-bold text-gray-800">186 zł</p>
+                            <p class="text-xs text-gray-400">Z kuponów</p>
+                        </div>
+                    </div>
+
+                    <!-- Active Order -->
+                    <div class="bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-3 sm:mb-4">
+                            <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Aktywne zamówienie</h4>
+                            <span class="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full font-medium">W drodze</span>
+                        </div>
+                        <div class="flex items-center gap-3 mb-3 sm:mb-4">
+                            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&h=100&fit=crop" class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover flex-shrink-0">
+                            <div class="min-w-0">
+                                <p class="font-medium text-gray-800 text-sm sm:text-base">Burger House</p>
+                                <p class="text-xs sm:text-sm text-gray-500 truncate">2x Burger Classic, 1x Frytki</p>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full w-3/4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"></div>
+                            </div>
+                            <div class="flex justify-between mt-2 text-[10px] sm:text-xs text-gray-500">
+                                <span>Przygotowanie</span>
+                                <span class="font-medium text-purple-600">W drodze</span>
+                                <span class="text-gray-300">Dostawa</span>
+                            </div>
+                        </div>
+                        <p class="text-center text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">
+                            <i class="fas fa-clock text-purple-500 mr-1"></i> Szacowany czas: <strong>15 min</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Recent Orders & Promotions -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <!-- Recent Orders -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+                            <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Ostatnie zamówienia</h4>
+                            <button onclick="showSection('orders')" class="text-purple-600 text-xs sm:text-sm font-medium hover:underline">Zobacz wszystkie</button>
+                        </div>
+                        <div class="divide-y divide-gray-50">
+                            <div class="p-3 sm:p-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors active:bg-gray-100">
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-utensils text-orange-500 text-sm sm:text-base"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base truncate">Pizza Italiana</p>
+                                    <p class="text-xs sm:text-sm text-gray-500">Wczoraj, 19:30</p>
+                                </div>
+                                <span class="font-semibold text-gray-800 text-sm sm:text-base">54,00 zł</span>
+                            </div>
+                            <div class="p-3 sm:p-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors active:bg-gray-100">
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-yellow-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-car text-yellow-600 text-sm sm:text-base"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base truncate">Przejazd Taxi</p>
+                                    <p class="text-xs sm:text-sm text-gray-500">22.01.2025</p>
+                                </div>
+                                <span class="font-semibold text-gray-800 text-sm sm:text-base">32,50 zł</span>
+                            </div>
+                            <div class="p-3 sm:p-4 flex items-center gap-3 sm:gap-4 hover:bg-gray-50 transition-colors active:bg-gray-100">
+                                <div class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-hotel text-blue-500 text-sm sm:text-base"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base truncate">Hotel Marriott</p>
+                                    <p class="text-xs sm:text-sm text-gray-500">18-20.01.2025</p>
+                                </div>
+                                <span class="font-semibold text-gray-800 text-sm sm:text-base">580 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Promotions -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-4 sm:p-5 border-b border-gray-100">
+                            <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Promocje dla Ciebie</h4>
+                        </div>
+                        <div class="p-3 sm:p-4 space-y-3">
+                            <div class="p-3 sm:p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl text-white">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-sm sm:text-lg">-20% na jedzenie</p>
+                                        <p class="text-white/80 text-xs sm:text-sm">Min. zamówienie 50 zł</p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <p class="text-lg sm:text-2xl font-bold">FOOD20</p>
+                                        <p class="text-white/80 text-[10px] sm:text-xs">Ważny 3 dni</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-3 sm:p-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl text-white">
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-sm sm:text-lg">Darmowy przejazd</p>
+                                        <p class="text-white/80 text-xs sm:text-sm">Pierwszy przejazd gratis</p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <p class="text-lg sm:text-2xl font-bold">TAXI0</p>
+                                        <p class="text-white/80 text-[10px] sm:text-xs">Do 25 zł</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Food Section -->
+            <section id="section-food" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Zamów jedzenie 🍕</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Wybierz spośród 150+ restauracji</p>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="flex gap-2 sm:gap-3 overflow-x-auto pb-3 sm:pb-4 mb-4 sm:mb-6 hide-scrollbar -mx-3 px-3 sm:-mx-4 sm:px-4">
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 gradient-bg text-white rounded-full font-medium whitespace-nowrap text-sm">Wszystkie</button>
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-full font-medium whitespace-nowrap hover:bg-gray-50 active:bg-gray-100 text-sm">🍕 Pizza</button>
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-full font-medium whitespace-nowrap hover:bg-gray-50 active:bg-gray-100 text-sm">🍔 Burgery</button>
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-full font-medium whitespace-nowrap hover:bg-gray-50 active:bg-gray-100 text-sm">🍣 Sushi</button>
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-full font-medium whitespace-nowrap hover:bg-gray-50 active:bg-gray-100 text-sm">🥗 Sałatki</button>
+                    <button class="px-4 sm:px-5 py-2 sm:py-2.5 bg-white border border-gray-200 rounded-full font-medium whitespace-nowrap hover:bg-gray-50 active:bg-gray-100 text-sm">🍝 Pasta</button>
+                </div>
+
+                <!-- Restaurants Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]" onclick="showFoodModal('Burger House')">
+                        <img src="https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Burger House</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.8</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Burgery • Amerykańska</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 25-35 min</span>
+                                <span class="text-green-600 font-medium">Gratis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Pizza Napoli</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.9</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Pizza • Włoska</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 30-45 min</span>
+                                <span class="text-gray-500">Od 8 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <img src="https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Sushi Master</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.7</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Sushi • Japońska</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 40-55 min</span>
+                                <span class="text-gray-500">Od 12 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Green Bowl</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.6</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Sałatki • Vege</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 20-30 min</span>
+                                <span class="text-green-600 font-medium">Gratis</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <img src="https://images.unsplash.com/photo-1555949258-eb67b1ef0ceb?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Kebab King</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.5</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Kebab • Turecka</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 20-30 min</span>
+                                <span class="text-gray-500">Od 5 zł</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <img src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&h=200&fit=crop" class="w-full h-32 sm:h-40 object-cover">
+                        <div class="p-3 sm:p-4">
+                            <div class="flex items-center justify-between mb-1 sm:mb-2">
+                                <h4 class="font-bold text-gray-800 text-sm sm:text-base">Thai Spice</h4>
+                                <span class="flex items-center gap-1 text-xs sm:text-sm"><i class="fas fa-star text-yellow-400"></i> 4.8</span>
+                            </div>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Tajska • Curry</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-600"><i class="fas fa-clock mr-1"></i> 35-45 min</span>
+                                <span class="text-gray-500">Od 10 zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Taxi Section -->
+            <section id="section-taxi" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Zamów Taxi 🚕</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Szybko i wygodnie dotrzyj do celu</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <!-- Booking Form -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">Zarezerwuj przejazd</h4>
+                        
+                        <div class="space-y-3 sm:space-y-4">
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 bg-green-500 rounded-full"></div>
+                                <input type="text" placeholder="Skąd jedziesz?" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base">
+                            </div>
+                            
+                            <div class="relative">
+                                <div class="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 bg-red-500 rounded-full"></div>
+                                <input type="text" placeholder="Dokąd jedziesz?" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm sm:text-base">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Data</label>
+                                    <input type="date" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Godzina</label>
+                                    <input type="time" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-2">Typ pojazdu</label>
+                                <div class="grid grid-cols-3 gap-2 sm:gap-3">
+                                    <button class="p-2 sm:p-3 border-2 border-purple-500 bg-purple-50 rounded-xl text-center active:scale-95 transition-transform">
+                                        <i class="fas fa-car text-purple-500 text-base sm:text-xl mb-0.5 sm:mb-1"></i>
+                                        <p class="text-xs sm:text-sm font-medium">Standard</p>
+                                        <p class="text-[10px] sm:text-xs text-gray-500">od 15 zł</p>
+                                    </button>
+                                    <button class="p-2 sm:p-3 border border-gray-200 rounded-xl text-center hover:border-purple-500 active:scale-95 transition-transform">
+                                        <i class="fas fa-car-side text-gray-400 text-base sm:text-xl mb-0.5 sm:mb-1"></i>
+                                        <p class="text-xs sm:text-sm font-medium">Comfort</p>
+                                        <p class="text-[10px] sm:text-xs text-gray-500">od 25 zł</p>
+                                    </button>
+                                    <button class="p-2 sm:p-3 border border-gray-200 rounded-xl text-center hover:border-purple-500 active:scale-95 transition-transform">
+                                        <i class="fas fa-shuttle-van text-gray-400 text-base sm:text-xl mb-0.5 sm:mb-1"></i>
+                                        <p class="text-xs sm:text-sm font-medium">Van</p>
+                                        <p class="text-[10px] sm:text-xs text-gray-500">od 40 zł</p>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="w-full py-3 gradient-bg text-white rounded-xl font-medium hover:opacity-90 active:opacity-80 transition-opacity text-sm sm:text-base">
+                                <i class="fas fa-search mr-2"></i> Znajdź kierowcę
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Map Placeholder & Info -->
+                    <div class="space-y-4">
+                        <div class="bg-gray-200 rounded-xl sm:rounded-2xl h-48 sm:h-64 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-map-marked-alt text-3xl sm:text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-500 text-sm sm:text-base">Mapa trasy</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                            <h4 class="font-semibold text-gray-800 mb-3 text-sm sm:text-base">Ostatnie adresy</h4>
+                            <div class="space-y-2 sm:space-y-3">
+                                <button class="w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 text-left transition-colors">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-home text-gray-500 text-sm sm:text-base"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">Dom</p>
+                                        <p class="text-xs sm:text-sm text-gray-500 truncate">ul. Kwiatowa 15, Warszawa</p>
+                                    </div>
+                                </button>
+                                <button class="w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 text-left transition-colors">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-briefcase text-gray-500 text-sm sm:text-base"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">Praca</p>
+                                        <p class="text-xs sm:text-sm text-gray-500 truncate">ul. Marszałkowska 100, Warszawa</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Hotels Section -->
+            <section id="section-hotels" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Znajdź nocleg 🏨</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Hotele, apartamenty i więcej</p>
+                    </div>
+                </div>
+
+                <!-- Search Form -->
+                <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="sm:col-span-2 lg:col-span-1">
+                            <label class="block text-xs sm:text-sm text-gray-600 mb-1">Gdzie?</label>
+                            <input type="text" placeholder="Miasto lub hotel" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs sm:text-sm text-gray-600 mb-1">Zameldowanie</label>
+                            <input type="date" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs sm:text-sm text-gray-600 mb-1">Wymeldowanie</label>
+                            <input type="date" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs sm:text-sm text-gray-600 mb-1">Goście</label>
+                            <select class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm bg-white">
+                                <option>1 osoba</option>
+                                <option>2 osoby</option>
+                                <option>3 osoby</option>
+                                <option>4+ osób</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="w-full sm:w-auto mt-3 sm:mt-4 px-6 sm:px-8 py-2.5 sm:py-3 gradient-bg text-white rounded-xl font-medium hover:opacity-90 active:opacity-80 transition-opacity text-sm sm:text-base">
+                        <i class="fas fa-search mr-2"></i> Szukaj
+                    </button>
+                </div>
+
+                <!-- Hotels Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=200&fit=crop" class="w-full h-36 sm:h-48 object-cover">
+                            <span class="absolute top-2 sm:top-3 right-2 sm:right-3 px-2 py-1 bg-white rounded-lg text-xs font-medium shadow">⭐ 4.9</span>
+                        </div>
+                        <div class="p-3 sm:p-4">
+                            <h4 class="font-bold text-gray-800 text-sm sm:text-base">Hotel Marriott Warsaw</h4>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2"><i class="fas fa-map-marker-alt mr-1"></i> Centrum, Warszawa</p>
+                            <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">WiFi</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">Basen</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">SPA</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-lg sm:text-2xl font-bold text-gray-800">289 zł</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm">/ noc</span>
+                                </div>
+                                <button class="px-3 sm:px-4 py-1.5 sm:py-2 gradient-bg text-white rounded-lg text-xs sm:text-sm font-medium active:scale-95 transition-transform">Rezerwuj</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&h=200&fit=crop" class="w-full h-36 sm:h-48 object-cover">
+                            <span class="absolute top-2 sm:top-3 right-2 sm:right-3 px-2 py-1 bg-white rounded-lg text-xs font-medium shadow">⭐ 4.7</span>
+                        </div>
+                        <div class="p-3 sm:p-4">
+                            <h4 class="font-bold text-gray-800 text-sm sm:text-base">Apartament Luxury Suite</h4>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2"><i class="fas fa-map-marker-alt mr-1"></i> Śródmieście, Kraków</p>
+                            <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">WiFi</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">Kuchnia</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">Taras</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-lg sm:text-2xl font-bold text-gray-800">199 zł</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm">/ noc</span>
+                                </div>
+                                <button class="px-3 sm:px-4 py-1.5 sm:py-2 gradient-bg text-white rounded-lg text-xs sm:text-sm font-medium active:scale-95 transition-transform">Rezerwuj</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 overflow-hidden card-hover cursor-pointer active:scale-[0.98]">
+                        <div class="relative">
+                            <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&h=200&fit=crop" class="w-full h-36 sm:h-48 object-cover">
+                            <span class="absolute top-2 sm:top-3 right-2 sm:right-3 px-2 py-1 bg-white rounded-lg text-xs font-medium shadow">⭐ 4.8</span>
+                        </div>
+                        <div class="p-3 sm:p-4">
+                            <h4 class="font-bold text-gray-800 text-sm sm:text-base">Sofitel Grand Sopot</h4>
+                            <p class="text-gray-500 text-xs sm:text-sm mb-2"><i class="fas fa-map-marker-alt mr-1"></i> Plaża, Sopot</p>
+                            <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">WiFi</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">Plaża</span>
+                                <span class="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 rounded text-[10px] sm:text-xs">SPA</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-lg sm:text-2xl font-bold text-gray-800">459 zł</span>
+                                    <span class="text-gray-500 text-xs sm:text-sm">/ noc</span>
+                                </div>
+                                <button class="px-3 sm:px-4 py-1.5 sm:py-2 gradient-bg text-white rounded-lg text-xs sm:text-sm font-medium active:scale-95 transition-transform">Rezerwuj</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="section-orders" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Twoje zamówienia 📋</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Historia i aktywne zamówienia</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="flex-1 sm:flex-none px-3 sm:px-4 py-2 gradient-bg text-white rounded-lg text-xs sm:text-sm font-medium">Aktywne</button>
+                        <button class="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-white border border-gray-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-50 active:bg-gray-100">Historia</button>
+                    </div>
+                </div>
+
+                <div class="space-y-3 sm:space-y-4">
+                    <!-- Active Order -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                        <div class="flex items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-utensils text-orange-500 text-sm sm:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Burger House</h4>
+                                    <p class="text-xs sm:text-sm text-gray-500">Zamówienie #12847</p>
+                                </div>
+                            </div>
+                            <span class="px-2 sm:px-3 py-1 bg-green-100 text-green-600 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">W drodze</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+                            <p class="text-xs sm:text-sm text-gray-600 mb-2">2x Burger Classic, 1x Frytki duże, 2x Cola</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-500">Dostawa: 14:35</span>
+                                <span class="font-semibold text-gray-800">67,50 zł</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 sm:gap-3">
+                            <button class="flex-1 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-xs sm:text-sm font-medium hover:bg-gray-50 active:bg-gray-100">
+                                <i class="fas fa-phone mr-1 sm:mr-2"></i> Zadzwoń
+                            </button>
+                            <button class="flex-1 py-2 sm:py-2.5 gradient-bg text-white rounded-lg text-xs sm:text-sm font-medium active:opacity-80">
+                                <i class="fas fa-map-marker-alt mr-1 sm:mr-2"></i> Śledź
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pending Order -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                        <div class="flex items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-car text-yellow-600 text-sm sm:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Przejazd Taxi</h4>
+                                    <p class="text-xs sm:text-sm text-gray-500">Zamówienie #12846</p>
+                                </div>
+                            </div>
+                            <span class="px-2 sm:px-3 py-1 bg-yellow-100 text-yellow-600 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">Zaplanowane</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+                            <div class="flex items-center gap-2 mb-1.5 sm:mb-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                                <p class="text-xs sm:text-sm text-gray-600 truncate">ul. Kwiatowa 15, Warszawa</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
+                                <p class="text-xs sm:text-sm text-gray-600 truncate">Lotnisko Chopina</p>
+                            </div>
+                            <div class="flex items-center justify-between text-xs sm:text-sm mt-2 sm:mt-3">
+                                <span class="text-gray-500">Jutro, 06:00</span>
+                                <span class="font-semibold text-gray-800">~85 zł</span>
+                            </div>
+                        </div>
+                        <button class="w-full py-2 sm:py-2.5 border border-red-200 text-red-500 rounded-lg text-xs sm:text-sm font-medium hover:bg-red-50 active:bg-red-100">
+                            <i class="fas fa-times mr-1 sm:mr-2"></i> Anuluj zamówienie
+                        </button>
+                    </div>
+
+                    <!-- Hotel Booking -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                        <div class="flex items-start sm:items-center justify-between gap-2 mb-3 sm:mb-4">
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-hotel text-blue-500 text-sm sm:text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Hotel Marriott</h4>
+                                    <p class="text-xs sm:text-sm text-gray-500">Rezerwacja #12845</p>
+                                </div>
+                            </div>
+                            <span class="px-2 sm:px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap">Potwierdzona</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                            <p class="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">Pokój Superior, 2 noce</p>
+                            <div class="flex items-center justify-between text-xs sm:text-sm">
+                                <span class="text-gray-500">25-27 stycznia 2025</span>
+                                <span class="font-semibold text-gray-800">578,00 zł</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Payments Section -->
+            <section id="section-payments" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Metody płatności 💳</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Zarządzaj swoimi kartami</p>
+                    </div>
+                    <button onclick="showAddCardModal()" class="w-full sm:w-auto px-4 py-2.5 gradient-bg text-white rounded-lg text-sm font-medium active:opacity-80">
+                        <i class="fas fa-plus mr-2"></i> Dodaj kartę
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <!-- Saved Cards -->
+                    <div class="space-y-3 sm:space-y-4">
+                        <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Zapisane karty</h4>
+                        
+                        <div class="p-4 sm:p-5 bg-gradient-to-r from-purple-600 to-pink-500 rounded-xl sm:rounded-2xl text-white relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                            <div class="flex items-center justify-between mb-6 sm:mb-8">
+                                <i class="fab fa-cc-visa text-2xl sm:text-3xl"></i>
+                                <span class="px-2 py-1 bg-white/20 rounded text-[10px] sm:text-xs">Domyślna</span>
+                            </div>
+                            <p class="text-base sm:text-xl tracking-widest mb-3 sm:mb-4">•••• •••• •••• 4582</p>
+                            <div class="flex items-center justify-between text-sm">
+                                <div>
+                                    <p class="text-white/70 text-[10px] sm:text-xs">Właściciel</p>
+                                    <p class="font-medium text-xs sm:text-base">JAN KOWALSKI</p>
+                                </div>
+                                <div>
+                                    <p class="text-white/70 text-[10px] sm:text-xs">Ważność</p>
+                                    <p class="font-medium text-xs sm:text-base">12/26</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 sm:p-5 bg-gradient-to-r from-gray-700 to-gray-900 rounded-xl sm:rounded-2xl text-white relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                            <div class="flex items-center justify-between mb-6 sm:mb-8">
+                                <i class="fab fa-cc-mastercard text-2xl sm:text-3xl"></i>
+                            </div>
+                            <p class="text-base sm:text-xl tracking-widest mb-3 sm:mb-4">•••• •••• •••• 8891</p>
+                            <div class="flex items-center justify-between text-sm">
+                                <div>
+                                    <p class="text-white/70 text-[10px] sm:text-xs">Właściciel</p>
+                                    <p class="font-medium text-xs sm:text-base">JAN KOWALSKI</p>
+                                </div>
+                                <div>
+                                    <p class="text-white/70 text-[10px] sm:text-xs">Ważność</p>
+                                    <p class="font-medium text-xs sm:text-base">08/25</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Other Payment Methods -->
+                    <div class="space-y-3 sm:space-y-4">
+                        <h4 class="font-semibold text-gray-800 text-sm sm:text-base">Inne metody płatności</h4>
+                        
+                        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+                            <div class="p-3 sm:p-4 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fab fa-paypal text-blue-600 text-base sm:text-xl"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">PayPal</p>
+                                        <p class="text-xs sm:text-sm text-gray-500 truncate">jan.kowalski@email.com</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div class="p-3 sm:p-4 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-green-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fab fa-google-pay text-green-600 text-base sm:text-xl"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">Google Pay</p>
+                                        <p class="text-xs sm:text-sm text-gray-500">Połączony</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div class="p-3 sm:p-4 flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-red-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                                        <i class="fas fa-university text-red-500 text-base sm:text-xl"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">BLIK</p>
+                                        <p class="text-xs sm:text-sm text-gray-500">Płatności mobilne</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Billing Address -->
+                        <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5">
+                            <div class="flex items-center justify-between mb-2 sm:mb-3">
+                                <h5 class="font-semibold text-gray-800 text-sm sm:text-base">Adres rozliczeniowy</h5>
+                                <button class="text-purple-600 text-xs sm:text-sm font-medium hover:underline">Edytuj</button>
+                            </div>
+                            <p class="text-gray-600 text-sm sm:text-base">Jan Kowalski</p>
+                            <p class="text-gray-500 text-xs sm:text-sm">ul. Kwiatowa 15/3<br>00-001 Warszawa</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile Section -->
+            <section id="section-profile" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Twój profil 👤</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Zarządzaj swoimi danymi</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <!-- Profile Card -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6 text-center">
+                        <div class="relative inline-block mb-3 sm:mb-4">
+                            <img src="https://ui-avatars.com/api/?name=Jan+Kowalski&background=667eea&color=fff&size=128" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full">
+                            <button class="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 bg-purple-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-95">
+                                <i class="fas fa-camera text-xs sm:text-sm"></i>
+                            </button>
+                        </div>
+                        <h4 class="font-bold text-lg sm:text-xl text-gray-800">Jan Kowalski</h4>
+                        <p class="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4">Członek od Styczeń 2023</p>
+                        <div class="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full text-white text-xs sm:text-sm font-medium">
+                            <i class="fas fa-crown"></i> Gold Member
+                        </div>
+                        <div class="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-gray-100 grid grid-cols-3 gap-2 sm:gap-4 text-center">
+                            <div>
+                                <p class="text-xl sm:text-2xl font-bold text-gray-800">47</p>
+                                <p class="text-[10px] sm:text-xs text-gray-500">Zamówień</p>
+                            </div>
+                            <div>
+                                <p class="text-xl sm:text-2xl font-bold text-gray-800">2,480</p>
+                                <p class="text-[10px] sm:text-xs text-gray-500">Punktów</p>
+                            </div>
+                            <div>
+                                <p class="text-xl sm:text-2xl font-bold text-gray-800">12</p>
+                                <p class="text-[10px] sm:text-xs text-gray-500">Kuponów</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Form -->
+                    <div class="lg:col-span-2 bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-gray-800 mb-4 sm:mb-6 text-sm sm:text-base">Dane osobowe</h4>
+                        <form class="space-y-3 sm:space-y-4">
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Imię</label>
+                                    <input type="text" value="Jan" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Nazwisko</label>
+                                    <input type="text" value="Kowalski" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">Email</label>
+                                <input type="email" value="jan.kowalski@email.com" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">Telefon</label>
+                                <input type="tel" value="+48 123 456 789" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                            </div>
+
+                            <hr class="my-4 sm:my-6">
+
+                            <h4 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">Adres dostawy</h4>
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-1">Ulica i numer</label>
+                                <input type="text" value="ul. Kwiatowa 15/3" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Kod pocztowy</label>
+                                    <input type="text" value="00-001" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Miasto</label>
+                                    <input type="text" value="Warszawa" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                </div>
+                            </div>
+
+                            <button type="button" class="w-full py-2.5 sm:py-3 gradient-bg text-white rounded-xl font-medium hover:opacity-90 active:opacity-80 transition-opacity text-sm sm:text-base">
+                                <i class="fas fa-save mr-2"></i> Zapisz zmiany
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="section-settings" class="section-content p-3 sm:p-4 lg:p-6 xl:p-8 hidden animate-fade">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Ustawienia ⚙️</h2>
+                        <p class="text-gray-500 text-sm sm:text-base">Dostosuj aplikację</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                    <!-- Notifications -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base"><i class="fas fa-bell mr-2 text-purple-500"></i> Powiadomienia</h4>
+                        <div class="space-y-3 sm:space-y-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base">Push</p>
+                                    <p class="text-xs sm:text-sm text-gray-500 truncate">Powiadomienia na telefon</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base">Email</p>
+                                    <p class="text-xs sm:text-sm text-gray-500 truncate">Potwierdzenia zamówień</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-medium text-gray-800 text-sm sm:text-base">Promocje</p>
+                                    <p class="text-xs sm:text-sm text-gray-500 truncate">Specjalne oferty</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input type="checkbox" class="sr-only peer">
+                                    <div class="w-10 sm:w-11 h-5 sm:h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 sm:after:h-5 after:w-4 sm:after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base"><i class="fas fa-shield-alt mr-2 text-green-500"></i> Bezpieczeństwo</h4>
+                        <div class="space-y-2 sm:space-y-3">
+                            <button class="w-full flex items-center justify-between p-3 sm:p-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 text-left">
+                                <div class="flex items-center gap-2 sm:gap-3">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-key text-gray-500 text-sm sm:text-base"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">Zmień hasło</p>
+                                        <p class="text-xs sm:text-sm text-gray-500">30 dni temu</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400 text-sm"></i>
+                            </button>
+                            <button class="w-full flex items-center justify-between p-3 sm:p-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 text-left">
+                                <div class="flex items-center gap-2 sm:gap-3">
+                                    <div class="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl flex items-center justify-center">
+                                        <i class="fas fa-mobile-alt text-gray-500 text-sm sm:text-base"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-800 text-sm sm:text-base">Weryfikacja 2FA</p>
+                                        <p class="text-xs sm:text-sm text-green-500">Włączona</p>
+                                    </div>
+                                </div>
+                                <i class="fas fa-chevron-right text-gray-400 text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Preferences -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base"><i class="fas fa-sliders-h mr-2 text-blue-500"></i> Preferencje</h4>
+                        <div class="space-y-3 sm:space-y-4">
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-1.5 sm:mb-2">Język</label>
+                                <select class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm bg-white">
+                                    <option selected>🇵🇱 Polski</option>
+                                    <option>🇬🇧 English</option>
+                                    <option>🇩🇪 Deutsch</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs sm:text-sm text-gray-600 mb-1.5 sm:mb-2">Waluta</label>
+                                <select class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm bg-white">
+                                    <option selected>PLN (zł)</option>
+                                    <option>EUR (€)</option>
+                                    <option>USD ($)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-red-100 p-4 sm:p-6">
+                        <h4 class="font-semibold text-red-600 mb-3 sm:mb-4 text-sm sm:text-base"><i class="fas fa-exclamation-triangle mr-2"></i> Strefa zagrożenia</h4>
+                        <div class="space-y-2 sm:space-y-3">
+                            <button class="w-full py-2.5 sm:py-3 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50 active:bg-gray-100 text-xs sm:text-sm">
+                                <i class="fas fa-download mr-2"></i> Pobierz moje dane
+                            </button>
+                            <button class="w-full py-2.5 sm:py-3 border border-red-200 rounded-xl text-red-500 font-medium hover:bg-red-50 active:bg-red-100 text-xs sm:text-sm">
+                                <i class="fas fa-trash-alt mr-2"></i> Usuń konto
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Card Modal -->
+    <div id="addCardModal" class="fixed inset-0 bg-black/50 z-[60] hidden items-center justify-center p-3 sm:p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-5 sm:p-6 animate-fade max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-5 sm:mb-6">
+                <h4 class="font-bold text-lg sm:text-xl text-gray-800">Dodaj nową kartę</h4>
+                <button onclick="closeAddCardModal()" class="p-2 hover:bg-gray-100 active:bg-gray-200 rounded-lg">
+                    <i class="fas fa-times text-gray-500"></i>
+                </button>
+            </div>
+            <form class="space-y-3 sm:space-y-4">
+                <div>
+                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Numer karty</label>
+                    <input type="text" placeholder="1234 5678 9012 3456" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs sm:text-sm text-gray-600 mb-1">Imię i nazwisko</label>
+                    <input type="text" placeholder="JAN KOWALSKI" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label class="block text-xs sm:text-sm text-gray-600 mb-1">Data ważności</label>
+                        <input type="text" placeholder="MM/RR" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm text-gray-600 mb-1">CVV</label>
+                        <input type="text" placeholder="123" class="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="defaultCard" class="w-4 h-4 text-purple-600 rounded focus:ring-purple-500">
+                    <label for="defaultCard" class="text-xs sm:text-sm text-gray-600">Ustaw jako domyślną</label>
+                </div>
+                <button type="button" onclick="closeAddCardModal()" class="w-full py-2.5 sm:py-3 gradient-bg text-white rounded-xl font-medium hover:opacity-90 active:opacity-80 transition-opacity text-sm sm:text-base">
+                    <i class="fas fa-plus mr-2"></i> Dodaj kartę
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+            document.body.classList.toggle('overflow-hidden');
+        }
+
+        // Show section
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section-content').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            const selectedSection = document.getElementById(`section-${sectionName}`);
+            if (selectedSection) {
+                selectedSection.classList.remove('hidden');
+            }
+
+            // Update sidebar nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('sidebar-active', 'text-white');
+                btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+            });
+
+            const activeBtn = document.querySelector(`.nav-btn[data-section="${sectionName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('sidebar-active', 'text-white');
+                activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            }
+
+            // Update bottom nav
+            document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+                btn.classList.remove('bottom-nav-active');
+                btn.classList.add('text-gray-500');
+            });
+
+            const activeBottomBtn = document.querySelector(`.bottom-nav-item[data-nav="${sectionName}"]`);
+            if (activeBottomBtn) {
+                activeBottomBtn.classList.add('bottom-nav-active');
+                activeBottomBtn.classList.remove('text-gray-500');
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
+            }
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add Card Modal
+        function showAddCardModal() {
+            document.getElementById('addCardModal').classList.remove('hidden');
+            document.getElementById('addCardModal').classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeAddCardModal() {
+            document.getElementById('addCardModal').classList.add('hidden');
+            document.getElementById('addCardModal').classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Food Modal (simplified)
+        function showFoodModal(restaurant) {
+            alert(`Otwieranie menu restauracji: ${restaurant}`);
+        }
+
+        // Close modal on outside click
+        document.getElementById('addCardModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddCardModal();
+            }
+        });
+
+        // Handle resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) {
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('overlay');
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+
+        // Prevent zoom on iOS
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>

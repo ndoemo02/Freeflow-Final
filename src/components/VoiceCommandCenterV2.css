@@ -6,7 +6,7 @@
     box-sizing: border-box;
 }
 
-.vcc-input-wrapper :root {
+.vcc-input-wrapper {
     --primary-color: #ff7e00;
     --secondary-color: #cc5500;
     --accent-color: #ffa500;

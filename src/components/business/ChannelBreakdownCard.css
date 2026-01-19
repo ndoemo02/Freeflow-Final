@@ -1,0 +1,85 @@
+/**
+ * ChannelBreakdownCard Styles
+ */
+
+.channel-card {
+    border-radius: 1rem;
+    padding: 1.5rem;
+}
+
+.channel-card__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--fg0);
+    margin: 0 0 1.5rem 0;
+}
+
+.channel-card__bars {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.channel-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.channel-bar__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.channel-bar__label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+}
+
+.channel-bar__icon {
+    font-size: 1rem;
+}
+
+.channel-bar__percentage {
+    font-weight: 600;
+    color: var(--fg0);
+}
+
+.channel-bar__track {
+    height: 0.5rem;
+    background: var(--glass);
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.channel-bar__fill {
+    height: 100%;
+    border-radius: 0.25rem;
+    transition: width 0.5s ease;
+}
+
+.channel-card__counts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    text-align: center;
+}
+
+.channel-count__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.channel-count__label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 0.25rem 0 0 0;
+}
