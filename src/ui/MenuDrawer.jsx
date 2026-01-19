@@ -158,8 +158,11 @@ export default function MenuDrawer() {
                   isExpanded={expandedSections['Panele']}
                 >
                   <MenuItem icon="🙍" text="Panel Klienta" route="/panel/customer" isSubItem requiresAuth />
-                  <MenuItem icon="🏢" text="Panel Biznesowy" route="/panel/business" isSubItem requiresAuth />
-                  <MenuItem icon="🆕" text="Panel Biznesowy v2" route="/panel/business-v2" isSubItem requiresAuth />
+                  <MenuItem icon="💼" text="Panel Właściciela (Read-only)" route="/business" isSubItem requiresAuth />
+                  <MenuItem icon="🍳" text="Kitchen Display (KDS)" route="/panel/business-kds" isSubItem requiresAuth />
+                  <MenuItem icon="🖥️" text="Client View" route="/client" isSubItem requiresAuth />
+                  <MenuItem icon="🏢" text="Panel Biznesowy (Legacy)" route="/panel/business" isSubItem requiresAuth />
+                  <MenuItem icon="🆕" text="Panel Biznesowy v2 (Legacy)" route="/panel/business-v2" isSubItem requiresAuth />
                   <MenuItem icon="🚗" text="Panel Kierowcy" route="/driver" isSubItem requiresAuth />
                   <MenuItem icon="📈" text="Analytics" route="/admin" isSubItem requiresAuth />
                 </ExpandableSection>
