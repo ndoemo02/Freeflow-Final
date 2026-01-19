@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 
+const STORAGE_KEY = "freeflow_tts_mode";
+
 export default function TTSSwitcher({ onModeChange }) {
   const [mode, setMode] = useState(() => {
-    // Initialize from localStorage or default to "classic"
+    // Initialize from localStorage or default to live streaming ("chirp")
     if (typeof window !== "undefined") {
-      return localStorage.getItem("ttsMode") || "classic";
+      return localStorage.getItem(STORAGE_KEY) || "chirp";
     }
-    return "classic";
+    return "chirp";
   });
   
   const [loading, setLoading] = useState(false);
@@ -14,7 +16,7 @@ export default function TTSSwitcher({ onModeChange }) {
   useEffect(() => {
     // Save to localStorage whenever mode changes
     if (typeof window !== "undefined") {
-      localStorage.setItem("ttsMode", mode);
+      localStorage.setItem(STORAGE_KEY, mode);
     }
     
     // Notify parent component

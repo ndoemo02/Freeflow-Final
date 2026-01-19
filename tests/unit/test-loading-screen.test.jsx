@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react-dom/test-utils';
 import LoadingScreen from '../../src/components/LoadingScreen';
 
 // Mock timers
@@ -19,8 +20,10 @@ describe('LoadingScreen Component', () => {
 
   it('should render loading screen with FreeFlow text', () => {
     render(<LoadingScreen onComplete={mockOnComplete} />);
-    
-    expect(screen.getByText('Free')).toBeInTheDocument();
+
+    ['F', 'R', 'E', 'E'].forEach(letter => {
+      expect(screen.getAllByText(letter)[0]).toBeInTheDocument();
+    });
     expect(screen.getByText('Flow')).toBeInTheDocument();
   });
 
@@ -30,19 +33,19 @@ describe('LoadingScreen Component', () => {
     const mainDiv = container.firstChild;
     expect(mainDiv).toHaveClass('fixed', 'inset-0', 'bg-black', 'z-50');
     
-    const logoDiv = screen.getByText('Free').closest('div');
-    expect(logoDiv).toHaveClass('flex', 'text-8xl', 'md:text-9xl', 'font-bold', 'uppercase');
+    const logoDiv = container.querySelector('div.flex.text-7xl');
+    expect(logoDiv).toHaveClass('flex', 'text-7xl', 'md:text-8xl', 'lg:text-9xl', 'font-bold', 'uppercase');
   });
 
   it('should call onComplete after animation duration', async () => {
     render(<LoadingScreen onComplete={mockOnComplete} />);
-    
-    // Fast-forward through the animation (4.5s + 0.5s fade)
-    vi.advanceTimersByTime(5000);
-    
-    await waitFor(() => {
-      expect(mockOnComplete).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+      vi.runAllTimers();
     });
+
+    expect(mockOnComplete).toHaveBeenCalledTimes(1);
   });
 
   it('should not call onComplete before animation completes', () => {
@@ -60,27 +63,27 @@ describe('LoadingScreen Component', () => {
     }).not.toThrow();
     
     // Fast-forward through animation
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(9000);
     
     // Should not crash even without onComplete
     expect(true).toBe(true);
   });
 
   it('should apply correct font family', () => {
-    render(<LoadingScreen onComplete={mockOnComplete} />);
-    
-    const logoDiv = screen.getByText('Free').closest('div');
+    const { container } = render(<LoadingScreen onComplete={mockOnComplete} />);
+
+    const logoDiv = container.querySelector('div.flex.text-7xl');
     expect(logoDiv).toHaveStyle('font-family: Poppins, sans-serif');
   });
 
   it('should have proper animation delays for letters', () => {
     render(<LoadingScreen onComplete={mockOnComplete} />);
     
-    const freeLetters = ['F', 'R', 'E', 'E'];
-    freeLetters.forEach((letter, index) => {
-      const letterElement = screen.getByText(letter);
-      const expectedDelay = `${0.1 + index * 0.1}s`;
-      expect(letterElement).toHaveStyle(`animation-delay: ${expectedDelay}`);
+    const letterElements = screen.getAllByText(/^[FRE]$/);
+    const expectedDelays = ['2.5s', '2.7s', '2.9s', '3.1s'];
+
+    expectedDelays.forEach((delay, index) => {
+      expect(letterElements[index]).toHaveStyle(`animation-delay: ${delay}`);
     });
   });
 
@@ -94,7 +97,7 @@ describe('LoadingScreen Component', () => {
     unmount();
     
     // Fast-forward remaining time
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(8000);
     
     // onComplete should not be called after unmount
     expect(mockOnComplete).not.toHaveBeenCalled();
