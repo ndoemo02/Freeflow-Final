@@ -6,15 +6,15 @@
     box-sizing: border-box;
 }
 
-.vcc-input-wrapper :root {
-    --primary-color: #7e22ce;
-    --secondary-color: #4c1d95;
-    --accent-color: #d946ef;
-    --text-color: #00ffcc;
+.vcc-input-wrapper {
+    --primary-color: #ff7e00;
+    --secondary-color: #cc5500;
+    --accent-color: #ffa500;
+    --text-color: #ffffff;
     --bg-color: #1e1e1e;
-    --input-bg: #2d2d2d;
-    --animation-color: #a855f7;
-    --glow-color: rgba(168, 85, 247, 0.6);
+    --input-bg: rgba(0, 0, 0, 0.2);
+    --animation-color: #ff9900;
+    --glow-color: rgba(255, 126, 0, 0.6);
 }
 
 /* We adapt .ai-input .container to be our main wrapper */
@@ -49,15 +49,17 @@
 .voice-cc-field {
     position: relative;
     flex: 1;
-    background: #2d2d2d;
-    /* fallback */
-    background: var(--input-bg, #2d2d2d);
+    /* Crystal Clear Glass */
+    background: rgba(0, 0, 0, 0.2) !important;
+    /* Force transparent */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: 24px;
     overflow: hidden;
     box-shadow:
-        0 8px 16px rgba(0, 0, 0, 0.2),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 0 20px rgba(126, 34, 206, 0.15);
+        0 8px 32px 0 rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: all 0.3s ease;
     animation:
         float-rotate 8s ease-in-out infinite,
@@ -88,44 +90,30 @@
     }
 }
 
-.voice-cc-field::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(45deg,
-            #7e22ce,
-            #4c1d95,
-            #d946ef,
-            #7e22ce);
-    border-radius: 24px;
-    z-index: -1;
-    opacity: 0.8;
-    background-size: 400% 400%;
-    animation: gradient-flow 15s linear infinite;
+/* removed pseudo-elements */
+
+/* 🔴 ACTIVE LISTENING INDICATOR (Restored for Transparency) */
+.voice-cc-container[data-status="listening"] .voice-cc-field {
+    border: 1px solid rgba(255, 126, 0, 0.8);
+    box-shadow: 0 0 20px rgba(255, 126, 0, 0.4), inset 0 0 10px rgba(255, 126, 0, 0.2);
+    animation: pulse-orange 1.5s infinite;
 }
 
-@keyframes gradient-flow {
+@keyframes pulse-orange {
     0% {
-        background-position: 0% 50%;
+        box-shadow: 0 0 15px rgba(255, 126, 0, 0.3), inset 0 0 5px rgba(255, 126, 0, 0.1);
+        border-color: rgba(255, 126, 0, 0.5);
     }
 
     50% {
-        background-position: 100% 50%;
+        box-shadow: 0 0 30px rgba(255, 126, 0, 0.6), inset 0 0 15px rgba(255, 126, 0, 0.3);
+        border-color: rgba(255, 126, 0, 1.0);
     }
 
     100% {
-        background-position: 0% 50%;
+        box-shadow: 0 0 15px rgba(255, 126, 0, 0.3), inset 0 0 5px rgba(255, 126, 0, 0.1);
+        border-color: rgba(255, 126, 0, 0.5);
     }
-}
-
-.voice-cc-field::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    background: #2d2d2d;
-    background: var(--input-bg, #2d2d2d);
-    border-radius: 24px;
-    z-index: -1;
 }
 
 /* The actual input element */
@@ -143,8 +131,8 @@
     font-size: 16px;
     position: relative;
     z-index: 2;
-    caret-color: #a855f7;
-    caret-color: var(--animation-color, #a855f7);
+    caret-color: #ca6f00;
+    caret-color: var(--animation-color, #fa8600);
     flex: 1;
     /* Take available header space */
 }

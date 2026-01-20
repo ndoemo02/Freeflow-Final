@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KDS - Kitchen Display System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Dark Theme Variables */
+        :root {
+            --bg-primary: #05060a;
+            --bg-secondary: #0c0d12;
+            --bg-card: #13151c;
+            --bg-card-hover: #1a1d26;
+            --border: rgba(255,255,255,0.06);
+            --border-light: rgba(255,255,255,0.1);
+        }
+        
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
+        }
+        
+        /* Order Card Base */
+        .order-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .order-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-light);
+        }
+        
+        /* Status Animations */
+        .status-new {
+            border-left: 4px solid #fbbf24;
+            animation: glow-yellow 2s ease-in-out infinite;
+        }
+        
+        .status-warning {
+            border-left: 4px solid #f97316;
+            animation: glow-orange 1.8s ease-in-out infinite;
+        }
+        
+        .status-urgent {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, var(--bg-card) 60%);
+            animation: glow-red 1.2s ease-in-out infinite;
+        }
+        
+        @keyframes glow-yellow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+            50% { box-shadow: 0 0 25px 3px rgba(251, 191, 36, 0.15); }
+        }
+        
+        @keyframes glow-orange {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+            50% { box-shadow: 0 0 30px 5px rgba(249, 115, 22, 0.2); }
+        }
+        
+        @keyframes glow-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            50% { box-shadow: 0 0 40px 8px rgba(239, 68, 68, 0.25); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-2px); }
+            40%, 80% { transform: translateX(2px); }
+        }
+        
+        .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+        
+        /* Timer Colors */
+        .timer-ok { color: #4ade80; }
+        .timer-warning { color: #fb923c; }
+        .timer-critical { 
+            color: #f87171; 
+            text-shadow: 0 0 20px rgba(248, 113, 113, 0.5);
+            animation: shake 0.5s ease-in-out infinite;
+        }
+        
+        /* Station Badges */
+        .station-kuchnia { background: linear-gradient(135deg, #f97316, #ea580c); }
+        .station-bar { background: linear-gradient(135deg, #a855f7, #7c3aed); }
+        .station-grill { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .station-zimne { background: linear-gradient(135deg, #22d3ee, #06b6d4); }
+        .station-desery { background: linear-gradient(135deg, #f472b6, #ec4899); }
+        
+        /* Channel Badges */
+        .channel-restaurant { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .channel-hotel { background: linear-gradient(135deg, #a855f7, #9333ea); }
+        .channel-delivery { background: linear-gradient(135deg, #22c55e, #16a34a); }
+        
+        /* Priority Badge */
+        .priority-high {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            animation: pulse-dot 1s ease-in-out infinite;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+        
+        /* Touch Optimization */
+        .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+        
+        /* Tab Active State */
+        .tab-active {
+            background: white !important;
+            color: #111827 !important;
+        }
+        
+        /* Item Done State */
+        .item-done {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        
+        /* Glass Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+            .order-card { 
+                background: white !important; 
+                border: 2px solid black !important; 
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Responsive Grid */
+        .orders-grid {
+            display: grid;
+            gap: 0.75rem;
+            grid-template-columns: 1fr;
+        }
+        
+        @media (min-width: 480px) {
+            .orders-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (min-width: 768px) {
+            .orders-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        }
+        
+        @media (min-width: 1024px) {
+            .orders-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (min-width: 1280px) {
+            .orders-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        
+        @media (min-width: 1536px) {
+            .orders-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        
+        @media (min-width: 1920px) {
+            .orders-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+        
+        /* Fullscreen Mode */
+        :fullscreen {
+            background: var(--bg-primary);
+        }
+        
+        :fullscreen .fullscreen-hide {
+            display: none !important;
+        }
+        
+        /* Safe Area for Mobile */
+        @supports (padding: max(0px)) {
+            .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+            .safe-top { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+        }
+    </style>
+</head>
+<body class="text-white antialiased">
+    <!-- ============ HEADER ============ -->
+    <header class="no-print sticky top-0 z-50 bg-black/95 backdrop-blur-xl border-b border-white/5 safe-top">
+        <!-- Top Bar -->
+        <div class="px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
+            <div class="flex items-center justify-between gap-2 sm:gap-4">
+                <!-- Logo & Clock -->
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/25">
+                            <i class="fas fa-fire-burner text-white text-base sm:text-xl"></i>
+                        </div>
+                        <div class="hidden sm:block">
+                            <h1 class="text-xl font-black tracking-tight leading-none bg-gradient-to-r from-orange-400 to-rose-400 bg-clip-text text-transparent">KDS</h1>
+                            <p class="text-[10px] text-gray-500 font-medium tracking-wider uppercase">Kitchen Display</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Clock -->
+                    <div class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 glass rounded-xl border border-white/10">
+                        <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-dot"></div>
+                        <span id="liveClock" class="font-mono text-base sm:text-xl font-bold tracking-wider">00:00:00</span>
+                    </div>
+                </div>
+                
+                <!-- Stats Desktop -->
+                <div class="hidden lg:flex items-center gap-4 xl:gap-6 px-5 py-2.5 glass rounded-xl border border-white/10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 bg-amber-400 rounded-full animate-pulse-dot"></div>
+                        <span class="text-gray-400 text-sm">Nowe</span>
+                        <span class="font-mono font-bold text-amber-400 text-lg" id="statNew">0</span>
+                    </div>
+                    <div class="w-px h-5 bg-white/10"></div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 bg-sky-400 rounded-full"></div>
+                        <span class="text-gray-400 text-sm">Realizacja</span>
+                        <span class="font-mono font-bold text-sky-400 text-lg" id="statProgress">0</span>
+                    </div>
+                    <div class="w-px h-5 bg-white/10"></div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-stopwatch text-gray-500"></i>
+                        <span class="text-gray-400 text-sm">Średnio</span>
+                        <span class="font-mono font-bold text-white text-lg" id="statAvgTime">0:00</span>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <!-- Sound Toggle -->
+                    <button onclick="toggleSound()" id="btnSound" class="touch-target p-2.5 sm:p-3 glass hover:bg-white/10 rounded-xl border border-white/5 transition-all" title="Dźwięk">
+                        <i class="fas fa-volume-up text-emerald-400 text-sm sm:text-base"></i>
+                    </button>
+                    
+                    <!-- Recall Last -->
+                    <button onclick="recallLastCompleted()" class="hidden sm:flex touch-target p-2.5 sm:p-3 glass hover:bg-white/10 rounded-xl border border-white/5 transition-all" title="Przywróć ostatnie">
+                        <i class="fas fa-undo text-gray-400 text-sm sm:text-base"></i>
+                    </button>
+                    
+                    <!-- Fullscreen -->
+                    <button onclick="toggleFullscreen()" class="touch-target p-2.5 sm:p-3 glass hover:bg-white/10 rounded-xl border border-white/5 transition-all fullscreen-hide" title="Pełny ekran">
+                        <i class="fas fa-expand text-sm sm:text-base"></i>
+                    </button>
+                    
+                    <!-- Settings -->
+                    <button onclick="openSettings()" class="touch-target p-2.5 sm:p-3 glass hover:bg-white/10 rounded-xl border border-white/5 transition-all" title="Ustawienia">
+                        <i class="fas fa-sliders text-sm sm:text-base"></i>
+                    </button>
+                    
+                    <!-- Add Demo -->
+                    <button onclick="addDemoOrder()" class="touch-target px-3 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 rounded-xl font-semibold text-xs sm:text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center gap-2">
+                        <i class="fas fa-plus"></i>
+                        <span class="hidden sm:inline">Nowe zamówienie</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Station Tabs -->
+        <div class="px-3 sm:px-4 lg:px-6 py-2 border-t border-white/5">
+            <div class="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide" id="stationTabs">
+                <button onclick="setStation('all')" data-station="all" class="station-tab tab-active flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Wszystkie</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-gray-900 text-white rounded-full text-[10px] sm:text-xs font-bold" id="countAll">0</span>
+                </button>
+                <button onclick="setStation('kuchnia')" data-station="kuchnia" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all glass hover:bg-white/10">
+                    <i class="fas fa-utensils text-orange-400"></i>
+                    <span>Kuchnia</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-orange-500/20 text-orange-300 rounded-full text-[10px] sm:text-xs" id="countKuchnia">0</span>
+                </button>
+                <button onclick="setStation('grill')" data-station="grill" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all glass hover:bg-white/10">
+                    <i class="fas fa-fire text-red-400"></i>
+                    <span>Grill</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full text-[10px] sm:text-xs" id="countGrill">0</span>
+                </button>
+                <button onclick="setStation('zimne')" data-station="zimne" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all glass hover:bg-white/10">
+                    <i class="fas fa-snowflake text-cyan-400"></i>
+                    <span>Zimne</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded-full text-[10px] sm:text-xs" id="countZimne">0</span>
+                </button>
+                <button onclick="setStation('bar')" data-station="bar" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all glass hover:bg-white/10">
+                    <i class="fas fa-martini-glass-citrus text-purple-400"></i>
+                    <span>Bar</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full text-[10px] sm:text-xs" id="countBar">0</span>
+                </button>
+                <button onclick="setStation('desery')" data-station="desery" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all glass hover:bg-white/10">
+                    <i class="fas fa-ice-cream text-pink-400"></i>
+                    <span>Desery</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-pink-500/20 text-pink-300 rounded-full text-[10px] sm:text-xs" id="countDesery">0</span>
+                </button>
+                <div class="hidden sm:block w-px h-8 bg-white/10 mx-1 self-center"></div>
+                <button onclick="setStation('wydawka')" data-station="wydawka" class="station-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20">
+                    <i class="fas fa-bell-concierge text-emerald-400"></i>
+                    <span>Wydawka</span>
+                    <span class="px-1.5 sm:px-2 py-0.5 bg-emerald-500/30 text-emerald-300 rounded-full text-[10px] sm:text-xs font-bold" id="countWydawka">0</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Stats Bar -->
+        <div class="lg:hidden px-3 sm:px-4 py-2 bg-black/60 border-t border-white/5">
+            <div class="flex items-center justify-between text-xs sm:text-sm">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
+                        <span class="text-amber-400 font-bold" id="statNewMobile">0</span>
+                        <span class="text-gray-500">nowe</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-2 h-2 bg-sky-400 rounded-full"></div>
+                        <span class="text-sky-400 font-bold" id="statProgressMobile">0</span>
+                        <span class="text-gray-500">realizacja</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-gray-400">
+                    <i class="fas fa-stopwatch text-xs"></i>
+                    <span class="font-mono font-bold text-white" id="statAvgTimeMobile">0:00</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============ MAIN CONTENT ============ -->
+    <main class="p-2 sm:p-4 lg:p-5 safe-bottom">
+        <!-- Orders Grid -->
+        <div id="ordersGrid" class="orders-grid">
+            <!-- Orders rendered here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden animate-fadeIn">
+            <div class="flex flex-col items-center justify-center py-20 sm:py-32">
+                <div class="relative mb-8">
+                    <div class="w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full flex items-center justify-center border-2 border-emerald-500/30">
+                        <i class="fas fa-check text-4xl sm:text-5xl text-emerald-400"></i>
+                    </div>
+                    <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center border-4 border-[var(--bg-primary)]">
+                        <i class="fas fa-sparkles text-white text-xs"></i>
+                    </div>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">Wszystko gotowe!</h3>
+                <p class="text-gray-500 text-sm sm:text-base text-center max-w-xs">Brak aktywnych zamówień.<br>Czas na przerwę ☕</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ============ ORDER DETAIL MODAL ============ -->
+    <div id="modalOrder" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="order-card rounded-2xl sm:rounded-3xl w-full max-w-2xl my-auto animate-slideUp">
+            <div id="modalOrderContent"></div>
+        </div>
+    </div>
+
+    <!-- ============ SETTINGS MODAL ============ -->
+    <div id="modalSettings" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden items-center justify-center p-3 sm:p-4">
+        <div class="order-card rounded-2xl sm:rounded-3xl w-full max-w-md p-4 sm:p-6 animate-slideUp">
+            <!-- Header -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-sliders text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-bold">Ustawienia</h3>
+                        <p class="text-xs text-gray-500">Konfiguracja KDS</p>
+                    </div>
+                </div>
+                <button onclick="closeSettings()" class="touch-target p-2.5 hover:bg-white/10 rounded-xl transition-all">
+                    <i class="fas fa-times text-lg text-gray-400"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 sm:space-y-4">
+                <!-- Sound -->
+                <div class="flex items-center justify-between p-3 sm:p-4 glass rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-volume-up text-emerald-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-sm sm:text-base">Dźwięki</p>
+                            <p class="text-xs text-gray-500">Powiadomienia o zamówieniach</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="settingSound" checked class="sr-only peer">
+                        <div class="w-12 h-7 bg-gray-700 rounded-full peer peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-5 shadow-inner"></div>
+                    </label>
+                </div>
+                
+                <!-- Auto Bump -->
+                <div class="flex items-center justify-between p-3 sm:p-4 glass rounded-xl border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-sky-500/20 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-robot text-sky-400 text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-sm sm:text-base">Auto-bump</p>
+                            <p class="text-xs text-gray-500">Automatyczne zamykanie zamówień</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="settingAutoBump" class="sr-only peer">
+                        <div class="w-12 h-7 bg-gray-700 rounded-full peer peer-checked:bg-sky-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-5 shadow-inner"></div>
+                    </label>
+                </div>
+                
+                <!-- Warning Time -->
+                <div class="p-3 sm:p-4 glass rounded-xl border border-white/5">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-400 text-sm"></i>
+                            </div>
+                            <p class="font-medium text-sm sm:text-base">Czas ostrzeżenia</p>
+                        </div>
+                        <span class="font-mono font-bold text-orange-400 text-lg" id="settingWarningValue">10 min</span>
+                    </div>
+                    <input type="range" id="settingWarning" min="3" max="25" value="10" class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-orange-500">
+                </div>
+                
+                <!-- Critical Time -->
+                <div class="p-3 sm:p-4 glass rounded-xl border border-white/5">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-triangle-exclamation text-red-400 text-sm"></i>
+                            </div>
+                            <p class="font-medium text-sm sm:text-base">Czas krytyczny</p>
+                        </div>
+                        <span class="font-mono font-bold text-red-400 text-lg" id="settingCriticalValue">20 min</span>
+                    </div>
+                    <input type="range" id="settingCritical" min="8" max="45" value="20" class="w-full h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-red-500">
+                </div>
+                
+                <!-- Divider -->
+                <div class="border-t border-white/5 my-2"></div>
+                
+                <!-- Back to Panel -->
+                <a href="index.html" class="flex items-center justify-center gap-2 w-full py-3.5 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl font-semibold text-sm sm:text-base transition-all shadow-lg shadow-indigo-500/25">
+                    <i class="fas fa-arrow-left"></i>
+                    Panel zarządzania
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ TOASTS ============ -->
+    <div id="toasts" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[60] space-y-2 safe-bottom"></div>
+
+    <!-- ============ AUDIO ============ -->
+    <audio id="audioNewOrder" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2EgYF8eX6DhIKAfXp7foCChIN/fHt8f4GCgoJ/fHt8f4GDg4KAfXt7foGDg4OAfXp7foGDg4OAfXp7foGDhIOBfnx7fn+ChISCf3x7fX+ChYWDgH17fX+ChYWEgX58fX+BhIWFg4F+fH1/gYSGhoSBfnx9f4GEhoaEgX58fH6BhIaGhIJ/fXx+gYSGhoWCf318foGEhoaFgoB9fH6Ag4aGhYOAfn1+gIOFhoWDgH59foCDhYaFg4B+fX6Ag4WGhYOAfn1+gIOFhoaDgX5+foCDhYaGg4F+fn6Ag4WGhoOBfn5+gIOFhoaDgX5+foCDhYaGg4F+fn6Ag4WGhoOBfn5+gIOFhoaDgX5+foCDhYaGg4F+fn6Ag4WGhg==" type="audio/wav">
+    </audio>
+
+    <script>
+        // ===================== STATE =====================
+        const state = {
+            orders: [],
+            completedOrders: [],
+            station: 'all',
+            sound: true,
+            autoBump: false,
+            warningTime: 10,
+            criticalTime: 20,
+            nextId: 1001
+        };
+
+        // ===================== MENU DATABASE =====================
+        const menuDB = {
+            kuchnia: [
+                { name: 'Pizza Margherita', time: 15, emoji: '🍕' },
+                { name: 'Pizza Pepperoni', time: 15, emoji: '🍕' },
+                { name: 'Pasta Carbonara', time: 12, emoji: '🍝' },
+                { name: 'Risotto Funghi', time: 18, emoji: '🍚' },
+                { name: 'Burger Classic', time: 10, emoji: '🍔' },
+                { name: 'Burger BBQ Bacon', time: 12, emoji: '🍔' },
+                { name: 'Frytki belgijskie', time: 8, emoji: '🍟' },
+                { name: 'Zupa dnia', time: 5, emoji: '🍲' },
+                { name: 'Żurek w chlebie', time: 6, emoji: '🥣' },
+                { name: 'Pierogi ruskie x8', time: 10, emoji: '🥟' }
+            ],
+            grill: [
+                { name: 'Stek Ribeye 300g', time: 18, emoji: '🥩' },
+                { name: 'Stek z polędwicy 250g', time: 16, emoji: '🥩' },
+                { name: 'Żeberka BBQ 500g', time: 25, emoji: '🍖' },
+                { name: 'Kurczak z grilla', time: 15, emoji: '🍗' },
+                { name: 'Łosoś z grilla', time: 14, emoji: '🐟' },
+                { name: 'Szaszłyki drobiowe', time: 12, emoji: '🍢' },
+                { name: 'Kiełbasa grillowa', time: 10, emoji: '🌭' }
+            ],
+            zimne: [
+                { name: 'Sałatka Cezar', time: 7, emoji: '🥗' },
+                { name: 'Sałatka grecka', time: 6, emoji: '🥗' },
+                { name: 'Carpaccio wołowe', time: 8, emoji: '🥩' },
+                { name: 'Tatar wołowy', time: 10, emoji: '🥩' },
+                { name: 'Bruschetta x3', time: 5, emoji: '🍞' },
+                { name: 'Krewetki marynowane', time: 6, emoji: '🦐' }
+            ],
+            bar: [
+                { name: 'Piwo Tyskie 0.5L', time: 1, emoji: '🍺' },
+                { name: 'Piwo IPA 0.4L', time: 1, emoji: '🍺' },
+                { name: 'Wino czerwone kieliszek', time: 2, emoji: '🍷' },
+                { name: 'Wino białe kieliszek', time: 2, emoji: '🍷' },
+                { name: 'Mojito', time: 4, emoji: '🍸' },
+                { name: 'Aperol Spritz', time: 3, emoji: '🍹' },
+                { name: 'Espresso', time: 2, emoji: '☕' },
+                { name: 'Cappuccino', time: 3, emoji: '☕' },
+                { name: 'Latte Macchiato', time: 3, emoji: '☕' },
+                { name: 'Lemoniada domowa', time: 2, emoji: '🍋' },
+                { name: 'Świeży sok pomarańczowy', time: 3, emoji: '🍊' }
+            ],
+            desery: [
+                { name: 'Tiramisu', time: 3, emoji: '🍰' },
+                { name: 'Panna Cotta', time: 3, emoji: '🍮' },
+                { name: 'Sernik NY', time: 3, emoji: '🍰' },
+                { name: 'Lody 3 gałki', time: 2, emoji: '🍨' },
+                { name: 'Brownie z lodami', time: 4, emoji: '🍫' },
+                { name: 'Crème brûlée', time: 5, emoji: '🍮' }
+            ]
+        };
+
+        const channels = {
+            restaurant: { name: 'Restauracja', icon: 'fa-utensils', color: 'channel-restaurant', short: 'REST' },
+            hotel: { name: 'Room Service', icon: 'fa-bed', color: 'channel-hotel', short: 'HOTEL' },
+            delivery: { name: 'Dostawa', icon: 'fa-motorcycle', color: 'channel-delivery', short: 'DOST' }
+        };
+
+        const orderNotes = [
+            'Bez cebuli', 'Bez glutenu', 'Extra ostre 🌶️', 'Bez laktozy',
+            'Alergia: orzechy!', 'Bez sosu', '⭐ VIP - PRIORYTET!',
+            'Dziecko - mała porcja', 'Bez soli', 'Wegetariańskie 🌿',
+            'Medium rare', 'Well done', 'Bez pietruszki'
+        ];
+
+        // ===================== INIT =====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            generateDemoOrders();
+            render();
+            startClock();
+            startTimerUpdate();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Settings inputs
+            document.getElementById('settingWarning').addEventListener('input', e => {
+                state.warningTime = parseInt(e.target.value);
+                document.getElementById('settingWarningValue').textContent = state.warningTime + ' min';
+                saveSettings();
+            });
+            
+            document.getElementById('settingCritical').addEventListener('input', e => {
+                state.criticalTime = parseInt(e.target.value);
+                document.getElementById('settingCriticalValue').textContent = state.criticalTime + ' min';
+                saveSettings();
+            });
+            
+            document.getElementById('settingSound').addEventListener('change', e => {
+                state.sound = e.target.checked;
+                updateSoundButton();
+                saveSettings();
+            });
+            
+            document.getElementById('settingAutoBump').addEventListener('change', e => {
+                state.autoBump = e.target.checked;
+                saveSettings();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') { closeOrderModal(); closeSettings(); }
+                if (e.key === 'f' && !e.target.matches('input')) toggleFullscreen();
+                if (e.key === 's' && !e.target.matches('input')) toggleSound();
+                if (e.key === 'n' && !e.target.matches('input')) addDemoOrder();
+            });
+            
+            // Modal close on backdrop click
+            document.getElementById('modalOrder').addEventListener('click', e => {
+                if (e.target.id === 'modalOrder') closeOrderModal();
+            });
+            
+            document.getElementById('modalSettings').addEventListener('click', e => {
+                if (e.target.id === 'modalSettings') closeSettings();
+            });
+        }
+
+        // ===================== CLOCK =====================
+        function startClock() {
+            const update = () => {
+                const now = new Date();
+                document.getElementById('liveClock').textContent = now.toLocaleTimeString('pl-PL');
+            };
+            update();
+            setInterval(update, 1000);
+        }
+
+        function startTimerUpdate() {
+            setInterval(() => {
+                updateTimers();
+                updateStats();
+            }, 1000);
+        }
+
+        // ===================== DEMO DATA =====================
+        function generateDemoOrders() {
+            const count = Math.floor(Math.random() * 5) + 4;
+            for (let i = 0; i < count; i++) {
+                const minutesAgo = Math.floor(Math.random() * 15);
+                createOrder(minutesAgo * 60 * 1000);
+            }
+        }
+
+        function createOrder(timeOffset = 0) {
+            const channelKeys = Object.keys(channels);
+            const channel = channelKeys[Math.floor(Math.random() * channelKeys.length)];
+            const stationKeys = Object.keys(menuDB);
+            
+            const items = [];
+            const numItems = Math.floor(Math.random() * 4) + 1;
+            
+            for (let i = 0; i < numItems; i++) {
+                const station = stationKeys[Math.floor(Math.random() * stationKeys.length)];
+                const menuItems = menuDB[station];
+                const item = menuItems[Math.floor(Math.random() * menuItems.length)];
+                
+                const existing = items.find(x => x.name === item.name);
+                if (existing) {
+                    existing.qty++;
+                } else {
+                    items.push({ ...item, station, qty: 1, done: false });
+                }
+            }
+
+            const order = {
+                id: state.nextId++,
+                channel,
+                items,
+                status: Math.random() > 0.5 ? 'preparing' : 'new',
+                priority: Math.random() > 0.85,
+                createdAt: new Date(Date.now() - timeOffset).toISOString(),
+                note: Math.random() > 0.7 ? orderNotes[Math.floor(Math.random() * orderNotes.length)] : null,
+                location: getRandomLocation(channel)
+            };
+
+            state.orders.push(order);
+            return order;
+        }
+
+        function getRandomLocation(channel) {
+            if (channel === 'restaurant') return 'Stolik ' + (Math.floor(Math.random() * 20) + 1);
+            if (channel === 'hotel') return 'Pokój ' + (Math.floor(Math.random() * 4) + 1) + String(Math.floor(Math.random() * 15) + 1).padStart(2, '0');
+            return 'ul. ' + ['Główna', 'Słoneczna', 'Kwiatowa', 'Leśna'][Math.floor(Math.random() * 4)] + ' ' + (Math.floor(Math.random() * 50) + 1);
+        }
+
+        function addDemoOrder() {
+            const order = createOrder(0);
+            order.status = 'new';
+            order.priority = Math.random() > 0.7;
+            render();
+            updateStats();
+            playSound();
+            toast(`Nowe zamówienie #${order.id}`, 'success');
+        }
+
+        // ===================== RENDER =====================
+        function render() {
+            const grid = document.getElementById('ordersGrid');
+            const empty = document.getElementById('emptyState');
+            
+            let filtered = state.orders.filter(o => o.status !== 'completed');
+            
+            // Filter by station
+            if (state.station === 'wydawka') {
+                filtered = filtered.filter(o => o.items.every(i => i.done));
+            } else if (state.station !== 'all') {
+                filtered = filtered.filter(o => 
+                    o.items.some(item => item.station === state.station && !item.done)
+                );
+            }
+            
+            // Sort: priority first, then new, then by time
+            filtered.sort((a, b) => {
+                if (a.priority && !b.priority) return -1;
+                if (!a.priority && b.priority) return 1;
+                if (a.status === 'new' && b.status !== 'new') return -1;
+                if (b.status === 'new' && a.status !== 'new') return 1;
+                return new Date(a.createdAt) - new Date(b.createdAt);
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                updateStationCounts();
+                return;
+            }
+
+            empty.classList.add('hidden');
+            
+            grid.innerHTML = filtered.map(order => renderOrderCard(order)).join('');
+            updateStationCounts();
+        }
+
+        function renderOrderCard(order) {
+            const elapsed = getElapsed(order.createdAt);
+            const mins = elapsed / 60;
+            
+            let cardStatus = '';
+            let timerClass = 'timer-ok';
+            
+            if (mins >= state.criticalTime) {
+                cardStatus = 'status-urgent';
+                timerClass = 'timer-critical';
+            } else if (mins >= state.warningTime) {
+                cardStatus = 'status-warning';
+                timerClass = 'timer-warning';
+            } else if (order.status === 'new') {
+                cardStatus = 'status-new';
+            }
+
+            const displayItems = state.station === 'all' || state.station === 'wydawka'
+                ? order.items 
+                : order.items.filter(i => i.station === state.station);
+            
+            const ch = channels[order.channel];
+            const doneCount = order.items.filter(i => i.done).length;
+            const progress = Math.round((doneCount / order.items.length) * 100);
+            const allDone = order.items.every(i => i.done);
+
+            return `
+                <div class="order-card ${cardStatus} rounded-xl sm:rounded-2xl overflow-hidden animate-slideUp" data-id="${order.id}">
+                    <!-- Header -->
+                    <div class="p-3 sm:p-4 border-b border-white/5">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-2xl sm:text-3xl font-black tracking-tight">#${order.id}</span>
+                                ${order.priority ? `<span class="priority-high px-2 py-0.5 rounded text-[10px] font-bold uppercase">PILNE</span>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <div class="font-mono text-2xl sm:text-3xl font-black ${timerClass}" data-timer="${order.createdAt}">${formatTime(elapsed)}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="px-2 py-1 ${ch.color} rounded text-[10px] sm:text-xs font-bold uppercase shrink-0">
+                                    <i class="fas ${ch.icon} mr-1"></i>${ch.short}
+                                </span>
+                                <span class="text-xs sm:text-sm text-gray-400 truncate">
+                                    <i class="fas fa-location-dot mr-1"></i>${order.location}
+                                </span>
+                            </div>
+                            ${order.status === 'new' ? `
+                                <span class="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-[10px] font-bold animate-pulse-dot shrink-0">NOWE</span>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- Progress -->
+                        <div class="mt-3 flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" style="width: ${progress}%"></div>
+                            </div>
+                            <span class="text-xs text-gray-500 font-medium">${doneCount}/${order.items.length}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Items -->
+                    <div class="p-2 sm:p-3 space-y-1 max-h-52 sm:max-h-60 overflow-y-auto">
+                        ${displayItems.map(item => {
+                            const itemIdx = order.items.indexOf(item);
+                            return `
+                                <div onclick="toggleItem(${order.id}, ${itemIdx})" 
+                                     class="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg cursor-pointer transition-all active:scale-[0.98] ${item.done ? 'bg-emerald-500/15 item-done' : 'glass hover:bg-white/10'}">
+                                    <div class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg ${item.done ? 'bg-emerald-500 text-white' : 'bg-white/10'} font-bold text-sm shrink-0 transition-all">
+                                        ${item.done ? '<i class="fas fa-check"></i>' : item.qty}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium text-xs sm:text-sm truncate">${item.emoji || ''} ${item.name}</p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <span class="px-1.5 py-0.5 station-${item.station} rounded text-[8px] sm:text-[10px] font-bold uppercase">${item.station}</span>
+                                            <span class="text-[10px] sm:text-xs text-gray-500">${item.time} min</span>
+                                        </div>
+                                    </div>
+                                    ${item.qty > 1 ? `<span class="text-base sm:text-lg font-bold text-gray-500 shrink-0">×${item.qty}</span>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <!-- Note -->
+                    ${order.note ? `
+                        <div class="px-2 sm:px-3 pb-2">
+                            <div class="p-2 sm:p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <p class="text-[10px] sm:text-xs text-amber-300">
+                                    <i class="fas fa-triangle-exclamation mr-1"></i>${order.note}
+                                </p>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Actions -->
+                    <div class="p-2 sm:p-3 pt-0 border-t border-white/5 mt-1">
+                        <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
+                            <button onclick="event.stopPropagation(); printOrder(${order.id})" class="touch-target p-2 sm:p-3 glass hover:bg-white/15 rounded-lg sm:rounded-xl transition-all" title="Drukuj">
+                                <i class="fas fa-print text-gray-400 text-xs sm:text-sm"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); openOrderModal(${order.id})" class="touch-target p-2 sm:p-3 glass hover:bg-white/15 rounded-lg sm:rounded-xl transition-all" title="Szczegóły">
+                                <i class="fas fa-expand text-gray-400 text-xs sm:text-sm"></i>
+                            </button>
+                            ${allDone || order.status === 'new' ? `
+                                <button onclick="event.stopPropagation(); ${order.status === 'new' ? `startOrder(${order.id})` : `completeOrder(${order.id})`}" 
+                                        class="touch-target p-2 sm:p-3 ${order.status === 'new' ? 'bg-gradient-to-r from-sky-500 to-blue-600' : 'bg-gradient-to-r from-emerald-500 to-teal-600'} hover:opacity-90 rounded-lg sm:rounded-xl transition-all" title="${order.status === 'new' ? 'Rozpocznij' : 'Zakończ'}">
+                                    <i class="fas ${order.status === 'new' ? 'fa-play' : 'fa-check'} text-white text-xs sm:text-sm"></i>
+                                </button>
+                            ` : `
+                                <button onclick="event.stopPropagation(); bumpOrder(${order.id})" class="touch-target p-2 sm:p-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg sm:rounded-xl transition-all" title="Bump">
+                                    <i class="fas fa-arrow-right text-white text-xs sm:text-sm"></i>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateTimers() {
+            document.querySelectorAll('[data-timer]').forEach(el => {
+                const createdAt = el.dataset.timer;
+                const elapsed = getElapsed(createdAt);
+                const mins = elapsed / 60;
+                
+                el.textContent = formatTime(elapsed);
+                
+                // Update timer color
+                el.classList.remove('timer-ok', 'timer-warning', 'timer-critical');
+                if (mins >= state.criticalTime) {
+                    el.classList.add('timer-critical');
+                } else if (mins >= state.warningTime) {
+                    el.classList.add('timer-warning');
+                } else {
+                    el.classList.add('timer-ok');
+                }
+            });
+        }
+
+        // ===================== ACTIONS =====================
+        function toggleItem(orderId, itemIdx) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order || !order.items[itemIdx]) return;
+            
+            order.items[itemIdx].done = !order.items[itemIdx].done;
+            
+            // Auto-bump if enabled and all done
+            if (state.autoBump && order.items.every(i => i.done)) {
+                setTimeout(() => completeOrder(orderId), 500);
+            }
+            
+            render();
+        }
+
+        function startOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (order) {
+                order.status = 'preparing';
+                render();
+                toast(`#${orderId} rozpoczęte`, 'info');
+            }
+        }
+
+        function bumpOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (order) {
+                // Mark all items as done
+                order.items.forEach(i => i.done = true);
+                render();
+                toast(`#${orderId} → wydawka`, 'info');
+            }
+        }
+
+        function completeOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (order) {
+                order.status = 'completed';
+                order.completedAt = new Date().toISOString();
+                state.completedOrders.unshift(order);
+                if (state.completedOrders.length > 20) state.completedOrders.pop();
+                render();
+                toast(`#${orderId} gotowe! ✓`, 'success');
+            }
+        }
+
+        function recallLastCompleted() {
+            if (state.completedOrders.length === 0) {
+                toast('Brak zamówień do przywrócenia', 'warning');
+                return;
+            }
+            
+            const order = state.completedOrders.shift();
+            order.status = 'preparing';
+            delete order.completedAt;
+            render();
+            toast(`#${order.id} przywrócone`, 'info');
+        }
+
+        function setStation(station) {
+            state.station = station;
+            
+            document.querySelectorAll('.station-tab').forEach(tab => {
+                tab.classList.remove('tab-active');
+                if (!tab.classList.contains('bg-emerald-500/10')) {
+                    tab.classList.add('glass');
+                }
+            });
+            
+            const activeTab = document.querySelector(`[data-station="${station}"]`);
+            activeTab.classList.add('tab-active');
+            activeTab.classList.remove('glass');
+            
+            render();
+        }
+
+        // ===================== MODAL =====================
+        function openOrderModal(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            const elapsed = getElapsed(order.createdAt);
+            const mins = elapsed / 60;
+            let timerClass = 'timer-ok';
+            if (mins >= state.criticalTime) timerClass = 'timer-critical';
+            else if (mins >= state.warningTime) timerClass = 'timer-warning';
+            
+            const ch = channels[order.channel];
+            const stations = [...new Set(order.items.map(i => i.station))];
+            const allDone = order.items.every(i => i.done);
+            
+            document.getElementById('modalOrderContent').innerHTML = `
+                <div class="p-4 sm:p-6">
+                    <!-- Header -->
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+                        <div>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-4xl sm:text-5xl font-black">#${order.id}</span>
+                                ${order.priority ? `<span class="priority-high px-3 py-1 rounded-lg text-xs font-bold">PILNE</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1.5 ${ch.color} rounded-lg text-xs sm:text-sm font-bold">
+                                    <i class="fas ${ch.icon} mr-1.5"></i>${ch.name}
+                                </span>
+                                <span class="text-gray-400 text-sm">
+                                    <i class="fas fa-location-dot mr-1"></i>${order.location}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-left sm:text-right">
+                            <div class="font-mono text-5xl sm:text-6xl font-black ${timerClass}">${formatTime(elapsed)}</div>
+                            <p class="text-xs text-gray-500 mt-1">od złożenia zamówienia</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress -->
+                    <div class="mb-6 p-4 glass rounded-xl border border-white/5">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-gray-400">Postęp realizacji</span>
+                            <span class="font-bold">${order.items.filter(i => i.done).length} / ${order.items.length} pozycji</span>
+                        </div>
+                        <div class="h-3 bg-white/10 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" 
+                                 style="width: ${(order.items.filter(i => i.done).length / order.items.length * 100)}%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Items by station -->
+                    <div class="space-y-4 mb-6">
+                        ${stations.map(station => {
+                            const stationItems = order.items.filter(i => i.station === station);
+                            const stationDone = stationItems.filter(i => i.done).length;
+                            return `
+                                <div>
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <span class="px-2.5 py-1 station-${station} rounded-lg text-xs font-bold uppercase">${station}</span>
+                                        <span class="text-sm text-gray-400">${stationDone}/${stationItems.length}</span>
+                                        ${stationDone === stationItems.length ? '<i class="fas fa-check-circle text-emerald-400 text-sm"></i>' : ''}
+                                    </div>
+                                    <div class="space-y-2">
+                                        ${stationItems.map(item => {
+                                            const idx = order.items.indexOf(item);
+                                            return `
+                                                <div onclick="toggleItem(${order.id}, ${idx}); openOrderModal(${order.id});" 
+                                                     class="flex items-center gap-3 p-3 sm:p-4 rounded-xl cursor-pointer transition-all active:scale-[0.99] ${item.done ? 'bg-emerald-500/15' : 'glass hover:bg-white/10'}">
+                                                    <div class="w-11 h-11 flex items-center justify-center rounded-xl ${item.done ? 'bg-emerald-500 text-white' : 'bg-white/10'} font-bold text-lg">
+                                                        ${item.done ? '<i class="fas fa-check"></i>' : item.qty}
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="font-semibold ${item.done ? 'line-through opacity-50' : ''}">${item.emoji || ''} ${item.name}</p>
+                                                        <p class="text-sm text-gray-500">${item.time} min przygotowania</p>
+                                                    </div>
+                                                    ${item.qty > 1 ? `<span class="text-2xl font-bold text-gray-500">×${item.qty}</span>` : ''}
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <!-- Note -->
+                    ${order.note ? `
+                        <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl mb-6">
+                            <p class="text-amber-300 text-sm">
+                                <i class="fas fa-triangle-exclamation mr-2"></i>
+                                <strong>Uwaga:</strong> ${order.note}
+                            </p>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Actions -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                        <button onclick="printOrder(${order.id})" class="py-3 sm:py-4 glass hover:bg-white/15 rounded-xl font-semibold transition-all text-sm">
+                            <i class="fas fa-print mr-2"></i>Drukuj
+                        </button>
+                        <button onclick="closeOrderModal()" class="py-3 sm:py-4 glass hover:bg-white/15 rounded-xl font-semibold transition-all text-sm">
+                            <i class="fas fa-times mr-2"></i>Zamknij
+                        </button>
+                        ${order.status === 'new' ? `
+                            <button onclick="startOrder(${order.id}); closeOrderModal();" class="py-3 sm:py-4 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl font-semibold transition-all text-sm col-span-2 sm:col-span-2">
+                                <i class="fas fa-play mr-2"></i>Rozpocznij realizację
+                            </button>
+                        ` : `
+                            <button onclick="completeOrder(${order.id}); closeOrderModal();" class="py-3 sm:py-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl font-semibold transition-all text-sm col-span-2 sm:col-span-2 ${allDone ? '' : 'opacity-50'}">
+                                <i class="fas fa-check mr-2"></i>Zamówienie gotowe
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modalOrder').classList.remove('hidden');
+            document.getElementById('modalOrder').classList.add('flex');
+        }
+
+        function closeOrderModal() {
+            document.getElementById('modalOrder').classList.add('hidden');
+            document.getElementById('modalOrder').classList.remove('flex');
+        }
+
+        // ===================== PRINT =====================
+        function printOrder(orderId) {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            const elapsed = getElapsed(order.createdAt);
+            const ch = channels[order.channel];
+            const stations = ['kuchnia', 'grill', 'zimne', 'bar', 'desery'];
+            
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Zamówienie #${order.id}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Courier New', monospace; padding: 12px; max-width: 280px; margin: 0 auto; font-size: 11px; }
+                        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px; }
+                        .order-id { font-size: 32px; font-weight: bold; letter-spacing: -1px; }
+                        .channel { background: #000; color: #fff; padding: 3px 10px; display: inline-block; margin-top: 4px; font-size: 10px; letter-spacing: 1px; }
+                        .location { margin-top: 6px; font-size: 13px; font-weight: bold; }
+                        .time { font-size: 10px; color: #666; margin-top: 2px; }
+                        .elapsed { font-size: 22px; font-weight: bold; margin: 6px 0; letter-spacing: 1px; }
+                        ${order.priority ? '.priority { background: #000; color: #fff; padding: 4px 8px; font-size: 11px; font-weight: bold; margin-top: 6px; display: inline-block; }' : ''}
+                        .station { background: #f0f0f0; padding: 4px 8px; font-weight: bold; margin: 10px 0 4px; font-size: 10px; letter-spacing: 1px; }
+                        .item { display: flex; padding: 3px 0; border-bottom: 1px dotted #ccc; font-size: 11px; }
+                        .item-qty { width: 28px; font-weight: bold; }
+                        .item-name { flex: 1; }
+                        .note { background: #fff3cd; padding: 6px; margin: 10px 0; border: 1px solid #ffc107; font-size: 10px; }
+                        .footer { text-align: center; border-top: 2px dashed #000; padding-top: 8px; margin-top: 10px; font-size: 9px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="order-id">#${order.id}</div>
+                        <div class="channel">${ch.name.toUpperCase()}</div>
+                        ${order.priority ? '<div class="priority">⚡ PRIORYTET</div>' : ''}
+                        <div class="location">${order.location}</div>
+                        <div class="time">${new Date(order.createdAt).toLocaleTimeString('pl-PL')}</div>
+                        <div class="elapsed">⏱ ${formatTime(elapsed)}</div>
+                    </div>
+                    
+                    ${stations.map(station => {
+                        const items = order.items.filter(i => i.station === station);
+                        if (items.length === 0) return '';
+                        return `
+                            <div class="station">[ ${station.toUpperCase()} ]</div>
+                            ${items.map(item => `
+                                <div class="item">
+                                    <span class="item-qty">${item.qty}×</span>
+                                    <span class="item-name">${item.name}</span>
+                                </div>
+                            `).join('')}
+                        `;
+                    }).join('')}
+                    
+                    ${order.note ? `<div class="note">⚠ ${order.note}</div>` : ''}
+                    
+                    <div class="footer">
+                        <p>${new Date().toLocaleString('pl-PL')}</p>
+                        <p style="margin-top:4px; font-weight:bold;">KDS - Kitchen Display System</p>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+            toast('Drukowanie zamówienia...', 'info');
+        }
+
+        // ===================== STATS =====================
+        function updateStats() {
+            const active = state.orders.filter(o => o.status !== 'completed');
+            const newCount = active.filter(o => o.status === 'new').length;
+            const progressCount = active.filter(o => o.status === 'preparing').length;
+            
+            document.getElementById('statNew').textContent = newCount;
+            document.getElementById('statNewMobile').textContent = newCount;
+            document.getElementById('statProgress').textContent = progressCount;
+            document.getElementById('statProgressMobile').textContent = progressCount;
+            
+            const completed = state.orders.filter(o => o.status === 'completed' && o.completedAt);
+            if (completed.length > 0) {
+                const total = completed.reduce((sum, o) => {
+                    return sum + (new Date(o.completedAt) - new Date(o.createdAt)) / 1000;
+                }, 0);
+                const avg = Math.floor(total / completed.length);
+                const avgStr = formatTime(avg);
+                document.getElementById('statAvgTime').textContent = avgStr;
+                document.getElementById('statAvgTimeMobile').textContent = avgStr;
+            }
+        }
+
+        function updateStationCounts() {
+            const active = state.orders.filter(o => o.status !== 'completed');
+            
+            document.getElementById('countAll').textContent = active.length;
+            
+            ['kuchnia', 'grill', 'zimne', 'bar', 'desery'].forEach(station => {
+                const count = active.filter(o => 
+                    o.items.some(i => i.station === station && !i.done)
+                ).length;
+                const el = document.getElementById('count' + station.charAt(0).toUpperCase() + station.slice(1));
+                if (el) el.textContent = count;
+            });
+            
+            // Wydawka = orders with all items done
+            const wydawka = active.filter(o => o.items.every(i => i.done)).length;
+            document.getElementById('countWydawka').textContent = wydawka;
+        }
+
+        // ===================== SETTINGS =====================
+        function openSettings() {
+            document.getElementById('modalSettings').classList.remove('hidden');
+            document.getElementById('modalSettings').classList.add('flex');
+        }
+
+        function closeSettings() {
+            document.getElementById('modalSettings').classList.add('hidden');
+            document.getElementById('modalSettings').classList.remove('flex');
+        }
+
+        function toggleSound() {
+            state.sound = !state.sound;
+            updateSoundButton();
+            document.getElementById('settingSound').checked = state.sound;
+            toast(state.sound ? 'Dźwięki włączone' : 'Dźwięki wyłączone', 'info');
+            saveSettings();
+        }
+
+        function updateSoundButton() {
+            const btn = document.getElementById('btnSound');
+            const icon = btn.querySelector('i');
+            icon.className = state.sound ? 'fas fa-volume-up text-emerald-400 text-sm sm:text-base' : 'fas fa-volume-xmark text-red-400 text-sm sm:text-base';
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ===================== HELPERS =====================
+        function getElapsed(isoTime) {
+            return Math.floor((Date.now() - new Date(isoTime)) / 1000);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function playSound() {
+            if (!state.sound) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                // Two-tone chime
+                osc.frequency.value = 880;
+                gain.gain.value = 0.25;
+                osc.start();
+                
+                setTimeout(() => { osc.frequency.value = 1100; }, 150);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        function toast(message, type = 'info') {
+            const container = document.getElementById('toasts');
+            const div = document.createElement('div');
+            
+            const styles = {
+                success: 'from-emerald-500 to-teal-600',
+                error: 'from-red-500 to-rose-600',
+                info: 'from-sky-500 to-blue-600',
+                warning: 'from-amber-500 to-orange-600'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+            
+            div.className = `bg-gradient-to-r ${styles[type]} px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-slideUp`;
+            div.innerHTML = `
+                <i class="fas ${icons[type]} text-white/90"></i>
+                <span class="font-medium text-sm flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="p-1 hover:bg-white/20 rounded-lg transition-all">
+                    <i class="fas fa-times text-xs text-white/70"></i>
+                </button>
+            `;
+            
+            container.appendChild(div);
+            
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transform = 'translateY(10px) scale(0.95)';
+                div.style.transition = 'all 0.3s ease';
+                setTimeout(() => div.remove(), 300);
+            }, 4000);
+        }
+
+        // ===================== STORAGE =====================
+        function saveSettings() {
+            try {
+                localStorage.setItem('kds_pro_settings', JSON.stringify({
+                    sound: state.sound,
+                    autoBump: state.autoBump,
+                    warningTime: state.warningTime,
+                    criticalTime: state.criticalTime
+                }));
+            } catch (e) {}
+        }
+
+        function loadSettings() {
+            try {
+                const saved = localStorage.getItem('kds_pro_settings');
+                if (saved) {
+                    const s = JSON.parse(saved);
+                    state.sound = s.sound ?? true;
+                    state.autoBump = s.autoBump ?? false;
+                    state.warningTime = s.warningTime ?? 10;
+                    state.criticalTime = s.criticalTime ?? 20;
+                    
+                    document.getElementById('settingSound').checked = state.sound;
+                    document.getElementById('settingAutoBump').checked = state.autoBump;
+                    document.getElementById('settingWarning').value = state.warningTime;
+                    document.getElementById('settingWarningValue').textContent = state.warningTime + ' min';
+                    document.getElementById('settingCritical').value = state.criticalTime;
+                    document.getElementById('settingCriticalValue').textContent = state.criticalTime + ' min';
+                    
+                    updateSoundButton();
+                }
+            } catch (e) {}
+        }
+    </script>
+</body>
+</html>

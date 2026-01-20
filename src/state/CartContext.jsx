@@ -172,7 +172,12 @@ export function CartProvider({ children }) {
   // Calculate total
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Submit order
+  /**
+   * @DEPRECATED for Voice flow - zamówienia głosowe są zapisywane w backend/ConfirmOrderHandler
+   * 
+   * Ta funkcja jest przeznaczona TYLKO dla manualnego checkout przez UI.
+   * Voice/Brain V2 używają: api/brain/domains/food/confirmHandler.js → persistOrderToDB()
+   */
   const submitOrder = async (deliveryInfo) => {
     console.log('🛒 submitOrder called with user:', user);
 
@@ -194,9 +199,79 @@ export function CartProvider({ children }) {
     setIsSubmitting(true);
 
     try {
+      // UUID validation helper
+      const isValidUUID = (id) => {
+        if (!id || typeof id !== 'string') return false;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(id);
+      };
+
+      // Fix for invalid restaurant IDs (when cart is synced from voice without full restaurant object)
+      let finalRestaurantId = restaurant.id;
+
+      // Check if ID is missing, placeholder, or not a valid UUID
+      const needsLookup = !finalRestaurantId ||
+        finalRestaurantId === 'unknown-sync' ||
+        !isValidUUID(finalRestaurantId);
+
+      if (needsLookup) {
+        const searchName = (restaurant.name || '').trim();
+        console.log(`🔍 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${searchName}"...`);
+
+        if (!searchName) {
+          throw new Error('Brak nazwy restauracji w koszyku. Proszę dodać produkty ponownie.');
+        }
+
+        // Try exact match first
+        let { data: restData, error: restErr } = await supabase
+          .from('restaurants')
+          .select('id, name')
+          .ilike('name', searchName)
+          .limit(1)
+          .maybeSingle();
+
+        // If no exact match, try partial match (contains)
+        if (!restData?.id) {
+          console.log(`🔍 No exact match, trying partial match for: "${searchName}"`);
+          const partialResult = await supabase
+            .from('restaurants')
+            .select('id, name')
+            .ilike('name', `%${searchName}%`)
+            .limit(1)
+            .maybeSingle();
+          restData = partialResult.data;
+          restErr = partialResult.error;
+        }
+
+        // If still no match, try searching by alias field (if exists)
+        if (!restData?.id) {
+          console.log(`🔍 No partial match, trying aliases for: "${searchName}"`);
+          const aliasResult = await supabase
+            .from('restaurants')
+            .select('id, name')
+            .ilike('aliases', `%${searchName}%`)
+            .limit(1)
+            .maybeSingle();
+          // Don't overwrite with error if aliases column doesn't exist
+          if (aliasResult.data?.id) {
+            restData = aliasResult.data;
+          }
+        }
+
+        if (restData?.id) {
+          finalRestaurantId = restData.id;
+          // Update local state to avoid re-fetching
+          setRestaurant(prev => ({ ...prev, id: finalRestaurantId, name: restData.name }));
+          console.log(`✅ Resolved restaurant "${searchName}" → ID: ${finalRestaurantId}, DB Name: "${restData.name}"`);
+        } else {
+          console.error("❌ Could not resolve restaurant ID. Searched for:", searchName, "Error:", restErr);
+          throw new Error(`Nie można znaleźć restauracji "${searchName}" w bazie. Spróbuj wybrać restaurację ponownie.`);
+        }
+      }
+
       const orderData = {
         user_id: user?.id || null,
-        restaurant_id: restaurant.id,
+        restaurant_id: finalRestaurantId,
         restaurant_name: restaurant.name,
         items: cart.map(item => ({
           menu_item_id: item.id,
@@ -204,7 +279,8 @@ export function CartProvider({ children }) {
           unit_price_cents: Math.round(item.price * 100),
           qty: item.quantity
         })),
-        total_price: Math.round(total * 100),
+        total_price: total,
+        total_cents: Math.round(total * 100),
         status: 'pending',
         customer_name: deliveryInfo.name || user?.user_metadata?.first_name || user?.email || 'Gość',
         customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
@@ -213,26 +289,39 @@ export function CartProvider({ children }) {
         created_at: new Date().toISOString()
       };
 
-      console.log('🛒 Submitting order', orderData);
-      const response = await fetch(getApiUrl('/api/orders'), {
+      const apiUrl = getApiUrl('/api/orders');
+      console.log('🛒 Submitting order to:', apiUrl);
+      console.log('🛒 Order data:', JSON.stringify(orderData, null, 2));
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData),
       });
 
+      console.log('🛒 Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create order');
+        const errorText = await response.text();
+        console.error('🛒 Error response body:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Unknown error' };
+        }
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('🛒 Order created successfully:', data);
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
       clearCart();
       setIsOpen(false);
       return data;
     } catch (error) {
-      console.error('Failed to submit order', error);
-      push('Błąd podczas składania zamówienia', 'error');
+      console.error('❌ Failed to submit order:', error.message, error);
+      push(`Błąd: ${error.message}`, 'error');
       return false;
     } finally {
       setIsSubmitting(false);

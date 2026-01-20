@@ -222,8 +222,15 @@ export default function Cart() {
                         🗑️ Wyczyść koszyk
                       </button>
                       <button
-                        type="submit"
+                        type="button"
                         disabled={isSubmitting}
+                        onClick={() => {
+                          if (!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address) {
+                            alert("⚠️ Proszę uzupełnić dane dostawy:\n- Imię i nazwisko\n- Telefon\n- Adres");
+                            return;
+                          }
+                          handleSubmit({ preventDefault: () => { } });
+                        }}
                         className="flex-1 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-3 font-semibold hover:shadow-[0_0_30px_rgba(0,234,255,0.5)] transition-all disabled:opacity-50"
                       >
                         {isSubmitting ? '⏳ Składanie...' : '✓ Złóż zamówienie'}

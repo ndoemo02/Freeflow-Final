@@ -2,7 +2,7 @@
   min-height: 100vh;
   width: 100%;
   /* usunięto tło z kontenera aby nie dublować warstwy bg */
-  background: #000;
+  background: transparent;
   position: relative;
   color: white;
   overflow: hidden;
@@ -12,6 +12,9 @@
 .home-page {
   box-sizing: border-box;
   padding: 88px 32px 32px;
+  max-height: 100vh;
+  overflow: hidden;
+  /* Fix unwanted scrollbar */
 }
 
 /* Wrapper dla chatu – ogranicza szerokość i dystans od krawędzi */

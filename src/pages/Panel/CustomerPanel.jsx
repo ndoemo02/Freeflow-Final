@@ -37,7 +37,7 @@ export default function CustomerPanel() {
     // Poczekaj aż stan auth będzie znany; jeśli brak usera → wróć do Home bez intro
     if (user === undefined) return;
     if (!user?.id) {
-      try { sessionStorage.setItem('skipIntro', 'true'); } catch {}
+      try { sessionStorage.setItem('skipIntro', 'true'); } catch { }
       navigate('/');
     }
   }, [user, navigate]);
@@ -82,8 +82,8 @@ export default function CustomerPanel() {
 
       // Load restaurants
       const { data: restaurantsData, error: restaurantsError } = await supabase
-          .from('restaurants')
-          .select('id,name,city,address,cuisine_type')
+        .from('restaurants')
+        .select('id,name,city,address,cuisine_type')
         .order('name');
 
       if (restaurantsError) AmberLogger.error(restaurantsError);
@@ -92,7 +92,7 @@ export default function CustomerPanel() {
 
       // Calculate loyalty points (example: 1 point per 10 zł spent)
       const completedOrders = ordersData?.filter(o => o.status === 'completed' || o.status === 'delivered') || [];
-      const totalSpent = completedOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0) / 100, 0);
+      const totalSpent = completedOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
       setLoyaltyPoints(Math.floor(totalSpent / 10));
 
       // Set recent orders (last 3)
@@ -126,7 +126,7 @@ export default function CustomerPanel() {
         navigate('/')
       }
     }
-    
+
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [navigate])
@@ -141,7 +141,7 @@ export default function CustomerPanel() {
         .order('name');
 
       if (error) throw error;
-      
+
       setMenuItems(data || []);
       AmberLogger.log("Menu loaded:", data);
     } catch (e) {
@@ -160,10 +160,10 @@ export default function CustomerPanel() {
 
   const saveProfile = async () => {
     if (!profile) return;
-    
+
     try {
       setSavingProfile(true);
-      
+
       // Update user metadata in Supabase Auth
       const { data, error } = await supabase.auth.updateUser({
         data: {
@@ -176,12 +176,12 @@ export default function CustomerPanel() {
       });
 
       if (error) throw error;
-      
+
       // Update local user state with new metadata
       if (data?.user) {
         setUser(data.user);
       }
-      
+
       push('Profil został zaktualizowany', 'success');
       setEditingProfile(false);
       AmberLogger.log("Profile saved:", profile);
@@ -210,7 +210,7 @@ export default function CustomerPanel() {
 
       push('Zamówienie zostało anulowane', 'success')
       AmberLogger.log("Order cancelled:", { id: orderId });
-      
+
       // Refresh orders via backend API
       const ordersResponse = await fetch(getApiUrl(`/api/orders?user_id=${user.id}`));
       if (ordersResponse.ok) {
@@ -224,7 +224,7 @@ export default function CustomerPanel() {
   }
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen bg-black px-4 py-8 relative overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -297,7 +297,7 @@ export default function CustomerPanel() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4 }}
-            whileHover={{ 
+            whileHover={{
               scale: 1.05,
               boxShadow: "0 0 20px rgba(0, 255, 255, 0.3)"
             }}
@@ -305,8 +305,8 @@ export default function CustomerPanel() {
           >
             ← Strona główna
           </motion.button>
-          
-          
+
+
           <motion.button
             onClick={() => {
               console.log('👤 CustomerPanel - ustawiam skipIntro flag');
@@ -317,7 +317,7 @@ export default function CustomerPanel() {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.5 }}
-            whileHover={{ 
+            whileHover={{
               scale: 1.05,
               boxShadow: "0 0 20px rgba(0, 255, 255, 0.3)"
             }}
@@ -341,7 +341,7 @@ export default function CustomerPanel() {
           >
             Panel Klienta
           </motion.h1>
-          
+
           <motion.p
             className="text-lg text-gray-300 mb-2"
             initial={{ opacity: 0, y: 20 }}
@@ -376,7 +376,7 @@ export default function CustomerPanel() {
           <TabButton current={tab} setTab={setTab} id="settings" icon="⚙️">Ustawienia</TabButton>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="rounded-2xl border border-cyan-500/20 bg-black/40 backdrop-blur-xl p-6 shadow-2xl"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -483,7 +483,7 @@ export default function CustomerPanel() {
           </AnimatePresence>
         </motion.div>
       </div>
-      
+
       {/* Cart Popup */}
       <Cart />
     </motion.div>
@@ -493,13 +493,13 @@ export default function CustomerPanel() {
 function TabButton({ current, setTab, id, icon, children }) {
   const active = current === id
   return (
-    <motion.button 
-      onClick={() => setTab(id)} 
+    <motion.button
+      onClick={() => setTab(id)}
       className={[
         'flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-all whitespace-nowrap backdrop-blur-xl',
         active ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-white shadow-lg border border-cyan-500/30' : 'bg-black/40 border border-white/10 text-slate-300 hover:bg-white/10 hover:border-cyan-500/20'
       ].join(' ')}
-      whileHover={{ 
+      whileHover={{
         scale: 1.05,
         y: -2,
         boxShadow: active ? "0 0 25px rgba(0, 255, 255, 0.4)" : "0 0 15px rgba(0, 255, 255, 0.2)",
@@ -508,7 +508,7 @@ function TabButton({ current, setTab, id, icon, children }) {
       whileTap={{ scale: 0.95 }}
     >
       <span>{icon}</span>
-        {children}
+      {children}
     </motion.button>
   )
 }
@@ -759,7 +759,7 @@ function OrdersTab({ orders, loading, cancelOrder, filter, setFilter }) {
 
               <div className="flex justify-between items-center">
                 <div className="text-sm text-slate-300">
-                  Kwota: {(Number(order.total_price || 0) / 100).toFixed(2)} zł
+                  Kwota: {(Number(order.total_price || 0)).toFixed(2)} zł
                 </div>
                 {(order.status === 'pending' || order.status === 'confirmed') && (
                   <button
@@ -1239,14 +1239,12 @@ function SettingToggle({ label, description, checked, onChange, icon }) {
       </div>
       <button
         onClick={() => onChange(!checked)}
-        className={`relative w-12 h-6 rounded-full transition-colors ${
-          checked ? 'bg-gradient-to-r from-cyan-500 to-purple-500' : 'bg-gray-600'
-        }`}
+        className={`relative w-12 h-6 rounded-full transition-colors ${checked ? 'bg-gradient-to-r from-cyan-500 to-purple-500' : 'bg-gray-600'
+          }`}
       >
         <div
-          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-            checked ? 'transform translate-x-6' : ''
-          }`}
+          className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${checked ? 'transform translate-x-6' : ''
+            }`}
         />
       </button>
     </div>
@@ -1254,7 +1252,7 @@ function SettingToggle({ label, description, checked, onChange, icon }) {
 }
 
 function getStatusClass(status) {
-  switch(status) {
+  switch (status) {
     case 'delivered': return 'bg-green-600/20 text-green-500 border-green-600/30'
     case 'completed': return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
     case 'preparing': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
@@ -1265,7 +1263,7 @@ function getStatusClass(status) {
 }
 
 function getStatusText(status) {
-  switch(status) {
+  switch (status) {
     case 'delivered': return 'Dostarczone'
     case 'completed': return 'Gotowe do odbioru'
     case 'preparing': return 'W przygotowaniu'
@@ -1276,7 +1274,7 @@ function getStatusText(status) {
 }
 
 function getReservationStatusClass(status) {
-  switch(status) {
+  switch (status) {
     case 'confirmed': return 'bg-green-600/20 text-green-500 border-green-600/30'
     case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
     case 'cancelled': return 'bg-red-500/20 text-red-400 border-red-500/30'
@@ -1286,7 +1284,7 @@ function getReservationStatusClass(status) {
 }
 
 function getReservationStatusText(status) {
-  switch(status) {
+  switch (status) {
     case 'confirmed': return 'Potwierdzona'
     case 'pending': return 'Oczekuje'
     case 'cancelled': return 'Anulowana'
@@ -1300,7 +1298,7 @@ function StatsCards({ orders }) {
   const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'delivered').length
   const totalSpent = orders
     .filter(o => o.status !== 'cancelled')
-    .reduce((sum, o) => sum + (Number(o.total_price) || 0) / 100, 0)
+    .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0)
   const pendingOrders = orders.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status)).length
 
   const stats = [
@@ -1504,7 +1502,7 @@ function CartTab() {
       )}
 
       <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30">
-        <span className="text-lg font-bold text-white">Razem: {(total / 100).toFixed(2)} zł</span>
+        <span className="text-lg font-bold text-white">Razem: {total.toFixed(2)} zł</span>
         <button
           onClick={() => {
             const deliveryInfo = {

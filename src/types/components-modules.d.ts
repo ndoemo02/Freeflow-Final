@@ -64,4 +64,103 @@ declare module '../components/LogoFreeFlow.jsx' {
   export default Component;
 }
 
+// Cart and CartContext
+declare module '../state/CartContext' {
+  export function useCart(): {
+    cart: any[];
+    restaurant: string | null;
+    total: number;
+    isOpen: boolean;
+    isSubmitting: boolean;
+    itemCount: number;
+    addToCart: (item: any, restaurant?: string) => void;
+    removeFromCart: (id: string) => void;
+    updateQuantity: (id: string, quantity: number) => void;
+    clearCart: () => void;
+    submitOrder: (deliveryInfo: any) => Promise<any>;
+    setIsOpen: (open: boolean) => void;
+    syncCart: (items: any[], restaurant: string) => void;
+  };
+  export const CartProvider: React.ComponentType<{ children: React.ReactNode }>;
+}
 
+declare module '../components/Cart' {
+  const Cart: React.ComponentType<any>;
+  export default Cart;
+}
+declare module '../components/Cart.jsx' {
+  const Cart: React.ComponentType<any>;
+  export default Cart;
+}
+
+// MenuDrawer
+declare module '../ui/MenuDrawer' {
+  const MenuDrawer: React.ComponentType<any>;
+  export default MenuDrawer;
+}
+declare module '../ui/MenuDrawer.jsx' {
+  const MenuDrawer: React.ComponentType<any>;
+  export default MenuDrawer;
+}
+
+// useSpeechRecognition hook
+declare module '../hooks/useSpeechRecognition' {
+  interface UseSpeechRecognitionOptions {
+    onTranscriptChange?: (transcript: string) => void;
+  }
+  interface UseSpeechRecognitionReturn {
+    recording: boolean;
+    interimText: string;
+    finalText: string;
+    setFinalText: (text: string) => void;
+    startRecording: () => void;
+    stopRecording: () => void;
+  }
+  export function useSpeechRecognition(options?: UseSpeechRecognitionOptions): UseSpeechRecognitionReturn;
+}
+declare module '../hooks/useSpeechRecognition.js' {
+  interface UseSpeechRecognitionOptions {
+    onTranscriptChange?: (transcript: string) => void;
+  }
+  interface UseSpeechRecognitionReturn {
+    recording: boolean;
+    interimText: string;
+    finalText: string;
+    setFinalText: (text: string) => void;
+    startRecording: () => void;
+    stopRecording: () => void;
+  }
+  export function useSpeechRecognition(options?: UseSpeechRecognitionOptions): UseSpeechRecognitionReturn;
+}
+
+// VoiceStateManager
+declare module '../managers/VoiceStateManager' {
+  export type VoiceState = 'IDLE' | 'USER_SPEAKING' | 'PROCESSING' | 'SYSTEM_SPEAKING';
+  export interface VoiceStateManager {
+    getState(): VoiceState;
+    setState(newState: VoiceState): void;
+    onVadStart(): boolean;
+    onVadEnd(): void;
+    onTtsStart(turnId: string): void;
+    onTtsEnd(): void;
+    registerAudio(audio: HTMLAudioElement): void;
+    stopTTS(): void;
+    subscribe(callback: (state: VoiceState) => void): () => void;
+  }
+  export const voiceStateManager: VoiceStateManager;
+}
+declare module '../managers/VoiceStateManager.js' {
+  export type VoiceState = 'IDLE' | 'USER_SPEAKING' | 'PROCESSING' | 'SYSTEM_SPEAKING';
+  export interface VoiceStateManager {
+    getState(): VoiceState;
+    setState(newState: VoiceState): void;
+    onVadStart(): boolean;
+    onVadEnd(): void;
+    onTtsStart(turnId: string): void;
+    onTtsEnd(): void;
+    registerAudio(audio: HTMLAudioElement): void;
+    stopTTS(): void;
+    subscribe(callback: (state: VoiceState) => void): () => void;
+  }
+  export const voiceStateManager: VoiceStateManager;
+}

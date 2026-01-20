@@ -10,6 +10,7 @@ const detectBackend = () => {
       return 'http://localhost:3000';
     }
   }
+  // Production backend URL (update if deployment changes)
   return 'https://backend-one-gilt-89.vercel.app';
 };
 

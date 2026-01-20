@@ -82,9 +82,9 @@ export default function VoiceCommandCenterV2({
           animate={{ y: 0, opacity: 1, x: "-50%" }}
           exit={{ y: 100, opacity: 0, x: "-50%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed bottom-6 left-1/2 w-[95%] sm:w-full max-w-[600px] z-50 transform-gpu vcc-input-wrapper pointer-events-auto"
+          className="fixed bottom-2 left-[53%] sm:left-1/2 w-[92%] sm:w-[90%] md:w-full max-w-[600px] z-50 transform-gpu vcc-input-wrapper pointer-events-auto"
         >
-          <div className="voice-cc-container">
+          <div className="voice-cc-container" data-status={amberStatus === 'listening' ? 'listening' : ''}>
             <div className="voice-cc-inner-container">
               <div className="voice-cc-field">
                 {/* Visual Flairs */}

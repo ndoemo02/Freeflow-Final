@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GastroPanel Pro - Panel Zarządzania</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        
+        /* Sidebar transition */
+        .sidebar { transition: all 0.3s ease; }
+        .sidebar.collapsed { width: 80px; }
+        .sidebar.collapsed .sidebar-text { display: none; }
+        .sidebar.collapsed .sidebar-logo-text { display: none; }
+        .sidebar.collapsed .sidebar-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        
+        /* Mobile sidebar */
+        .sidebar-overlay { transition: opacity 0.3s ease; }
+        
+        /* Gradient backgrounds */
+        .gradient-blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .gradient-orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gradient-purple { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        
+        /* Card hover */
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        
+        /* Status badges */
+        .status-new { background: #fef3c7; color: #92400e; }
+        .status-preparing { background: #dbeafe; color: #1e40af; }
+        .status-ready { background: #d1fae5; color: #065f46; }
+        .status-delivered { background: #e5e7eb; color: #374151; }
+        
+        /* Channel badges */
+        .channel-restaurant { background: #3b82f6; }
+        .channel-hotel { background: #8b5cf6; }
+        .channel-delivery { background: #22c55e; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+        
+        /* Dark mode */
+        .dark { color-scheme: dark; }
+        .dark body { background: #0f172a; color: #e2e8f0; }
+        .dark .bg-white { background: #1e293b !important; }
+        .dark .bg-gray-50 { background: #0f172a !important; }
+        .dark .bg-gray-100 { background: #1e293b !important; }
+        .dark .text-gray-900 { color: #f1f5f9 !important; }
+        .dark .text-gray-600 { color: #94a3b8 !important; }
+        .dark .text-gray-500 { color: #64748b !important; }
+        .dark .border-gray-200 { border-color: #334155 !important; }
+        .dark .border-gray-100 { border-color: #1e293b !important; }
+        .dark .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; }
+        
+        /* Print */
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black/50 z-40 lg:hidden hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed left-0 top-0 h-full w-72 bg-white border-r border-gray-200 z-50 -translate-x-full lg:translate-x-0 shadow-xl lg:shadow-none">
+        <!-- Logo -->
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <i class="fas fa-utensils text-white"></i>
+                </div>
+                <div class="sidebar-logo-text">
+                    <h1 class="text-xl font-black text-gray-900">GastroPanel</h1>
+                    <p class="text-xs text-gray-500">Professional</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="p-4 space-y-1">
+            <a href="#" onclick="showSection('dashboard')" data-section="dashboard" class="sidebar-item nav-item active flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-chart-pie w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Pulpit</span>
+            </a>
+            <a href="#" onclick="showSection('orders')" data-section="orders" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-receipt w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Zamówienia</span>
+                <span class="sidebar-text ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full" id="ordersCount">0</span>
+            </a>
+            <a href="#" onclick="showSection('menu')" data-section="menu" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-book-open w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Menu</span>
+            </a>
+            <a href="#" onclick="showSection('categories')" data-section="categories" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-folder w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Kategorie</span>
+            </a>
+            
+            <div class="pt-4 pb-2">
+                <p class="sidebar-text px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Kanały sprzedaży</p>
+            </div>
+            
+            <a href="#" onclick="showSection('channel-restaurant')" data-section="channel-restaurant" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-store w-5 text-center text-lg text-blue-500"></i>
+                <span class="sidebar-text font-medium">Restauracja</span>
+            </a>
+            <a href="#" onclick="showSection('channel-hotel')" data-section="channel-hotel" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-hotel w-5 text-center text-lg text-purple-500"></i>
+                <span class="sidebar-text font-medium">Hotel</span>
+            </a>
+            <a href="#" onclick="showSection('channel-delivery')" data-section="channel-delivery" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-motorcycle w-5 text-center text-lg text-green-500"></i>
+                <span class="sidebar-text font-medium">Dostawa</span>
+            </a>
+            
+            <div class="pt-4 pb-2">
+                <p class="sidebar-text px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">System</p>
+            </div>
+            
+            <a href="#" onclick="showSection('reports')" data-section="reports" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-chart-bar w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Raporty</span>
+            </a>
+            <a href="#" onclick="showSection('settings')" data-section="settings" class="sidebar-item nav-item flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all">
+                <i class="fas fa-cog w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-medium">Ustawienia</span>
+            </a>
+        </nav>
+        
+        <!-- KDS Link -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
+            <a href="kds.html" class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-xl hover:from-orange-600 hover:to-red-700 transition-all shadow-lg shadow-orange-500/30">
+                <i class="fas fa-fire-burner w-5 text-center text-lg"></i>
+                <span class="sidebar-text font-semibold">Kitchen Display</span>
+            </a>
+        </div>
+        
+        <!-- Desktop collapse button -->
+        <button onclick="toggleSidebarDesktop()" class="hidden lg:flex absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-sm hover:bg-gray-50 transition-all">
+            <i class="fas fa-chevron-left text-xs text-gray-500" id="collapseIcon"></i>
+        </button>
+        
+        <!-- Mobile close button -->
+        <button onclick="toggleSidebar()" class="lg:hidden absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg">
+            <i class="fas fa-times text-gray-500"></i>
+        </button>
+    </aside>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="lg:ml-72 transition-all duration-300">
+        <!-- Header -->
+        <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 no-print">
+            <div class="flex items-center justify-between px-4 lg:px-6 py-4">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-bars text-gray-600"></i>
+                    </button>
+                    <div>
+                        <h2 class="text-xl lg:text-2xl font-bold text-gray-900" id="pageTitle">Pulpit</h2>
+                        <p class="text-sm text-gray-500" id="pageSubtitle">Przegląd aktywności</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 lg:gap-4">
+                    <button onclick="toggleDarkMode()" class="p-2 lg:p-3 hover:bg-gray-100 rounded-xl transition-all" title="Tryb ciemny">
+                        <i class="fas fa-moon text-gray-600"></i>
+                    </button>
+                    <button class="p-2 lg:p-3 hover:bg-gray-100 rounded-xl transition-all relative">
+                        <i class="fas fa-bell text-gray-600"></i>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
+                            A
+                        </div>
+                        <div class="hidden md:block">
+                            <p class="font-semibold text-gray-900 text-sm">Admin</p>
+                            <p class="text-xs text-gray-500">Manager</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="p-4 lg:p-6">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard" class="section">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-4 lg:p-6 shadow-sm card-hover">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-blue-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs lg:text-sm text-green-600 font-medium"><i class="fas fa-arrow-up mr-1"></i>12%</span>
+                        </div>
+                        <p class="text-2xl lg:text-3xl font-bold text-gray-900" id="statRevenue">0 zł</p>
+                        <p class="text-sm text-gray-500">Przychód dziś</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-4 lg:p-6 shadow-sm card-hover">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-receipt text-green-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs lg:text-sm text-green-600 font-medium"><i class="fas fa-arrow-up mr-1"></i>8%</span>
+                        </div>
+                        <p class="text-2xl lg:text-3xl font-bold text-gray-900" id="statOrders">0</p>
+                        <p class="text-sm text-gray-500">Zamówień dziś</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-4 lg:p-6 shadow-sm card-hover">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-users text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs lg:text-sm text-green-600 font-medium"><i class="fas fa-arrow-up mr-1"></i>5%</span>
+                        </div>
+                        <p class="text-2xl lg:text-3xl font-bold text-gray-900" id="statCustomers">0</p>
+                        <p class="text-sm text-gray-500">Klienci dziś</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-4 lg:p-6 shadow-sm card-hover">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-600 text-xl"></i>
+                            </div>
+                            <span class="text-xs lg:text-sm text-red-600 font-medium"><i class="fas fa-arrow-down mr-1"></i>3%</span>
+                        </div>
+                        <p class="text-2xl lg:text-3xl font-bold text-gray-900" id="statAvgTime">0 min</p>
+                        <p class="text-sm text-gray-500">Śr. czas realizacji</p>
+                    </div>
+                </div>
+                
+                <!-- Charts & Orders Row -->
+                <div class="grid lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Revenue Chart -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-bold text-gray-900">Przychody - ostatnie 7 dni</h3>
+                            <select class="text-sm border border-gray-200 rounded-lg px-3 py-2">
+                                <option>Tydzień</option>
+                                <option>Miesiąc</option>
+                                <option>Rok</option>
+                            </select>
+                        </div>
+                        <div class="h-64" id="revenueChart">
+                            <div class="flex items-end justify-between h-full gap-2">
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 60%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Pon</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 80%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Wt</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 45%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Śr</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 70%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Czw</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 90%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Pt</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg" style="height: 100%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Sob</span>
+                                </div>
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg" style="height: 75%"></div>
+                                    <span class="text-xs text-gray-500 mt-2">Nd</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Orders by Channel -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-900 mb-6">Zamówienia wg kanału</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600"><i class="fas fa-store text-blue-500 mr-2"></i>Restauracja</span>
+                                    <span class="font-semibold">45%</span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full">
+                                    <div class="h-full bg-blue-500 rounded-full" style="width: 45%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600"><i class="fas fa-hotel text-purple-500 mr-2"></i>Hotel</span>
+                                    <span class="font-semibold">30%</span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full">
+                                    <div class="h-full bg-purple-500 rounded-full" style="width: 30%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600"><i class="fas fa-motorcycle text-green-500 mr-2"></i>Dostawa</span>
+                                    <span class="font-semibold">25%</span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full">
+                                    <div class="h-full bg-green-500 rounded-full" style="width: 25%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-gray-100">
+                            <div class="grid grid-cols-3 gap-2 text-center">
+                                <div>
+                                    <p class="text-2xl font-bold text-blue-600" id="countRestaurant">0</p>
+                                    <p class="text-xs text-gray-500">Rest.</p>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-bold text-purple-600" id="countHotel">0</p>
+                                    <p class="text-xs text-gray-500">Hotel</p>
+                                </div>
+                                <div>
+                                    <p class="text-2xl font-bold text-green-600" id="countDelivery">0</p>
+                                    <p class="text-xs text-gray-500">Dostawa</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Active Orders & Top Products -->
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <!-- Active Orders -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-bold text-gray-900">Aktywne zamówienia</h3>
+                            <a href="#" onclick="showSection('orders')" class="text-sm text-blue-600 hover:underline">Zobacz wszystkie</a>
+                        </div>
+                        <div class="space-y-3" id="activeOrdersList">
+                            <!-- Orders will be populated -->
+                        </div>
+                    </div>
+                    
+                    <!-- Top Products -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-bold text-gray-900">Top produkty</h3>
+                            <span class="text-sm text-gray-500">Dziś</span>
+                        </div>
+                        <div class="space-y-4" id="topProductsList">
+                            <!-- Products will be populated -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="section-orders" class="section hidden">
+                <!-- Filters -->
+                <div class="bg-white rounded-2xl p-4 lg:p-6 shadow-sm mb-6">
+                    <div class="flex flex-col lg:flex-row gap-4">
+                        <div class="flex-1">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" placeholder="Szukaj zamówienia..." class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <select id="filterStatus" class="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" onchange="filterOrders()">
+                                <option value="all">Wszystkie statusy</option>
+                                <option value="new">Nowe</option>
+                                <option value="preparing">W przygotowaniu</option>
+                                <option value="ready">Gotowe</option>
+                                <option value="delivered">Dostarczone</option>
+                            </select>
+                            <select id="filterChannel" class="px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" onchange="filterOrders()">
+                                <option value="all">Wszystkie kanały</option>
+                                <option value="restaurant">Restauracja</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="delivery">Dostawa</option>
+                            </select>
+                            <button onclick="addDemoOrder()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 font-semibold transition-all">
+                                <i class="fas fa-plus mr-2"></i>Demo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Orders List -->
+                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Zamówienie</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Kanał</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lokalizacja</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Produkty</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Wartość</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Akcje</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody" class="divide-y divide-gray-100">
+                                <!-- Orders will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Menu Section -->
+            <section id="section-menu" class="section hidden">
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-6">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="menuSearch" placeholder="Szukaj produktu..." class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500" oninput="filterMenu()">
+                    </div>
+                    <button onclick="openMenuModal()" class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700 font-semibold transition-all">
+                        <i class="fas fa-plus mr-2"></i>Dodaj produkt
+                    </button>
+                </div>
+                
+                <!-- Menu Grid -->
+                <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Products will be populated -->
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section id="section-categories" class="section hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <p class="text-gray-600">Zarządzaj kategoriami menu</p>
+                    <button onclick="openCategoryModal()" class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 font-semibold transition-all">
+                        <i class="fas fa-plus mr-2"></i>Nowa kategoria
+                    </button>
+                </div>
+                
+                <div id="categoriesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <!-- Categories will be populated -->
+                </div>
+            </section>
+
+            <!-- Channel Sections -->
+            <section id="section-channel-restaurant" class="section hidden">
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-store text-blue-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Restauracja</h3>
+                            <p class="text-gray-500">Zamówienia lokalne - obsługa stolików</p>
+                        </div>
+                        <div class="ml-auto">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                <span class="ml-3 text-sm font-medium text-gray-700">Aktywny</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-4 bg-blue-50 rounded-xl">
+                            <p class="text-3xl font-bold text-blue-600" id="restaurantOrders">0</p>
+                            <p class="text-sm text-gray-600">Zamówień dziś</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-xl">
+                            <p class="text-3xl font-bold text-green-600" id="restaurantRevenue">0 zł</p>
+                            <p class="text-sm text-gray-600">Przychód dziś</p>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-xl">
+                            <p class="text-3xl font-bold text-purple-600">12</p>
+                            <p class="text-sm text-gray-600">Aktywne stoliki</p>
+                        </div>
+                        <div class="p-4 bg-orange-50 rounded-xl">
+                            <p class="text-3xl font-bold text-orange-600">18 min</p>
+                            <p class="text-sm text-gray-600">Śr. czas</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-channel-hotel" class="section hidden">
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-hotel text-purple-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Room Service</h3>
+                            <p class="text-gray-500">Zamówienia hotelowe - obsługa pokoi</p>
+                        </div>
+                        <div class="ml-auto">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                <span class="ml-3 text-sm font-medium text-gray-700">Aktywny</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-4 bg-purple-50 rounded-xl">
+                            <p class="text-3xl font-bold text-purple-600" id="hotelOrders">0</p>
+                            <p class="text-sm text-gray-600">Zamówień dziś</p>
+                        </div>
+                        <div class="p-4 bg-green-50 rounded-xl">
+                            <p class="text-3xl font-bold text-green-600" id="hotelRevenue">0 zł</p>
+                            <p class="text-sm text-gray-600">Przychód dziś</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-xl">
+                            <p class="text-3xl font-bold text-blue-600">48</p>
+                            <p class="text-sm text-gray-600">Pokoje</p>
+                        </div>
+                        <div class="p-4 bg-orange-50 rounded-xl">
+                            <p class="text-3xl font-bold text-orange-600">25 min</p>
+                            <p class="text-sm text-gray-600">Śr. czas</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-channel-delivery" class="section hidden">
+                <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center">
+                            <i class="fas fa-motorcycle text-green-600 text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Dostawa</h3>
+                            <p class="text-gray-500">Zamówienia na wynos i dostawy</p>
+                        </div>
+                        <div class="ml-auto">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                <span class="ml-3 text-sm font-medium text-gray-700">Aktywny</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="p-4 bg-green-50 rounded-xl">
+                            <p class="text-3xl font-bold text-green-600" id="deliveryOrders">0</p>
+                            <p class="text-sm text-gray-600">Zamówień dziś</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-xl">
+                            <p class="text-3xl font-bold text-blue-600" id="deliveryRevenue">0 zł</p>
+                            <p class="text-sm text-gray-600">Przychód dziś</p>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-xl">
+                            <p class="text-3xl font-bold text-purple-600">3</p>
+                            <p class="text-sm text-gray-600">Kurierzy</p>
+                        </div>
+                        <div class="p-4 bg-orange-50 rounded-xl">
+                            <p class="text-3xl font-bold text-orange-600">35 min</p>
+                            <p class="text-sm text-gray-600">Śr. czas</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="section-reports" class="section hidden">
+                <div class="grid lg:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Generuj raport</h3>
+                        <div class="space-y-4">
+                            <select class="w-full px-4 py-3 border border-gray-200 rounded-xl">
+                                <option>Raport dzienny</option>
+                                <option>Raport tygodniowy</option>
+                                <option>Raport miesięczny</option>
+                            </select>
+                            <input type="date" class="w-full px-4 py-3 border border-gray-200 rounded-xl">
+                            <button class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">
+                                <i class="fas fa-download mr-2"></i>Pobierz PDF
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Podsumowanie miesiąca</h3>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="text-center p-4 bg-gray-50 rounded-xl">
+                                <p class="text-3xl font-bold text-gray-900">847</p>
+                                <p class="text-sm text-gray-500">Zamówień</p>
+                            </div>
+                            <div class="text-center p-4 bg-gray-50 rounded-xl">
+                                <p class="text-3xl font-bold text-green-600">48,250 zł</p>
+                                <p class="text-sm text-gray-500">Przychód</p>
+                            </div>
+                            <div class="text-center p-4 bg-gray-50 rounded-xl">
+                                <p class="text-3xl font-bold text-blue-600">312</p>
+                                <p class="text-sm text-gray-500">Klientów</p>
+                            </div>
+                            <div class="text-center p-4 bg-gray-50 rounded-xl">
+                                <p class="text-3xl font-bold text-purple-600">57 zł</p>
+                                <p class="text-sm text-gray-500">Śr. zamówienie</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="section-settings" class="section hidden">
+                <div class="max-w-2xl">
+                    <div class="bg-white rounded-2xl p-6 shadow-sm mb-6">
+                        <h3 class="text-lg font-bold text-gray-900 mb-6">Ustawienia restauracji</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nazwa restauracji</label>
+                                <input type="text" value="Restauracja Pod Złotym Półmiskiem" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Adres</label>
+                                <input type="text" value="ul. Główna 15, 00-001 Warszawa" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+                                    <input type="tel" value="+48 123 456 789" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                    <input type="email" value="kontakt@restauracja.pl" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-900 mb-6">Preferencje</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div>
+                                    <p class="font-medium text-gray-900">Powiadomienia dźwiękowe</p>
+                                    <p class="text-sm text-gray-500">Sygnał przy nowym zamówieniu</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div>
+                                    <p class="font-medium text-gray-900">Tryb ciemny</p>
+                                    <p class="text-sm text-gray-500">Ciemny motyw interfejsu</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="darkModeToggle" class="sr-only peer" onchange="toggleDarkMode()">
+                                    <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-500 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Menu Modal -->
+    <div id="menuModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-900" id="menuModalTitle">Dodaj produkt</h3>
+                    <button onclick="closeMenuModal()" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-times text-gray-500"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="editProductId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nazwa produktu</label>
+                    <input type="text" id="productName" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kategoria</label>
+                    <select id="productCategory" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                        <!-- Categories will be populated -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cena (zł)</label>
+                        <input type="number" id="productPrice" step="0.01" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Koszt (zł)</label>
+                        <input type="number" id="productCost" step="0.01" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Czas przygotowania (min)</label>
+                    <input type="number" id="productTime" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Opis</label>
+                    <textarea id="productDesc" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="productVeg" class="w-5 h-5 rounded text-green-500 focus:ring-green-500">
+                        <span class="text-sm text-gray-700">Wegetariańskie</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="productSpicy" class="w-5 h-5 rounded text-red-500 focus:ring-red-500">
+                        <span class="text-sm text-gray-700">Ostre</span>
+                    </label>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100 flex gap-3">
+                <button onclick="closeMenuModal()" class="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all">
+                    Anuluj
+                </button>
+                <button onclick="saveProduct()" class="flex-1 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-blue-700 transition-all">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="categoryModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md">
+            <div class="p-6 border-b border-gray-100">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-gray-900">Nowa kategoria</h3>
+                    <button onclick="closeCategoryModal()" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <i class="fas fa-times text-gray-500"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nazwa kategorii</label>
+                    <input type="text" id="categoryName" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Ikona</label>
+                    <div class="grid grid-cols-8 gap-2">
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-utensils"><i class="fas fa-utensils"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-pizza-slice"><i class="fas fa-pizza-slice"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-burger"><i class="fas fa-burger"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-bowl-food"><i class="fas fa-bowl-food"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-fish"><i class="fas fa-fish"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-drumstick-bite"><i class="fas fa-drumstick-bite"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-wine-glass"><i class="fas fa-wine-glass"></i></button>
+                        <button type="button" class="category-icon-btn p-3 border border-gray-200 rounded-lg hover:bg-gray-50" data-icon="fa-mug-hot"><i class="fas fa-mug-hot"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kolor</label>
+                    <div class="grid grid-cols-8 gap-2">
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-red-500" data-color="red"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-orange-500" data-color="orange"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-yellow-500" data-color="yellow"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-green-500" data-color="green"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-blue-500" data-color="blue"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-purple-500" data-color="purple"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-pink-500" data-color="pink"></button>
+                        <button type="button" class="category-color-btn w-10 h-10 rounded-lg bg-gray-500" data-color="gray"></button>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-100 flex gap-3">
+                <button onclick="closeCategoryModal()" class="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all">
+                    Anuluj
+                </button>
+                <button onclick="saveCategory()" class="flex-1 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-purple-700 transition-all">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toasts" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // ===================== STATE =====================
+        const state = {
+            orders: [],
+            products: [],
+            categories: [],
+            currentSection: 'dashboard',
+            sidebarCollapsed: false,
+            darkMode: false,
+            nextOrderId: 1001,
+            nextProductId: 101,
+            nextCategoryId: 11
+        };
+
+        // ===================== INIT =====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initCategories();
+            initProducts();
+            initOrders();
+            render();
+            updateStats();
+            
+            // Category modal icon/color selection
+            document.querySelectorAll('.category-icon-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.category-icon-btn').forEach(b => b.classList.remove('ring-2', 'ring-blue-500'));
+                    btn.classList.add('ring-2', 'ring-blue-500');
+                });
+            });
+            
+            document.querySelectorAll('.category-color-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.category-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-900'));
+                    btn.classList.add('ring-2', 'ring-offset-2', 'ring-gray-900');
+                });
+            });
+        });
+
+        // ===================== DEMO DATA =====================
+        function initCategories() {
+            state.categories = [
+                { id: 1, name: 'Pizza', icon: 'fa-pizza-slice', color: 'red', active: true },
+                { id: 2, name: 'Burgery', icon: 'fa-burger', color: 'orange', active: true },
+                { id: 3, name: 'Makarony', icon: 'fa-bowl-food', color: 'yellow', active: true },
+                { id: 4, name: 'Dania główne', icon: 'fa-utensils', color: 'green', active: true },
+                { id: 5, name: 'Sałatki', icon: 'fa-leaf', color: 'green', active: true },
+                { id: 6, name: 'Zupy', icon: 'fa-bowl-food', color: 'blue', active: true },
+                { id: 7, name: 'Napoje', icon: 'fa-wine-glass', color: 'purple', active: true },
+                { id: 8, name: 'Desery', icon: 'fa-ice-cream', color: 'pink', active: true },
+                { id: 9, name: 'Przystawki', icon: 'fa-cheese', color: 'orange', active: true },
+                { id: 10, name: 'Dodatki', icon: 'fa-french-fries', color: 'yellow', active: true }
+            ];
+        }
+
+        function initProducts() {
+            state.products = [
+                { id: 1, name: 'Pizza Margherita', category: 1, price: 32, cost: 12, time: 15, desc: 'Klasyczna pizza z sosem pomidorowym i mozzarellą', veg: true, spicy: false, active: true, sold: 45 },
+                { id: 2, name: 'Pizza Pepperoni', category: 1, price: 38, cost: 15, time: 15, desc: 'Pizza z salami pepperoni', veg: false, spicy: true, active: true, sold: 38 },
+                { id: 3, name: 'Burger Classic', category: 2, price: 35, cost: 14, time: 12, desc: 'Wołowina, sałata, pomidor, cebula, sos', veg: false, spicy: false, active: true, sold: 52 },
+                { id: 4, name: 'Burger BBQ', category: 2, price: 42, cost: 18, time: 15, desc: 'Wołowina, bekon, cebula, sos BBQ', veg: false, spicy: false, active: true, sold: 34 },
+                { id: 5, name: 'Spaghetti Carbonara', category: 3, price: 36, cost: 13, time: 12, desc: 'Makaron z boczkiem i sosem śmietanowym', veg: false, spicy: false, active: true, sold: 28 },
+                { id: 6, name: 'Stek wołowy', category: 4, price: 75, cost: 35, time: 20, desc: 'Stek 300g z masłem czosnkowym', veg: false, spicy: false, active: true, sold: 22 },
+                { id: 7, name: 'Łosoś grillowany', category: 4, price: 58, cost: 28, time: 18, desc: 'Filet z łososia z warzywami', veg: false, spicy: false, active: true, sold: 19 },
+                { id: 8, name: 'Sałatka Cezar', category: 5, price: 28, cost: 10, time: 8, desc: 'Sałata, kurczak, parmezan, grzanki', veg: false, spicy: false, active: true, sold: 31 },
+                { id: 9, name: 'Żurek', category: 6, price: 18, cost: 6, time: 5, desc: 'Tradycyjny żurek z kiełbasą i jajkiem', veg: false, spicy: false, active: true, sold: 25 },
+                { id: 10, name: 'Tiramisu', category: 8, price: 22, cost: 8, time: 3, desc: 'Klasyczny włoski deser', veg: true, spicy: false, active: true, sold: 42 },
+                { id: 11, name: 'Lemoniada', category: 7, price: 12, cost: 3, time: 2, desc: 'Domowa lemoniada z miętą', veg: true, spicy: false, active: true, sold: 67 },
+                { id: 12, name: 'Frytki', category: 10, price: 12, cost: 4, time: 8, desc: 'Chrupiące frytki', veg: true, spicy: false, active: true, sold: 89 }
+            ];
+        }
+
+        function initOrders() {
+            const channels = ['restaurant', 'hotel', 'delivery'];
+            const statuses = ['new', 'preparing', 'ready'];
+            
+            for (let i = 0; i < 8; i++) {
+                const channel = channels[Math.floor(Math.random() * channels.length)];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                const numItems = Math.floor(Math.random() * 3) + 1;
+                const items = [];
+                
+                for (let j = 0; j < numItems; j++) {
+                    const product = state.products[Math.floor(Math.random() * state.products.length)];
+                    items.push({ ...product, qty: Math.floor(Math.random() * 2) + 1 });
+                }
+                
+                const total = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                const timeAgo = Math.floor(Math.random() * 30) * 60 * 1000;
+                
+                state.orders.push({
+                    id: state.nextOrderId++,
+                    channel,
+                    status,
+                    items,
+                    total,
+                    location: getRandomLocation(channel),
+                    createdAt: new Date(Date.now() - timeAgo).toISOString()
+                });
+            }
+        }
+
+        function getRandomLocation(channel) {
+            if (channel === 'restaurant') return 'Stolik ' + (Math.floor(Math.random() * 20) + 1);
+            if (channel === 'hotel') return 'Pokój ' + (Math.floor(Math.random() * 5) + 1) + String(Math.floor(Math.random() * 20) + 1).padStart(2, '0');
+            return 'ul. Przykładowa ' + (Math.floor(Math.random() * 100) + 1);
+        }
+
+        function addDemoOrder() {
+            const channels = ['restaurant', 'hotel', 'delivery'];
+            const channel = channels[Math.floor(Math.random() * channels.length)];
+            const numItems = Math.floor(Math.random() * 3) + 1;
+            const items = [];
+            
+            for (let i = 0; i < numItems; i++) {
+                const product = state.products[Math.floor(Math.random() * state.products.length)];
+                items.push({ ...product, qty: Math.floor(Math.random() * 2) + 1 });
+            }
+            
+            const total = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            
+            state.orders.unshift({
+                id: state.nextOrderId++,
+                channel,
+                status: 'new',
+                items,
+                total,
+                location: getRandomLocation(channel),
+                createdAt: new Date().toISOString()
+            });
+            
+            render();
+            updateStats();
+            toast('Nowe zamówienie!', 'success');
+        }
+
+        // ===================== RENDER =====================
+        function render() {
+            renderOrders();
+            renderMenu();
+            renderCategories();
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            // Active orders
+            const active = state.orders.filter(o => o.status !== 'delivered').slice(0, 5);
+            const list = document.getElementById('activeOrdersList');
+            
+            if (active.length === 0) {
+                list.innerHTML = '<p class="text-gray-500 text-center py-4">Brak aktywnych zamówień</p>';
+            } else {
+                list.innerHTML = active.map(order => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 ${getChannelBg(order.channel)} rounded-lg flex items-center justify-center">
+                                <i class="fas ${getChannelIcon(order.channel)} text-white text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-gray-900">#${order.id}</p>
+                                <p class="text-xs text-gray-500">${order.location}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-900">${order.total} zł</p>
+                            <span class="px-2 py-0.5 text-xs font-medium rounded-full status-${order.status}">${getStatusName(order.status)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // Top products
+            const topProducts = [...state.products].sort((a, b) => b.sold - a.sold).slice(0, 5);
+            const topList = document.getElementById('topProductsList');
+            
+            topList.innerHTML = topProducts.map((product, idx) => `
+                <div class="flex items-center gap-4">
+                    <span class="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full font-bold text-gray-600">${idx + 1}</span>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-900">${product.name}</p>
+                        <p class="text-sm text-gray-500">${product.price} zł</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-gray-900">${product.sold}</p>
+                        <p class="text-xs text-gray-500">sprzedanych</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderOrders() {
+            const statusFilter = document.getElementById('filterStatus')?.value || 'all';
+            const channelFilter = document.getElementById('filterChannel')?.value || 'all';
+            
+            let filtered = state.orders;
+            if (statusFilter !== 'all') filtered = filtered.filter(o => o.status === statusFilter);
+            if (channelFilter !== 'all') filtered = filtered.filter(o => o.channel === channelFilter);
+            
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = filtered.map(order => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-gray-900">#${order.id}</span>
+                            <span class="text-xs text-gray-500">${formatTime(order.createdAt)}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 ${getChannelBg(order.channel)} text-white text-xs font-semibold rounded">
+                            ${getChannelName(order.channel)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600">${order.location}</td>
+                    <td class="px-6 py-4 text-gray-600">${order.items.length} poz.</td>
+                    <td class="px-6 py-4 font-bold text-gray-900">${order.total} zł</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full status-${order.status}">${getStatusName(order.status)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-2">
+                            <button onclick="changeOrderStatus(${order.id})" class="p-2 hover:bg-gray-100 rounded-lg" title="Zmień status">
+                                <i class="fas fa-arrow-right text-blue-600"></i>
+                            </button>
+                            <button onclick="deleteOrder(${order.id})" class="p-2 hover:bg-gray-100 rounded-lg" title="Usuń">
+                                <i class="fas fa-trash text-red-600"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('ordersCount').textContent = state.orders.filter(o => o.status !== 'delivered').length;
+        }
+
+        function renderMenu() {
+            const search = document.getElementById('menuSearch')?.value?.toLowerCase() || '';
+            let filtered = state.products;
+            if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search));
+            
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = filtered.map(product => {
+                const category = state.categories.find(c => c.id === product.category);
+                const margin = Math.round(((product.price - product.cost) / product.price) * 100);
+                
+                return `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm card-hover ${!product.active ? 'opacity-60' : ''}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                ${product.veg ? '<span class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center"><i class="fas fa-leaf text-green-600 text-xs"></i></span>' : ''}
+                                ${product.spicy ? '<span class="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center"><i class="fas fa-pepper-hot text-red-600 text-xs"></i></span>' : ''}
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editProduct(${product.id})" class="p-2 hover:bg-gray-100 rounded-lg">
+                                    <i class="fas fa-edit text-gray-400 text-sm"></i>
+                                </button>
+                                <button onclick="toggleProduct(${product.id})" class="p-2 hover:bg-gray-100 rounded-lg">
+                                    <i class="fas ${product.active ? 'fa-toggle-on text-green-500' : 'fa-toggle-off text-gray-400'} text-sm"></i>
+                                </button>
+                                <button onclick="deleteProduct(${product.id})" class="p-2 hover:bg-gray-100 rounded-lg">
+                                    <i class="fas fa-trash text-red-400 text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <h4 class="font-bold text-gray-900 mb-1">${product.name}</h4>
+                        <p class="text-sm text-gray-500 mb-3 line-clamp-2">${product.desc || ''}</p>
+                        
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="px-2 py-1 bg-${category?.color || 'gray'}-100 text-${category?.color || 'gray'}-700 text-xs font-medium rounded">
+                                ${category?.name || 'Brak'}
+                            </span>
+                            <span class="text-xs text-gray-400">${product.time} min</span>
+                        </div>
+                        
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-2xl font-bold text-gray-900">${product.price} zł</p>
+                                <p class="text-xs text-gray-400">Koszt: ${product.cost} zł • Marża: ${margin}%</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold text-green-600">${product.sold}</p>
+                                <p class="text-xs text-gray-400">sprzedanych</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoriesGrid');
+            grid.innerHTML = state.categories.map(cat => {
+                const productCount = state.products.filter(p => p.category === cat.id).length;
+                
+                return `
+                    <div class="bg-white rounded-2xl p-6 shadow-sm card-hover ${!cat.active ? 'opacity-60' : ''}">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-14 h-14 bg-${cat.color}-100 rounded-xl flex items-center justify-center">
+                                <i class="fas ${cat.icon} text-${cat.color}-600 text-xl"></i>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="toggleCategory(${cat.id})" class="p-2 hover:bg-gray-100 rounded-lg">
+                                    <i class="fas ${cat.active ? 'fa-toggle-on text-green-500' : 'fa-toggle-off text-gray-400'}"></i>
+                                </button>
+                                <button onclick="deleteCategory(${cat.id})" class="p-2 hover:bg-gray-100 rounded-lg">
+                                    <i class="fas fa-trash text-red-400"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <h4 class="text-lg font-bold text-gray-900 mb-1">${cat.name}</h4>
+                        <p class="text-sm text-gray-500">${productCount} produktów</p>
+                    </div>
+                `;
+            }).join('');
+            
+            // Update category select in product modal
+            const select = document.getElementById('productCategory');
+            if (select) {
+                select.innerHTML = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            }
+        }
+
+        // ===================== STATS =====================
+        function updateStats() {
+            const today = state.orders;
+            const revenue = today.reduce((sum, o) => sum + o.total, 0);
+            const customers = new Set(today.map(o => o.location)).size;
+            
+            document.getElementById('statRevenue').textContent = revenue.toLocaleString() + ' zł';
+            document.getElementById('statOrders').textContent = today.length;
+            document.getElementById('statCustomers').textContent = customers;
+            document.getElementById('statAvgTime').textContent = '18 min';
+            
+            // Channel counts
+            document.getElementById('countRestaurant').textContent = today.filter(o => o.channel === 'restaurant').length;
+            document.getElementById('countHotel').textContent = today.filter(o => o.channel === 'hotel').length;
+            document.getElementById('countDelivery').textContent = today.filter(o => o.channel === 'delivery').length;
+            
+            // Channel sections
+            const restOrders = today.filter(o => o.channel === 'restaurant');
+            const hotelOrders = today.filter(o => o.channel === 'hotel');
+            const delivOrders = today.filter(o => o.channel === 'delivery');
+            
+            document.getElementById('restaurantOrders').textContent = restOrders.length;
+            document.getElementById('restaurantRevenue').textContent = restOrders.reduce((s, o) => s + o.total, 0) + ' zł';
+            document.getElementById('hotelOrders').textContent = hotelOrders.length;
+            document.getElementById('hotelRevenue').textContent = hotelOrders.reduce((s, o) => s + o.total, 0) + ' zł';
+            document.getElementById('deliveryOrders').textContent = delivOrders.length;
+            document.getElementById('deliveryRevenue').textContent = delivOrders.reduce((s, o) => s + o.total, 0) + ' zł';
+        }
+
+        // ===================== ACTIONS =====================
+        function changeOrderStatus(id) {
+            const order = state.orders.find(o => o.id === id);
+            if (!order) return;
+            
+            const flow = ['new', 'preparing', 'ready', 'delivered'];
+            const idx = flow.indexOf(order.status);
+            if (idx < flow.length - 1) {
+                order.status = flow[idx + 1];
+                render();
+                updateStats();
+                toast(`Zamówienie #${id}: ${getStatusName(order.status)}`, 'info');
+            }
+        }
+
+        function deleteOrder(id) {
+            if (confirm('Czy na pewno chcesz usunąć to zamówienie?')) {
+                state.orders = state.orders.filter(o => o.id !== id);
+                render();
+                updateStats();
+                toast('Zamówienie usunięte', 'success');
+            }
+        }
+
+        function toggleProduct(id) {
+            const product = state.products.find(p => p.id === id);
+            if (product) {
+                product.active = !product.active;
+                renderMenu();
+                toast(`Produkt ${product.active ? 'włączony' : 'wyłączony'}`, 'info');
+            }
+        }
+
+        function deleteProduct(id) {
+            if (confirm('Czy na pewno chcesz usunąć ten produkt?')) {
+                state.products = state.products.filter(p => p.id !== id);
+                render();
+                toast('Produkt usunięty', 'success');
+            }
+        }
+
+        function toggleCategory(id) {
+            const cat = state.categories.find(c => c.id === id);
+            if (cat) {
+                cat.active = !cat.active;
+                renderCategories();
+                toast(`Kategoria ${cat.active ? 'włączona' : 'wyłączona'}`, 'info');
+            }
+        }
+
+        function deleteCategory(id) {
+            if (confirm('Czy na pewno chcesz usunąć tę kategorię?')) {
+                state.categories = state.categories.filter(c => c.id !== id);
+                render();
+                toast('Kategoria usunięta', 'success');
+            }
+        }
+
+        // ===================== MODALS =====================
+        function openMenuModal(productId = null) {
+            document.getElementById('menuModalTitle').textContent = productId ? 'Edytuj produkt' : 'Dodaj produkt';
+            document.getElementById('editProductId').value = productId || '';
+            
+            if (productId) {
+                const product = state.products.find(p => p.id === productId);
+                if (product) {
+                    document.getElementById('productName').value = product.name;
+                    document.getElementById('productCategory').value = product.category;
+                    document.getElementById('productPrice').value = product.price;
+                    document.getElementById('productCost').value = product.cost;
+                    document.getElementById('productTime').value = product.time;
+                    document.getElementById('productDesc').value = product.desc || '';
+                    document.getElementById('productVeg').checked = product.veg;
+                    document.getElementById('productSpicy').checked = product.spicy;
+                }
+            } else {
+                document.getElementById('productName').value = '';
+                document.getElementById('productPrice').value = '';
+                document.getElementById('productCost').value = '';
+                document.getElementById('productTime').value = '';
+                document.getElementById('productDesc').value = '';
+                document.getElementById('productVeg').checked = false;
+                document.getElementById('productSpicy').checked = false;
+            }
+            
+            document.getElementById('menuModal').classList.remove('hidden');
+            document.getElementById('menuModal').classList.add('flex');
+        }
+
+        function closeMenuModal() {
+            document.getElementById('menuModal').classList.add('hidden');
+            document.getElementById('menuModal').classList.remove('flex');
+        }
+
+        function editProduct(id) {
+            openMenuModal(id);
+        }
+
+        function saveProduct() {
+            const id = document.getElementById('editProductId').value;
+            const data = {
+                name: document.getElementById('productName').value,
+                category: parseInt(document.getElementById('productCategory').value),
+                price: parseFloat(document.getElementById('productPrice').value),
+                cost: parseFloat(document.getElementById('productCost').value),
+                time: parseInt(document.getElementById('productTime').value),
+                desc: document.getElementById('productDesc').value,
+                veg: document.getElementById('productVeg').checked,
+                spicy: document.getElementById('productSpicy').checked,
+                active: true,
+                sold: 0
+            };
+            
+            if (id) {
+                const product = state.products.find(p => p.id === parseInt(id));
+                if (product) {
+                    Object.assign(product, data);
+                    toast('Produkt zaktualizowany', 'success');
+                }
+            } else {
+                data.id = state.nextProductId++;
+                state.products.push(data);
+                toast('Produkt dodany', 'success');
+            }
+            
+            closeMenuModal();
+            render();
+        }
+
+        function openCategoryModal() {
+            document.getElementById('categoryName').value = '';
+            document.querySelectorAll('.category-icon-btn').forEach(b => b.classList.remove('ring-2', 'ring-blue-500'));
+            document.querySelectorAll('.category-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-offset-2', 'ring-gray-900'));
+            
+            document.getElementById('categoryModal').classList.remove('hidden');
+            document.getElementById('categoryModal').classList.add('flex');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryModal').classList.add('hidden');
+            document.getElementById('categoryModal').classList.remove('flex');
+        }
+
+        function saveCategory() {
+            const name = document.getElementById('categoryName').value;
+            const iconBtn = document.querySelector('.category-icon-btn.ring-2');
+            const colorBtn = document.querySelector('.category-color-btn.ring-2');
+            
+            if (!name) {
+                toast('Podaj nazwę kategorii', 'error');
+                return;
+            }
+            
+            state.categories.push({
+                id: state.nextCategoryId++,
+                name,
+                icon: iconBtn?.dataset.icon || 'fa-utensils',
+                color: colorBtn?.dataset.color || 'gray',
+                active: true
+            });
+            
+            closeCategoryModal();
+            render();
+            toast('Kategoria dodana', 'success');
+        }
+
+        // ===================== NAVIGATION =====================
+        function showSection(section) {
+            state.currentSection = section;
+            
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('section-' + section)?.classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active', 'bg-blue-50', 'text-blue-700');
+            });
+            
+            const activeItem = document.querySelector(`[data-section="${section}"]`);
+            if (activeItem) {
+                activeItem.classList.add('active', 'bg-blue-50', 'text-blue-700');
+            }
+            
+            const titles = {
+                'dashboard': ['Pulpit', 'Przegląd aktywności'],
+                'orders': ['Zamówienia', 'Zarządzanie zamówieniami'],
+                'menu': ['Menu', 'Zarządzanie produktami'],
+                'categories': ['Kategorie', 'Zarządzanie kategoriami'],
+                'channel-restaurant': ['Restauracja', 'Kanał sprzedaży'],
+                'channel-hotel': ['Room Service', 'Kanał sprzedaży'],
+                'channel-delivery': ['Dostawa', 'Kanał sprzedaży'],
+                'reports': ['Raporty', 'Analizy i statystyki'],
+                'settings': ['Ustawienia', 'Konfiguracja systemu']
+            };
+            
+            const [title, subtitle] = titles[section] || ['', ''];
+            document.getElementById('pageTitle').textContent = title;
+            document.getElementById('pageSubtitle').textContent = subtitle;
+            
+            // Close mobile sidebar
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+        }
+
+        // ===================== SIDEBAR =====================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('sidebar');
+            const main = document.getElementById('mainContent');
+            const icon = document.getElementById('collapseIcon');
+            
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+            
+            if (state.sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                main.style.marginLeft = '80px';
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                sidebar.classList.remove('collapsed');
+                main.style.marginLeft = '';
+                icon.classList.add('fa-chevron-left');
+                icon.classList.remove('fa-chevron-right');
+            }
+        }
+
+        // ===================== HELPERS =====================
+        function getChannelIcon(channel) {
+            const icons = { restaurant: 'fa-store', hotel: 'fa-bed', delivery: 'fa-motorcycle' };
+            return icons[channel];
+        }
+
+        function getChannelName(channel) {
+            const names = { restaurant: 'Restauracja', hotel: 'Hotel', delivery: 'Dostawa' };
+            return names[channel];
+        }
+
+        function getChannelBg(channel) {
+            const colors = { restaurant: 'bg-blue-500', hotel: 'bg-purple-500', delivery: 'bg-green-500' };
+            return colors[channel];
+        }
+
+        function getStatusName(status) {
+            const names = { new: 'Nowe', preparing: 'Przygotowanie', ready: 'Gotowe', delivered: 'Dostarczone' };
+            return names[status];
+        }
+
+        function formatTime(isoString) {
+            return new Date(isoString).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function filterOrders() {
+            renderOrders();
+        }
+
+        function filterMenu() {
+            renderMenu();
+        }
+
+        function toggleDarkMode() {
+            state.darkMode = !state.darkMode;
+            document.documentElement.classList.toggle('dark', state.darkMode);
+        }
+
+        function toast(message, type = 'info') {
+            const container = document.getElementById('toasts');
+            const div = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-yellow-500'
+            };
+            
+            div.className = `${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-pulse`;
+            div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle"></i>${message}`;
+            
+            container.appendChild(div);
+            
+            setTimeout(() => {
+                div.style.opacity = '0';
+                div.style.transition = 'opacity 0.3s';
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

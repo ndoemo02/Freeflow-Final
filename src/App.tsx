@@ -7,6 +7,9 @@ import { CartProvider } from "./state/CartContext";
 import Cart from "./components/Cart";
 import CustomerPanel from "./pages/Panel/CustomerPanel";
 import BusinessPanel from "./pages/Panel/BusinessPanel";
+import BusinessPanelV2 from "./pages/Panel/BusinessPanelV2";
+import BusinessPanelNew from "./pages/BusinessPanelNew";
+import BusinessClientPanel from "./pages/BusinessClientPanel";
 import AdminPanel from "./pages/AdminPanel";
 import DriverPanel from "./pages/DriverPanel";
 import AuthModal from "./components/AuthModal";
@@ -17,12 +20,32 @@ import { ThemeProvider } from "./state/ThemeContext";
 import RestaurantBackground from "./components/RestaurantBackground";
 
 import MenuViewer from "./components/MenuViewer";
+import ClientPanel from "./pages/ClientPanel/ClientPanel";
 
+import { ttsManager } from "./tts/ttsManager";
+import { useEffect } from "react";
 
 
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
   const closeAuth = useUI((s) => s.closeAuth);
+
+  useEffect(() => {
+    const killTTS = () => {
+      ttsManager.stop();
+    };
+
+    window.addEventListener("beforeunload", killTTS);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) killTTS();
+    });
+
+    return () => {
+      killTTS(); // Cleanup on unmount too
+      window.removeEventListener("beforeunload", killTTS);
+      document.removeEventListener("visibilitychange", killTTS);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen text-slate-100 relative overflow-hidden">
@@ -35,11 +58,18 @@ function AppContent() {
       <main className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/business" element={<BusinessClientPanel />} />
           <Route path="/panel/customer" element={<CustomerPanel />} />
           <Route path="/panel/business" element={<BusinessPanel />} />
+          <Route path="/panel/business-v2" element={<BusinessPanelV2 />} />
+          <Route path="/panel/business-kds" element={<BusinessPanelNew />} />
+          <Route path="/business-panel" element={<BusinessPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/panel/admin" element={<AdminPanel />} />
+          <Route path="/admin-panel" element={<AdminPanel />} />
           <Route path="/driver" element={<DriverPanel />} />
+          <Route path="/client" element={<ClientPanel />} />
+          <Route path="/panel/client" element={<ClientPanel />} />
           {/* reszta tras */}
         </Routes >
       </main >
