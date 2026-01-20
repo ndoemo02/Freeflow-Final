@@ -22,10 +22,30 @@ import RestaurantBackground from "./components/RestaurantBackground";
 import MenuViewer from "./components/MenuViewer";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
 
+import { ttsManager } from "./tts/ttsManager";
+import { useEffect } from "react";
+
 
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
   const closeAuth = useUI((s) => s.closeAuth);
+
+  useEffect(() => {
+    const killTTS = () => {
+      ttsManager.stop();
+    };
+
+    window.addEventListener("beforeunload", killTTS);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) killTTS();
+    });
+
+    return () => {
+      killTTS(); // Cleanup on unmount too
+      window.removeEventListener("beforeunload", killTTS);
+      document.removeEventListener("visibilitychange", killTTS);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen text-slate-100 relative overflow-hidden">

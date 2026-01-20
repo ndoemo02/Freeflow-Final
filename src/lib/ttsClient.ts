@@ -1,6 +1,7 @@
 // src/lib/ttsClient.ts
 import { getApiUrl } from './config';
 import { voiceStateManager } from '../managers/VoiceStateManager';
+import { ttsManager } from '../tts/ttsManager';
 
 export interface TtsOptions {
   lang?: string;
@@ -27,6 +28,9 @@ export interface TtsResponse {
 async function speakWithGoogleTTS(text: string, opts: TtsOptions): Promise<HTMLAudioElement> {
   console.log("🎤 Google TTS: Starting speech synthesis for text:", text);
 
+  // 1. Get cancellation signal
+  const signal = ttsManager.startAsyncRequest();
+
   try {
     const res = await fetch(getApiUrl('/api/tts'), {
       method: "POST",
@@ -36,7 +40,10 @@ async function speakWithGoogleTTS(text: string, opts: TtsOptions): Promise<HTMLA
         languageCode: opts.lang || 'pl-PL',
         voice: opts.voiceName || 'pl-PL-Standard-A'
       }),
+      signal // Signal for generic fetch abort
     });
+
+    if (signal.aborted) throw new Error('TTS Aborted by user');
 
     if (!res.ok) {
       // Try to get error details from JSON response
@@ -53,11 +60,23 @@ async function speakWithGoogleTTS(text: string, opts: TtsOptions): Promise<HTMLA
     const audio = new Audio(url);
 
     return new Promise((resolve, reject) => {
+      // 2. Register active audio
+      ttsManager.registerAudio(audio);
+
       audio.onloadeddata = () => {
+        if (signal.aborted) {
+             URL.revokeObjectURL(url);
+             reject(new Error('TTS Aborted'));
+             return;
+        }
         console.log("🎤 Google TTS: Audio loaded, starting playback");
         voiceStateManager.registerAudio(audio);
         voiceStateManager.onTtsStart('google');
-        audio.play();
+        // Play wrapped in try/catch for autoplay policy
+        audio.play().catch(e => {
+             console.error("Audio play failed", e);
+             reject(e);
+        });
         resolve(audio);
       };
 
@@ -74,7 +93,11 @@ async function speakWithGoogleTTS(text: string, opts: TtsOptions): Promise<HTMLA
       };
     });
   } catch (error) {
-    console.error("🎤 Google TTS: Request failed:", error);
+    if (error instanceof Error && error.name === 'AbortError') {
+        console.log('TTS Fetch aborted');
+    } else {
+        console.error("🎤 Google TTS: Request failed:", error);
+    }
     throw error;
   }
 }
@@ -82,6 +105,9 @@ async function speakWithGoogleTTS(text: string, opts: TtsOptions): Promise<HTMLA
 // Web Speech API fallback function
 async function speakWithWebSpeechAPI(text: string, opts: TtsOptions): Promise<HTMLAudioElement> {
   console.log("🎤 Web Speech API: Starting speech synthesis for text:", text);
+  
+  // 1. Stop any previous TTS
+  ttsManager.stop();
 
   return new Promise((resolve, reject) => {
     if (!('speechSynthesis' in window)) {
@@ -124,6 +150,7 @@ async function speakWithWebSpeechAPI(text: string, opts: TtsOptions): Promise<HT
     };
 
     utterance.onerror = (event) => {
+      // If cancelled, it's not strictly an error but we handle it
       console.error("🎤 Web Speech API: Speech error:", event.error);
       reject(new Error(`Speech synthesis failed: ${event.error}`));
     };
