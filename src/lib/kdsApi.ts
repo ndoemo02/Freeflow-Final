@@ -193,21 +193,73 @@ export function getChannelDisplay(channel: OrderChannel): {
 
 // ============== API Functions ==============
 
+// TODO: Move token to env var
+const ADMIN_TOKEN = 'super_secret_key_amber_2025';
+
+function getHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'x-admin-token': ADMIN_TOKEN
+    };
+}
+
 /**
- * Fetch KDS orders from backend
- * GET /api/orders?view=kds
+ * Fetch KDS orders from backend using Admin API
+ * GET /api/admin/orders
  */
 export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
     try {
-        const url = getApiUrl('api/orders?view=kds');
-        const response = await fetch(url);
+        const url = getApiUrl('api/admin/orders?limit=100');
+        const response = await fetch(url, { headers: getHeaders() });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch KDS orders: ${response.statusText}`);
         }
 
-        const data = await response.json();
-        return data as KDSDashboardResponse;
+        const json = await response.json();
+        const rawOrders = json.data || [];
+
+        // Filter for active orders only (exclude cancelled, delivered if you want, but KDS usually shows active)
+        const activeOrders = rawOrders.filter((o: any) => o.status !== 'cancelled' && o.status !== 'delivered');
+
+        // Map to KDS structure
+        const orders: KDSOrder[] = activeOrders.map((o: any) => ({
+            id: o.id,
+            order_number: `#${o.id.slice(0, 4)}`,
+            channel: 'restaurant', // Default
+            status: o.status === 'pending' ? 'new' : o.status, // Map pending -> new
+            items: Array.isArray(o.items) ? o.items.map((i: any, idx: number) => ({
+                id: `item-${idx}`,
+                name: i.name || i.dish_name || (typeof i === 'string' ? i : 'Pozycja'),
+                quantity: i.quantity || i.qty || 1,
+                station: 'kuchnia', // Default station
+                done: false // Backend V1 doesn't track item status yet
+            })) : [],
+            total: Number(o.totalPrice) || 0,
+            total_formatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
+            location: 'Stolik',
+            priority: false,
+            notes: o.notes,
+            created_at: o.createdAt,
+            updated_at: o.updatedAt,
+            customer_name: o.customer?.name,
+            restaurant_id: o.restaurantId
+        }));
+
+        // Calculate stats
+        const stats = {
+            new_count: orders.filter((o: any) => o.status === 'new' || o.status === 'pending').length,
+            preparing_count: orders.filter((o: any) => o.status === 'preparing').length,
+            ready_count: orders.filter((o: any) => o.status === 'ready').length,
+            avg_time_minutes: 15 // Placeholder
+        };
+
+        return {
+            ok: true,
+            orders,
+            stats,
+            last_updated: new Date().toISOString()
+        };
     } catch (error) {
         console.error('[KDS API] Fetch error:', error);
         throw error;
@@ -216,16 +268,15 @@ export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
 
 /**
  * Start an order (transition: new/pending -> preparing)
- * Backend FSM is authoritative - this is just a request
- * 
- * POST /api/orders/:id/start
+ * Uses generic PATCH /api/orders/:id
  */
 export async function startOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}/start`);
+        const url = getApiUrl(`api/orders/${orderId}`);
         const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'preparing' })
         });
 
         const data = await response.json();
@@ -234,7 +285,7 @@ export async function startOrder(orderId: string): Promise<{ ok: boolean; order?
             return { ok: false, error: data.error || response.statusText };
         }
 
-        return { ok: true, order: data.order };
+        return { ok: true };
     } catch (error) {
         console.error('[KDS API] Start order error:', error);
         return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
@@ -243,16 +294,15 @@ export async function startOrder(orderId: string): Promise<{ ok: boolean; order?
 
 /**
  * Mark order as ready (transition: preparing -> ready)
- * Backend FSM is authoritative
- * 
- * POST /api/orders/:id/ready
+ * Uses generic PATCH /api/orders/:id
  */
 export async function markOrderReady(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}/ready`);
+        const url = getApiUrl(`api/orders/${orderId}`);
         const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'ready' })
         });
 
         const data = await response.json();
@@ -261,7 +311,7 @@ export async function markOrderReady(orderId: string): Promise<{ ok: boolean; or
             return { ok: false, error: data.error || response.statusText };
         }
 
-        return { ok: true, order: data.order };
+        return { ok: true };
     } catch (error) {
         console.error('[KDS API] Ready order error:', error);
         return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
@@ -269,47 +319,27 @@ export async function markOrderReady(orderId: string): Promise<{ ok: boolean; or
 }
 
 /**
- * Mark item as done within an order
- * Backend FSM is authoritative
- * 
- * POST /api/orders/:id/items/:itemIndex/toggle
+ * Toggle item status (simulated client-side only for now as backend lacks item-level status)
  */
 export async function toggleOrderItem(
     orderId: string,
     itemIndex: number
 ): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
-    try {
-        const url = getApiUrl(`api/orders/${orderId}/items/${itemIndex}/toggle`);
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return { ok: false, error: data.error || response.statusText };
-        }
-
-        return { ok: true, order: data.order };
-    } catch (error) {
-        console.error('[KDS API] Toggle item error:', error);
-        return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
+    console.warn('[KDS API] Item toggle not persisted to backend yet (not supported in V1 API)');
+    return { ok: true };
 }
 
 /**
  * Complete/deliver an order (transition: ready -> delivered)
- * Backend FSM is authoritative
- * 
- * POST /api/orders/:id/complete
+ * Uses generic PATCH /api/orders/:id
  */
 export async function completeOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}/complete`);
+        const url = getApiUrl(`api/orders/${orderId}`);
         const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'delivered' })
         });
 
         const data = await response.json();
@@ -318,7 +348,7 @@ export async function completeOrder(orderId: string): Promise<{ ok: boolean; ord
             return { ok: false, error: data.error || response.statusText };
         }
 
-        return { ok: true, order: data.order };
+        return { ok: true };
     } catch (error) {
         console.error('[KDS API] Complete order error:', error);
         return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
@@ -326,80 +356,35 @@ export async function completeOrder(orderId: string): Promise<{ ok: boolean; ord
 }
 
 /**
- * Bump order (mark all items done, move to ready queue)
- * Backend FSM is authoritative
- * 
- * POST /api/orders/:id/bump
+ * Bump order (move back to ready? or special status)
+ * Treating as 'ready' for V1
  */
 export async function bumpOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
-    try {
-        const url = getApiUrl(`api/orders/${orderId}/bump`);
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return { ok: false, error: data.error || response.statusText };
-        }
-
-        return { ok: true, order: data.order };
-    } catch (error) {
-        console.error('[KDS API] Bump order error:', error);
-        return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
+    return markOrderReady(orderId);
 }
 
 /**
  * Recall last completed order
- * Backend FSM is authoritative
- * 
- * POST /api/orders/recall-last
+ * Helper not implemented in V1 Backend yet
  */
 export async function recallLastOrder(): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
-    try {
-        const url = getApiUrl('api/orders/recall-last');
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return { ok: false, error: data.error || response.statusText };
-        }
-
-        return { ok: true, order: data.order };
-    } catch (error) {
-        console.error('[KDS API] Recall order error:', error);
-        return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
-    }
+    console.warn('[KDS API] Recall not implemented in backend');
+    return { ok: false, error: 'Not implemented' };
 }
 
 // ============== Helpers ==============
-
-/**
- * Calculate elapsed seconds since order creation
- */
+// (Helpers getElapsedSeconds, formatTime, getElapsedMinutes remain unchanged)
 export function getElapsedSeconds(createdAt: string): number {
     return Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
 }
 
-/**
- * Format seconds as MM:SS
- */
 export function formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/**
- * Get elapsed minutes since order creation
- */
 export function getElapsedMinutes(createdAt: string): number {
     return Math.floor(getElapsedSeconds(createdAt) / 60);
 }
+

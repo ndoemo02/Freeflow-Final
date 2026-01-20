@@ -17,6 +17,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { getApiUrl } from '../lib/config';
 import { logger } from '../lib/logger';
+import { ttsManager } from '../tts/ttsManager';
 
 export interface BrainMessage {
     role: 'user' | 'assistant' | 'system';
@@ -166,6 +167,9 @@ export function useBrainSession(): UseBrainSessionReturn {
                 `🔒 [SessionLifecycle] Conversation closed: ${response.closedReason}`,
                 `| Switching to ${response.newSessionId}`
             );
+
+            // STOP TTS ON SESSION CLOSE (User Request #4)
+            ttsManager.stop();
             
             // CRITICAL: Update session ID immediately
             setSessionId(response.newSessionId);
@@ -251,6 +255,10 @@ export function useBrainSession(): UseBrainSessionReturn {
     const startNewConversation = useCallback(() => {
         const newId = generateSessionId();
         logger.info(`🔄 [SessionLifecycle] Manual new conversation: ${newId}`);
+        
+        // STOP TTS ON NEW CONVERSATION
+        ttsManager.stop();
+        
         setSessionId(newId);
         localStorage.setItem("amber-session-id", newId);
         clearHistory();
