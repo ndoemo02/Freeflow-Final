@@ -61,13 +61,14 @@ export default function Home() {
       setHints(hints);
 
       // 2. Trigger TTS if text available (Once per response)
-      // Check for structured TTS object first, then fallback to tts_text, then legacy text
-      if (lastFullResponse.tts?.text) {
-        play(lastFullResponse.tts.text);
-      } else if (lastFullResponse.tts_text) {
-        play(lastFullResponse.tts_text);
-      } else if (lastFullResponse.text) {
-        play(lastFullResponse.text);
+      // Priority: Backend audio (Gemini/Vertex) > WebSpeech fallback
+      // audioContent from backend is base64 encoded audio
+      const audioContent = lastFullResponse.audioContent;
+      const ttsText = lastFullResponse.tts?.text || lastFullResponse.tts_text || lastFullResponse.text;
+
+      if (ttsText) {
+        // play(text, audioContent) - hook handles priority
+        play(ttsText, audioContent);
       }
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
