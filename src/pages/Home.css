@@ -320,7 +320,8 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: clamp(6px, 1.6vw, 12px);
+  gap: clamp(12px, 2.5vw, 20px);
+  /* Increased for better touch UX */
   flex-wrap: wrap;
   justify-content: center;
   z-index: 25;
@@ -337,8 +338,9 @@
 }
 
 .tile img {
-  width: clamp(80px, 8.5vw, 110px);
-  height: clamp(80px, 8.5vw, 110px);
+  width: clamp(88px, 10vw, 120px);
+  /* Min 88px for touch target compliance */
+  height: clamp(88px, 10vw, 120px);
   border-radius: 16px;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
   transition: transform 0.3s ease, box-shadow 0.4s ease;

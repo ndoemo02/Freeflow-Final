@@ -29,6 +29,7 @@ import AmberControlDeck from '../components/admin/AmberControlDeck';
 import AmberLiveMonitor from '../components/AmberLiveMonitor';
 import FreeFunSection from '../components/FreeFunSection';
 import ConversationViewer from '../components/admin/ConversationViewer';
+import ConversationDebugView, { ConversationDebugList } from '../components/admin/ConversationDebugView';
 
 ChartJS.register(
   CategoryScale,

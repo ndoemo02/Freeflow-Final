@@ -15,16 +15,21 @@ import { useBrainSession } from "../hooks/useBrainSession";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useUIPanels } from "../hooks/useUIPanels";
 import { useTTS } from "../hooks/useTTS";
+import { useActionDispatcher } from "../hooks/useActionDispatcher";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
 import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
+import Switch from "../components/Switch";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
 import freeflowLogo from '../assets/Freeflowlogo.png';
 import "./Home.css";
+
+// --- UI View Mode Types ---
+type ViewMode = 'tiles' | 'bar';
 
 export default function Home() {
   // --- Hooks ---
@@ -34,6 +39,14 @@ export default function Home() {
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
+  const { dispatch } = useActionDispatcher();
+
+  // --- UI View State (tiles vs voicebar) ---
+  const [viewMode, setViewMode] = useState<ViewMode>('tiles');
+
+  // --- Amber Status (green = free, red = processing) ---
+  // Derived from isThinking state: free when idle, processing when thinking
+  const amberStatus: 'free' | 'processing' = isThinking ? 'processing' : 'free';
 
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
@@ -56,8 +69,14 @@ export default function Home() {
       } else if (lastFullResponse.text) {
         play(lastFullResponse.text);
       }
+
+      // 3. Dispatch backend actions (cart sync, show cart, etc.)
+      // This is the critical fix for "Frontend nie słucha Backendu" issue
+      if (lastFullResponse.actions || lastFullResponse.meta?.addedToCart) {
+        dispatch(lastFullResponse.actions, lastFullResponse.meta);
+      }
     }
-  }, [lastFullResponse, setHints, play]);
+  }, [lastFullResponse, setHints, play, dispatch]);
 
   // --- Handlers ---
 
@@ -91,10 +110,10 @@ export default function Home() {
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-center z-50">
-        <div className="flex items-center gap-3">
+      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50">
+        <div className="flex flex-col gap-1">
           <LogoFreeFlow />
-          <div className="hidden sm:flex flex-col justify-center">
+          <div className="flex flex-col pl-1">
             <p className="text-sm font-medium text-white/90 leading-tight">Voice to order — Złóż zamówienie</p>
             <p className="text-xs text-white/60 leading-tight">Restauracja, taxi albo hotel?</p>
           </div>
@@ -140,20 +159,44 @@ export default function Home() {
 
       </main>
 
-      {/* Voice Command Center (Input) */}
-      <VoiceCommandCenterV2
-        recording={isListening}
-        isProcessing={isThinking}
-        isSpeaking={isSpeaking}
-        interimText={transcript}
-        finalText={transcript}
-        amberResponse={lastResponse || lastFullResponse?.reply || ''}
-        onMicClick={handleMicClick}
-        onTextSubmit={handleTextSubmit}
-        onClearResponse={() => { }}
-        visible={true}
-        isPresenting={uiHints.panel !== 'none'} // Adjust layout if presenting
+      {/* Switch (Pałąk) - stała pozycja po lewej */}
+      <Switch
+        onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
+        initial={viewMode === 'bar'}
+        amberReady={amberStatus === 'free'}
       />
+
+      {/* Tiles Panel - widoczne gdy viewMode === 'tiles' */}
+      {viewMode === 'tiles' && (
+        <div className={`tiles ${viewMode !== 'tiles' ? 'hidden' : ''}`}>
+          <div className="tile" onClick={() => setViewMode('bar')}>
+            <img src="/icons/food.png" alt="Food" />
+          </div>
+          <div className="tile" onClick={() => setViewMode('bar')}>
+            <img src="/icons/car.png" alt="Taxi" />
+          </div>
+          <div className="tile" onClick={() => setViewMode('bar')}>
+            <img src="/icons/hotel.png" alt="Hotel" />
+          </div>
+        </div>
+      )}
+
+      {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
+      {viewMode === 'bar' && (
+        <VoiceCommandCenterV2
+          recording={isListening}
+          isProcessing={isThinking}
+          isSpeaking={isSpeaking}
+          interimText={transcript}
+          finalText={transcript}
+          amberResponse={lastResponse || lastFullResponse?.reply || ''}
+          onMicClick={handleMicClick}
+          onTextSubmit={handleTextSubmit}
+          onClearResponse={() => { }}
+          visible={true}
+          isPresenting={uiHints.panel !== 'none'}
+        />
+      )}
 
       {/* Drawers */}
       <MenuDrawer />

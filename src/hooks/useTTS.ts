@@ -20,7 +20,27 @@ export function useTTS(): UseTTSReturn {
             setIsSpeaking(synth.speaking);
         }, 100);
 
-        return () => clearInterval(interval);
+        // 🔊 Cleanup on page unload / visibility change
+        const handleUnload = () => {
+            synth.cancel();
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                synth.cancel();
+                setIsSpeaking(false);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('beforeunload', handleUnload);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            synth.cancel(); // Stop any speech on unmount
+        };
     }, [isSupported, synth]);
 
     const stop = useCallback(() => {

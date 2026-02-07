@@ -15,6 +15,48 @@ const LoaderWrapper = styled.div`
   flex-direction: column;
   align-items: center;
 
+  /* ===== Animacja Letter Reveal przy załadowaniu ===== */
+  @keyframes letterReveal {
+    0% {
+      opacity: 0;
+      transform: translateY(10px) scale(0.9);
+      filter: blur(4px);
+    }
+    60% {
+      opacity: 1;
+      transform: translateY(-2px) scale(1.02);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  /* ===== Animacja Glow Pulse (cykliczna) ===== */
+  @keyframes brandGlowFree {
+    0%, 100% { 
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+      filter: brightness(1);
+    }
+    50% { 
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.9), 0 0 40px rgba(255, 255, 255, 0.4);
+      filter: brightness(1.15);
+    }
+  }
+
+  @keyframes brandGlowFlow {
+    0%, 100% { 
+      text-shadow: 0 0 10px rgba(255, 123, 0, 0.4);
+      filter: brightness(1);
+    }
+    50% { 
+      text-shadow: 0 0 25px rgba(255, 123, 0, 0.9), 0 0 50px rgba(255, 123, 0, 0.5);
+      filter: brightness(1.2);
+    }
+  }
+
   .logo-main {
     display: flex;
     align-items: center;
@@ -27,17 +69,25 @@ const LoaderWrapper = styled.div`
     display: inline-block;
   }
 
-  /* Kolory marki - STATYCZNE */
+  /* FREE - Letter reveal + subtle white glow */
   .free {
     color: #f2fff0;       
     text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
     display: inline-block;
+    animation: 
+      letterReveal 0.8s ease-out forwards,
+      brandGlowFree 4s ease-in-out 1s infinite;
   }
 
+  /* FLOW - Letter reveal (delayed) + orange glow pulse */
   .flow {
     color: #ff7b00;
     text-shadow: 0 0 10px rgba(255, 123, 0, 0.4);
     display: inline-block;
+    animation: 
+      letterReveal 0.8s ease-out 0.3s forwards,
+      brandGlowFlow 3s ease-in-out 1.3s infinite;
+    opacity: 0; /* Start hidden for reveal animation */
   }
 
   /* Statyczne podkreślenie dla FREE (na dole) */
