@@ -53,7 +53,7 @@ export interface BrainV2Response {
     };
     context?: any;
     error?: string;
-    
+
     // ═══════════════════════════════════════════════════════════════════════════
     // SESSION LIFECYCLE (Conversation Isolation)
     // When conversationClosed=true, frontend MUST switch to newSessionId
@@ -127,7 +127,7 @@ export function useBrainSession(): UseBrainSessionReturn {
     // SESSION LIFECYCLE: One conversation = one session_id
     // When a conversation closes, we switch to newSessionId from backend
     // ═══════════════════════════════════════════════════════════════════════════
-    
+
     // Generate session ID helper
     const generateSessionId = () => {
         const ts = Date.now();
@@ -156,6 +156,9 @@ export function useBrainSession(): UseBrainSessionReturn {
     // Dedupe ref to prevent double sends
     const lastMessageRef = useRef("");
 
+    // Cooldown ref to prevent duplicate input after conversationClosed
+    const closedCooldownRef = useRef<number>(0);
+
     /**
      * Handle session lifecycle boundary.
      * Called when backend closes a conversation.
@@ -170,15 +173,18 @@ export function useBrainSession(): UseBrainSessionReturn {
 
             // STOP TTS ON SESSION CLOSE (User Request #4)
             ttsManager.stop();
-            
+
             // CRITICAL: Update session ID immediately
             setSessionId(response.newSessionId);
             localStorage.setItem("amber-session-id", response.newSessionId);
-            
+
+            // Set cooldown to block duplicate input for 1500ms
+            closedCooldownRef.current = Date.now();
+
             // Reset UI-only state (NOT cart, NOT backend)
             setConversationHistory([]);
             lastMessageRef.current = "";
-            
+
             // Keep lastFullResponse for UI to process actions/cart
         }
     }, []);
@@ -189,6 +195,12 @@ export function useBrainSession(): UseBrainSessionReturn {
      */
     const sendMessage = useCallback(async (text: string): Promise<BrainV2Response | null> => {
         const trimmed = text.trim();
+
+        // Cooldown guard: ignore input within 1500ms of conversationClosed
+        if (Date.now() - closedCooldownRef.current < 1500) {
+            console.log('[useBrainSession] ignored duplicate after conversationClosed');
+            return null;
+        }
 
         // Dedupe check
         if (!trimmed || trimmed === lastMessageRef.current) {
@@ -255,10 +267,10 @@ export function useBrainSession(): UseBrainSessionReturn {
     const startNewConversation = useCallback(() => {
         const newId = generateSessionId();
         logger.info(`🔄 [SessionLifecycle] Manual new conversation: ${newId}`);
-        
+
         // STOP TTS ON NEW CONVERSATION
         ttsManager.stop();
-        
+
         setSessionId(newId);
         localStorage.setItem("amber-session-id", newId);
         clearHistory();
