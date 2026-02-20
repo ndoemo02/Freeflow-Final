@@ -28,6 +28,8 @@ export default function AmberControlDeck({ adminToken }) {
     env: '-',
   });
   const [prompt, setPrompt] = useState('');
+  const [stylizationPrompt, setStylizationPrompt] = useState('');
+  const [stylizationSaving, setStylizationSaving] = useState(false);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [aliases, setAliases] = useState({});
@@ -160,10 +162,35 @@ export default function AmberControlDeck({ adminToken }) {
     }
   };
 
+  const fetchStylizationPrompt = async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/admin/config/stylization'), { headers });
+      const json = await res.json();
+      setStylizationPrompt(json.prompt || '');
+    } catch { setStylizationPrompt(''); }
+  };
+
+  const saveStylizationPrompt = async () => {
+    if (stylizationPrompt.length < 20) return;
+    setStylizationSaving(true);
+    try {
+      await fetch(getApiUrl('/api/admin/config/stylization'), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt: stylizationPrompt }),
+      });
+    } catch (e) {
+      alert('Zapis nie powiódł się: ' + e.message);
+    } finally {
+      setStylizationSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!adminToken) return;
     fetchData();
     fetchPrompt();
+    fetchStylizationPrompt();
     const iv = setInterval(fetchData, 10000);
     return () => clearInterval(iv);
   }, [adminToken]);
@@ -449,7 +476,7 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Prompt editor */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold">🪄 Prompt stylizacji GPT-4o</div>
+          <div className="text-[var(--fg0)] font-semibold">🪄 Prompt Amber (legacy override)</div>
           <button onClick={savePrompt} className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)]">💾 Zapisz prompt</button>
         </div>
 
@@ -490,6 +517,38 @@ export default function AmberControlDeck({ adminToken }) {
           className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none font-mono"
           placeholder="Wklej prompt..."
         />
+      </div>
+
+      {/* Stylization Prompt editor (NEW) */}
+      <div className={CardClass}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-[var(--fg0)] font-semibold">✨ Prompt stylizacji odpowiedzi</div>
+          <div className="flex items-center gap-2">
+            {stylizationPrompt.length > 0 && stylizationPrompt.length < 20 && (
+              <span className="text-[var(--bad)] text-xs">Min. 20 znaków</span>
+            )}
+            <button
+              onClick={saveStylizationPrompt}
+              disabled={stylizationSaving || stylizationPrompt.length < 20}
+              className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {stylizationSaving ? '⏳ Zapisuję...' : '💾 Zapisz prompt'}
+            </button>
+          </div>
+        </div>
+        <div className="text-[11px] text-[var(--muted)] mb-2 leading-relaxed">
+          Ten prompt jest używany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
+          <strong> NIE</strong> stylizuje: find_nearby, menu, confirm_order, ani list numerowanych.
+        </div>
+        <textarea
+          value={stylizationPrompt}
+          onChange={(e) => setStylizationPrompt(e.target.value)}
+          className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none font-mono"
+          placeholder="Jesteś Amber – asystentką FreeFlow. Przekształć tekst w krótką, naturalną wypowiedź..."
+        />
+        <div className="text-right text-[10px] text-[var(--muted)] mt-1">
+          {stylizationPrompt.length} znaków
+        </div>
       </div>
     </div>
   );
