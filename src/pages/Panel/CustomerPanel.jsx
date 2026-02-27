@@ -483,9 +483,6 @@ export default function CustomerPanel() {
           </AnimatePresence>
         </motion.div>
       </div>
-
-      {/* Cart Popup */}
-      <Cart />
     </motion.div>
   )
 }

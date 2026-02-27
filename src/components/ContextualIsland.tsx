@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useUI } from '../state/ui';
 import IslandWrapper from './IslandWrapper';
@@ -10,10 +10,50 @@ interface ContextualIslandProps {
 export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
     const { mode, presentationItems, highlightedCardId, setHighlightedCardId, setMode } = useUI();
     const [expanded, setExpanded] = useState(false);
-    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    // --- Slider state ---
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerWidth, setContainerWidth] = useState(256); // fallback to 256px
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Measure container width on mount + resize
+    useEffect(() => {
+        let retries = 0;
+        const measure = () => {
+            const w = containerRef.current?.offsetWidth || 0;
+            if (w > 0) {
+                console.log('[ContextualIsland] containerWidth measured:', w);
+                setContainerWidth(w);
+            } else if (retries < 10) {
+                // Retry co 100ms jeśli ref jeszcze nie ma rozmiaru
+                retries++;
+                setTimeout(measure, 100);
+            } else {
+                // Ostateczny fallback: 256px (Tailwind w-64)
+                const fallback = 256;
+                console.log('[ContextualIsland] fallback containerWidth:', fallback);
+                setContainerWidth(fallback);
+            }
+        };
+
+        const timeout = setTimeout(measure, 50);
+        const observer = new ResizeObserver((entries) => {
+            const w = entries[0]?.contentRect.width || 0;
+            if (w > 0) {
+                console.log('[ContextualIsland] ResizeObserver width:', w);
+                setContainerWidth(w);
+            }
+        });
+        if (containerRef.current) observer.observe(containerRef.current);
+        return () => {
+            clearTimeout(timeout);
+            observer.disconnect();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Sync scroll when highlightedCardId changes in expanded mode
-    React.useEffect(() => {
+    useEffect(() => {
         if (expanded && highlightedCardId && scrollContainerRef.current) {
             const activeElement = scrollContainerRef.current.querySelector(`[data-id="${highlightedCardId}"]`);
             if (activeElement) {
@@ -23,31 +63,70 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
     }, [highlightedCardId, expanded]);
 
     // 🛑 Render only if presentation active and items exist
-    // Unified to support both restaurant and menu modes in the same layout
     const isVisible = ['restaurant_presentation', 'menu_presentation'].includes(mode);
     if (!isVisible || (presentationItems?.length || 0) === 0) {
         return null;
     }
 
-    const activeIndex = presentationItems.findIndex((i: any) => (i.id === highlightedCardId || i.menuItemId === highlightedCardId));
+    const activeIndex = presentationItems.findIndex(
+        (i: any) => i.id === highlightedCardId || i.menuItemId === highlightedCardId
+    );
     const currentIndex = activeIndex >= 0 ? activeIndex : 0;
-    const currentItem = presentationItems[currentIndex];
 
-    const next = () => {
-        if (currentIndex < presentationItems.length - 1) {
-            setHighlightedCardId(presentationItems[currentIndex + 1].id);
-        }
-    };
+    // DEBUG: log slider state
+    console.log('[ContextualIsland] DEBUG →', {
+        containerWidth,
+        presentationItemsLength: presentationItems.length,
+        currentIndex,
+        trackWidth: containerWidth * presentationItems.length,
+        highlightedCardId,
+        translateX: -(currentIndex * containerWidth),
+    });
 
-    const prev = () => {
-        if (currentIndex > 0) {
-            setHighlightedCardId(presentationItems[currentIndex - 1].id);
+    // Helper: get item ID (supports both restaurant and menu items)
+    const getItemId = (item: any) => item.id || item.menuItemId;
+
+    const goTo = useCallback((targetIndex: number) => {
+        // Clamp: never jump more than ±1, never go out of bounds
+        const clamped = Math.max(0, Math.min(presentationItems.length - 1, targetIndex));
+        setHighlightedCardId(getItemId(presentationItems[clamped]));
+    }, [currentIndex, presentationItems, setHighlightedCardId]);
+
+    const next = useCallback(() => goTo(currentIndex + 1), [goTo, currentIndex]);
+    const prev = useCallback(() => goTo(currentIndex - 1), [goTo, currentIndex]);
+
+    // ─── Drag handler with velocity + offset logic ───────────────────────────
+    const handleDragEnd = useCallback((_event: any, info: any) => {
+        const OFFSET_THRESHOLD = 50;
+        const VELOCITY_THRESHOLD = 800;
+
+        const vx = info.velocity.x;
+        const ox = info.offset.x;
+
+        // Velocity-based flick (takes priority over offset)
+        if (vx < -VELOCITY_THRESHOLD) {
+            goTo(currentIndex + 1);
+            return;
         }
-    };
+        if (vx > VELOCITY_THRESHOLD) {
+            goTo(currentIndex - 1);
+            return;
+        }
+
+        // Offset-based slow drag
+        if (ox < -OFFSET_THRESHOLD) {
+            goTo(currentIndex + 1);
+        } else if (ox > OFFSET_THRESHOLD) {
+            goTo(currentIndex - 1);
+        }
+        // Otherwise snap back — framer-motion animate handles it
+    }, [currentIndex, goTo]);
 
     const close = () => {
         setMode('standard_chat');
     };
+
+    const canDrag = presentationItems.length > 1;
 
     return (
         <IslandWrapper
@@ -62,29 +141,59 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
             {/* Content Container */}
             <div className={`relative flex flex-col h-full ${expanded ? 'max-h-[60vh]' : ''}`}>
 
-                {/* Collapsed State: Single Item Info */}
+                {/* Collapsed State: Draggable Carousel Slider */}
                 {!expanded && (
-                    <div className="p-4 flex flex-col h-full justify-between">
-                        <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                                <motion.h3 layout="position" className="font-bold text-white text-base truncate leading-tight">
-                                    {currentItem.name}
-                                </motion.h3>
-                                <motion.p layout="position" className="text-xs text-amber-400 font-medium truncate">
-                                    {currentItem.cuisine_type || currentItem.category || (mode === 'restaurant_presentation' ? 'Restauracja' : 'Danie')}
-                                </motion.p>
-                            </div>
-                            {(currentItem.rating || mode === 'restaurant_presentation') && (
-                                <div className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/80 shrink-0">
-                                    <span>★</span> {currentItem.rating || '5.0'}
-                                </div>
-                            )}
-                        </div>
+                    // Viewport: clips the track to one card width
+                    <div
+                        ref={containerRef}
+                        className="relative w-full h-full overflow-hidden flex items-center"
+                    >
+                        {/* Track: a single horizontal flex row */}
+                        <motion.div
+                            className="flex h-full"
+                            style={{ width: `${containerWidth * presentationItems.length}px` }}
+                            // Snap to currentIndex using pixel values (no percentages → no micro-glitch)
+                            animate={{ x: -(currentIndex * containerWidth) }}
+                            transition={{ type: 'spring', stiffness: 400, damping: 40, mass: 0.8 }}
+                            // ── Drag config ──────────────────────────────────────────
+                            drag={canDrag ? 'x' : false}
+                            dragDirectionLock           // prevent diagonal drift
+                            dragMomentum={false}        // no inertia after release → deterministic snap
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={0.15}
+                            onDragEnd={handleDragEnd}
+                        >
+                            {presentationItems.map((item: any, idx: number) => (
+                                <div
+                                    key={getItemId(item) || idx}
+                                    className="flex flex-col h-full justify-between shrink-0 select-none pointer-events-none p-4"
+                                    style={{ width: `${containerWidth}px` }}
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-white text-base truncate leading-tight">
+                                                {item.name}
+                                            </h3>
+                                            <p className="text-xs text-amber-400 font-medium truncate">
+                                                {item.cuisine_type || item.category || (mode === 'restaurant_presentation' ? 'Restauracja' : 'Danie')}
+                                            </p>
+                                        </div>
+                                        {(item.rating || mode === 'restaurant_presentation') && (
+                                            <div className="flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded text-[10px] text-white/80 shrink-0">
+                                                <span>★</span> {item.rating || '5.0'}
+                                            </div>
+                                        )}
+                                    </div>
 
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} className="flex items-center gap-3 text-[10px] text-gray-400 mt-1">
-                            {currentItem.distance && <span>📍 {currentItem.distance.toFixed(1)} km</span>}
-                            {(currentItem.price_pln || currentItem.price) && <span>💰 {Number(currentItem.price_pln || currentItem.price).toFixed(2)} zł</span>}
-                            <span className="ml-auto opacity-50">Swipe →</span>
+                                    <div className="flex items-center gap-3 text-[10px] text-gray-400 mt-1">
+                                        {item.distance && <span>📍 {item.distance.toFixed(1)} km</span>}
+                                        {(item.price_pln || item.price) && (
+                                            <span>💰 {Number(item.price_pln || item.price).toFixed(2)} zł</span>
+                                        )}
+                                        {canDrag && <span className="ml-auto opacity-50">Swipe →</span>}
+                                    </div>
+                                </div>
+                            ))}
                         </motion.div>
                     </div>
                 )}
@@ -103,7 +212,10 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
                                 <h3 className="text-sm font-bold text-white">
                                     {mode === 'restaurant_presentation' ? 'Polecane Miejsca' : 'Karta Menu'}
                                 </h3>
-                                <button onClick={(e) => { e.stopPropagation(); setExpanded(false); }} className="text-white/40 hover:text-white transition-colors text-xs">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+                                    className="text-white/40 hover:text-white transition-colors text-xs"
+                                >
                                     Pomniejsz
                                 </button>
                             </div>
@@ -112,8 +224,8 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
                             <div ref={scrollContainerRef} className="overflow-y-auto p-2 space-y-2 max-h-[40vh] tiny-scroll">
                                 {presentationItems.map((item: any, idx: number) => (
                                     <motion.div
-                                        key={item.id || item.menuItemId || idx}
-                                        data-id={item.id || item.menuItemId}
+                                        key={getItemId(item) || idx}
+                                        data-id={getItemId(item)}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.03 }}
@@ -125,7 +237,7 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
                                         `}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setHighlightedCardId(item.id || item.menuItemId);
+                                            setHighlightedCardId(getItemId(item));
                                         }}
                                     >
                                         <div className="flex-1 min-w-0">
@@ -136,7 +248,9 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="text-xs font-mono font-bold text-amber-400">
-                                                {(item.price_pln || item.price) ? `${Number(item.price_pln || item.price).toFixed(0)} zł` : (item.rating ? `★ ${item.rating}` : '')}
+                                                {(item.price_pln || item.price)
+                                                    ? `${Number(item.price_pln || item.price).toFixed(0)} zł`
+                                                    : (item.rating ? `★ ${item.rating}` : '')}
                                             </div>
                                             <button
                                                 className="opacity-0 group-hover:opacity-100 bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full transition-all"
@@ -159,7 +273,7 @@ export default function ContextualIsland({ onSelect }: ContextualIslandProps) {
                     {presentationItems.map((_: any, idx: number) => (
                         <div
                             key={idx}
-                            className={`w-1 h-1 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-amber-400 w-3' : 'bg-white/20'}`}
+                            className={`h-1 rounded-full transition-all duration-300 ${idx === currentIndex ? 'bg-amber-400 w-3' : 'bg-white/20 w-1'}`}
                         />
                     ))}
                 </div>

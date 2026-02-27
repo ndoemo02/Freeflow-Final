@@ -6,10 +6,14 @@
 .business-panel {
     min-height: 100vh;
     padding: 1.5rem;
-    background:
-        radial-gradient(1100px 700px at 20% 10%, rgba(91, 124, 255, 0.12), transparent 60%),
-        radial-gradient(900px 600px at 85% 20%, rgba(56, 189, 248, 0.10), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
+    background-color: #000000;
+    background-image: url('/deep_space_wallpaper.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    color: #EAF0FF;
+    position: relative;
+    isolation: isolate;
 }
 
 /* ===== Header ===== */
@@ -250,4 +254,19 @@
         opacity: 1;
         transform: translateX(-50%) translateY(0);
     }
+}
+
+/* --- High-End Minimalist Glassmorphism Upgrade --- */
+.business-panel__quick-stats,
+.business-panel__channels>div,
+.business-panel__orders,
+.business-panel__settings,
+.stats-card,
+.stat-card,
+.quick-stat {
+    background: rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(25px) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
 }

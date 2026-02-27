@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback, useEffect } from "react";
-import { useBrainSession } from "../hooks/useBrainSession";
+import { useConversationStore } from "../store/useConversationStore";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useUIPanels } from "../hooks/useUIPanels";
 import { useTTS } from "../hooks/useTTS";
@@ -23,10 +23,14 @@ import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
+import { StateIsland, RestaurantCard, ExpectedContextPrompts, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
+import MenuIsland from "../components/MenuIsland";
+import CartBadge from "../components/CartBadge";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
 import freeflowLogo from '../assets/Freeflowlogo.png';
 import "./Home.css";
+import { usePostOrderReset } from '../hooks/usePostOrderReset';
 
 // --- UI View Mode Types ---
 type ViewMode = 'tiles' | 'bar';
@@ -35,14 +39,18 @@ export default function Home() {
   // --- Hooks ---
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
-  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, startNewConversation } = useBrainSession();
+  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation } = useConversationStore();
+  const phase = useConversationStore(state => state.conversationPhase);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
   const { dispatch } = useActionDispatcher();
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('tiles');
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
+
+  // 🔄 Auto-reset UI po potwierdzeniu zamówienia
+  usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
   // Derived from isThinking state: free when idle, processing when thinking
@@ -74,7 +82,8 @@ export default function Home() {
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
       // This is the critical fix for "Frontend nie słucha Backendu" issue
       if (lastFullResponse.actions || lastFullResponse.meta?.addedToCart) {
-        dispatch(lastFullResponse.actions, lastFullResponse.meta);
+        const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
+        dispatch(lastFullResponse.actions, lastFullResponse.meta, responseKey);
       }
     }
   }, [lastFullResponse, setHints, play, dispatch]);
@@ -103,6 +112,29 @@ export default function Home() {
     }
   }, [isListening, transcript, handleTextSubmit]);
 
+  // Handle restaurant selection from carousel "Wybierz" button
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const r = (e as CustomEvent).detail;
+      if (r?.name) {
+        handleTextSubmit(`Wybieram ${r.name}`);
+      }
+    };
+    window.addEventListener('freeflow:selectRestaurant', handler);
+    return () => window.removeEventListener('freeflow:selectRestaurant', handler);
+  }, [handleTextSubmit]);
+
+  // Handle menu item order from MenuIsland "Kliknij pozycję"
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { item } = (e as CustomEvent).detail;
+      if (item?.name) {
+        handleTextSubmit(`Chcę zamówić ${item.name}`);
+      }
+    };
+    window.addEventListener('freeflow:orderItem', handler);
+    return () => window.removeEventListener('freeflow:orderItem', handler);
+  }, [handleTextSubmit]);
 
   // --- Render ---
   return (
@@ -111,18 +143,15 @@ export default function Home() {
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50">
-        <div className="flex flex-col gap-1">
+      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50 pointer-events-none">
+        <div className="flex flex-col gap-1 pointer-events-auto">
           <LogoFreeFlow />
-          <div className="flex flex-col pl-1">
-            <p className="text-sm font-medium text-white/90 leading-tight">Voice to order — Złóż zamówienie</p>
-            <p className="text-xs text-white/60 leading-tight">Restauracja, taxi albo hotel?</p>
+          <div className="flex items-center gap-2 pl-1 mt-1">
+            <StateIsland />
           </div>
         </div>
-        <div className="flex gap-4">
-          <button onClick={() => setIsOpen(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
-            <i className="fas fa-shopping-cart text-white" />
-          </button>
+        <div className="flex gap-4 pointer-events-auto">
+          {/* Cart triggers now managed below or via the CartBadge directly */}
           <button onClick={openDrawer} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
             <i className="fas fa-bars text-white" />
           </button>
@@ -140,23 +169,21 @@ export default function Home() {
           />
         </div>
 
-        {/* Logo/Brand Centerpiece (Empty State for Panels) */}
-        {uiHints.panel === 'none' && (
-          <div className="hero-stack">
-            <div className={`logo-container ${isListening ? 'recording' : ''}`} onClick={handleMicClick}>
-              <img
-                src={freeflowLogo}
-                alt="FreeFlow"
-                className={`logo ${isListening ? 'recording' : ''}`}
-              />
-              {isListening && (
-                <div className="recording-indicator">
-                  Nasłuchiwanie...
-                </div>
-              )}
-            </div>
+        {/* Logo/Brand Centerpiece — zawsze widoczne, bo to przycisk mikrofonu */}
+        <div className="hero-stack">
+          <div className={`logo-container ${isListening ? 'recording' : ''}`} onClick={handleMicClick}>
+            <img
+              src={freeflowLogo}
+              alt="FreeFlow"
+              className={`logo ${isListening ? 'recording' : ''}`}
+            />
+            {isListening && (
+              <div className="recording-indicator">
+                Nasłuchiwanie...
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
       </main>
 
@@ -182,26 +209,50 @@ export default function Home() {
         </div>
       )}
 
-      {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
-      {viewMode === 'bar' && (
-        <VoiceCommandCenterV2
-          recording={isListening}
-          isProcessing={isThinking}
-          isSpeaking={isSpeaking}
-          interimText={transcript}
-          finalText={transcript}
-          amberResponse={lastResponse || lastFullResponse?.reply || ''}
-          onMicClick={handleMicClick}
-          onTextSubmit={handleTextSubmit}
-          onClearResponse={() => { }}
-          visible={true}
-          isPresenting={uiHints.panel !== 'none'}
-        />
+      {/* PHASE: IDLE */}
+      {viewMode === 'bar' && phase === 'idle' && (
+        <SuggestedRestaurantsCarousel />
       )}
 
-      {/* Drawers */}
-      <MenuDrawer />
-      <Cart />
+      {/* PHASE: RESTAURANT_SELECTED || ORDERING */}
+      {viewMode === 'bar' && (phase === 'restaurant_selected' || phase === 'ordering') && (
+        <>
+          <RestaurantCard />
+          <MenuIsland />
+          <div className="fixed top-4 right-20 z-50 pointer-events-auto">
+            {/* 
+              Renderujemy bezpośrednio badge. W tym setupie zakładamy, że CartBadge 
+              obsługuje własne kliknięcie (on/off szuflady). 
+            */}
+            <CartBadge />
+          </div>
+        </>
+      )}
+
+      {/* PHASE: CHECKOUT */}
+      {viewMode === 'bar' && phase === 'checkout' && (
+        <Cart />
+      )}
+
+      {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
+      {viewMode === 'bar' && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+          <ExpectedContextPrompts />
+          <VoiceCommandCenterV2
+            recording={isListening}
+            isProcessing={isThinking}
+            isSpeaking={isSpeaking}
+            interimText={transcript}
+            finalText={transcript}
+            amberResponse={lastResponse || lastFullResponse?.reply || ''}
+            onMicClick={handleMicClick}
+            onTextSubmit={handleTextSubmit}
+            onClearResponse={() => { }}
+            visible={true}
+            isPresenting={uiHints.panel !== 'none'}
+          />
+        </div>
+      )}
 
     </div>
   );

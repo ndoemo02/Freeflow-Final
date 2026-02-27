@@ -1,7 +1,5 @@
 import React from 'react';
 import { UIHints } from '../types/uiHints';
-import RestaurantsList from './panels/RestaurantsList';
-import MenuPanel from './panels/MenuPanel';
 import KitchenDisplay from './panels/KitchenDisplay';
 import BusinessStatsPanel from './panels/BusinessStatsPanel';
 
@@ -11,16 +9,16 @@ interface UIPanelRouterProps {
 }
 
 export default function UIPanelRouter({ uiHints, data }: UIPanelRouterProps) {
-    // console.log("🧭 UIPanelRouter", { uiHints, data });
 
     switch (uiHints.panel) {
         case 'restaurants':
-            return <RestaurantsList data={data.restaurants || []} />;
+            // W nowym UI-only V2, karuzela restauracji jest obsługiwana przez ulepszony SuggestedRestaurantsCarousel
+            return null;
 
         case 'menu':
-            // Pass restaurantName if available in data
-            const restaurantName = data.currentRestaurant?.name || data.restaurantName;
-            return <MenuPanel data={data.menuItems || []} restaurantName={restaurantName} />;
+            // Menu jest teraz renderowane przez MenuIsland (prawa strefa fixed).
+            // Nie renderuj centralnego overlaya — return null.
+            return null;
 
         case 'kds':
             // Expecting KDS data in generic 'data' or specific field if passed

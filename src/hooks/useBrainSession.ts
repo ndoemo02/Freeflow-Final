@@ -99,6 +99,56 @@ async function callBrainV2(
 ): Promise<BrainV2Response> {
     const url = getApiUrl('api/brain/v2');
 
+    const getBrowserCoords = async (): Promise<{ lat: number; lng: number } | null> => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
+
+        return new Promise((resolve) => {
+            const timeoutMs = 1200;
+            let settled = false;
+            const timeoutId = window.setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                resolve(null);
+            }, timeoutMs);
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    const lat = Number(pos.coords.latitude);
+                    const lng = Number(pos.coords.longitude);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                        resolve(null);
+                        return;
+                    }
+                    resolve({ lat, lng });
+                },
+                () => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    resolve(null);
+                },
+                { enableHighAccuracy: false, maximumAge: 120000, timeout: timeoutMs }
+            );
+        });
+    };
+
+    const coords = await getBrowserCoords();
+
+    // 🛒 Pobierz stan koszyka z localStorage, aby wysłać go do backendu
+    let cartItems = [];
+    let cartRestaurant = null;
+    try {
+        const cartStr = localStorage.getItem('freeflow_cart');
+        const restStr = localStorage.getItem('freeflow_cart_restaurant');
+        if (cartStr) cartItems = JSON.parse(cartStr);
+        if (restStr) cartRestaurant = JSON.parse(restStr);
+    } catch (e) {
+        console.warn('Failed to parse cart for backend sync', e);
+    }
+
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -109,7 +159,17 @@ async function callBrainV2(
             input: text,
             text: text, // Legacy fallback
             includeTTS: options.includeTTS || false,
-            meta: { channel: 'web' }
+            meta: {
+                channel: 'web',
+                state: {
+                    cart: {
+                        items: cartItems,
+                        restaurantId: cartRestaurant?.id || null,
+                        restaurantName: cartRestaurant?.name || null
+                    }
+                }
+            },
+            ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
         }),
     });
 
@@ -221,7 +281,7 @@ export function useBrainSession(): UseBrainSessionReturn {
 
             const amberReply = response.reply || response.text || "";
             logger.info("🤖 [useBrainSession] Brain replied:", amberReply);
-            logger.info("📊 [useBrainSession] Intent:", response.intent, "| Source:", response.meta?.source);
+            logger.info(`📊 [useBrainSession] Intent: ${response.intent} | Source: ${response.meta?.source}`);
 
             setLastResponse(amberReply);
             setLastFullResponse(response);

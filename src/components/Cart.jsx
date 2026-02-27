@@ -4,13 +4,22 @@ import { Dialog, Transition } from '@headlessui/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../state/CartContext';
 import { useAuth } from '../state/auth';
+import { useConversationStore } from '../store/useConversationStore';
 
 export default function Cart() {
-  const { cart, restaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
-  const restaurantLabel = restaurant
-    ? (typeof restaurant === 'object'
-      ? (typeof restaurant.name === 'string' ? restaurant.name : JSON.stringify(restaurant.name ?? restaurant))
-      : String(restaurant))
+  const { isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
+  const storeCart = useConversationStore(state => state.cart);
+  const currentRestaurant = useConversationStore(state => state.currentRestaurant);
+
+  const cart = (storeCart && Array.isArray(storeCart.items))
+    ? storeCart.items
+    : (Array.isArray(storeCart) ? storeCart : []);
+  const total = cart.reduce((sum, item) => sum + (Number(item.price || item.price_pln || 0) * Number(item.quantity || item.qty || 1)), 0);
+
+  const restaurantLabel = currentRestaurant
+    ? (typeof currentRestaurant === 'object'
+      ? (typeof currentRestaurant.name === 'string' ? currentRestaurant.name : JSON.stringify(currentRestaurant.name ?? currentRestaurant))
+      : String(currentRestaurant))
     : null;
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -24,19 +33,49 @@ export default function Cart() {
     notes: ''
   });
 
+  const handleUpdateQuantity = (id, newQty) => {
+    updateQuantity(id, newQty);
+    useConversationStore.setState(state => {
+      const currentCart = state.cart;
+      if (!currentCart) return state;
+      const items = Array.isArray(currentCart.items) ? currentCart.items : (Array.isArray(currentCart) ? currentCart : []);
+      const newItems = items.map(item => item.id === id ? { ...item, quantity: newQty, qty: newQty } : item);
+      return { cart: { ...currentCart, items: newItems } };
+    });
+  };
+
+  const handleRemoveFromCart = (id) => {
+    removeFromCart(id);
+    useConversationStore.setState(state => {
+      const currentCart = state.cart;
+      if (!currentCart) return state;
+      const items = Array.isArray(currentCart.items) ? currentCart.items : (Array.isArray(currentCart) ? currentCart : []);
+      const newItems = items.filter(item => item.id !== id);
+      return { cart: { ...currentCart, items: newItems } };
+    });
+  };
+
+  const handleClearCart = () => {
+    clearCart();
+    useConversationStore.setState({ cart: null });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await submitOrder(deliveryInfo);
     if (result) {
       // Order submitted successfully
+      useConversationStore.getState().handleOrderSuccess();
       setDeliveryInfo({ name: '', phone: '', address: '', notes: '' });
       // Przejdź do panelu klienta
       navigate('/panel/customer');
     }
   };
 
+  const isCartVisible = isOpen || useConversationStore(state => state.conversationPhase) === 'checkout';
+
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition appear show={isCartVisible} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)} initialFocus={closeButtonRef}>
         <Transition.Child
           as={Fragment}
@@ -125,7 +164,7 @@ export default function Cart() {
                                 <div className="flex items-center gap-3">
                                   <div className="flex items-center gap-2 bg-black/40 rounded-lg px-2 py-1">
                                     <button
-                                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                      onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                                       className="text-slate-400 hover:text-white transition-colors w-6 h-6 flex items-center justify-center"
                                     >
                                       −
@@ -134,7 +173,7 @@ export default function Cart() {
                                       {item.quantity}
                                     </span>
                                     <button
-                                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                      onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                                       className="text-slate-400 hover:text-white transition-colors w-6 h-6 flex items-center justify-center"
                                     >
                                       +
@@ -146,7 +185,7 @@ export default function Cart() {
                                   </div>
 
                                   <button
-                                    onClick={() => removeFromCart(item.id)}
+                                    onClick={() => handleRemoveFromCart(item.id)}
                                     className="text-red-400 hover:text-red-300 transition-colors ml-2"
                                   >
                                     🗑️
@@ -215,7 +254,7 @@ export default function Cart() {
                     <div className="flex gap-3">
                       <button
                         type="button"
-                        onClick={clearCart}
+                        onClick={handleClearCart}
                         disabled={isSubmitting}
                         className="flex-1 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
                       >

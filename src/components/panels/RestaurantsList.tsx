@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export interface RestaurantData {
     id: string;
     name: string;
+    displayName?: string;
     rating?: number;
     cuisine_type?: string;
     delivery_time?: string;
@@ -51,6 +52,7 @@ export default function RestaurantsList({ data }: Props) {
                 <div className="flex overflow-x-auto gap-4 pb-8 pt-4 px-4 snap-x snap-mandatory no-scrollbar cursor-grab active:cursor-grabbing">
                     {data.map((r, i) => {
                         const imageSrc = r.img || r.image_url || getFallbackImage(r.id, i);
+                        const displayName = r.displayName || r.name;
                         return (
                             <div
                                 key={r.id || i}
@@ -60,7 +62,7 @@ export default function RestaurantsList({ data }: Props) {
                                 <div className="h-32 relative">
                                     <img
                                         src={imageSrc}
-                                        alt={r.name}
+                                        alt={displayName}
                                         className="w-full h-full object-cover"
                                         onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGES[0]}
                                     />
@@ -71,7 +73,7 @@ export default function RestaurantsList({ data }: Props) {
                                     )}
                                 </div>
                                 <div className="p-4">
-                                    <h3 className="text-white font-bold text-lg mb-1 truncate">{r.name}</h3>
+                                    <h3 className="text-white font-bold text-lg mb-1 truncate">{displayName}</h3>
                                     <p className="text-brand-500 text-xs font-medium mb-4">{r.city || 'Polska'}</p>
 
                                     {/* Pagination Dots (Visual Only) */}
@@ -124,18 +126,19 @@ export default function RestaurantsList({ data }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-24">
                 {data.map((r, i) => {
                     const imageSrc = r.img || r.image_url || getFallbackImage(r.id, i);
+                    const displayName = r.displayName || r.name;
                     return (
                         <div key={r.id || i} className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all cursor-pointer group">
                             <div className="h-48 relative overflow-hidden">
                                 <img
                                     src={imageSrc}
-                                    alt={r.name}
+                                    alt={displayName}
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                                     onError={(e) => (e.target as HTMLImageElement).src = FALLBACK_IMAGES[0]}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                                 <div className="absolute bottom-0 left-0 p-4">
-                                    <h3 className="text-white font-bold text-xl">{r.name}</h3>
+                                    <h3 className="text-white font-bold text-xl">{displayName}</h3>
                                     <p className="text-gray-300 text-sm">{r.cuisine_type || 'Kuchnia międzynarodowa'}</p>
                                 </div>
                                 {r.rating && (

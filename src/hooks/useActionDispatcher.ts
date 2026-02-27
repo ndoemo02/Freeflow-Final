@@ -2,19 +2,20 @@
  * useActionDispatcher.ts
  * ═══════════════════════════════════════════════════════════════════════════
  * DISPATCHER AKCJI Z BACKENDU
- * 
+ *
  * Wykonuje akcje przesłane przez backend w response.actions[].
  * Rozwiązuje problem: "Frontend nie słucha Backendu"
- * 
+ *
  * Obsługiwane akcje:
  * - SHOW_CART: Otwiera drawer koszyka
  * - add_to_cart: Dodaje item do koszyka
  * - SYNC_CART: Synchronizuje cały koszyk
  * - CLEAR_CART: Czyści koszyk
+ * - CONFIRM_ORDER / RESET_UI / order_confirmed: Reset UI po zamówieniu
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useCart } from '../state/CartContext';
 import { useToast } from '../components/Toast';
 
@@ -46,8 +47,9 @@ interface BrainMeta {
 }
 
 export function useActionDispatcher() {
-    const cart = useCart();
-    const toast = useToast();
+    const cart = useCart() as any;
+    const toast = useToast() as any;
+    const lastVoiceCartToastKeyRef = useRef<string | null>(null);
 
     // Safely extract functions with fallbacks
     const syncCart = cart?.syncCart;
@@ -56,7 +58,7 @@ export function useActionDispatcher() {
     const clearCart = cart?.clearCart;
     const push = toast?.push;
 
-    const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta) => {
+    const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta, responseKey?: string) => {
         const fnTag = '[ActionDispatcher]';
 
         // 1. Process explicit actions array
@@ -118,6 +120,18 @@ export function useActionDispatcher() {
                         }
                         break;
 
+                    // ─── RESET UI po potwierdzeniu zamówienia ───────────────────
+                    case 'CONFIRM_ORDER':
+                    case 'RESET_UI':
+                    case 'order_confirmed':
+                        // Zamknij koszyk natychmiast, wyczyść po krótkim delay (animacja)
+                        if (setIsOpen) setIsOpen(false);
+                        setTimeout(() => { if (clearCart) clearCart(); }, 800);
+                        // Powiadom inne hooki (np. usePostOrderReset)
+                        window.dispatchEvent(new CustomEvent('freeflow:orderConfirmed', { detail: action }));
+                        console.log(`${fnTag} ✅ UI reset triggered by action: ${action.type}`);
+                        break;
+
                     default:
                         console.log(`${fnTag} ⚠️ Unknown action type: ${action.type}`);
                 }
@@ -135,8 +149,13 @@ export function useActionDispatcher() {
                 setIsOpen(true);
             }
 
-            if (push) {
+            const toastKey = responseKey || null;
+            const shouldToast = !toastKey || lastVoiceCartToastKeyRef.current !== toastKey;
+
+            if (shouldToast && push) {
+                // FIX: prevent duplicate cart update toasts from voice flow
                 push('Zaktualizowano koszyk z głosowej komendy', 'success');
+                lastVoiceCartToastKeyRef.current = toastKey;
             }
             console.log(`${fnTag} ✅ Cart synced from meta.cart`);
         }

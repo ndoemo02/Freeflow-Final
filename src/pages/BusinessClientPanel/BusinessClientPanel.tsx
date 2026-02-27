@@ -31,6 +31,7 @@ import ActiveOrdersList from '../../components/business/ActiveOrdersList';
 
 // Styles
 import './BusinessClientPanel.css';
+import StarfieldBackground from '../../components/StarfieldBackground';
 
 // Icons as simple components
 const IconDollar = () => <span>💰</span>;
@@ -74,6 +75,7 @@ export default function BusinessClientPanel() {
     if (loading) {
         return (
             <div className="business-panel">
+                <StarfieldBackground />
                 <div className="business-panel__loading">
                     <div className="business-panel__spinner" />
                     <p>Ładowanie danych...</p>
@@ -103,6 +105,7 @@ export default function BusinessClientPanel() {
 
     return (
         <div className="business-panel">
+            <StarfieldBackground />
             {/* Header */}
             <header className="business-panel__header">
                 <div className="business-panel__header-left">

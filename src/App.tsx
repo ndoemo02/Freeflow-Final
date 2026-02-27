@@ -21,6 +21,7 @@ import RestaurantBackground from "./components/RestaurantBackground";
 
 import MenuViewer from "./components/MenuViewer";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
+import DevOverlay from "./components/DevOverlay";
 
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
@@ -78,6 +79,7 @@ function AppContent() {
       < MenuDrawer />
       <Cart />
       {authOpen && <AuthModal onClose={closeAuth} />}
+      <DevOverlay />
     </div >
   );
 }

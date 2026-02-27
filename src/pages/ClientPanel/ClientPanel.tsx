@@ -14,6 +14,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
 import { supabase } from '../../lib/supabase';
+import StarfieldBackground from '../../components/StarfieldBackground';
 import './ClientPanel.css';
 
 // Types
@@ -104,6 +105,7 @@ export default function ClientPanel() {
 
     return (
         <div className="client-panel">
+            <StarfieldBackground />
             {/* Mobile Header */}
             <header className="mobile-header lg:hidden">
                 <button onClick={() => setSidebarOpen(true)} className="header-btn">

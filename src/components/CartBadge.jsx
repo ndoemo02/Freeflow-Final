@@ -1,43 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getCart, setCart, clearCart } from '../lib/cart';
+import { useConversationStore } from '../store/useConversationStore';
+import { useConversationUIState } from '../hooks/useConversationUIState';
 
 export default function CartBadge() {
   const [open, setOpen] = useState(false);
-  const [cart, setCartState] = useState({ items: getCart() });
+  const cartStore = useConversationStore(state => state.cart);
+  const cartItems = cartStore?.items || [];
 
   useEffect(() => {
-    const onStorage = (e) => { if (e.key === 'cart') setCartState({ items: getCart() }); };
-    window.addEventListener('storage', onStorage);
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('keydown', onKey);
-    const id = setInterval(() => setCartState({ items: getCart() }), 800);
-    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('keydown', onKey); clearInterval(id); };
+    return () => { window.removeEventListener('keydown', onKey); };
   }, []);
 
-  const totalQty = cart.items.reduce((s, i) => s + i.qty, 0);
-  const totalPrice = cart.items.reduce((s, i) => s + (i.price * i.qty), 0);
+  const totalQty = cartItems.reduce((s, i) => s + (i.qty || i.quantity || 1), 0);
+  const totalPrice = cartItems.reduce((s, i) => s + (i.price * (i.qty || i.quantity || 1)), 0);
 
+  // Zablokowane lokalne mutowanie stanu - polegamy na FSM backendu
   const updateQuantity = (itemId, change) => {
-    const items = getCart();
-    const updated = items.map(i => 
-      i.id === itemId ? {...i, qty: Math.max(0, i.qty + change)} : i
-    ).filter(i => i.qty > 0);
-    setCart(updated); 
-    setCartState({ items: updated }); 
+    console.warn("Cart UI mutation is disabled in V2 mode. FSM drives the cart.");
   };
 
   return (
     <div className="relative">
       {/* Cart Button */}
-      <button 
-        type="button" 
+      <button
+        type="button"
         className="relative w-8 h-8 rounded-lg bg-black/20 border border-orange-400/20 text-orange-200 hover:bg-black/30 hover:border-orange-400/40 transition-all duration-200 flex items-center justify-center"
-        aria-label="Koszyk" 
+        aria-label="Koszyk"
         onClick={() => setOpen(v => !v)}
       >
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.16 14.26l.03.01 10.59-.01c.83 0 1.55-.5 1.85-1.22l2.95-6.88A1 1 0 0 0 21.66 4H6.21L5.27 2H2v2h2l3.6 7.59-1.35 2.45C5.52 15.37 6.48 17 8 17h12v-2H8.42c-.14 0-.25-.11-.25-.25 0-.04.01-.08.03-.11l.96-1.74z"/>
+          <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.16 14.26l.03.01 10.59-.01c.83 0 1.55-.5 1.85-1.22l2.95-6.88A1 1 0 0 0 21.66 4H6.21L5.27 2H2v2h2l3.6 7.59-1.35 2.45C5.52 15.37 6.48 17 8 17h12v-2H8.42c-.14 0-.25-.11-.25-.25 0-.04.01-.08.03-.11l.96-1.74z" />
         </svg>
         {totalQty > 0 && (
           <span className="absolute -top-2 -right-2 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
@@ -51,11 +46,11 @@ export default function CartBadge() {
         {open && (
           <>
             {/* Backdrop */}
-            <div 
+            <div
               className="fixed inset-0 z-40 bg-black/20"
               onClick={() => setOpen(false)}
             />
-            
+
             {/* Cart Drawer */}
             <motion.div
               initial={{ opacity: 0, x: 300, scale: 0.95 }}
@@ -63,7 +58,7 @@ export default function CartBadge() {
               exit={{ opacity: 0, x: 300, scale: 0.95 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="absolute top-12 right-0 z-50 w-80 max-h-96 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-2xl overflow-hidden"
-              role="dialog" 
+              role="dialog"
               aria-label="Koszyk"
             >
               {/* Header */}
@@ -77,7 +72,7 @@ export default function CartBadge() {
                     </span>
                   )}
                 </div>
-                <button 
+                <button
                   onClick={() => setOpen(false)}
                   className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all duration-200 flex items-center justify-center text-sm"
                 >
@@ -87,7 +82,7 @@ export default function CartBadge() {
 
               {/* Cart Content */}
               <div className="max-h-64 overflow-y-auto">
-                {cart.items.length === 0 ? (
+                {cartItems.length === 0 ? (
                   <div className="p-8 text-center">
                     <div className="text-4xl mb-2">🛒</div>
                     <p className="text-white/60 text-sm">Koszyk jest pusty</p>
@@ -95,7 +90,7 @@ export default function CartBadge() {
                   </div>
                 ) : (
                   <div className="p-4 space-y-3">
-                    {cart.items.map((item, index) => (
+                    {cartItems.map((item, index) => (
                       <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -106,10 +101,10 @@ export default function CartBadge() {
                         <div className="flex-1 min-w-0">
                           <h4 className="text-white font-medium text-sm truncate">{item.name}</h4>
                           <p className="text-orange-300 text-xs">
-                            {item.price?.toFixed(2)} zł × {item.qty}
+                            {item.price?.toFixed(2)} zł × {item.qty || item.quantity || 1}
                           </p>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => updateQuantity(item.id, -1)}
@@ -118,7 +113,7 @@ export default function CartBadge() {
                             −
                           </button>
                           <span className="text-white font-medium text-sm min-w-[20px] text-center">
-                            {item.qty}
+                            {item.qty || item.quantity || 1}
                           </span>
                           <button
                             onClick={() => updateQuantity(item.id, 1)}
@@ -134,7 +129,7 @@ export default function CartBadge() {
               </div>
 
               {/* Footer */}
-              {cart.items.length > 0 && (
+              {cartItems.length > 0 && (
                 <div className="p-4 border-t border-white/10 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-white/80 font-medium">Razem:</span>
@@ -142,10 +137,10 @@ export default function CartBadge() {
                       {totalPrice.toFixed(2)} zł
                     </span>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { clearCart(); setCartState({ items: getCart() }); }}
+                      onClick={() => { console.warn('Podejście V2 nie pozwala na czyszczenie koszyka ze strony UI bezpośrednio bez eventu') }}
                       className="flex-1 px-3 py-2 bg-white/10 border border-white/20 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-200 text-sm font-medium"
                     >
                       Wyczyść

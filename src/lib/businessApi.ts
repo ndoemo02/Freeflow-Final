@@ -189,15 +189,15 @@ export async function fetchBusinessDashboard(): Promise<BusinessDashboardData> {
 
         // --- Calculate KPIs ---
         const today = new Date().toDateString();
-        const ordersToday = orders.filter(o => new Date(o.createdAt).toDateString() === today);
-        
-        const revenueToday = ordersToday.reduce((sum, o) => sum + (Number(o.totalPrice) || 0), 0);
-        
+        const ordersToday = orders.filter((o: any) => new Date(o.createdAt).toDateString() === today);
+
+        const revenueToday = ordersToday.reduce((sum: number, o: any) => sum + (Number(o.totalPrice) || 0), 0);
+
         // Calculate average elapsed time for completed orders (if backend provided closedAt, but here we estimate)
         // Since we don't have exact fulfillment time easily, we use elapsed time of 'delivered' orders as proxy or 15 mins default
         const avgFulfillmentTime = 18; // Placeholder/Estimate
 
-        const uniqueCustomers = new Set(ordersToday.map(o => o.userId || o.customer?.phone || 'guest')).size;
+        const uniqueCustomers = new Set(ordersToday.map((o: any) => o.userId || o.customer?.phone || 'guest')).size;
 
         const kpis: KPIData = {
             ordersToday: ordersToday.length,
@@ -211,14 +211,14 @@ export async function fetchBusinessDashboard(): Promise<BusinessDashboardData> {
         // --- Calculate Channels ---
         const channelCounts = { restaurant: 0, hotel: 0, delivery: 0 };
         const totalChannels = ordersToday.length || 1;
-        
+
         // Heuristic mapping if channel field missing or different
-        ordersToday.forEach(o => {
+        ordersToday.forEach((o: any) => {
             // Here assuming backend might not return 'channel' directly, so defaults to 'restaurant'
             // But if we had channel logic:
             // const ch = o.channel || 'restaurant'; 
             // For now using random dist or 'restaurant' as default since Admin API might not explicitly return channel enum
-             channelCounts.restaurant++;
+            channelCounts.restaurant++;
         });
 
         const channels: ChannelBreakdown = {
@@ -229,13 +229,13 @@ export async function fetchBusinessDashboard(): Promise<BusinessDashboardData> {
 
         // --- Active Orders ---
         const activeOrders: ActiveOrder[] = orders
-            .filter(o => ['new', 'pending', 'preparing', 'ready'].includes(o.status))
-            .map(o => ({
+            .filter((o: any) => ['new', 'pending', 'preparing', 'ready'].includes(o.status))
+            .map((o: any) => ({
                 id: o.id,
                 orderNumber: `#${o.id.slice(0, 4)}`,
                 channel: 'restaurant', // Defaulting as Admin API lacks specific channel mapping in first version
                 status: o.status === 'pending' ? 'new' : o.status, // Map 'pending' to 'new' for UI
-                items: Array.isArray(o.items) ? o.items.map(i => i.name || i) : [],
+                items: Array.isArray(o.items) ? o.items.map((i: any) => i.name || i) : [],
                 total: Number(o.totalPrice) || 0,
                 totalFormatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
                 location: o.customer?.address || 'Stolik',

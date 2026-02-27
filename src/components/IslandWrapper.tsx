@@ -22,31 +22,25 @@ export default function IslandWrapper({
     className = '',
     position = 'left'
 }: IslandWrapperProps) {
-    const handleDragEnd = (event: any, info: PanInfo) => {
+    const handleDragEnd = (_event: any, info: PanInfo) => {
         const SWIPE_THRESHOLD = 50;
         const VELOCITY_THRESHOLD = 400;
         const { offset, velocity } = info;
 
-        // Horizontal Swipe (Navigate Items)
-        if (Math.abs(offset.x) > Math.abs(offset.y)) {
-            if (offset.x < -SWIPE_THRESHOLD || velocity.x < -VELOCITY_THRESHOLD) {
-                onSwipeNext?.();
-            } else if (offset.x > SWIPE_THRESHOLD || velocity.x > VELOCITY_THRESHOLD) {
-                onSwipePrev?.();
-            }
-        }
+        // Only respond to vertical gestures — horizontal is handled by inner slider
+        // Guard: only process if the gesture is predominantly vertical
+        if (Math.abs(offset.y) <= Math.abs(offset.x)) return;
+
         // Vertical Swipe (Expand / Collapse / Close)
-        else {
-            if (offset.y < -SWIPE_THRESHOLD || velocity.y < -VELOCITY_THRESHOLD) {
-                // Swipe Up -> Expand
-                setExpanded(true);
-            } else if (offset.y > SWIPE_THRESHOLD || velocity.y > VELOCITY_THRESHOLD) {
-                // Swipe Down
-                if (expanded) {
-                    setExpanded(false);
-                } else {
-                    onClose?.();
-                }
+        if (offset.y < -SWIPE_THRESHOLD || velocity.y < -VELOCITY_THRESHOLD) {
+            // Swipe Up → Expand
+            setExpanded(true);
+        } else if (offset.y > SWIPE_THRESHOLD || velocity.y > VELOCITY_THRESHOLD) {
+            // Swipe Down
+            if (expanded) {
+                setExpanded(false);
+            } else {
+                onClose?.();
             }
         }
     };
@@ -59,18 +53,21 @@ export default function IslandWrapper({
             initial={{ opacity: 0, x: position === 'left' ? -50 : 50, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: position === 'left' ? -50 : 50, scale: 0.9 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
             <motion.div
                 className={`
-                    relative bg-black/40 backdrop-blur-xl border border-white/10 
+                    relative bg-black/40 backdrop-blur-xl border border-white/10
                     rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.3)]
-                    overflow-hidden cursor-grab active:cursor-grabbing
+                    overflow-hidden
                     ${expanded ? 'w-80 h-auto' : 'w-64 h-24'}
                 `}
-                drag
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.2}
+                // Vertical-only drag for expand / close gesture
+                drag="y"
+                dragDirectionLock
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.15}
+                dragMomentum={false}
                 onDragEnd={handleDragEnd}
                 layout
                 onClick={() => !expanded && setExpanded(true)}
