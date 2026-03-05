@@ -7,7 +7,7 @@ const detectBackend = () => {
       return ''; // Pusty string = względne ścieżki, używa Vite proxy
     }
     if (h === 'localhost' || h === '127.0.0.1') {
-      return 'http://localhost:3000';
+      return 'http://localhost:3005';
     }
   }
   // Production backend URL (update if deployment changes)

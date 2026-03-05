@@ -155,13 +155,20 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             if (!response.ok) throw new Error(data.error || 'Brain error');
 
             const amberReply = data.reply || data.text || '';
+            const hasContext = !!data.context;
             const ctx = data.context || {};
 
             const newHistory = [...get().conversationHistory, { role: 'assistant', content: amberReply }];
 
-            const newPhase = ctx.conversationPhase || 'idle';
+            let newPhase = ctx.conversationPhase;
+            if (!hasContext) {
+                console.warn('⚠️ [useConversationStore] Backend response missing `context`. Retaining current FSM phase to prevent UI reset.');
+                newPhase = get().conversationPhase;
+            } else if (!newPhase) {
+                newPhase = 'idle';
+            }
             const isIdle = newPhase === 'idle';
-            console.debug('[FSM_PHASE]', newPhase);
+            console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
 
             // Check for order_success event or order_complete intent from backend
             const isOrderSuccess = data.intent === 'order_success'
@@ -206,14 +213,14 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 // Map Backend FSM
                 conversationPhase: newPhase,
 
-                // Retain currentRestaurant UNLESS entering idle
-                currentRestaurant: isIdle ? null : (ctx.currentRestaurant || get().currentRestaurant),
+                // Retain currentRestaurant UNLESS entering idle and we actually got a context update
+                currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || get().currentRestaurant),
 
                 // Retain pending order and cart. Cart persists across sessions until order success.
-                pendingOrder: isIdle ? null : (ctx.pendingOrder || get().pendingOrder),
+                pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: data.meta?.cart || ctx.cart || get().cart,
 
-                expectedContext: ctx.expectedContext || null,
+                expectedContext: hasContext ? (ctx.expectedContext || null) : get().expectedContext,
                 conversationClosed: data.conversationClosed || false,
 
                 // Map UI Only State from response

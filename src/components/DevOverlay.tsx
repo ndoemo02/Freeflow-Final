@@ -29,6 +29,29 @@ export default function DevOverlay() {
         setTimeout(() => setCopied(false), 1500);
     };
 
+    const handleCopyDebugSnapshot = () => {
+        const fullState = {
+            snapshotTime: new Date().toISOString(),
+            request: {
+                lastUserMessage: state.conversationHistory.filter(h => h.role === 'user').pop()?.content || '',
+                latestIntent: state.lastIntent,
+                latestSource: state.lastSource,
+            },
+            response: state.lastFullResponse,
+            storeSnapshot: {
+                sessionId: state.sessionId,
+                conversationPhase: state.conversationPhase,
+                expectedContext: state.expectedContext,
+                currentRestaurant: state.currentRestaurant,
+                pendingOrder: state.pendingOrder,
+                cart: state.cart
+            }
+        };
+        navigator.clipboard.writeText(JSON.stringify(fullState, null, 2));
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     if (!isOpen) {
         return (
             <button
@@ -48,6 +71,12 @@ export default function DevOverlay() {
                     🧠 V2 FSM State
                 </h3>
                 <div className="flex gap-2">
+                    <button
+                        onClick={handleCopyDebugSnapshot}
+                        className="bg-purple-800 hover:bg-purple-700 text-white/90 px-2 py-0.5 rounded text-[9px] border border-purple-600 transition-colors"
+                    >
+                        Copy debug snapshot
+                    </button>
                     <button
                         onClick={handleCopyFSM}
                         className="bg-gray-800 hover:bg-gray-700 text-white/90 px-2 py-0.5 rounded text-[9px] border border-gray-600 transition-colors"

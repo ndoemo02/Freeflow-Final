@@ -72,11 +72,30 @@ export default function Cart() {
     }
   };
 
-  const isCartVisible = isOpen || useConversationStore(state => state.conversationPhase) === 'checkout';
+  const phase = useConversationStore(state => state.conversationPhase);
+
+  // Zabezpieczenie przed "wiszacym" koszykiem - jeśli użytkownik w 'checkout' zamknie koszyk z palca, nie otwieraj go
+  const [closedInCheckout, setClosedInCheckout] = useState(false);
+
+  // Kiedy faza się zmienia na nową (np. wejdziemy w checkout), resetujemy tę blokadę
+  React.useEffect(() => {
+    if (phase !== 'checkout') {
+      setClosedInCheckout(false);
+    }
+  }, [phase]);
+
+  const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    if (phase === 'checkout') {
+      setClosedInCheckout(true);
+    }
+  };
 
   return (
     <Transition appear show={isCartVisible} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)} initialFocus={closeButtonRef}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose} initialFocus={closeButtonRef}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -114,7 +133,7 @@ export default function Cart() {
                     </Dialog.Title>
                     <button
                       ref={closeButtonRef}
-                      onClick={() => setIsOpen(false)}
+                      onClick={handleClose}
                       className="text-slate-400 hover:text-white transition-colors"
                     >
                       ✕

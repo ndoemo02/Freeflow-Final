@@ -80,159 +80,26 @@ export function RestaurantCard({ restaurant, isActive = true, isCarousel = false
     );
 }
 
+import ContextualIsland from './ContextualIsland';
+
 export function SuggestedRestaurantsCarousel() {
     const suggestedRestaurants = useConversationStore(state => state.suggestedRestaurants);
     const selectedRestaurantPreviewId = useConversationStore(state => state.selectedRestaurantPreviewId);
     const setSelectedRestaurantPreviewId = useConversationStore(state => state.setSelectedRestaurantPreviewId);
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = React.useState(280);
-    const [currentIndex, setCurrentIndex] = React.useState(0);
-
-    // Measure card width
-    React.useEffect(() => {
-        const measure = () => {
-            const w = containerRef.current?.offsetWidth || 0;
-            if (w > 0) setContainerWidth(w);
-        };
-        const t = setTimeout(measure, 50);
-        const obs = new ResizeObserver(() => {
-            const w = containerRef.current?.offsetWidth || 0;
-            if (w > 0) setContainerWidth(w);
-        });
-        if (containerRef.current) obs.observe(containerRef.current);
-        return () => { clearTimeout(t); obs.disconnect(); };
-    }, []);
-
-    // Sync selectedRestaurantPreviewId → currentIndex
-    React.useEffect(() => {
-        if (!suggestedRestaurants) return;
-        const idx = suggestedRestaurants.findIndex(r => r.id === selectedRestaurantPreviewId);
-        if (idx >= 0) setCurrentIndex(idx);
-        else if (selectedRestaurantPreviewId === null && suggestedRestaurants.length > 0) {
-            setCurrentIndex(0);
-            setSelectedRestaurantPreviewId(suggestedRestaurants[0].id);
-        }
-    }, [selectedRestaurantPreviewId, suggestedRestaurants]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
 
-    const goTo = (idx: number) => {
-        const clamped = Math.max(0, Math.min(suggestedRestaurants.length - 1, idx));
-        setCurrentIndex(clamped);
-        setSelectedRestaurantPreviewId(suggestedRestaurants[clamped].id);
-    };
-
-    const handleDragEnd = (_: any, info: any) => {
-        const THRESHOLD = 50;
-        const VEL = 500;
-        if (info.velocity.x < -VEL || info.offset.x < -THRESHOLD) goTo(currentIndex + 1);
-        else if (info.velocity.x > VEL || info.offset.x > THRESHOLD) goTo(currentIndex - 1);
-    };
-
-    const canDrag = suggestedRestaurants.length > 1;
-
     return (
-        <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="fixed bottom-28 left-4 z-40 pointer-events-auto"
-            style={{ width: '280px' }}
-        >
-            {/* Viewport — clips to one card */}
-            <div
-                ref={containerRef}
-                className="relative overflow-hidden rounded-3xl"
-                style={{ width: '280px' }}
-            >
-                {/* Track — slides horizontally */}
-                <motion.div
-                    className="flex"
-                    style={{ width: `${containerWidth * suggestedRestaurants.length}px` }}
-                    animate={{ x: -(currentIndex * containerWidth) }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 40, mass: 0.8 }}
-                    drag={canDrag ? 'x' : false}
-                    dragDirectionLock
-                    dragMomentum={false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.15}
-                    onDragEnd={handleDragEnd}
-                >
-                    {suggestedRestaurants.map((r, i) => {
-                        const isActive = i === currentIndex;
-                        return (
-                            <div
-                                key={r.id}
-                                className="shrink-0 cursor-pointer"
-                                style={{ width: `${containerWidth}px` }}
-                                onClick={() => {
-                                    if (isActive) {
-                                        // double click → select
-                                    } else {
-                                        goTo(i);
-                                    }
-                                }}
-                            >
-                                <motion.div
-                                    animate={{
-                                        scale: isActive ? 1 : 0.93,
-                                        opacity: isActive ? 1 : 0.55,
-                                    }}
-                                    transition={{ duration: 0.25 }}
-                                    className="bg-black/80 backdrop-blur-xl border border-white/10 p-5 rounded-3xl shadow-2xl mx-1"
-                                >
-                                    <h3 className="text-white font-bold text-base leading-tight truncate">{r.name}</h3>
-                                    <p className="text-orange-400 font-medium text-xs mt-1 truncate">
-                                        {r.cuisine_type || r.city || 'Restauracja'}
-                                    </p>
-                                    {r.rating && (
-                                        <p className="text-white/40 text-xs mt-1">★ {r.rating}</p>
-                                    )}
-                                    {r.distance && (
-                                        <p className="text-white/40 text-xs">📍 {typeof r.distance === 'number' ? r.distance.toFixed(1) : r.distance} km</p>
-                                    )}
-
-                                    {/* Wybierz button — only when active */}
-                                    {isActive && (
-                                        <motion.button
-                                            initial={{ opacity: 0, y: 4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="mt-3 w-full bg-orange-500 hover:bg-orange-400 text-black text-xs font-bold py-2 rounded-xl transition-colors pointer-events-auto"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // Trigger selection — send "wybieram <name>" via custom event
-                                                window.dispatchEvent(new CustomEvent('freeflow:selectRestaurant', { detail: r }));
-                                            }}
-                                        >
-                                            Wybierz {r.name?.split(' ')[0]}
-                                        </motion.button>
-                                    )}
-                                </motion.div>
-                            </div>
-                        );
-                    })}
-                </motion.div>
-            </div>
-
-            {/* Navigation dots */}
-            {suggestedRestaurants.length > 1 && (
-                <div className="flex justify-center gap-1.5 mt-2 items-center">
-                    {suggestedRestaurants.map((_, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => goTo(idx)}
-                            className={`rounded-full transition-all duration-300 pointer-events-auto ${idx === currentIndex
-                                    ? 'w-4 h-1.5 bg-orange-400'
-                                    : 'w-1.5 h-1.5 bg-white/20 hover:bg-white/40'
-                                }`}
-                        />
-                    ))}
-                    <span className="text-[10px] text-white/30 ml-2 font-medium">
-                        {currentIndex + 1}/{suggestedRestaurants.length}
-                    </span>
-                </div>
-            )}
-        </motion.div>
+        <ContextualIsland
+            items={suggestedRestaurants}
+            type="restaurant"
+            position="left"
+            highlightedId={selectedRestaurantPreviewId}
+            setHighlightedId={(id) => setSelectedRestaurantPreviewId(id as string)}
+            onSelect={(item) => {
+                window.dispatchEvent(new CustomEvent('freeflow:selectRestaurant', { detail: item }));
+            }}
+        />
     );
 }
 

@@ -80,10 +80,17 @@ export default function Home() {
       }
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
-      // This is the critical fix for "Frontend nie słucha Backendu" issue
-      if (lastFullResponse.actions || lastFullResponse.meta?.addedToCart) {
+      // GUARD: Skip dispatch for order-success responses to prevent race condition
+      // where meta.cart re-syncs cart AFTER useConversationStore already cleared it
+      const isOrderDone = ['confirm_order', 'order_confirmed', 'order_success', 'order_complete']
+        .includes(lastFullResponse.intent)
+        || lastFullResponse.meta?.conversationClosed === true;
+
+      if (!isOrderDone && (lastFullResponse.actions || lastFullResponse.meta?.cart)) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
         dispatch(lastFullResponse.actions, lastFullResponse.meta, responseKey);
+      } else if (isOrderDone) {
+        console.log('[Home] ⏭️ Skipping dispatch for order-done response (cart already cleared by store)');
       }
     }
   }, [lastFullResponse, setHints, play, dispatch]);
@@ -247,7 +254,9 @@ export default function Home() {
             amberResponse={lastResponse || lastFullResponse?.reply || ''}
             onMicClick={handleMicClick}
             onTextSubmit={handleTextSubmit}
-            onClearResponse={() => { }}
+            onClearResponse={() => {
+              useConversationStore.setState({ lastResponse: '', lastFullResponse: null });
+            }}
             visible={true}
             isPresenting={uiHints.panel !== 'none'}
           />

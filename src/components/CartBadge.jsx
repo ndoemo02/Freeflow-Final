@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useConversationStore } from '../store/useConversationStore';
-import { useConversationUIState } from '../hooks/useConversationUIState';
+import { useCart } from '../state/CartContext';
 
 export default function CartBadge() {
   const [open, setOpen] = useState(false);
-  const cartStore = useConversationStore(state => state.cart);
-  const cartItems = cartStore?.items || [];
+  const { cart: cartItems, total: totalPrice, restaurant, updateQuantity: ctxUpdateQuantity, clearCart, setIsOpen } = useCart();
+
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
@@ -14,12 +13,14 @@ export default function CartBadge() {
     return () => { window.removeEventListener('keydown', onKey); };
   }, []);
 
-  const totalQty = cartItems.reduce((s, i) => s + (i.qty || i.quantity || 1), 0);
-  const totalPrice = cartItems.reduce((s, i) => s + (i.price * (i.qty || i.quantity || 1)), 0);
+  const totalQty = cartItems.reduce((s, i) => s + (i.quantity || 1), 0);
 
-  // Zablokowane lokalne mutowanie stanu - polegamy na FSM backendu
-  const updateQuantity = (itemId, change) => {
-    console.warn("Cart UI mutation is disabled in V2 mode. FSM drives the cart.");
+  // Delegate quantity changes to CartContext
+  const handleQuantityChange = (itemId, change) => {
+    const item = cartItems.find(i => i.id === itemId);
+    if (!item) return;
+    const newQty = (item.quantity || 1) + change;
+    ctxUpdateQuantity(itemId, newQty);
   };
 
   return (
@@ -101,22 +102,22 @@ export default function CartBadge() {
                         <div className="flex-1 min-w-0">
                           <h4 className="text-white font-medium text-sm truncate">{item.name}</h4>
                           <p className="text-orange-300 text-xs">
-                            {item.price?.toFixed(2)} zł × {item.qty || item.quantity || 1}
+                            {item.price?.toFixed(2)} zł × {item.quantity || 1}
                           </p>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => handleQuantityChange(item.id, -1)}
                             className="w-6 h-6 rounded-full bg-white/10 hover:bg-red-500/20 text-white/80 hover:text-red-300 transition-all duration-200 flex items-center justify-center text-sm"
                           >
                             −
                           </button>
                           <span className="text-white font-medium text-sm min-w-[20px] text-center">
-                            {item.qty || item.quantity || 1}
+                            {item.quantity || 1}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, 1)}
+                            onClick={() => handleQuantityChange(item.id, 1)}
                             className="w-6 h-6 rounded-full bg-white/10 hover:bg-green-500/20 text-white/80 hover:text-green-300 transition-all duration-200 flex items-center justify-center text-sm"
                           >
                             +
@@ -140,7 +141,7 @@ export default function CartBadge() {
 
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { console.warn('Podejście V2 nie pozwala na czyszczenie koszyka ze strony UI bezpośrednio bez eventu') }}
+                      onClick={() => { clearCart(); setOpen(false); }}
                       className="flex-1 px-3 py-2 bg-white/10 border border-white/20 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-200 text-sm font-medium"
                     >
                       Wyczyść

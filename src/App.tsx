@@ -64,6 +64,8 @@ function AppContent() {
           <Route path="/panel/business" element={<BusinessPanel />} />
           <Route path="/panel/business-v2" element={<BusinessPanelV2 />} />
           <Route path="/panel/business-kds" element={<BusinessPanelNew />} />
+          <Route path="/panel/business_kds" element={<BusinessPanelNew />} />
+          <Route path="/business_kds" element={<BusinessPanelNew />} />
           <Route path="/business-panel" element={<BusinessPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/panel/admin" element={<AdminPanel />} />
