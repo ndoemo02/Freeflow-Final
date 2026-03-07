@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
 
 interface ConversationState {
@@ -6,29 +6,22 @@ interface ConversationState {
     isThinking: boolean;
     error: string | null;
     lastResponse: string;
-
-    // Backend session state mapped directly
     conversationPhase: 'idle' | 'restaurant_selected' | 'ordering' | 'checkout' | 'unknown' | string;
     currentRestaurant: any | null;
     pendingOrder: any | null;
     cart: any | null;
     expectedContext: string | null;
     conversationClosed: boolean;
-
-    // History & Dev
+    closedReason: string | null;
+    orderFinalized: boolean;
     conversationHistory: { role: string; content: string }[];
     lastContext: any | null;
     lastFullResponse: any | null;
-
     suggestedRestaurants: any[] | null;
     selectedRestaurantPreviewId: string | null;
     menuItems: any[] | null;
-
-    // Misc Context
     lastIntent: string | null;
     lastSource: string | null;
-
-    // Actions
     setSessionId: (id: string) => void;
     sendMessage: (text: string) => Promise<void>;
     resetSession: () => void;
@@ -38,27 +31,50 @@ interface ConversationState {
 
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
+const normalizeMenuItems = (items: any[] | null | undefined) => {
+    if (!Array.isArray(items)) return null;
+    return items.filter(Boolean).map((item, index) => ({
+        ...item,
+        id: item.id || item.menuItemId || item.menu_item_id || `menu-${index}`,
+        name: item.name || item.base_name || item.title || 'Pozycja menu',
+        description: item.description || item.desc || item.ingredients || '',
+        category: item.category || item.section || item.cuisine_type || null,
+        price: Number(item.price ?? item.price_pln ?? item.pricePln ?? 0),
+        price_pln: Number(item.price_pln ?? item.price ?? item.pricePln ?? 0),
+        available: item.available !== false,
+    }));
+};
+
+const normalizeRestaurants = (items: any[] | null | undefined) => {
+    if (!Array.isArray(items)) return null;
+    return items.filter(Boolean).map((item, index) => ({
+        ...item,
+        id: item.id || `restaurant-${index}`,
+        name: item.display_name || item.name || 'Restauracja',
+        cuisine_type: item.cuisine_type || item.category || item.city || 'Restauracja',
+        city: item.city || item.address || '',
+    }));
+};
+
 export const useConversationStore = create<ConversationState>((set, get) => ({
     sessionId: localStorage.getItem('amber-session-id') || generateSessionId(),
     isThinking: false,
     error: null,
     lastResponse: '',
-
     conversationPhase: 'idle',
     currentRestaurant: null,
     pendingOrder: null,
     cart: null,
     expectedContext: null,
     conversationClosed: false,
-
+    closedReason: null,
+    orderFinalized: false,
     conversationHistory: [],
     lastContext: null,
     lastFullResponse: null,
-
     suggestedRestaurants: null,
     selectedRestaurantPreviewId: null,
     menuItems: null,
-
     lastIntent: null,
     lastSource: null,
 
@@ -78,7 +94,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             conversationPhase: 'idle',
             currentRestaurant: null,
             lastFullResponse: null,
-            // Full UI reset
+            conversationClosed: false,
+            closedReason: null,
+            orderFinalized: false,
             suggestedRestaurants: null,
             selectedRestaurantPreviewId: null,
             menuItems: null,
@@ -97,12 +115,15 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             cart: null,
             expectedContext: null,
             conversationClosed: false,
+            closedReason: null,
+            orderFinalized: false,
             conversationHistory: [],
             lastContext: null,
             lastResponse: '',
             error: null,
             suggestedRestaurants: null,
             selectedRestaurantPreviewId: null,
+            menuItems: null,
             lastIntent: null,
             lastSource: null
         });
@@ -122,7 +143,6 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         try {
             const url = getApiUrl('api/brain/v2');
 
-            // Get Coords
             const getBrowserCoords = async (): Promise<{ lat: number; lng: number } | null> => {
                 if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
                 return new Promise((resolve) => {
@@ -157,7 +177,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             const amberReply = data.reply || data.text || '';
             const hasContext = !!data.context;
             const ctx = data.context || {};
-
+            const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
+            const menuFromResponse = normalizeMenuItems(data.menuItems || data.menu || ctx.last_menu || null);
             const newHistory = [...get().conversationHistory, { role: 'assistant', content: amberReply }];
 
             let newPhase = ctx.conversationPhase;
@@ -170,18 +191,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             const isIdle = newPhase === 'idle';
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
 
-            // Check for order_success event or order_complete intent from backend
             const isOrderSuccess = data.intent === 'order_success'
                 || data.intent === 'order_complete'
-                || data.intent === 'confirm_order'
                 || data.intent === 'order_confirmed'
-                || data.actions?.some((a: any) =>
-                    a.type === 'order_success' || a.type === 'CONFIRM_ORDER' || a.type === 'order_confirmed'
-                );
+                || (data.conversationClosed === true && data.closedReason === 'ORDER_CONFIRMED')
+                || data.actions?.some((a: any) => a.type === 'order_success' || a.type === 'order_confirmed');
 
             if (isOrderSuccess) {
-                console.log('[POST_SUBMIT_RESET]', get());
-
                 set({
                     isThinking: false,
                     lastResponse: amberReply,
@@ -194,6 +210,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     cart: null,
                     expectedContext: null,
                     conversationClosed: data.conversationClosed || false,
+                    closedReason: data.closedReason || data.meta?.closedReason || null,
+                    orderFinalized: true,
                     suggestedRestaurants: null,
                     selectedRestaurantPreviewId: null,
                     menuItems: null,
@@ -209,44 +227,32 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationHistory: newHistory,
                 lastContext: ctx,
                 lastFullResponse: data,
-
-                // Map Backend FSM
                 conversationPhase: newPhase,
-
-                // Retain currentRestaurant UNLESS entering idle and we actually got a context update
-                currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || get().currentRestaurant),
-
-                // Retain pending order and cart. Cart persists across sessions until order success.
+                currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: data.meta?.cart || ctx.cart || get().cart,
-
                 expectedContext: hasContext ? (ctx.expectedContext || null) : get().expectedContext,
                 conversationClosed: data.conversationClosed || false,
-
-                // Map UI Only State from response
-                suggestedRestaurants: isIdle ? (data.restaurants?.length ? data.restaurants : null) : get().suggestedRestaurants,
-                selectedRestaurantPreviewId: isIdle ? (data.restaurants?.length ? data.restaurants[0].id : null) : get().selectedRestaurantPreviewId,
-
-                // Retain menuItems if omitted by backend during clarify_order
-                menuItems: isIdle ? null : (data.menuItems || get().menuItems),
-
+                closedReason: data.closedReason || data.meta?.closedReason || null,
+                orderFinalized: false,
+                suggestedRestaurants: restaurantsFromResponse || (isIdle ? null : get().suggestedRestaurants),
+                selectedRestaurantPreviewId: restaurantsFromResponse?.[0]?.id || (isIdle ? null : get().selectedRestaurantPreviewId),
+                menuItems: menuFromResponse || (isIdle ? null : get().menuItems),
                 lastIntent: data.intent || null,
                 lastSource: data.meta?.source || null,
             });
 
             if (data.conversationClosed && data.newSessionId) {
-                // Automatically cycle session when conversation is closed
                 setTimeout(() => {
                     get().setSessionId(data.newSessionId);
                     set({
                         conversationHistory: [],
                         conversationClosed: false,
+                        closedReason: null,
                         expectedContext: null,
                         pendingOrder: null,
-                        // Keeping cart up to date across sessions
-                        // cart: null -> do not clear cart, it crosses session boundaries!
                     });
-                }, 3000); // Small delay to let UI show the final message
+                }, 3000);
             }
 
         } catch (err) {

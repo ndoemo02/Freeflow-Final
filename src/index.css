@@ -149,6 +149,36 @@ html:not(.dark) .neon-ring {
   background: transparent;
 }
 
+/* Prismatic animated border (holographic ring) */
+.ff-prismatic-border {
+  position: relative;
+}
+.ff-prismatic-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    #ff0080,
+    #7928ca,
+    #0070f3,
+    #00dfd8,
+    #79f2c0,
+    #ff0080
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  animation: ff-prismatic-spin 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes ff-prismatic-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* --- Minimal Voice Panel (electric border + cursor) --- */
 .ff-gsap-demo body {
   /* no-op to prevent global override */

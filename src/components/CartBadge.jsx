@@ -13,7 +13,7 @@ export default function CartBadge() {
     return () => { window.removeEventListener('keydown', onKey); };
   }, []);
 
-  const totalQty = cartItems.reduce((s, i) => s + (i.quantity || 1), 0);
+  const totalQty = cartItems.reduce((s, i) => s + Number(i.quantity || i.qty || 1), 0);
 
   // Delegate quantity changes to CartContext
   const handleQuantityChange = (itemId, change) => {
@@ -74,7 +74,7 @@ export default function CartBadge() {
                   )}
                 </div>
                 <button
-                  onClick={() => setOpen(false)}
+                  onClick={(e) => { e.stopPropagation(); setOpen(false); }}
                   className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all duration-200 flex items-center justify-center text-sm"
                 >
                   ✕

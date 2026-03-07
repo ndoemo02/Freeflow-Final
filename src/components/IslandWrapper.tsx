@@ -16,8 +16,6 @@ export default function IslandWrapper({
     children,
     expanded,
     setExpanded,
-    onSwipeNext,
-    onSwipePrev,
     onClose,
     className = '',
     position = 'left'
@@ -27,16 +25,11 @@ export default function IslandWrapper({
         const VELOCITY_THRESHOLD = 400;
         const { offset, velocity } = info;
 
-        // Only respond to vertical gestures — horizontal is handled by inner slider
-        // Guard: only process if the gesture is predominantly vertical
         if (Math.abs(offset.y) <= Math.abs(offset.x)) return;
 
-        // Vertical Swipe (Expand / Collapse / Close)
         if (offset.y < -SWIPE_THRESHOLD || velocity.y < -VELOCITY_THRESHOLD) {
-            // Swipe Up → Expand
             setExpanded(true);
         } else if (offset.y > SWIPE_THRESHOLD || velocity.y > VELOCITY_THRESHOLD) {
-            // Swipe Down
             if (expanded) {
                 setExpanded(false);
             } else {
@@ -49,20 +42,17 @@ export default function IslandWrapper({
 
     return (
         <motion.div
-            className={`fixed bottom-[180px] ${sideClasses} z-40 ${className}`}
-            initial={{ opacity: 0, x: position === 'left' ? -50 : 50, scale: 0.9 }}
+            className={`fixed bottom-[172px] ${sideClasses} z-40 ${className}`}
+            initial={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: position === 'left' ? -50 : 50, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            exit={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
         >
             <motion.div
                 className={`
-                    relative bg-black/40 backdrop-blur-xl border border-white/10
-                    rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.3)]
-                    overflow-hidden
-                    ${expanded ? 'w-80 h-auto' : 'w-64 h-24'}
+                    relative
+                    ${expanded ? 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]' : 'w-[19rem] h-[15.5rem]'}
                 `}
-                // Vertical-only drag for expand / close gesture
                 drag="y"
                 dragDirectionLock
                 dragConstraints={{ top: 0, bottom: 0 }}
@@ -72,9 +62,6 @@ export default function IslandWrapper({
                 layout
                 onClick={() => !expanded && setExpanded(true)}
             >
-                {/* Background Glow */}
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
-
                 {children}
             </motion.div>
         </motion.div>
