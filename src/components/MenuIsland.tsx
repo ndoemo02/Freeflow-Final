@@ -39,14 +39,18 @@ export default function MenuIsland() {
             return;
         }
 
-        if (recommendedId && recommendedId !== highlightedId) {
+        const hasCurrentSelection = highlightedId
+            ? menuItems.some((item) => (item.id || item.menuItemId || item.menu_item_id) === highlightedId)
+            : false;
+
+        if (hasCurrentSelection) return;
+
+        if (recommendedId && menuItems.some((item) => (item.id || item.menuItemId || item.menu_item_id) === recommendedId)) {
             setHighlightedId(recommendedId);
             return;
         }
 
-        if (!highlightedId) {
-            setHighlightedId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null);
-        }
+        setHighlightedId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null);
     }, [menuItems, recommendedId, highlightedId]);
 
     if (!isVisible || !menuItems || menuItems.length === 0) return null;

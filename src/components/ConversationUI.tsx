@@ -131,13 +131,19 @@ export function SuggestedRestaurantsCarousel() {
 
     useEffect(() => {
         if (!suggestedRestaurants?.length) return;
-        if (recommendedId && recommendedId !== selectedRestaurantPreviewId) {
+
+        const hasCurrentSelection = selectedRestaurantPreviewId
+            ? suggestedRestaurants.some((item) => item.id === selectedRestaurantPreviewId)
+            : false;
+
+        if (hasCurrentSelection) return;
+
+        if (recommendedId && suggestedRestaurants.some((item) => item.id === recommendedId)) {
             setSelectedRestaurantPreviewId(recommendedId);
             return;
         }
-        if (!selectedRestaurantPreviewId) {
-            setSelectedRestaurantPreviewId(suggestedRestaurants[0].id);
-        }
+
+        setSelectedRestaurantPreviewId(suggestedRestaurants[0].id);
     }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
@@ -187,3 +193,4 @@ export function ExpectedContextPrompts() {
         </AnimatePresence>
     );
 }
+

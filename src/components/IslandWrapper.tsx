@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion, PanInfo } from 'framer-motion';
 
 interface IslandWrapperProps {
@@ -10,6 +10,7 @@ interface IslandWrapperProps {
     onClose?: () => void;
     className?: string;
     position?: 'left' | 'right';
+    sizeVariant?: 'default' | 'restaurant-stack';
 }
 
 export default function IslandWrapper({
@@ -18,8 +19,10 @@ export default function IslandWrapper({
     setExpanded,
     onClose,
     className = '',
-    position = 'left'
+    position = 'left',
+    sizeVariant = 'default'
 }: IslandWrapperProps) {
+    const isRestaurantStack = sizeVariant === 'restaurant-stack';
     const handleDragEnd = (_event: any, info: PanInfo) => {
         const SWIPE_THRESHOLD = 50;
         const VELOCITY_THRESHOLD = 400;
@@ -39,6 +42,9 @@ export default function IslandWrapper({
     };
 
     const sideClasses = position === 'left' ? 'left-4 md:left-8' : 'right-4 md:right-8';
+    const sizeClasses = isRestaurantStack
+        ? (expanded ? 'w-[22rem] md:w-[24rem] h-[39rem] max-h-[78vh]' : 'w-[22rem] h-[34rem]')
+        : (expanded ? 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]' : 'w-[19rem] h-[15.5rem]');
 
     return (
         <motion.div
@@ -51,19 +57,23 @@ export default function IslandWrapper({
             <motion.div
                 className={`
                     relative
-                    ${expanded ? 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]' : 'w-[19rem] h-[15.5rem]'}
+                    ${sizeClasses}
                 `}
-                drag="y"
+                drag={isRestaurantStack ? false : 'y'}
                 dragDirectionLock
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={0.15}
                 dragMomentum={false}
-                onDragEnd={handleDragEnd}
+                onDragEnd={isRestaurantStack ? undefined : handleDragEnd}
                 layout
-                onClick={() => !expanded && setExpanded(true)}
+                onClick={() => {
+                    if (!isRestaurantStack && !expanded) setExpanded(true);
+                }}
             >
                 {children}
             </motion.div>
         </motion.div>
     );
 }
+
+
