@@ -64,11 +64,14 @@ function AppContent() {
           <Route path="/panel/business" element={<BusinessPanel />} />
           <Route path="/panel/business-v2" element={<BusinessPanelV2 />} />
           <Route path="/panel/business-kds" element={<BusinessPanelNew />} />
+          <Route path="/panel/business_kds" element={<BusinessPanelNew />} />
+          <Route path="/business_kds" element={<BusinessPanelNew />} />
           <Route path="/business-panel" element={<BusinessPanel />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/panel/admin" element={<AdminPanel />} />
           <Route path="/admin-panel" element={<AdminPanel />} />
           <Route path="/driver" element={<DriverPanel />} />
+          <Route path="/restaurants" element={<ClientPanel />} />
           <Route path="/client" element={<ClientPanel />} />
           <Route path="/panel/client" element={<ClientPanel />} />
           {/* reszta tras */}

@@ -1,0 +1,34 @@
+[
+  {
+    "type": "debug",
+    "text": "[vite] connecting..."
+  },
+  {
+    "type": "debug",
+    "text": "[vite] connected."
+  },
+  {
+    "type": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold"
+  },
+  {
+    "type": "log",
+    "text": "SUPABASE_URL: https://ezemaacyyvbpjlagchds.supabase.co"
+  },
+  {
+    "type": "log",
+    "text": "🔗 getApiUrl: {hostname: localhost, baseUrl: http://localhost:3000, path: api/brain/v2, finalUrl: http://localhost:3000/api/brain/v2}"
+  },
+  {
+    "type": "debug",
+    "text": "[FSM_PHASE] idle "
+  },
+  {
+    "type": "log",
+    "text": "📺 useUIPanels: Setting hints {panel: none}"
+  },
+  {
+    "type": "log",
+    "text": "[TTS] 🔊 Playing backend audio (Gemini/Vertex)"
+  }
+]

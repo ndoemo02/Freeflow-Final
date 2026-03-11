@@ -10,7 +10,7 @@
  * STRICTLY NO BUSINESS LOGIC OR INTENT INSPECTION HERE.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useConversationStore } from "../store/useConversationStore";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useUIPanels } from "../hooks/useUIPanels";
@@ -20,6 +20,7 @@ import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
 import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
+import FreeFlowSpringLogo from "../components/FreeFlowSpringLogo";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -28,7 +29,7 @@ import MenuIsland from "../components/MenuIsland";
 import CartBadge from "../components/CartBadge";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
-import freeflowLogo from '../assets/Freeflowlogo.png';
+import ErrorFallback from "../components/ErrorFallback";
 import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
 
@@ -39,12 +40,13 @@ export default function Home() {
   // --- Hooks ---
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
-  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation } = useConversationStore();
+  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
   const phase = useConversationStore(state => state.conversationPhase);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
   const { dispatch } = useActionDispatcher();
+  const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
   const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
@@ -64,6 +66,13 @@ export default function Home() {
   // When lastFullResponse updates, we derive UI hints and trigger TTS
   useEffect(() => {
     if (lastFullResponse) {
+      // Avoid re-running side effects (TTS/actions) for the same response object.
+      // This prevents SHOW_CART from reopening the modal on unrelated re-renders.
+      if (lastProcessedResponseRef.current === lastFullResponse) {
+        return;
+      }
+      lastProcessedResponseRef.current = lastFullResponse;
+
       // 1. Update UI Panels based on response
       const hints = deriveUIHints(lastFullResponse);
       setHints(hints);
@@ -80,10 +89,11 @@ export default function Home() {
       }
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
-      // This is the critical fix for "Frontend nie słucha Backendu" issue
-      if (lastFullResponse.actions || lastFullResponse.meta?.addedToCart) {
+      // Keep sync enabled for confirm_order because response carries authoritative meta.cart.
+      if (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
-        dispatch(lastFullResponse.actions, lastFullResponse.meta, responseKey);
+        const fakeMeta = { ...lastFullResponse.meta, cart: lastFullResponse.cart || lastFullResponse.meta?.cart };
+        dispatch(lastFullResponse.actions, fakeMeta, responseKey);
       }
     }
   }, [lastFullResponse, setHints, play, dispatch]);
@@ -99,6 +109,13 @@ export default function Home() {
       startListening();
     }
   }, [isListening, stopListening, startListening, stop, resetTranscript]);
+
+  const handleLogoPull = useCallback(() => {
+    if (isListening) return;
+    stop();
+    resetTranscript();
+    startListening();
+  }, [isListening, startListening, stop, resetTranscript]);
 
   const handleTextSubmit = useCallback(async (text: string) => {
     stop(); // Stop TTS
@@ -163,26 +180,19 @@ export default function Home() {
 
         {/* Brain UI Router - Renders "Configurable Islands" */}
         <div className="w-full mb-8">
-          <UIPanelRouter
-            uiHints={uiHints}
-            data={lastFullResponse || {}}
-          />
+          {error ? (
+            <ErrorFallback message={error} onRetry={() => useConversationStore.setState({ error: null })} />
+          ) : (
+            <UIPanelRouter
+              uiHints={uiHints}
+              data={lastFullResponse || {}}
+            />
+          )}
         </div>
 
-        {/* Logo/Brand Centerpiece — zawsze widoczne, bo to przycisk mikrofonu */}
+        {/* Logo/Brand Centerpiece: pull-to-talk badge */}
         <div className="hero-stack">
-          <div className={`logo-container ${isListening ? 'recording' : ''}`} onClick={handleMicClick}>
-            <img
-              src={freeflowLogo}
-              alt="FreeFlow"
-              className={`logo ${isListening ? 'recording' : ''}`}
-            />
-            {isListening && (
-              <div className="recording-indicator">
-                Nasłuchiwanie...
-              </div>
-            )}
-          </div>
+          <FreeFlowSpringLogo onActivate={handleLogoPull} />
         </div>
 
       </main>
@@ -247,7 +257,9 @@ export default function Home() {
             amberResponse={lastResponse || lastFullResponse?.reply || ''}
             onMicClick={handleMicClick}
             onTextSubmit={handleTextSubmit}
-            onClearResponse={() => { }}
+            onClearResponse={() => {
+              useConversationStore.setState({ lastResponse: '', lastFullResponse: null });
+            }}
             visible={true}
             isPresenting={uiHints.panel !== 'none'}
           />
@@ -257,3 +269,7 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+

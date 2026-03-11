@@ -15,6 +15,7 @@ import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
 import { supabase } from '../../lib/supabase';
 import StarfieldBackground from '../../components/StarfieldBackground';
+import ErrorFallback from '../../components/ErrorFallback';
 import './ClientPanel.css';
 
 // Types
@@ -57,6 +58,7 @@ export default function ClientPanel() {
     // Local state for restaurants
     const [restaurants, setRestaurants] = useState<any[]>([]);
     const [loadingRestaurants, setLoadingRestaurants] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     const [activeSection, setActiveSection] = useState<SectionName>('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,6 +73,7 @@ export default function ClientPanel() {
                 .select('*')
                 .limit(20);
 
+            if (error) setFetchError(error.message);
             if (data) setRestaurants(data);
             setLoadingRestaurants(false);
         };
@@ -381,10 +384,33 @@ export default function ClientPanel() {
 
                             {/* Restaurants Grid */}
                             <div className="restaurants-grid">
-                                {loadingRestaurants ? (
+                                {fetchError ? (
+                                    <div className="col-span-full">
+                                        <ErrorFallback message={fetchError} onRetry={() => {
+                                            setFetchError(null);
+                                            setLoadingRestaurants(true);
+                                            supabase.from('restaurants').select('*').limit(20)
+                                                .then(({ data, error }: { data: any, error: any }) => {
+                                                    if (error) setFetchError(error.message);
+                                                    if (data) setRestaurants(data);
+                                                    setLoadingRestaurants(false);
+                                                });
+                                        }} />
+                                    </div>
+                                ) : loadingRestaurants ? (
                                     <p className="text-gray-400">Ładowanie restauracji...</p>
                                 ) : restaurants.length === 0 ? (
-                                    <p className="text-gray-400">Brak dostępnych restauracji.</p>
+                                    <div className="col-span-full">
+                                        <ErrorFallback message="Brak dostępnych restauracji w tej chwili." onRetry={() => {
+                                            setLoadingRestaurants(true);
+                                            supabase.from('restaurants').select('*').limit(20)
+                                                .then(({ data, error }: { data: any, error: any }) => {
+                                                    if (error) setFetchError(error.message);
+                                                    if (data) setRestaurants(data);
+                                                    setLoadingRestaurants(false);
+                                                });
+                                        }} />
+                                    </div>
                                 ) : (
                                     restaurants.map((r, i) => (
                                         <div key={r.id || i} className="restaurant-card">

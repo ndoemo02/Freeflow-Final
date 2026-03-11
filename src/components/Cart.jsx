@@ -7,20 +7,14 @@ import { useAuth } from '../state/auth';
 import { useConversationStore } from '../store/useConversationStore';
 
 export default function Cart() {
-  const { isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
-  const storeCart = useConversationStore(state => state.cart);
-  const currentRestaurant = useConversationStore(state => state.currentRestaurant);
+  const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
 
-  const cart = (storeCart && Array.isArray(storeCart.items))
-    ? storeCart.items
-    : (Array.isArray(storeCart) ? storeCart : []);
-  const total = cart.reduce((sum, item) => sum + (Number(item.price || item.price_pln || 0) * Number(item.quantity || item.qty || 1)), 0);
-
-  const restaurantLabel = currentRestaurant
-    ? (typeof currentRestaurant === 'object'
-      ? (typeof currentRestaurant.name === 'string' ? currentRestaurant.name : JSON.stringify(currentRestaurant.name ?? currentRestaurant))
-      : String(currentRestaurant))
+  const restaurantLabel = activeRestaurant
+    ? (typeof activeRestaurant === 'object'
+      ? (typeof activeRestaurant.name === 'string' ? activeRestaurant.name : JSON.stringify(activeRestaurant.name ?? activeRestaurant))
+      : String(activeRestaurant))
     : null;
+
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -35,29 +29,15 @@ export default function Cart() {
 
   const handleUpdateQuantity = (id, newQty) => {
     updateQuantity(id, newQty);
-    useConversationStore.setState(state => {
-      const currentCart = state.cart;
-      if (!currentCart) return state;
-      const items = Array.isArray(currentCart.items) ? currentCart.items : (Array.isArray(currentCart) ? currentCart : []);
-      const newItems = items.map(item => item.id === id ? { ...item, quantity: newQty, qty: newQty } : item);
-      return { cart: { ...currentCart, items: newItems } };
-    });
   };
 
   const handleRemoveFromCart = (id) => {
     removeFromCart(id);
-    useConversationStore.setState(state => {
-      const currentCart = state.cart;
-      if (!currentCart) return state;
-      const items = Array.isArray(currentCart.items) ? currentCart.items : (Array.isArray(currentCart) ? currentCart : []);
-      const newItems = items.filter(item => item.id !== id);
-      return { cart: { ...currentCart, items: newItems } };
-    });
   };
 
   const handleClearCart = () => {
     clearCart();
-    useConversationStore.setState({ cart: null });
+    setIsOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -72,11 +52,30 @@ export default function Cart() {
     }
   };
 
-  const isCartVisible = isOpen || useConversationStore(state => state.conversationPhase) === 'checkout';
+  const phase = useConversationStore(state => state.conversationPhase);
+
+  // Zabezpieczenie przed "wiszacym" koszykiem - jeśli użytkownik w 'checkout' zamknie koszyk z palca, nie otwieraj go
+  const [closedInCheckout, setClosedInCheckout] = useState(false);
+
+  // Kiedy faza się zmienia na nową (np. wejdziemy w checkout), resetujemy tę blokadę
+  React.useEffect(() => {
+    if (phase !== 'checkout') {
+      setClosedInCheckout(false);
+    }
+  }, [phase]);
+
+  const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    if (phase === 'checkout') {
+      setClosedInCheckout(true);
+    }
+  };
 
   return (
     <Transition appear show={isCartVisible} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)} initialFocus={closeButtonRef}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose} initialFocus={closeButtonRef}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -108,13 +107,16 @@ export default function Cart() {
                       🛒 Koszyk
                       {cart.length > 0 && (
                         <span className="text-sm font-normal text-slate-400">
-                          ({cart.reduce((sum, item) => sum + item.quantity, 0)} pozycji)
+                          ({cart.reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0)} pozycji)
                         </span>
                       )}
                     </Dialog.Title>
                     <button
                       ref={closeButtonRef}
-                      onClick={() => setIsOpen(false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClose();
+                      }}
                       className="text-slate-400 hover:text-white transition-colors"
                     >
                       ✕

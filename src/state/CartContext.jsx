@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './auth';
 import { supabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
@@ -22,7 +22,6 @@ export function CartProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem('freeflow_cart');
     const savedRestaurant = localStorage.getItem('freeflow_cart_restaurant');
@@ -44,7 +43,6 @@ export function CartProvider({ children }) {
     }
   }, []);
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem('freeflow_cart', JSON.stringify(cart));
@@ -53,7 +51,6 @@ export function CartProvider({ children }) {
     }
   }, [cart]);
 
-  // Save restaurant to localStorage whenever it changes
   useEffect(() => {
     if (restaurant) {
       localStorage.setItem('freeflow_cart_restaurant', JSON.stringify(restaurant));
@@ -62,37 +59,29 @@ export function CartProvider({ children }) {
     }
   }, [restaurant]);
 
-  // Add item to cart
   const addToCart = (item, restaurantData) => {
-    // Check if cart is from different restaurant
     if (restaurant && restaurant.id !== restaurantData.id) {
       const confirm = window.confirm(
         `Masz już pozycje z ${restaurant.name} w koszyku. Czy chcesz wyczyścić koszyk i dodać pozycję z ${restaurantData.name}?`
       );
       if (!confirm) return;
 
-      // Clear cart and set new restaurant
       setCart([]);
       setRestaurant(restaurantData);
     } else if (!restaurant) {
       setRestaurant(restaurantData);
     }
 
-    // Pobierz ilość z item.quantity (domyślnie 1 jeśli nie podano)
     const quantityToAdd = item.quantity || 1;
-
-    // Check if item already exists in cart
     const existingIndex = cart.findIndex(cartItem => cartItem.id === item.id);
 
     if (existingIndex >= 0) {
-      // Update quantity - dodaj ilość z item.quantity (nie zawsze +1!)
       const newCart = [...cart];
       newCart[existingIndex].quantity += quantityToAdd;
       setCart(newCart);
       console.log(`✅ Updated quantity for ${item.name}: +${quantityToAdd} (total: ${newCart[existingIndex].quantity})`);
       push(`Zwiększono ilość: ${item.name} (+${quantityToAdd})`, 'success');
     } else {
-      // Add new item - użyj item.quantity z backendu (nie nadpisuj na 1!)
       setCart([...cart, { ...item, quantity: quantityToAdd }]);
       console.log(`✅ Added new item to cart: ${item.name} (quantity: ${quantityToAdd})`);
       push(`Dodano do koszyka: ${item.name} (${quantityToAdd}x)`, 'success');
@@ -101,12 +90,10 @@ export function CartProvider({ children }) {
     console.log('Item added to cart', { item, restaurant: restaurantData, quantityAdded: quantityToAdd });
   };
 
-  // Remove item from cart
   const removeFromCart = (itemId) => {
     const newCart = cart.filter(item => item.id !== itemId);
     setCart(newCart);
 
-    // Clear restaurant if cart is empty
     if (newCart.length === 0) {
       setRestaurant(null);
     }
@@ -115,7 +102,6 @@ export function CartProvider({ children }) {
     console.log('Item removed from cart', { itemId });
   };
 
-  // Update item quantity
   const updateQuantity = (itemId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(itemId);
@@ -129,21 +115,63 @@ export function CartProvider({ children }) {
     console.log('Cart quantity updated', { itemId, quantity });
   };
 
-  // Clear cart
-  const clearCart = () => {
+  const resetCartLocal = (options = {}) => {
+    const { clearRestaurant = false, closeDrawer = false, silent = false } = options;
+
     setCart([]);
-    setRestaurant(null);
-    push('Koszyk wyczyszczony', 'info');
-    console.log('Cart cleared');
+    if (clearRestaurant) {
+      setRestaurant(null);
+    }
+    if (closeDrawer) {
+      setIsOpen(false);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('freeflow_cart');
+      if (clearRestaurant) {
+        window.localStorage.removeItem('freeflow_cart_restaurant');
+      }
+    }
+
+    if (!silent) {
+      console.log('Cart reset locally', { clearRestaurant, closeDrawer });
+    }
   };
 
-  // Sync cart with backend state (e.g. from Voice AI)
+  const clearCart = async (options = {}) => {
+    const { syncBackend = true, clearRestaurant = false, closeDrawer = false, silent = false } = options;
+
+    resetCartLocal({ clearRestaurant, closeDrawer, silent: true });
+
+    if (syncBackend && typeof window !== 'undefined') {
+      const sessionId = window.localStorage.getItem('amber-session-id') || window.localStorage.getItem('brain_session_id');
+      if (sessionId) {
+        fetch(getApiUrl('/api/brain/v2'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            input: 'wyczysc koszyk',
+            text: 'wyczysc koszyk',
+            includeTTS: false,
+            meta: { channel: 'web' }
+          })
+        }).catch(err => console.error('Failed to notify backend of clearCart', err));
+      }
+    }
+
+    if (!silent) {
+      push('Koszyk wyczyszczony', 'info');
+      console.log('Cart cleared', { syncBackend, clearRestaurant, closeDrawer });
+    }
+  };
+
   const syncCart = (backendItems, restaurantData) => {
-    console.log("🛒 Syncing cart from Backend:", backendItems, restaurantData);
+    console.log('🛒 Syncing cart from Backend:', backendItems, restaurantData);
     if (!backendItems || !Array.isArray(backendItems)) return;
 
     const mappedItems = backendItems.map(item => ({
-      id: item.id || item.menu_item_id, // Fallback
+      id: item.id || item.menu_item_id,
       name: item.name,
       price: Number(item.price_pln ?? item.price ?? 0),
       quantity: Number(item.qty ?? item.quantity ?? 1)
@@ -152,32 +180,15 @@ export function CartProvider({ children }) {
     setCart(mappedItems);
 
     if (restaurantData) {
-      // If restaurantData is string, wrap it
       const rData = typeof restaurantData === 'string' ? { name: restaurantData, id: 'unknown-sync' } : restaurantData;
-
-      // Try to preserve ID if we have it in current state and names match
-      if (restaurant && restaurant.name === rData.name) {
-        // Keep existing restaurant object with ID
-      } else {
+      if (!(restaurant && restaurant.name === rData.name)) {
         setRestaurant(rData);
       }
     }
-
-    // Opcjonalnie otwórz koszyk jeśli są elementy
-    if (mappedItems.length > 0) {
-      // setIsOpen(true); // Decyzja UX: czy otwierać automatycznie? User complain "nie pokazuje", więc może tak.
-    }
   };
 
-  // Calculate total
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = cart.reduce((sum, item) => sum + ((item.price ?? item.price_pln ?? 0) * (item.quantity ?? item.qty ?? 1)), 0);
 
-  /**
-   * @DEPRECATED for Voice flow - zamówienia głosowe są zapisywane w backend/ConfirmOrderHandler
-   * 
-   * Ta funkcja jest przeznaczona TYLKO dla manualnego checkout przez UI.
-   * Voice/Brain V2 używają: api/brain/domains/food/confirmHandler.js → persistOrderToDB()
-   */
   const submitOrder = async (deliveryInfo) => {
     console.log('🛒 submitOrder called with user:', user);
 
@@ -199,30 +210,26 @@ export function CartProvider({ children }) {
     setIsSubmitting(true);
 
     try {
-      // UUID validation helper
       const isValidUUID = (id) => {
         if (!id || typeof id !== 'string') return false;
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
         return uuidRegex.test(id);
       };
 
-      // Fix for invalid restaurant IDs (when cart is synced from voice without full restaurant object)
       let finalRestaurantId = restaurant.id;
 
-      // Check if ID is missing, placeholder, or not a valid UUID
       const needsLookup = !finalRestaurantId ||
         finalRestaurantId === 'unknown-sync' ||
         !isValidUUID(finalRestaurantId);
 
       if (needsLookup) {
         const searchName = (restaurant.name || '').trim();
-        console.log(`🔍 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${searchName}"...`);
+        console.log(`🔤 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${searchName}"...`);
 
         if (!searchName) {
           throw new Error('Brak nazwy restauracji w koszyku. Proszę dodać produkty ponownie.');
         }
 
-        // Try exact match first
         let { data: restData, error: restErr } = await supabase
           .from('restaurants')
           .select('id, name')
@@ -230,9 +237,8 @@ export function CartProvider({ children }) {
           .limit(1)
           .maybeSingle();
 
-        // If no exact match, try partial match (contains)
         if (!restData?.id) {
-          console.log(`🔍 No exact match, trying partial match for: "${searchName}"`);
+          console.log(`🔤 No exact match, trying partial match for: "${searchName}"`);
           const partialResult = await supabase
             .from('restaurants')
             .select('id, name')
@@ -243,16 +249,14 @@ export function CartProvider({ children }) {
           restErr = partialResult.error;
         }
 
-        // If still no match, try searching by alias field (if exists)
         if (!restData?.id) {
-          console.log(`🔍 No partial match, trying aliases for: "${searchName}"`);
+          console.log(`🔤 No partial match, trying aliases for: "${searchName}"`);
           const aliasResult = await supabase
             .from('restaurants')
             .select('id, name')
             .ilike('aliases', `%${searchName}%`)
             .limit(1)
             .maybeSingle();
-          // Don't overwrite with error if aliases column doesn't exist
           if (aliasResult.data?.id) {
             restData = aliasResult.data;
           }
@@ -260,11 +264,10 @@ export function CartProvider({ children }) {
 
         if (restData?.id) {
           finalRestaurantId = restData.id;
-          // Update local state to avoid re-fetching
           setRestaurant(prev => ({ ...prev, id: finalRestaurantId, name: restData.name }));
           console.log(`✅ Resolved restaurant "${searchName}" → ID: ${finalRestaurantId}, DB Name: "${restData.name}"`);
         } else {
-          console.error("❌ Could not resolve restaurant ID. Searched for:", searchName, "Error:", restErr);
+          console.error('❌ Could not resolve restaurant ID. Searched for:', searchName, 'Error:', restErr);
           throw new Error(`Nie można znaleźć restauracji "${searchName}" w bazie. Spróbuj wybrać restaurację ponownie.`);
         }
       }
@@ -316,8 +319,7 @@ export function CartProvider({ children }) {
       const data = await response.json();
       console.log('🛒 Order created successfully:', data);
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
-      clearCart();
-      setIsOpen(false);
+      resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true });
       return data;
     } catch (error) {
       console.error('❌ Failed to submit order:', error.message, error);
@@ -338,13 +340,12 @@ export function CartProvider({ children }) {
     removeFromCart,
     updateQuantity,
     clearCart,
-    syncCart, // Export this
+    resetCartLocal,
+    syncCart,
     submitOrder,
     setIsOpen,
-    itemCount: cart.reduce((sum, item) => sum + item.quantity, 0)
+    itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0)
   };
-
-
 
   return (
     <CartContext.Provider value={value}>
@@ -352,4 +353,3 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
-

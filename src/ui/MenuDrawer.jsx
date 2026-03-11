@@ -50,7 +50,7 @@ export default function MenuDrawer() {
         whileHover={{ x: 4 }}
         whileTap={{ scale: 0.98 }}
         className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer ${isSubItem ? 'ml-6 text-sm' : 'text-base'
-          } ${isDanger ? 'text-red-400 hover:bg-red-500/20' : 'text-white hover:bg-white/10'
+          } ${isDanger ? 'text-red-400 hover:bg-red-500/20' : 'text-white/90 hover:bg-white/[0.08] hover:backdrop-blur-sm'
           }`}
         onClick={handleClick}
       >
@@ -66,7 +66,7 @@ export default function MenuDrawer() {
         whileHover={{ x: 4 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => toggleSection(title)}
-        className="w-full flex items-center justify-between p-4 rounded-xl bg-black/30 backdrop-blur-xl border border-white/20 hover:bg-black/50 transition-all duration-200 group"
+        className="w-full flex items-center justify-between p-4 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.12] hover:bg-white/[0.12] transition-all duration-200 group"
       >
         <div className="flex items-center gap-3">
           <span className="text-lg">{icon}</span>
@@ -100,9 +100,9 @@ export default function MenuDrawer() {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - frosted overlay */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -110,28 +110,29 @@ export default function MenuDrawer() {
             onClick={close}
           />
 
-          {/* Menu Panel */}
+          {/* Menu Panel - glassmorphism */}
           <motion.aside
             role="dialog"
             aria-label="Menu"
-            className="fixed top-4 right-4 z-50 w-80 h-[calc(100vh-2rem)] bg-black/40 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col"
-            initial={{ scale: 0.8, opacity: 0, y: -20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.8, opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 z-50 w-80 h-[calc(100vh-2rem)] bg-white/[0.08] backdrop-blur-3xl rounded-2xl border border-white/[0.18] shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
+            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' }}
+            initial={{ scale: 0.95, opacity: 0, x: 20 }}
+            animate={{ scale: 1, opacity: 1, x: 0 }}
+            exit={{ scale: 0.95, opacity: 0, x: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/20 bg-gradient-to-r from-white/5 to-transparent">
+            {/* Header - glass layer */}
+            <div className="flex items-center justify-between p-5 border-b border-white/[0.12] bg-white/[0.05] backdrop-blur-xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-400/20 to-pink-500/20 backdrop-blur-sm border border-orange-400/30 flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 rounded-xl bg-white/[0.15] backdrop-blur-md border border-white/[0.2] flex items-center justify-center shadow-lg">
                   <span className="text-orange-300 font-bold text-lg">FF</span>
                 </div>
-                <h2 className="text-white font-bold text-lg bg-gradient-to-r from-orange-300 to-pink-300 bg-clip-text text-transparent">FreeFlow</h2>
+                <h2 className="text-white font-bold text-lg">FreeFlow</h2>
               </div>
               <button
                 onClick={close}
-                className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/20 text-white/70 hover:text-white hover:bg-black/60 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-white/10"
+                className="w-10 h-10 rounded-xl bg-white/[0.1] backdrop-blur-md border border-white/[0.15] text-white/80 hover:text-white hover:bg-white/[0.2] transition-all duration-300 flex items-center justify-center"
                 aria-label="Zamknij menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +142,7 @@ export default function MenuDrawer() {
             </div>
 
             {/* Menu Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.2] scrollbar-track-transparent hover:scrollbar-thumb-white/30">
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {/* Główne sekcje */}
                 <MenuItem icon="🏠" text="Główne" onClick={close} />
@@ -149,7 +150,7 @@ export default function MenuDrawer() {
                 <MenuItem icon="📅" text="Rezerwacje Stolików" route="/reservations" />
 
                 {/* Separator */}
-                <div className="my-4 h-px bg-white/20"></div>
+                <div className="my-4 h-px bg-white/[0.12]"></div>
 
                 {/* Panele */}
                 <ExpandableSection
@@ -194,12 +195,12 @@ export default function MenuDrawer() {
                 </ExpandableSection>
 
                 {/* Separator */}
-                <div className="my-4 h-px bg-white/20"></div>
+                <div className="my-4 h-px bg-white/[0.12]"></div>
 
-                {/* User Info */}
-                <div className="p-4 rounded-xl bg-black/30 backdrop-blur-xl border border-white/20">
+                {/* User Info - glass card */}
+                <div className="p-4 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.12]">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-400/20 to-purple-500/20 backdrop-blur-sm border border-blue-400/30 flex items-center justify-center shadow-lg">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.12] backdrop-blur-md border border-white/[0.18] flex items-center justify-center">
                       <span className="text-blue-300 font-bold text-sm">
                         {user?.email?.charAt(0).toUpperCase() || 'U'}
                       </span>
@@ -216,7 +217,7 @@ export default function MenuDrawer() {
                 </div>
 
                 {/* Separator */}
-                <div className="my-4 h-px bg-white/20"></div>
+                <div className="my-4 h-px bg-white/[0.12]"></div>
 
                 {/* Zarządzanie - tylko dla admin/business */}
                 {(userRole === 'admin' || userRole === 'business') && (

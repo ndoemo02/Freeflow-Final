@@ -92,37 +92,67 @@ export default function VoiceCommandCenterV2({
                   {[...Array(10)].map((_, i) => <div key={i} className="vcc-twinkle"></div>)}
                 </div>
                 <div className="voice-cc-flare"></div>
-                <div className="voice-cc-floating-label">
-                  {showResponse ? "Asystent" : "Twoja wiadomość"}
-                </div>
+                {/* Ticker / Chip Area */}
+                <div className="flex-1 flex flex-col justify-center px-4 overflow-hidden relative" style={{ height: '60px' }}>
 
-                {/* INPUT AREA */}
-                {showResponse ? (
-                  <div
-                    className="w-full h-[60px] flex items-center px-[20px] pt-[15px] relative z-[2] cursor-pointer"
-                    onClick={onClearResponse}
-                  >
-                    <span className="text-[#00ffcc] truncate font-medium text-[15px] w-full">
-                      {amberResponse}
-                    </span>
-                  </div>
-                ) : (
-                  <input
-                    id="voice-cc-text-input"
-                    ref={inputRef}
-                    type="text"
-                    placeholder={amberStatus === 'listening' ? "Słucham..." : "Napisz lub powiedz..."}
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="w-full bg-transparent border-none text-white placeholder-white/40 focus:ring-0 text-lg tracking-wide h-full px-6"
-                    style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}
-                  />
-                )}
+                  {/* User Transcript Ticker */}
+                  <AnimatePresence>
+                    {(interimText || (recording && amberStatus === 'listening')) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                        className="text-white/60 text-[11px] font-medium truncate mb-0.5 flex items-center gap-1"
+                      >
+                        <i className="fas fa-user-circle text-[10px]" />
+                        <span>{interimText || "Słucham..."}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Assistant Reply / Input */}
+                  {showResponse && !recording ? (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[#00ffcc] truncate font-medium text-sm w-full cursor-pointer flex items-center gap-2"
+                      onClick={onClearResponse}
+                    >
+                      <i className="fas fa-robot text-[#00ffcc]/60 text-xs" />
+                      <span className="truncate">{amberResponse}</span>
+                    </motion.div>
+                  ) : (
+                    <input
+                      id="voice-cc-text-input"
+                      ref={inputRef}
+                      type="text"
+                      placeholder={amberStatus === 'listening' ? "" : "Napisz lub powiedz..."}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="w-full bg-transparent border-none text-white placeholder-white/40 focus:ring-0 text-sm tracking-wide p-0 m-0"
+                      style={{ textShadow: '0 0 10px rgba(255,255,255,0.3)' }}
+                    />
+                  )}
+
+                  {/* Debug Tools */}
+                  {import.meta.env.DEV && (showResponse || interimText) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(`U: ${interimText}\nA: ${amberResponse}`);
+                      }}
+                      className="absolute right-2 top-2 text-[8px] bg-purple-900/50 text-white/70 px-1.5 py-0.5 rounded border border-purple-500/50 hover:bg-purple-800 transition-colors pointer-events-auto"
+                      title="Copy last transcript + reply"
+                    >
+                      Copy TR
+                    </button>
+                  )}
+                </div>
 
                 {/* ORB AREA (Inside Panel, Right Side) */}
                 <div
-                  className="voice-cc-animation-container cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center w-[60px] h-[60px]"
+                  className="voice-cc-animation-container cursor-pointer hover:scale-105 transition-transform active:scale-95 flex items-center justify-center w-[60px] h-[60px] shrink-0"
                   title={inputValue.trim() ? "Wyślij wiadomość" : "Kliknij, aby rozmawiać"}
                   onClick={inputValue.trim() ? handleSubmit : onMicClick}
                 >

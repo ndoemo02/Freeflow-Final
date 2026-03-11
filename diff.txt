@@ -1,0 +1,11 @@
+﻿src/App.tsx
+src/components/Cart.jsx
+src/components/ContextualIsland.tsx
+src/components/ConversationUI.tsx
+src/components/DevOverlay.tsx
+src/components/MenuIsland.tsx
+src/components/VoiceCommandCenterV2.tsx
+src/components/panels/KitchenDisplay.tsx
+src/pages/BusinessPanelNew.tsx
+src/state/auth.tsx
+src/store/useConversationStore.ts

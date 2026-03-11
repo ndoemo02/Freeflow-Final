@@ -149,6 +149,8 @@ html:not(.dark) .neon-ring {
   background: transparent;
 }
 
+/* (ff-prismatic-border removed – effect replaced prostszym highlightem) */
+
 /* --- Minimal Voice Panel (electric border + cursor) --- */
 .ff-gsap-demo body {
   /* no-op to prevent global override */

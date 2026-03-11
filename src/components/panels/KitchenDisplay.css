@@ -1,0 +1,42 @@
+/* Responsive improvements for KDS */
+@media (max-width: 768px) {
+
+    /* Enable horizontal scroll with smooth behavior */
+    main.kds-main {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Custom scrollbar for better UX */
+    main.kds-main::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    main.kds-main::-webkit-scrollbar-track {
+        background: #1e293b;
+        border-radius: 3px;
+    }
+
+    main.kds-main::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 3px;
+    }
+
+    main.kds-main::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+}
+
+/* Prevent text selection on touch devices for better UX */
+@media (hover: none) and (pointer: coarse) {
+    .kds-button {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* Ensure proper sizing on mobile */
+@media (max-width: 640px) {
+    .kds-min-h-screen {
+        min-height: 100vh;
+    }
+}
