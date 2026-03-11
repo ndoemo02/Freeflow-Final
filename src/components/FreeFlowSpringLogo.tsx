@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { animate, motion, useMotionTemplate, useMotionValue, useTransform } from 'framer-motion';
 import * as THREE from 'three';
@@ -82,6 +82,8 @@ export default function FreeFlowSpringLogo({
 }: {
     onActivate?: () => void;
 }) {
+    const [isDragging, setIsDragging] = useState(false);
+    const [isCoarsePointer, setIsCoarsePointer] = useState(false);
     const dragX = useMotionValue(0);
     const dragY = useMotionValue(0);
     const swayX = useMotionValue(0);
@@ -101,6 +103,21 @@ export default function FreeFlowSpringLogo({
     const combinedRotateZ = useTransform(() => badgeRotateZ.get() + swayRotate.get());
     const combinedHookRotate = useTransform(() => hookRotateBase.get() + dragRotateY.get() * 0.16 + swayRotate.get() * 0.35);
     const combinedLanyardX = useTransform(() => dragX.get() * 0.24 + swayX.get() * 0.32);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+        const media = window.matchMedia('(pointer: coarse)');
+        const update = () => setIsCoarsePointer(media.matches);
+        update();
+        if (typeof media.addEventListener === 'function') {
+            media.addEventListener('change', update);
+            return () => media.removeEventListener('change', update);
+        }
+        media.addListener(update);
+        return () => media.removeListener(update);
+    }, []);
+
+    const staticMobileShadow = '0 18px 40px rgba(0,0,0,0.34), 0 0 18px rgba(255,120,0,0.18)';
 
     return (
         <div
@@ -201,16 +218,19 @@ export default function FreeFlowSpringLogo({
                         transformStyle: 'preserve-3d',
                         pointerEvents: 'auto',
                         touchAction: 'none',
+                        willChange: 'transform',
                         cursor: 'grab',
                     }}
                     transition={SPRING_CONFIG}
                     whileDrag={{ cursor: 'grabbing' }}
                     onDragStart={() => {
+                        setIsDragging(true);
                         dragX.set(0);
                         swayX.set(0);
                         swayRotate.set(0);
                     }}
                     onDragEnd={() => {
+                        setIsDragging(false);
                         const releaseY = Math.max(dragY.get(), 0);
                         const wobble = Math.max(0.28, Math.min(releaseY / 160, 1));
                         animate(dragX, 0, SPRING_CONFIG);
@@ -235,11 +255,12 @@ export default function FreeFlowSpringLogo({
                             height: '100%',
                             transformStyle: 'preserve-3d',
                             borderRadius: 999,
-                            boxShadow: badgeShadow,
+                            boxShadow: isDragging || isCoarsePointer ? staticMobileShadow : badgeShadow,
                             y: badgeLift,
                             background:
                                 'radial-gradient(circle at 50% 25%, rgba(255,160,70,0.18), rgba(0,0,0,0) 46%), linear-gradient(180deg, rgba(11,14,22,0.1), rgba(11,14,22,0))',
                             overflow: 'visible',
+                            willChange: 'transform',
                         }}
                     >
                         <div
