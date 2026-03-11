@@ -20,6 +20,7 @@ import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
 import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
+import FreeFlowSpringLogo from "../components/FreeFlowSpringLogo";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -29,7 +30,6 @@ import CartBadge from "../components/CartBadge";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
 import ErrorFallback from "../components/ErrorFallback";
-import freeflowLogo from '../assets/Freeflowlogo.png';
 import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
 
@@ -110,6 +110,13 @@ export default function Home() {
     }
   }, [isListening, stopListening, startListening, stop, resetTranscript]);
 
+  const handleLogoPull = useCallback(() => {
+    if (isListening) return;
+    stop();
+    resetTranscript();
+    startListening();
+  }, [isListening, startListening, stop, resetTranscript]);
+
   const handleTextSubmit = useCallback(async (text: string) => {
     stop(); // Stop TTS
     await sendMessage(text);
@@ -183,20 +190,9 @@ export default function Home() {
           )}
         </div>
 
-        {/* Logo/Brand Centerpiece — zawsze widoczne, bo to przycisk mikrofonu */}
+        {/* Logo/Brand Centerpiece: pull-to-talk badge */}
         <div className="hero-stack">
-          <div className={`logo-container ${isListening ? 'recording' : ''}`} onClick={handleMicClick}>
-            <img
-              src={freeflowLogo}
-              alt="FreeFlow"
-              className={`logo ${isListening ? 'recording' : ''}`}
-            />
-            {isListening && (
-              <div className="recording-indicator">
-                Nasłuchiwanie...
-              </div>
-            )}
-          </div>
+          <FreeFlowSpringLogo onActivate={handleLogoPull} />
         </div>
 
       </main>
