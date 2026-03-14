@@ -395,7 +395,7 @@ function FloatingRestaurantFocusIsland({
     }, [handlePointerMove, handlePointerUp]);
 
     return (
-        <div className="relative w-[min(70vw,16rem)] md:w-[16.5rem]">
+        <div className="relative w-full">
             <div className="mb-2 px-2">
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
@@ -717,6 +717,7 @@ export default function ContextualIsland({
         </IslandWrapper>
     );
 }
+
 
 
 

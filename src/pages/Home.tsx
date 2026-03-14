@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Home.tsx - Thin Orchestration Layer
  * 
  * Responsibilities:
@@ -19,7 +19,6 @@ import { useActionDispatcher } from "../hooks/useActionDispatcher";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
-import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -48,9 +47,9 @@ export default function Home() {
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyĹ›lnie voice bar
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
 
-  // đź”„ Auto-reset UI po potwierdzeniu zamĂłwienia
+  // 🔄 Auto-reset UI po potwierdzeniu zamówienia
   usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
@@ -140,12 +139,12 @@ export default function Home() {
     return () => window.removeEventListener('freeflow:selectRestaurant', handler);
   }, [handleTextSubmit]);
 
-  // Handle menu item order from MenuIsland "Kliknij pozycjÄ™"
+  // Handle menu item order from MenuIsland "Kliknij pozycję"
   useEffect(() => {
     const handler = (e: Event) => {
       const { item } = (e as CustomEvent).detail;
       if (item?.name) {
-        handleTextSubmit(`ChcÄ™ zamĂłwiÄ‡ ${item.name}`);
+        handleTextSubmit(`Chcę zamówić ${item.name}`);
       }
     };
     window.addEventListener('freeflow:orderItem', handler);
@@ -161,7 +160,6 @@ export default function Home() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50 pointer-events-none">
         <div className="flex flex-col gap-1 pointer-events-auto">
-          <LogoFreeFlow />
           <div className="flex items-center gap-2 pl-1 mt-1">
             <StateIsland />
           </div>
@@ -207,7 +205,7 @@ export default function Home() {
 
       </main>
 
-      {/* Switch (PaĹ‚Ä…k) - staĹ‚a pozycja po lewej */}
+      {/* Switch (Pałąk) - stała pozycja po lewej */}
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
@@ -241,8 +239,8 @@ export default function Home() {
           <MenuIsland />
           <div className="fixed top-4 right-20 z-50 pointer-events-auto">
             {/* 
-              Renderujemy bezpoĹ›rednio badge. W tym setupie zakĹ‚adamy, ĹĽe CartBadge 
-              obsĹ‚uguje wĹ‚asne klikniÄ™cie (on/off szuflady). 
+              Renderujemy bezpośrednio badge. W tym setupie zakładamy, że CartBadge 
+              obsługuje własne kliknięcie (on/off szuflady). 
             */}
             <CartBadge />
           </div>
@@ -279,6 +277,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 

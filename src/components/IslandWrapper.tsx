@@ -41,31 +41,34 @@ export default function IslandWrapper({
         }
     };
 
-    const sideClasses = isRestaurantStack && position === 'left'
-        ? 'left-4 md:left-10'
+    const sideClasses = isRestaurantStack
+        ? 'left-3 sm:left-4 md:left-10'
         : position === 'left'
             ? 'left-4 md:left-10'
             : 'right-4 md:right-10';
+
     const sizeClasses = isRestaurantStack
-        ? (expanded ? 'w-[18.25rem] md:w-[20.5rem] h-[27rem] md:h-[33rem] max-h-[65vh]' : 'w-[16rem] md:w-[16.5rem] h-[14rem] md:h-[14.5rem]')
+        ? (
+            expanded
+                ? 'w-[14.5rem] sm:w-[15.5rem] md:w-[20.5rem] h-[18rem] sm:h-[20rem] md:h-[33rem] max-h-[44vh] md:max-h-[65vh]'
+                : 'w-[13.5rem] sm:w-[14.5rem] md:w-[16.5rem] h-[9.75rem] sm:h-[10.5rem] md:h-[14.5rem]'
+        )
         : (expanded ? 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]' : 'w-[19rem] h-[15.5rem]');
+
     const stackPlacement = isRestaurantStack
-        ? 'bottom-[144px] md:bottom-[164px]'
+        ? 'bottom-[118px] sm:bottom-[126px] md:bottom-[164px]'
         : 'bottom-[172px]';
 
     return (
         <motion.div
             className={`fixed ${stackPlacement} ${sideClasses} z-40 ${className}`}
-            initial={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
+            initial={{ opacity: 0, x: isRestaurantStack ? 0 : (position === 'left' ? -40 : 40), scale: 0.94 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
+            exit={{ opacity: 0, x: isRestaurantStack ? 0 : (position === 'left' ? -40 : 40), scale: 0.94 }}
             transition={{ type: 'spring', stiffness: 260, damping: 28 }}
         >
             <motion.div
-                className={`
-                    relative
-                    ${sizeClasses}
-                `}
+                className={`relative ${sizeClasses}`}
                 drag={isRestaurantStack ? false : 'y'}
                 dragDirectionLock
                 dragConstraints={{ top: 0, bottom: 0 }}
@@ -82,8 +85,4 @@ export default function IslandWrapper({
         </motion.div>
     );
 }
-
-
-
-
 
