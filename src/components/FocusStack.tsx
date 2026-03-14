@@ -11,6 +11,7 @@ interface FocusStackProps {
     setActiveIndex: (index: number) => void;
     side?: 'left' | 'right';
     focusTop?: string;
+    cardWidth?: string;
 }
 
 type DepthStyle = {
@@ -29,7 +30,7 @@ const DEPTH_MAP: Record<string, DepthStyle> = {
     '-2': { y: -110, scale: 0.92, blur: 4, opacity: 0.6, z: 8 },
 };
 
-function getDepthStyle(position: number, focusTop: string): React.CSSProperties {
+function getDepthStyle(position: number, focusTop: string, cardWidth: string): React.CSSProperties {
     const mapped = DEPTH_MAP[String(position)];
     const style = mapped || {
         y: position < 0 ? -150 : 150,
@@ -43,7 +44,7 @@ function getDepthStyle(position: number, focusTop: string): React.CSSProperties 
         position: 'absolute',
         left: '50%',
         top: focusTop,
-        width: '320px',
+        width: cardWidth,
         transform: `translate(-50%, ${style.y}px) scale(${style.scale})`,
         transformOrigin: 'center center',
         filter: `blur(${style.blur}px)`,
@@ -60,6 +61,7 @@ export default function FocusStack({
     setActiveIndex,
     side = 'left',
     focusTop = '38%',
+    cardWidth = '320px',
 }: FocusStackProps) {
     const stackRef = useRef<HTMLDivElement | null>(null);
     const wheelLockRef = useRef(false);
@@ -121,7 +123,7 @@ export default function FocusStack({
                 const position = index - clampedIndex;
 
                 return (
-                    <div key={item.id} className="focus-card" style={getDepthStyle(position, focusTop)}>
+                    <div key={item.id} className="focus-card" style={getDepthStyle(position, focusTop, cardWidth)}>
                         {item.render()}
                     </div>
                 );
@@ -129,5 +131,4 @@ export default function FocusStack({
         </div>
     );
 }
-
 

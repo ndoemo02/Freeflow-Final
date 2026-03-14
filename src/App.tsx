@@ -12,20 +12,16 @@ import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
 import AdminPanel from "./pages/AdminPanel";
 import DriverPanel from "./pages/DriverPanel";
+import UiLab from "./pages/UiLab";
 import AuthModal from "./components/AuthModal";
 import MenuDrawer from "./ui/MenuDrawer";
 import { ThemeProvider } from "./state/ThemeContext";
-
-// ✅ KOMPONENT Z 3D KIELISZKIEM I LAMPKĄ
 import RestaurantBackground from "./components/RestaurantBackground";
-
 import MenuViewer from "./components/MenuViewer";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
 import DevOverlay from "./components/DevOverlay";
-
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
-
 
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
@@ -42,7 +38,7 @@ function AppContent() {
     });
 
     return () => {
-      killTTS(); // Cleanup on unmount too
+      killTTS();
       window.removeEventListener("beforeunload", killTTS);
       document.removeEventListener("visibilitychange", killTTS);
     };
@@ -50,15 +46,12 @@ function AppContent() {
 
   return (
     <div className="min-h-screen text-slate-100 relative overflow-hidden">
-
-      {/* 🌌 GLOBALNE TŁO Z 3D KIELISZKIEM WINA */}
       <RestaurantBackground />
-
-
 
       <main className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/ui-lab" element={<UiLab />} />
           <Route path="/business" element={<BusinessClientPanel />} />
           <Route path="/panel/customer" element={<CustomerPanel />} />
           <Route path="/panel/business" element={<BusinessPanel />} />
@@ -74,16 +67,14 @@ function AppContent() {
           <Route path="/restaurants" element={<ClientPanel />} />
           <Route path="/client" element={<ClientPanel />} />
           <Route path="/panel/client" element={<ClientPanel />} />
-          {/* reszta tras */}
-        </Routes >
-      </main >
+        </Routes>
+      </main>
 
-      {/* Globalne komponenty */}
-      < MenuDrawer />
+      <MenuDrawer />
       <Cart />
       {authOpen && <AuthModal onClose={closeAuth} />}
       <DevOverlay />
-    </div >
+    </div>
   );
 }
 

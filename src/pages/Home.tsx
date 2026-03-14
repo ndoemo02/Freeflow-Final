@@ -19,8 +19,6 @@ import { useActionDispatcher } from "../hooks/useActionDispatcher";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
-import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
-import FreeFlowSpringLogo from "../components/FreeFlowSpringLogo";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -162,7 +160,6 @@ export default function Home() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50 pointer-events-none">
         <div className="flex flex-col gap-1 pointer-events-auto">
-          <LogoFreeFlow />
           <div className="flex items-center gap-2 pl-1 mt-1">
             <StateIsland />
           </div>
@@ -190,9 +187,20 @@ export default function Home() {
           )}
         </div>
 
-        {/* Logo/Brand Centerpiece: pull-to-talk badge */}
+        {/* Logo/Brand Centerpiece: static voice trigger on the main screen */}
         <div className="hero-stack">
-          <FreeFlowSpringLogo onActivate={handleLogoPull} />
+          <button
+            type="button"
+            onClick={handleLogoPull}
+            className="logo-container"
+            aria-label="Uruchom mikrofon"
+          >
+            <img
+              src="/logo/logo.png"
+              alt="FreeFlow"
+              className={`logo ${isListening ? "recording" : ""}`}
+            />
+          </button>
         </div>
 
       </main>
@@ -269,6 +277,11 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
 
 
 
