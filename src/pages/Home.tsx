@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Home.tsx - Thin Orchestration Layer
  * 
  * Responsibilities:
@@ -20,7 +20,6 @@ import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
 import LogoFreeFlow from "../components/LogoFreeFlow.jsx";
-import FreeFlowSpringLogo from "../components/FreeFlowSpringLogo";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -49,9 +48,9 @@ export default function Home() {
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyĹ›lnie voice bar
 
-  // 🔄 Auto-reset UI po potwierdzeniu zamówienia
+  // đź”„ Auto-reset UI po potwierdzeniu zamĂłwienia
   usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
@@ -141,12 +140,12 @@ export default function Home() {
     return () => window.removeEventListener('freeflow:selectRestaurant', handler);
   }, [handleTextSubmit]);
 
-  // Handle menu item order from MenuIsland "Kliknij pozycję"
+  // Handle menu item order from MenuIsland "Kliknij pozycjÄ™"
   useEffect(() => {
     const handler = (e: Event) => {
       const { item } = (e as CustomEvent).detail;
       if (item?.name) {
-        handleTextSubmit(`Chcę zamówić ${item.name}`);
+        handleTextSubmit(`ChcÄ™ zamĂłwiÄ‡ ${item.name}`);
       }
     };
     window.addEventListener('freeflow:orderItem', handler);
@@ -190,14 +189,25 @@ export default function Home() {
           )}
         </div>
 
-        {/* Logo/Brand Centerpiece: pull-to-talk badge */}
+        {/* Logo/Brand Centerpiece: static voice trigger on the main screen */}
         <div className="hero-stack">
-          <FreeFlowSpringLogo onActivate={handleLogoPull} />
+          <button
+            type="button"
+            onClick={handleLogoPull}
+            className="logo-container"
+            aria-label="Uruchom mikrofon"
+          >
+            <img
+              src="/logo/logo.png"
+              alt="FreeFlow"
+              className={`logo ${isListening ? "recording" : ""}`}
+            />
+          </button>
         </div>
 
       </main>
 
-      {/* Switch (Pałąk) - stała pozycja po lewej */}
+      {/* Switch (PaĹ‚Ä…k) - staĹ‚a pozycja po lewej */}
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
@@ -231,8 +241,8 @@ export default function Home() {
           <MenuIsland />
           <div className="fixed top-4 right-20 z-50 pointer-events-auto">
             {/* 
-              Renderujemy bezpośrednio badge. W tym setupie zakładamy, że CartBadge 
-              obsługuje własne kliknięcie (on/off szuflady). 
+              Renderujemy bezpoĹ›rednio badge. W tym setupie zakĹ‚adamy, ĹĽe CartBadge 
+              obsĹ‚uguje wĹ‚asne klikniÄ™cie (on/off szuflady). 
             */}
             <CartBadge />
           </div>
@@ -269,6 +279,10 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
 
 
 

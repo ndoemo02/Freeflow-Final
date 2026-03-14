@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { motion, PanInfo } from 'framer-motion';
 
 interface IslandWrapperProps {
@@ -41,14 +41,21 @@ export default function IslandWrapper({
         }
     };
 
-    const sideClasses = position === 'left' ? 'left-4 md:left-8' : 'right-4 md:right-8';
+    const sideClasses = isRestaurantStack && position === 'left'
+        ? 'left-4 md:left-10'
+        : position === 'left'
+            ? 'left-4 md:left-10'
+            : 'right-4 md:right-10';
     const sizeClasses = isRestaurantStack
-        ? (expanded ? 'w-[22rem] md:w-[24rem] h-[39rem] max-h-[78vh]' : 'w-[22rem] h-[34rem]')
+        ? (expanded ? 'w-[18.25rem] md:w-[20.5rem] h-[27rem] md:h-[33rem] max-h-[65vh]' : 'w-[16rem] md:w-[16.5rem] h-[14rem] md:h-[14.5rem]')
         : (expanded ? 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]' : 'w-[19rem] h-[15.5rem]');
+    const stackPlacement = isRestaurantStack
+        ? 'bottom-[144px] md:bottom-[164px]'
+        : 'bottom-[172px]';
 
     return (
         <motion.div
-            className={`fixed bottom-[172px] ${sideClasses} z-40 ${className}`}
+            className={`fixed ${stackPlacement} ${sideClasses} z-40 ${className}`}
             initial={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
@@ -75,5 +82,8 @@ export default function IslandWrapper({
         </motion.div>
     );
 }
+
+
+
 
 
