@@ -499,31 +499,47 @@ function MenuPreviewCard({
         <button
             type="button"
             onClick={onClick}
-            className={`relative flex w-full flex-col rounded-[24px] border px-4 py-4 text-left backdrop-blur-xl transition ${
-                isRecommended
-                    ? 'border-amber-300/60 bg-[linear-gradient(180deg,rgba(255,184,77,0.12),rgba(20,23,31,0.82))]'
-                    : 'border-white/8 bg-[linear-gradient(180deg,rgba(18,24,36,0.78),rgba(7,10,16,0.82))]'
-            }`}
+            className="w-full text-left"
         >
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-white/55">
-                            {getCuisine(item)}
-                        </span>
+            <div
+                className="relative overflow-hidden rounded-[18px] px-3.5 py-3"
+                style={{
+                    background: isRecommended
+                        ? 'linear-gradient(135deg, rgba(255,184,77,0.14) 0%, rgba(10,14,24,0.88) 100%)'
+                        : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
+                    boxShadow: isRecommended
+                        ? '0 0 24px rgba(255,184,77,0.14), 0 14px 28px rgba(0,0,0,0.28)'
+                        : '0 10px 20px rgba(0,0,0,0.14)',
+                    backdropFilter: 'blur(16px) saturate(1.15)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
+                }}
+            >
+                {isRecommended ? (
+                    <div
+                        className="absolute inset-x-5 top-0 h-px"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,184,77,0.45), transparent)' }}
+                    />
+                ) : null}
+
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/42">
+                                {getCuisine(item)}
+                            </span>
+                        </div>
+                        <div className="mt-2 truncate text-[14px] font-semibold text-white">{item.name}</div>
+                        <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/62">{metaLine}</div>
                     </div>
-                    <h4 className="mt-3 text-lg font-semibold leading-tight text-white">{item.name}</h4>
-                    <p className="mt-2 line-clamp-3 text-sm leading-5 text-white/68">{metaLine}</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                    {price ? <div className="text-lg font-semibold text-amber-200">{price}</div> : null}
-                    <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-white/55">Wybierz</span>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                        {price ? <div className="text-[14px] font-semibold text-amber-200">{price}</div> : null}
+                        <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] text-white/54">Wybierz</span>
+                    </div>
                 </div>
             </div>
         </button>
     );
 }
-
 export default function ContextualIsland({
     items,
     type,
@@ -695,17 +711,44 @@ export default function ContextualIsland({
                                             }}
                                             className="w-full text-left"
                                         >
-                                            <div className="relative overflow-hidden rounded-[22px] px-4 py-3.5" style={{ background: isActive ? (item._uiId === recommendedId ? 'linear-gradient(135deg, rgba(34,211,238,0.16) 0%, rgba(10,14,24,0.88) 100%)' : 'linear-gradient(135deg, rgba(255,255,255,0.09) 0%, rgba(10,14,24,0.86) 100%)') : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))', boxShadow: isActive ? '0 14px 28px rgba(0,0,0,0.22)' : '0 10px 20px rgba(0,0,0,0.14)', backdropFilter: 'blur(16px) saturate(1.15)', WebkitBackdropFilter: 'blur(16px) saturate(1.15)' }}><div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-sm font-semibold text-white">{item.name}</div>
-                                                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-white/42">{getCuisine(item)}</div>
-                                                    <div className="mt-2 text-sm text-white/65">{getMetaLine(item, type)}</div>
+                                            <div
+                                                className="relative overflow-hidden rounded-[22px] px-4 py-3.5"
+                                                style={{
+                                                    background: isActive
+                                                        ? (item._uiId === recommendedId
+                                                            ? 'linear-gradient(135deg, rgba(255,184,77,0.16) 0%, rgba(10,14,24,0.88) 100%)'
+                                                            : 'linear-gradient(135deg, rgba(255,255,255,0.09) 0%, rgba(10,14,24,0.86) 100%)')
+                                                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))',
+                                                    boxShadow: isActive
+                                                        ? '0 14px 28px rgba(0,0,0,0.22)'
+                                                        : '0 10px 20px rgba(0,0,0,0.14)',
+                                                    backdropFilter: 'blur(16px) saturate(1.15)',
+                                                    WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
+                                                }}
+                                            >
+                                                {isActive ? (
+                                                    <div
+                                                        className="absolute inset-x-5 top-0 h-px"
+                                                        style={{ background: `linear-gradient(90deg, transparent, ${item._uiId === recommendedId ? 'rgba(255,184,77,0.45)' : 'rgba(255,255,255,0.28)'}, transparent)` }}
+                                                    />
+                                                ) : null}
+
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/42">
+                                                                {getCuisine(item)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-2 text-[15px] font-semibold text-white">{item.name}</div>
+                                                        <div className="mt-2 line-clamp-3 text-[13px] leading-5 text-white/66">{getMetaLine(item, type)}</div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {price ? <div className="text-[15px] font-semibold text-amber-200">{price}</div> : null}
+                                                        <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] text-white/54">Wybierz</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    {price ? <div className="text-sm font-semibold text-amber-200">{price}</div> : <div className="text-xs text-white/45">{item.rating ? `Ocena ${item.rating}` : ''}</div>}
-                                                    <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-white/55">Wybierz</span>
-                                                </div>
-                                            </div></div>
+                                            </div>
                                         </motion.button>
                                     );
                                 })}
@@ -717,6 +760,7 @@ export default function ContextualIsland({
         </IslandWrapper>
     );
 }
+
 
 
 
