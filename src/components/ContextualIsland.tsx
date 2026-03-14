@@ -624,22 +624,28 @@ export default function ContextualIsland({
         );
     }
 
-    return (
-        <IslandWrapper
-            expanded={expanded}
-            setExpanded={setExpanded}
-            onClose={onClose}
-            position={position}
-            sizeVariant="default"
-            className="z-[60]"
-        >
-            <div className="relative flex h-full flex-col overflow-visible text-white">
                 <div className="px-3.5 py-2.5 md:px-4 md:py-3.5">
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <div className="text-[11px] uppercase tracking-[0.24em] text-white/38">FreeFlow</div>
-                            <h3 className="mt-1 text-sm font-semibold text-white">{headerTitle}</h3>
-                            {resultSummary ? <p className="mt-1 text-xs text-white/54">{resultSummary}</p> : null}
+                            <div className="flex items-center gap-2">
+                                <div className="h-1.5 w-1.5 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(255,184,77,0.55)]" />
+                                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/85">W menu</div>
+                            </div>
+                            <h3 className="mt-1.5 text-[14px] font-semibold tracking-tight text-white">{headerTitle}</h3>
+                            {resultSummary ? <p className="mt-1 text-[11px] text-white/52">{resultSummary}</p> : null}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setExpanded((v) => !v);
+                            }}
+                            className="rounded-full bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/68 transition hover:bg-white/10 hover:text-white"
+                        >
+                            {expanded ? 'Zwin' : 'Rozwin'}
+                        </button>
+                    </div>
+                </div>
                         </div>
                         <button
                             type="button"
@@ -670,14 +676,14 @@ export default function ContextualIsland({
                         <div className="mt-2 hidden items-start justify-between gap-2 px-1 text-xs text-white/48 md:flex md:flex-row md:items-end md:gap-3">
                             <div className="min-w-0 leading-5">Pelna lista w zasiegu</div>
                             <div className="flex items-center gap-2 self-stretch md:self-end">
-                                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px]">Kolem zmieniasz focus</span>
+                                <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] text-white/58">Kolem zmieniasz focus</span>
                                 <button
                                     type="button"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setExpanded(true);
                                     }}
-                                    className="rounded-full border border-cyan-200/20 bg-cyan-300/10 px-3 py-1 text-[11px] text-cyan-50 transition hover:bg-cyan-300/16"
+                                    className="rounded-full bg-amber-300/12 px-3 py-1 text-[11px] text-amber-50 transition hover:bg-amber-300/18"
                                 >
                                     Rozwin liste
                                 </button>
@@ -760,10 +766,3 @@ export default function ContextualIsland({
         </IslandWrapper>
     );
 }
-
-
-
-
-
-
-

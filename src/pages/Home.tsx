@@ -196,7 +196,7 @@ export default function Home() {
             aria-label="Uruchom mikrofon"
           >
             <img
-              src="/logo/logo.png"
+              src="/logo/freeflow-drop.png"
               alt="FreeFlow"
               className={`logo ${isListening ? "recording" : ""}`}
             />
@@ -277,7 +277,6 @@ export default function Home() {
     </div>
   );
 }
-
 
 
 
