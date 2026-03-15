@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import { CSSProperties } from 'react';
 import { useBottomSheetContext } from './BottomSheetContainer';
 import { readSheetBoundary } from './sheetBoundary';
 
 interface SheetScrollableProps {
     children: React.ReactNode;
     className?: string;
+    style?: CSSProperties;
 }
 
-export default function SheetScrollable({ children, className = '' }: SheetScrollableProps) {
+export default function SheetScrollable({ children, className = '', style }: SheetScrollableProps) {
     const { reportBoundary } = useBottomSheetContext();
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,6 +27,7 @@ export default function SheetScrollable({ children, className = '' }: SheetScrol
                 touchAction: 'pan-y',
                 overscrollBehavior: 'contain',
                 WebkitOverflowScrolling: 'touch',
+                ...style,
             }}
         >
             {children}

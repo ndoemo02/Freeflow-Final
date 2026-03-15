@@ -147,7 +147,7 @@ export default function BottomSheetContainer({
     const resolvedPlacementClassName = placementClassName || 'bottom-[172px]';
     const resolvedSnapClassNames = {
         peek: 'w-[19rem] h-[15.5rem]',
-        expanded: 'w-[24rem] md:w-[27rem] h-auto max-h-[72vh]',
+        expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
         ...snapClassNames,
     };
 
@@ -175,7 +175,7 @@ export default function BottomSheetContainer({
                 transition={{ type: 'spring', stiffness: 260, damping: 28 }}
             >
                 <motion.div
-                    className={`relative ${resolvedSnapClassNames[snap]}`}
+                    className={`relative flex min-h-0 flex-col overflow-hidden ${resolvedSnapClassNames[snap]}`}
                     layout
                     animate={{ y: dragOffsetY }}
                     transition={isDragging ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 34 }}

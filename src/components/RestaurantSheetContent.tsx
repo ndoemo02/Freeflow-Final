@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useCallback, useMemo } from 'react';
 import SheetHandle from './sheet/SheetHandle';
 import SheetScrollable from './sheet/SheetScrollable';
 import { SheetSnap } from './sheet/sheetTypes';
@@ -38,10 +37,11 @@ function FloatingRestaurantFocusCard({
     const secondary = getRestaurantSecondary(item) || getMetaLine(item);
     const normalizedDistance = Math.min(Math.abs(offsetFromCenter) / (FLOATING_STRIDE * 1.8), 1);
     const eased = normalizedDistance * normalizedDistance;
-    const scale = 1.02 - 0.18 * eased;
+    const scale = 1.03 - 0.19 * eased;
     const blur = 3.2 * eased;
     const opacity = 1 - 0.62 * eased;
     const focused = normalizedDistance < 0.12;
+    const focusAccent = 'rgba(34,211,238,0.92)';
 
     return (
         <button
@@ -63,52 +63,65 @@ function FloatingRestaurantFocusCard({
                 className="relative h-full overflow-hidden rounded-[18px]"
                 style={{
                     background: focused
-                        ? `linear-gradient(135deg, ${isRecommended ? 'rgba(34,211,238,0.24)' : 'rgba(255,255,255,0.10)'} 0%, rgba(10,14,24,0.88) 100%)`
+                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
                         : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
                     boxShadow: focused
-                        ? `0 0 24px ${isRecommended ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.08)'}, 0 14px 28px rgba(0,0,0,0.28)`
+                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 28px rgba(34,211,238,0.26), 0 16px 30px rgba(0,0,0,0.34)'
                         : '0 10px 20px rgba(0,0,0,0.14)',
+                    border: focused ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
                     backdropFilter: 'blur(16px) saturate(1.2)',
                     WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
                 }}
             >
                 {focused ? (
-                    <div
-                        className="absolute inset-x-5 top-0 h-px"
-                        style={{ background: `linear-gradient(90deg, transparent, ${isRecommended ? 'rgba(34,211,238,0.65)' : 'rgba(255,255,255,0.35)'}, transparent)` }}
-                    />
+                    <>
+                        <div
+                            className="absolute inset-x-5 top-0 h-px"
+                            style={{ background: `linear-gradient(90deg, transparent, ${focusAccent}, transparent)` }}
+                        />
+                        <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.2)]">
+                            Fokus
+                        </div>
+                    </>
                 ) : null}
 
                 <div className="flex h-full items-center gap-3 px-3.5">
-                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px]" style={{ boxShadow: focused && isRecommended ? '0 0 14px rgba(34,211,238,0.24)' : 'none' }}>
+                    <div
+                        className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px]"
+                        style={{
+                            boxShadow: focused ? '0 0 0 1px rgba(34,211,238,0.35) inset, 0 0 16px rgba(34,211,238,0.14)' : 'none',
+                        }}
+                    >
                         {item?.image_url ? (
                             <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
                         ) : item?.image ? (
                             <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                         ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-black/20 text-xs text-white/60">{item?.rating ? item.rating : '?'}</div>
+                            <div className={`flex h-full w-full items-center justify-center text-xs ${focused ? 'bg-cyan-400/14 text-cyan-100' : 'bg-black/20 text-white/60'}`}>
+                                {item?.rating ? item.rating : '?'}
+                            </div>
                         )}
                     </div>
 
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                            <div className="truncate text-[13px] font-semibold leading-tight text-white">{item.name}</div>
+                            <div className={`truncate text-[13px] font-semibold leading-tight ${focused ? 'text-cyan-50' : 'text-white'}`}>{item.name}</div>
                             <div
                                 className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                 style={{
-                                    color: isRecommended ? 'rgba(103,232,249,0.92)' : 'rgba(255,255,255,0.58)',
-                                    background: isRecommended ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.06)',
+                                    color: focused ? 'rgba(224,255,255,0.96)' : isRecommended ? 'rgba(103,232,249,0.92)' : 'rgba(255,255,255,0.58)',
+                                    background: focused ? 'rgba(34,211,238,0.18)' : isRecommended ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.06)',
                                 }}
                             >
                                 {item?.distance != null ? (typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance) : 'teraz'}
                             </div>
                         </div>
 
-                        <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.18em] text-white/36">
+                        <div className={`mt-0.5 truncate text-[10px] uppercase tracking-[0.18em] ${focused ? 'text-cyan-200/78' : 'text-white/36'}`}>
                             {item?.cuisine_type || 'Restauracja'}
                         </div>
-                        <div className="mt-1 truncate text-[11px] text-white/62">{secondary}</div>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/55">
+                        <div className={`mt-1 truncate text-[11px] ${focused ? 'text-cyan-50/92' : 'text-white/62'}`}>{secondary}</div>
+                        <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${focused ? 'text-cyan-100/82' : 'text-white/55'}`}>
                             <span className="font-semibold text-amber-300">{item?.rating || '4.5'}</span>
                             <span className="text-white/18">|</span>
                             <span>{item?.city || item?.address || 'w poblizu'}</span>
@@ -222,12 +235,30 @@ export default function RestaurantSheetContent({
         return found >= 0 ? found : 0;
     }, [highlightedId, items]);
 
-    const viewportHeight = snap === 'expanded' ? 364 : 152;
+    const focusedItem = items[activeIndex];
+
+    const selectIndex = useCallback((nextIndex: number) => {
+        const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+        const nextItem = items[safeIndex];
+        if (!nextItem) return;
+        setHighlightedId(nextItem._uiId);
+    }, [items, setHighlightedId]);
+
+    const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        if (Math.abs(event.deltaY) < 6) {
+            return;
+        }
+
+        event.preventDefault();
+        const direction = event.deltaY > 0 ? 1 : -1;
+        selectIndex(activeIndex + direction);
+    }, [activeIndex, selectIndex]);
 
     return (
-        <div className="relative w-full text-white">
-            <SheetHandle />
-            <div className="mb-2 px-2">
+        <div className="relative flex h-full min-h-0 flex-col text-white">
+            {snap === 'peek' ? <SheetHandle mode="surface" /> : null}
+            <SheetHandle className={snap === 'peek' ? '' : '-mb-1'} mode={snap === 'peek' ? 'overlay' : 'bar'} />
+            <div className="relative z-10 mb-2 px-2">
                 <div className="flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
                     <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/85">W poblizu</div>
@@ -252,35 +283,31 @@ export default function RestaurantSheetContent({
 
             {snap === 'expanded' ? (
                 <SheetScrollable
-                    className="tiny-scroll relative space-y-2.5 pr-1"
+                    className="tiny-scroll relative mt-2 min-h-0 flex-1 space-y-2.5 pr-1"
+                    style={{
+                        WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 6%, rgba(0,0,0,1) 94%, rgba(0,0,0,0) 100%)',
+                        maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 6%, rgba(0,0,0,1) 94%, rgba(0,0,0,0) 100%)',
+                    }}
                 >
-                    <div
-                        style={{
-                            height: `${viewportHeight}px`,
-                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 6%, rgba(0,0,0,1) 94%, rgba(0,0,0,0) 100%)',
-                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 6%, rgba(0,0,0,1) 94%, rgba(0,0,0,0) 100%)',
-                        }}
-                    >
-                        {items.map((item, index) => (
-                            <div key={item._uiId} data-id={item._uiId} className="pb-2.5 last:pb-0">
-                                <FloatingRestaurantListCard
-                                    item={item}
-                                    isRecommended={item._uiId === recommendedId}
-                                    isActive={index === activeIndex}
-                                    onClick={() => {
-                                        setHighlightedId(item._uiId);
-                                        onSelect(item);
-                                    }}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    {items.map((item, index) => (
+                        <div key={item._uiId} data-id={item._uiId} className="pb-2.5 last:pb-0">
+                            <FloatingRestaurantListCard
+                                item={item}
+                                isRecommended={item._uiId === recommendedId}
+                                isActive={index === activeIndex}
+                                onClick={() => {
+                                    setHighlightedId(item._uiId);
+                                    onSelect(item);
+                                }}
+                            />
+                        </div>
+                    ))}
                 </SheetScrollable>
             ) : (
                 <div
-                    className="relative overflow-hidden"
+                    className="relative z-10 flex-1 overflow-hidden"
+                    onWheel={handlePeekWheel}
                     style={{
-                        height: `${viewportHeight}px`,
                         WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
                         maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
                     }}
@@ -288,8 +315,8 @@ export default function RestaurantSheetContent({
                     <div
                         className="absolute inset-0 transition-colors duration-500"
                         style={{
-                            background: items[activeIndex]
-                                ? `radial-gradient(circle at 50% 48%, ${recommendedId === items[activeIndex]._uiId ? 'rgba(34,211,238,0.16)' : 'rgba(255,255,255,0.05)'} 0%, transparent 64%)`
+                            background: focusedItem
+                                ? 'radial-gradient(circle at 50% 48%, rgba(34,211,238,0.14) 0%, transparent 66%)'
                                 : 'none',
                         }}
                     />

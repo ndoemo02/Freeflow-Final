@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import FocusStack, { FocusStackItem } from './FocusStack';
 import RestaurantSheetContent from './RestaurantSheetContent';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
 import SheetHandle from './sheet/SheetHandle';
@@ -20,13 +19,9 @@ interface ContextualIslandProps {
     subtitle?: string | null;
 }
 
-const FLOATING_CARD_HEIGHT = 72;
+const FLOATING_CARD_HEIGHT = 78;
 const FLOATING_CARD_GAP = 10;
 const FLOATING_STRIDE = FLOATING_CARD_HEIGHT + FLOATING_CARD_GAP;
-const FLOATING_SPRING_STIFFNESS = 0.13;
-const FLOATING_SPRING_DAMPING = 0.8;
-const FLOATING_EXPAND_DISTANCE_THRESHOLD = 86;
-const FLOATING_EXPAND_VELOCITY_THRESHOLD = 0.62;
 
 const formatPrice = (item: any) => {
     const value = Number(item?.price_pln ?? item?.price ?? 0);
@@ -41,10 +36,6 @@ const getMetaLine = (item: any, type: 'restaurant' | 'menu') => {
     }
     return item?.description || item?.ingredients || item?.allergens || 'Kliknij, aby dodac do zamowienia';
 };
-
-function clamp(value: number, min: number, max: number) {
-    return Math.min(Math.max(value, min), max);
-}
 
 function getResultsLabel(count: number) {
     if (count === 1) return '1 miejsce';
@@ -62,75 +53,96 @@ function getLocationLabel(items: any[]) {
     return city || address || null;
 }
 
-function getRestaurantSecondary(item: any) {
-    const parts = [item?.cuisine_type, item?.city];
-
-    if (item?.distance != null) {
-        parts.push(typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance);
-    } else if (item?.delivery_time) {
-        parts.push(item.delivery_time);
-    }
-
-    return parts.filter(Boolean).join(' / ');
-}
-
-function MenuPreviewCard({
+function FloatingMenuFocusCard({
     item,
+    offsetFromCenter,
+    isFocused,
     isRecommended,
     onClick,
 }: {
     item: any;
+    offsetFromCenter: number;
+    isFocused: boolean;
     isRecommended: boolean;
     onClick: () => void;
 }) {
     const price = formatPrice(item);
     const metaLine = getMetaLine(item, 'menu');
+    const normalizedDistance = Math.min(Math.abs(offsetFromCenter) / (FLOATING_STRIDE * 1.8), 1);
+    const eased = normalizedDistance * normalizedDistance;
+    const scale = 1.03 - 0.19 * eased;
+    const blur = 3.2 * eased;
+    const opacity = 1 - 0.62 * eased;
 
     return (
         <button
             type="button"
             onClick={onClick}
-            className="w-full text-left"
+            className="absolute left-0 right-0 mx-auto will-change-transform text-left"
+            style={{
+                height: `${FLOATING_CARD_HEIGHT}px`,
+                top: `calc(50% + ${offsetFromCenter}px - ${FLOATING_CARD_HEIGHT / 2}px)`,
+                transform: `translate3d(0,0,0) scale(${scale.toFixed(4)})`,
+                filter: blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none',
+                opacity,
+                zIndex: isFocused ? 20 : 10 - Math.min(Math.abs(Math.round(offsetFromCenter / FLOATING_STRIDE)), 8),
+                transition: 'transform 180ms ease, opacity 180ms ease, filter 180ms ease',
+            }}
+            aria-label={item.name}
         >
             <div
-                className="relative overflow-hidden rounded-[18px] px-3.5 py-3"
+                className="relative h-full overflow-hidden rounded-[18px]"
                 style={{
-                    background: isRecommended
-                        ? 'linear-gradient(135deg, rgba(255,184,77,0.14) 0%, rgba(10,14,24,0.88) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
-                    boxShadow: isRecommended
-                        ? '0 0 24px rgba(255,184,77,0.14), 0 14px 28px rgba(0,0,0,0.28)'
-                        : '0 10px 20px rgba(0,0,0,0.14)',
+                    background: isFocused
+                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
+                        : isRecommended
+                            ? 'linear-gradient(135deg, rgba(255,184,77,0.14) 0%, rgba(10,14,24,0.88) 100%)'
+                            : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
+                    boxShadow: isFocused
+                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 28px rgba(34,211,238,0.26), 0 16px 30px rgba(0,0,0,0.34)'
+                        : isRecommended
+                            ? '0 0 24px rgba(255,184,77,0.14), 0 14px 28px rgba(0,0,0,0.28)'
+                            : '0 10px 20px rgba(0,0,0,0.14)',
+                    border: isFocused ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
                     backdropFilter: 'blur(16px) saturate(1.15)',
                     WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
                 }}
             >
-                {isRecommended ? (
+                {(isFocused || isRecommended) ? (
                     <div
                         className="absolute inset-x-5 top-0 h-px"
-                        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,184,77,0.45), transparent)' }}
+                        style={{ background: `linear-gradient(90deg, transparent, ${isFocused ? 'rgba(34,211,238,0.92)' : 'rgba(255,184,77,0.55)'}, transparent)` }}
                     />
                 ) : null}
 
-                <div className="flex items-start justify-between gap-3">
+                {isFocused ? (
+                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.2)]">
+                        Fokus
+                    </div>
+                ) : null}
+
+                <div className="flex h-full items-center gap-3 px-3.5">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/42">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${isFocused ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/6 text-white/42'}`}>
                                 {getCuisine(item)}
                             </span>
+                            {price ? <span className={`text-[12px] font-semibold ${isFocused ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</span> : null}
                         </div>
-                        <div className="mt-2 truncate text-[14px] font-semibold text-white">{item.name}</div>
-                        <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/62">{metaLine}</div>
+                        <div className={`mt-2 truncate text-[14px] font-semibold ${isFocused ? 'text-cyan-50' : 'text-white'}`}>{item.name}</div>
+                        <div className={`mt-1 line-clamp-2 text-[11px] leading-4 ${isFocused ? 'text-cyan-50/92' : 'text-white/62'}`}>{metaLine}</div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                        {price ? <div className="text-[14px] font-semibold text-amber-200">{price}</div> : null}
-                        <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] text-white/54">Wybierz</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${isFocused ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/6 text-white/54'}`}>
+                            {isFocused ? 'Wybrane' : 'Wybierz'}
+                        </span>
                     </div>
                 </div>
             </div>
         </button>
     );
 }
+
 interface MenuSheetContentProps {
     normalizedItems: any[];
     position: 'left' | 'right';
@@ -140,7 +152,6 @@ interface MenuSheetContentProps {
     headerTitle: string;
     resultSummary: string | null;
     currentIndex: number;
-    stackItems: FocusStackItem[];
     onSelect: (item: any) => void;
     goTo: (targetIndex: number) => void;
     snap: SheetSnap;
@@ -156,13 +167,14 @@ function MenuSheetContent({
     headerTitle,
     resultSummary,
     currentIndex,
-    stackItems,
     onSelect,
     goTo,
     snap,
     setSnap,
 }: MenuSheetContentProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const peekRef = useRef<HTMLDivElement>(null);
+    const focusedItem = normalizedItems[currentIndex];
 
     useEffect(() => {
         if (snap === 'expanded' && highlightedId && scrollContainerRef.current) {
@@ -173,10 +185,51 @@ function MenuSheetContent({
         }
     }, [highlightedId, snap]);
 
+    useEffect(() => {
+        if (snap !== 'peek') {
+            return;
+        }
+
+        const element = peekRef.current;
+        if (!element) {
+            return;
+        }
+
+        let wheelLocked = false;
+        let unlockTimer: number | null = null;
+
+        const onWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (wheelLocked) {
+                return;
+            }
+
+            wheelLocked = true;
+            const direction = event.deltaY > 0 ? 1 : -1;
+            goTo(currentIndex + direction);
+
+            unlockTimer = window.setTimeout(() => {
+                wheelLocked = false;
+            }, 180);
+        };
+
+        element.addEventListener('wheel', onWheel, { passive: false, capture: true });
+
+        return () => {
+            element.removeEventListener('wheel', onWheel, true);
+            if (unlockTimer !== null) {
+                window.clearTimeout(unlockTimer);
+            }
+        };
+    }, [currentIndex, goTo, snap]);
+
     return (
-        <div className="relative flex h-full flex-col overflow-visible text-white">
-            <SheetHandle />
-            <div className="px-3.5 py-2.5 md:px-4 md:py-3.5">
+        <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
+            {snap === 'peek' ? <SheetHandle mode="surface" /> : null}
+            <SheetHandle mode={snap === 'peek' ? 'overlay' : 'bar'} />
+            <div className="relative z-10 px-3.5 py-2.5 md:px-4 md:py-3.5">
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                         <div className="text-[11px] uppercase tracking-[0.24em] text-white/38">FreeFlow</div>
@@ -197,22 +250,47 @@ function MenuSheetContent({
             </div>
 
             {snap === 'peek' ? (
-                <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5 md:pt-3">
-                    <div className="relative mx-auto h-[12.5rem] md:h-[16.5rem] w-full overflow-visible">
-                        <FocusStack
-                            side={position}
-                            items={stackItems}
-                            activeIndex={currentIndex}
-                            setActiveIndex={goTo}
-                            focusTop="35%"
-                            cardWidth="18rem"
+                <div ref={peekRef} className="relative z-10 flex flex-1 flex-col px-3 pb-3 pt-2.5 md:pt-3">
+                    <div
+                        className="relative mx-auto h-[12.5rem] md:h-[16.5rem] w-full overflow-visible"
+                        style={{
+                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
+                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
+                        }}
+                    >
+                        <div
+                            className="absolute inset-0 transition-colors duration-500"
+                            style={{
+                                background: focusedItem
+                                    ? 'radial-gradient(circle at 50% 48%, rgba(34,211,238,0.14) 0%, transparent 66%)'
+                                    : 'none',
+                            }}
                         />
+
+                        {normalizedItems.map((item, index) => {
+                            const offsetFromCenter = (index - currentIndex) * FLOATING_STRIDE;
+                            if (Math.abs(offsetFromCenter) > FLOATING_STRIDE * 4.8) return null;
+
+                            return (
+                                <FloatingMenuFocusCard
+                                    key={item._uiId}
+                                    item={item}
+                                    offsetFromCenter={offsetFromCenter}
+                                    isFocused={index === currentIndex}
+                                    isRecommended={item._uiId === recommendedId}
+                                    onClick={() => {
+                                        setHighlightedId(item._uiId);
+                                        onSelect(item);
+                                    }}
+                                />
+                            );
+                        })}
                     </div>
 
                     <div className="mt-2 hidden items-start justify-between gap-2 px-1 text-xs text-white/48 md:flex md:flex-row md:items-end md:gap-3">
-                        <div className="min-w-0 leading-5">Pelna lista w zasiegu</div>
+                        <div className="min-w-0 leading-5">Kolem zmieniasz fokus dan</div>
                         <div className="flex items-center gap-2 self-stretch md:self-end">
-                            <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] text-white/58">Kolem zmieniasz focus</span>
+                            <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] text-white/58">Rozwin, aby zobaczyc liste</span>
                             <button
                                 type="button"
                                 onClick={(e) => {
@@ -234,11 +312,12 @@ function MenuSheetContent({
                         exit={{ opacity: 0, height: 0 }}
                         className="flex min-h-0 flex-1 flex-col"
                     >
-                        <SheetScrollable className="tiny-scroll mt-3 flex-1 space-y-2 px-3 pb-3">
+                        <SheetScrollable className="tiny-scroll mt-3 min-h-0 flex-1 space-y-2 px-3 pb-3">
                             <div ref={scrollContainerRef} className="space-y-2">
                                 {normalizedItems.map((item, idx) => {
                                     const isActive = item._uiId === highlightedId;
                                     const price = formatPrice(item);
+
                                     return (
                                         <motion.button
                                             type="button"
@@ -258,37 +337,48 @@ function MenuSheetContent({
                                                 className="relative overflow-hidden rounded-[22px] px-4 py-3.5"
                                                 style={{
                                                     background: isActive
-                                                        ? (item._uiId === recommendedId
+                                                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
+                                                        : (item._uiId === recommendedId
                                                             ? 'linear-gradient(135deg, rgba(255,184,77,0.16) 0%, rgba(10,14,24,0.88) 100%)'
-                                                            : 'linear-gradient(135deg, rgba(255,255,255,0.09) 0%, rgba(10,14,24,0.86) 100%)')
-                                                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))',
+                                                            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))'),
                                                     boxShadow: isActive
-                                                        ? '0 14px 28px rgba(0,0,0,0.22)'
-                                                        : '0 10px 20px rgba(0,0,0,0.14)',
+                                                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 30px rgba(34,211,238,0.24), 0 18px 34px rgba(0,0,0,0.3)'
+                                                        : (item._uiId === recommendedId
+                                                            ? '0 0 28px rgba(255,184,77,0.22), 0 16px 30px rgba(0,0,0,0.28)'
+                                                            : '0 10px 20px rgba(0,0,0,0.14)'),
+                                                    border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
                                                     backdropFilter: 'blur(16px) saturate(1.15)',
                                                     WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
                                                 }}
                                             >
-                                                {isActive ? (
+                                                {(isActive || item._uiId === recommendedId) ? (
                                                     <div
                                                         className="absolute inset-x-5 top-0 h-px"
-                                                        style={{ background: `linear-gradient(90deg, transparent, ${item._uiId === recommendedId ? 'rgba(255,184,77,0.45)' : 'rgba(255,255,255,0.28)'}, transparent)` }}
+                                                        style={{ background: `linear-gradient(90deg, transparent, ${isActive ? 'rgba(34,211,238,0.92)' : 'rgba(255,184,77,0.45)'}, transparent)` }}
                                                     />
+                                                ) : null}
+
+                                                {isActive ? (
+                                                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.22)]">
+                                                        Aktywne
+                                                    </div>
                                                 ) : null}
 
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-white/42">
+                                                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${isActive ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/6 text-white/42'}`}>
                                                                 {getCuisine(item)}
                                                             </span>
                                                         </div>
                                                         <div className="mt-2 text-[15px] font-semibold text-white">{item.name}</div>
-                                                        <div className="mt-2 line-clamp-3 text-[13px] leading-5 text-white/66">{getMetaLine(item, 'menu')}</div>
+                                                        <div className={`mt-2 line-clamp-3 text-[13px] leading-5 ${isActive ? 'text-cyan-50/92' : 'text-white/66'}`}>{getMetaLine(item, 'menu')}</div>
                                                     </div>
                                                     <div className="flex flex-col items-end gap-2">
-                                                        {price ? <div className="text-[15px] font-semibold text-amber-200">{price}</div> : null}
-                                                        <span className="rounded-full bg-white/6 px-2 py-0.5 text-[10px] text-white/54">Wybierz</span>
+                                                        {price ? <div className={`text-[15px] font-semibold ${isActive ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</div> : null}
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${isActive ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/6 text-white/54'}`}>
+                                                            {isActive ? 'Wybrane' : 'Wybierz'}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -336,22 +426,6 @@ export default function ContextualIsland({
         setHighlightedId(normalizedItems[clamped]?._uiId || null);
     }, [normalizedItems, setHighlightedId]);
 
-    const stackItems = useMemo<FocusStackItem[]>(() => {
-        return normalizedItems.map((item) => ({
-            id: item._uiId,
-            render: () => (
-                <MenuPreviewCard
-                    item={item}
-                    isRecommended={item._uiId === recommendedId}
-                    onClick={() => {
-                        setHighlightedId(item._uiId);
-                        onSelect(item);
-                    }}
-                />
-            ),
-        }));
-    }, [normalizedItems, onSelect, recommendedId, setHighlightedId]);
-
     if (type === 'restaurant') {
         return (
             <BottomSheetContainer
@@ -378,6 +452,7 @@ export default function ContextualIsland({
             </BottomSheetContainer>
         );
     }
+
     return (
         <BottomSheetContainer initialSnap="peek" position={position} className="z-[60]">
             {({ snap, setSnap }) => (
@@ -390,7 +465,6 @@ export default function ContextualIsland({
                     headerTitle={headerTitle}
                     resultSummary={resultSummary}
                     currentIndex={currentIndex}
-                    stackItems={stackItems}
                     onSelect={onSelect}
                     goTo={goTo}
                     snap={snap}
@@ -400,9 +474,3 @@ export default function ContextualIsland({
         </BottomSheetContainer>
     );
 }
-
-
-
-
-
-
