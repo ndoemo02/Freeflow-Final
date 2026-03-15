@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface IslandWrapperProps {
     children: React.ReactNode;
@@ -17,30 +17,11 @@ export default function IslandWrapper({
     children,
     expanded,
     setExpanded,
-    onClose,
     className = '',
     position = 'left',
     sizeVariant = 'default'
 }: IslandWrapperProps) {
     const isRestaurantStack = sizeVariant === 'restaurant-stack';
-    const handleDragEnd = (_event: any, info: PanInfo) => {
-        const SWIPE_THRESHOLD = 50;
-        const VELOCITY_THRESHOLD = 400;
-        const { offset, velocity } = info;
-
-        if (Math.abs(offset.y) <= Math.abs(offset.x)) return;
-
-        if (offset.y < -SWIPE_THRESHOLD || velocity.y < -VELOCITY_THRESHOLD) {
-            setExpanded(true);
-        } else if (offset.y > SWIPE_THRESHOLD || velocity.y > VELOCITY_THRESHOLD) {
-            if (expanded) {
-                setExpanded(false);
-            } else {
-                onClose?.();
-            }
-        }
-    };
-
     const sideClasses = isRestaurantStack
         ? 'left-3 sm:left-4 md:left-10'
         : position === 'left'
@@ -69,12 +50,6 @@ export default function IslandWrapper({
         >
             <motion.div
                 className={`relative ${sizeClasses}`}
-                drag={isRestaurantStack ? false : 'y'}
-                dragDirectionLock
-                dragConstraints={{ top: 0, bottom: 0 }}
-                dragElastic={0.15}
-                dragMomentum={false}
-                onDragEnd={isRestaurantStack ? undefined : handleDragEnd}
                 layout
                 onClick={() => {
                     if (!isRestaurantStack && !expanded) setExpanded(true);
@@ -85,4 +60,3 @@ export default function IslandWrapper({
         </motion.div>
     );
 }
-
