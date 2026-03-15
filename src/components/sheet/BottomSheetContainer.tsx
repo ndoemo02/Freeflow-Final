@@ -150,6 +150,7 @@ export default function BottomSheetContainer({
         expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
         ...snapClassNames,
     };
+    const overflowClassName = snap === 'peek' ? 'overflow-visible' : 'overflow-hidden';
 
     const renderState: BottomSheetRenderState = {
         snap,
@@ -175,7 +176,7 @@ export default function BottomSheetContainer({
                 transition={{ type: 'spring', stiffness: 260, damping: 28 }}
             >
                 <motion.div
-                    className={`relative flex min-h-0 flex-col overflow-hidden ${resolvedSnapClassNames[snap]}`}
+                    className={`relative flex min-h-0 flex-col ${overflowClassName} ${resolvedSnapClassNames[snap]}`}
                     layout
                     animate={{ y: dragOffsetY }}
                     transition={isDragging ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 34 }}

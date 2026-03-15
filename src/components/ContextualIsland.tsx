@@ -454,7 +454,15 @@ export default function ContextualIsland({
     }
 
     return (
-        <BottomSheetContainer initialSnap="peek" position={position} className="z-[60]">
+        <BottomSheetContainer
+            initialSnap="peek"
+            position={position}
+            className="z-[60]"
+            snapClassNames={{
+                peek: 'w-[20.5rem] md:w-[22rem] h-[16.5rem] md:h-[18.5rem]',
+                expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
+            }}
+        >
             {({ snap, setSnap }) => (
                 <MenuSheetContent
                     normalizedItems={normalizedItems}
