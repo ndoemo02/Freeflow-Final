@@ -19,7 +19,7 @@ interface ContextualIslandProps {
     subtitle?: string | null;
 }
 
-const FLOATING_CARD_HEIGHT = 78;
+const FLOATING_CARD_HEIGHT = 92;
 const FLOATING_CARD_GAP = 10;
 const FLOATING_STRIDE = FLOATING_CARD_HEIGHT + FLOATING_CARD_GAP;
 
@@ -81,7 +81,7 @@ function FloatingMenuFocusCard({
             className="absolute left-0 right-0 mx-auto will-change-transform text-left"
             style={{
                 height: `${FLOATING_CARD_HEIGHT}px`,
-                top: `calc(50% + ${offsetFromCenter}px - ${FLOATING_CARD_HEIGHT / 2}px)`,
+                top: `calc(100% - 144px + ${offsetFromCenter}px)`,
                 transform: `translate3d(0,0,0) scale(${scale.toFixed(4)})`,
                 filter: blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none',
                 opacity,
@@ -108,6 +108,16 @@ function FloatingMenuFocusCard({
                     WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
                 }}
             >
+                {isFocused ? (
+                    <div
+                        className="pointer-events-none absolute inset-x-6 -bottom-8 h-16 rounded-full"
+                        style={{
+                            background: 'radial-gradient(circle, rgba(34,211,238,0.30) 0%, rgba(34,211,238,0.14) 40%, rgba(34,211,238,0) 74%)',
+                            filter: 'blur(16px)',
+                        }}
+                    />
+                ) : null}
+
                 {(isFocused || isRecommended) ? (
                     <div
                         className="absolute inset-x-5 top-0 h-px"
@@ -130,7 +140,7 @@ function FloatingMenuFocusCard({
                             {price ? <span className={`text-[12px] font-semibold ${isFocused ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</span> : null}
                         </div>
                         <div className={`mt-2 truncate text-[14px] font-semibold ${isFocused ? 'text-cyan-50' : 'text-white'}`}>{item.name}</div>
-                        <div className={`mt-1 line-clamp-2 text-[11px] leading-4 ${isFocused ? 'text-cyan-50/92' : 'text-white/62'}`}>{metaLine}</div>
+                        <div className={`mt-1 line-clamp-3 text-[11px] leading-4 ${isFocused ? 'text-cyan-50/92' : 'text-white/62'}`}>{metaLine}</div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] ${isFocused ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/6 text-white/54'}`}>
@@ -229,41 +239,41 @@ function MenuSheetContent({
         <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
             {snap === 'peek' ? <SheetHandle mode="surface" /> : null}
             <SheetHandle mode={snap === 'peek' ? 'overlay' : 'bar'} />
-            <div className="relative z-10 px-3.5 py-2.5 md:px-4 md:py-3.5">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.24em] text-white/38">FreeFlow</div>
-                        <h3 className="mt-1 text-sm font-semibold text-white">{headerTitle}</h3>
-                        {resultSummary ? <p className="mt-1 text-xs text-white/54">{resultSummary}</p> : null}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setSnap(snap === 'expanded' ? 'peek' : 'expanded');
-                        }}
-                        className="rounded-full bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/68 transition hover:bg-white/10 hover:text-white"
-                    >
-                        {snap === 'expanded' ? 'Zwin' : 'Rozwin'}
-                    </button>
-                </div>
+            <div className="absolute right-3 top-3 z-20 md:right-4 md:top-4">
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setSnap(snap === 'expanded' ? 'peek' : 'expanded');
+                    }}
+                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/76 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                >
+                    {snap === 'expanded' ? 'Zwin' : 'Rozwin'}
+                </button>
             </div>
 
             {snap === 'peek' ? (
-                <div ref={peekRef} className="relative z-10 flex flex-1 flex-col px-3 pb-3 pt-2.5 md:pt-3">
+                <div ref={peekRef} className="relative z-10 flex flex-1 flex-col px-3 pb-20 pt-32 md:pt-40">
                     <div
-                        className="relative mx-auto h-[12.5rem] md:h-[16.5rem] w-full overflow-visible"
+                        className="relative mx-auto h-[16rem] md:h-[20rem] w-full overflow-visible"
                         style={{
-                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
-                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 18%, rgba(0,0,0,1) 80%, rgba(0,0,0,0) 100%)',
+                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.88) 18%, rgba(0,0,0,1) 58%, rgba(0,0,0,1) 78%, rgba(0,0,0,0.76) 92%, rgba(0,0,0,0) 100%)',
+                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.88) 18%, rgba(0,0,0,1) 58%, rgba(0,0,0,1) 78%, rgba(0,0,0,0.76) 92%, rgba(0,0,0,0) 100%)',
                         }}
                     >
                         <div
                             className="absolute inset-0 transition-colors duration-500"
                             style={{
                                 background: focusedItem
-                                    ? 'radial-gradient(circle at 50% 48%, rgba(34,211,238,0.14) 0%, transparent 66%)'
+                                    ? 'radial-gradient(circle at 50% 74%, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0.12) 18%, transparent 62%)'
                                     : 'none',
+                            }}
+                        />
+                        <div
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
+                            style={{
+                                background: 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.1) 18%, rgba(2,6,23,0.34) 56%, rgba(2,6,23,0.72) 100%)',
+                                filter: 'blur(18px)',
                             }}
                         />
 
@@ -434,8 +444,9 @@ export default function ContextualIsland({
                 className="z-40"
                 placementClassName="bottom-[118px] sm:bottom-[126px] md:bottom-[164px]"
                 snapClassNames={{
-                    peek: 'w-[13.5rem] sm:w-[14.5rem] md:w-[16.5rem] h-[9.75rem] sm:h-[10.5rem] md:h-[14.5rem]',
-                    expanded: 'w-[14.5rem] sm:w-[15.5rem] md:w-[20.5rem] h-[18rem] sm:h-[20rem] md:h-[33rem] max-h-[44vh] md:max-h-[65vh]',
+                    closed: 'w-[15rem] h-0 opacity-0',
+                    peek: 'w-[15.5rem] sm:w-[16.5rem] md:w-[20rem] h-[45vh] max-h-[45vh] overflow-hidden rounded-t-[28px]',
+                    expanded: 'w-[15.5rem] sm:w-[16.5rem] md:w-[20rem] h-[100vh] max-h-[100vh] overflow-hidden rounded-t-[28px]',
                 }}
             >
                 {({ snap, setSnap }) => (
@@ -459,7 +470,7 @@ export default function ContextualIsland({
             position={position}
             className="z-[60]"
             snapClassNames={{
-                peek: 'w-[20.5rem] md:w-[22rem] h-[16.5rem] md:h-[18.5rem]',
+                peek: 'w-[20.5rem] md:w-[22rem] h-[22.5rem] md:h-[25rem]',
                 expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
             }}
         >

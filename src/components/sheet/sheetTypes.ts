@@ -1,4 +1,4 @@
-export type SheetSnap = 'peek' | 'expanded';
+export type SheetSnap = 'closed' | 'peek' | 'expanded';
 
 export interface SheetBoundaryState {
     scrollTop: number;

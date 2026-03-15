@@ -22,7 +22,7 @@ import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
-import { StateIsland, RestaurantCard, ExpectedContextPrompts, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
+import { StateIsland, ExpectedContextPrompts, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
 import MenuIsland from "../components/MenuIsland";
 import CartBadge from "../components/CartBadge";
 import { useUI } from "../state/ui";
@@ -40,6 +40,7 @@ export default function Home() {
   // startNewConversation: Manual conversation reset (optional UI feature)
   const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
   const phase = useConversationStore(state => state.conversationPhase);
+  const currentRestaurant = useConversationStore(state => state.currentRestaurant);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
@@ -47,9 +48,9 @@ export default function Home() {
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyĹ›lnie voice bar
 
-  // 🔄 Auto-reset UI po potwierdzeniu zamówienia
+  // đź”„ Auto-reset UI po potwierdzeniu zamĂłwienia
   usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
@@ -139,12 +140,12 @@ export default function Home() {
     return () => window.removeEventListener('freeflow:selectRestaurant', handler);
   }, [handleTextSubmit]);
 
-  // Handle menu item order from MenuIsland "Kliknij pozycję"
+  // Handle menu item order from MenuIsland "Kliknij pozycjÄ™"
   useEffect(() => {
     const handler = (e: Event) => {
       const { item } = (e as CustomEvent).detail;
       if (item?.name) {
-        handleTextSubmit(`Chcę zamówić ${item.name}`);
+        handleTextSubmit(`ChcÄ™ zamĂłwiÄ‡ ${item.name}`);
       }
     };
     window.addEventListener('freeflow:orderItem', handler);
@@ -205,7 +206,7 @@ export default function Home() {
 
       </main>
 
-      {/* Switch (Pałąk) - stała pozycja po lewej */}
+      {/* Switch (PaĹ‚Ä…k) - staĹ‚a pozycja po lewej */}
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
@@ -235,13 +236,8 @@ export default function Home() {
       {/* PHASE: RESTAURANT_SELECTED || ORDERING */}
       {viewMode === 'bar' && (phase === 'restaurant_selected' || phase === 'ordering') && (
         <>
-          <RestaurantCard />
           <MenuIsland />
           <div className="fixed top-4 right-20 z-50 pointer-events-auto">
-            {/* 
-              Renderujemy bezpośrednio badge. W tym setupie zakładamy, że CartBadge 
-              obsługuje własne kliknięcie (on/off szuflady). 
-            */}
             <CartBadge />
           </div>
         </>
@@ -277,11 +273,6 @@ export default function Home() {
     </div>
   );
 }
-
-
-
-
-
 
 
 

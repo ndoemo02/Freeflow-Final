@@ -1,12 +1,16 @@
 import { SheetBoundaryState, SheetSnap } from './sheetTypes';
 
-const EXPAND_DISTANCE = 48;
-const COLLAPSE_DISTANCE = 32;
-const EXPAND_VELOCITY_THRESHOLD = 0.38;
-const COLLAPSE_VELOCITY_THRESHOLD = 0.24;
-const MAX_DRAG_OFFSET = 120;
+const PEEK_EXPAND_DISTANCE = 90;
+const PEEK_EXPAND_VELOCITY = -900;
+const EXPANDED_COLLAPSE_DISTANCE = 70;
+const EXPANDED_COLLAPSE_VELOCITY = 800;
+const MAX_DRAG_OFFSET = 140;
 
 export function clampSheetDragOffset(snap: SheetSnap, rawOffset: number, boundary: SheetBoundaryState) {
+    if (snap === 'closed') {
+        return Math.max(-MAX_DRAG_OFFSET, Math.min(0, rawOffset));
+    }
+
     if (snap === 'peek') {
         return Math.max(-MAX_DRAG_OFFSET, Math.min(0, rawOffset));
     }
@@ -24,8 +28,16 @@ export function resolveSheetSnap(
     velocityY: number,
     boundary: SheetBoundaryState,
 ): SheetSnap {
+    if (snap === 'closed') {
+        if (dragOffsetY <= -PEEK_EXPAND_DISTANCE || velocityY <= PEEK_EXPAND_VELOCITY) {
+            return 'peek';
+        }
+
+        return 'closed';
+    }
+
     if (snap === 'peek') {
-        if (dragOffsetY <= -EXPAND_DISTANCE || velocityY <= -EXPAND_VELOCITY_THRESHOLD) {
+        if (dragOffsetY <= -PEEK_EXPAND_DISTANCE || velocityY <= PEEK_EXPAND_VELOCITY) {
             return 'expanded';
         }
 
@@ -36,7 +48,7 @@ export function resolveSheetSnap(
         return 'expanded';
     }
 
-    if (dragOffsetY >= COLLAPSE_DISTANCE || velocityY >= COLLAPSE_VELOCITY_THRESHOLD) {
+    if (dragOffsetY >= EXPANDED_COLLAPSE_DISTANCE || velocityY >= EXPANDED_COLLAPSE_VELOCITY) {
         return 'peek';
     }
 

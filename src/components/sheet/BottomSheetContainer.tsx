@@ -56,6 +56,10 @@ export default function BottomSheetContainer({
     }, [onSnapChange]);
 
     useEffect(() => {
+        if (snap === 'closed') {
+            return;
+        }
+
         const previousHtmlOverflow = document.documentElement.style.overflow;
         const previousBodyOverflow = document.body.style.overflow;
 
@@ -66,7 +70,7 @@ export default function BottomSheetContainer({
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
         };
-    }, []);
+    }, [snap]);
 
     const finishDrag = useCallback(() => {
         const dragState = dragStateRef.current;
@@ -76,7 +80,7 @@ export default function BottomSheetContainer({
         }
 
         const elapsed = Math.max(performance.now() - dragState.startedAt, 16);
-        const velocityY = (dragState.lastY - dragState.startY) / elapsed;
+        const velocityY = ((dragState.lastY - dragState.startY) / elapsed) * 1000;
         const nextSnap = resolveSheetSnap(snap, dragState.deltaY, velocityY, boundary);
 
         dragStateRef.current = null;
@@ -146,11 +150,12 @@ export default function BottomSheetContainer({
     const sideClasses = position === 'left' ? 'left-4 md:left-10' : 'right-4 md:right-10';
     const resolvedPlacementClassName = placementClassName || 'bottom-[172px]';
     const resolvedSnapClassNames = {
+        closed: 'pointer-events-none opacity-0 translate-y-full',
         peek: 'w-[19rem] h-[15.5rem]',
         expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
         ...snapClassNames,
     };
-    const overflowClassName = snap === 'peek' ? 'overflow-visible' : 'overflow-hidden';
+    const overflowClassName = snap === 'expanded' ? 'overflow-hidden' : 'overflow-visible';
 
     const renderState: BottomSheetRenderState = {
         snap,
@@ -171,7 +176,7 @@ export default function BottomSheetContainer({
             <motion.div
                 className={`fixed ${resolvedPlacementClassName} ${sideClasses} z-[60] ${className}`}
                 initial={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
+                animate={{ opacity: snap === 'closed' ? 0 : 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 28 }}
             >
