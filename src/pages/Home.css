@@ -1,14 +1,14 @@
-.freeflow {
+﻿.freeflow {
   min-height: 100vh;
   width: 100%;
-  /* usunięto tło z kontenera aby nie dublować warstwy bg */
+  /* usuniÄ™to tĹ‚o z kontenera aby nie dublowaÄ‡ warstwy bg */
   background: transparent;
   position: relative;
   color: white;
   overflow: hidden;
 }
 
-/* Strona Home – bezpieczne odstępy od krawędzi i headera */
+/* Strona Home â€“ bezpieczne odstÄ™py od krawÄ™dzi i headera */
 .home-page {
   box-sizing: border-box;
   padding: 88px 32px 32px;
@@ -17,23 +17,23 @@
   /* Fix unwanted scrollbar */
 }
 
-/* Wrapper dla chatu – ogranicza szerokość i dystans od krawędzi */
+/* Wrapper dla chatu â€“ ogranicza szerokoĹ›Ä‡ i dystans od krawÄ™dzi */
 .chat-wrapper {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 32px 32px;
 }
 
-/* Tło jako fixed layer - pełne dopasowanie dla projektora */
+/* TĹ‚o jako fixed layer - peĹ‚ne dopasowanie dla projektora */
 .bg {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* zachowuje proporcje, wypełnia viewport */
+  /* zachowuje proporcje, wypeĹ‚nia viewport */
   object-position: center center;
-  /* wyśrodkowane */
+  /* wyĹ›rodkowane */
   z-index: 1;
   filter: brightness(0.85);
   /* lekkie przyciemnienie dla projektora */
@@ -44,64 +44,64 @@
   display: grid;
   place-items: center;
   min-height: 100dvh;
-  /* nie 100vh – naprawa iOS */
-  /* bez sztucznego dolnego paddingu, który wprowadzał scroll */
+  /* nie 100vh â€“ naprawa iOS */
+  /* bez sztucznego dolnego paddingu, ktĂłry wprowadzaĹ‚ scroll */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   position: relative;
   overflow: visible !important;
   /* zmienione z hidden */
   z-index: 2;
   pointer-events: none;
-  /* dzieci muszą włączyć pointer-events */
+  /* dzieci muszÄ… wĹ‚Ä…czyÄ‡ pointer-events */
 }
 
-/* Hero stack – TYLKO LOGO (wyśrodkowane, wyżej) */
+/* Hero stack â€“ TYLKO LOGO (wyĹ›rodkowane, wyĹĽej) */
 .hero-stack {
   display: flex !important;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  /* wysoki z-index, żeby logo było nad kafelkami */
+  /* wysoki z-index, ĹĽeby logo byĹ‚o nad kafelkami */
   pointer-events: auto;
-  /* unieruchom logo względem viewportu (brak scrollowania) */
+  /* unieruchom logo wzglÄ™dem viewportu (brak scrollowania) */
   position: fixed;
   left: 50%;
   top: 24%;
-  /* logo bliżej headera */
+  /* logo bliĹĽej headera */
   transform: translate(-50%, -50%);
   min-width: 400px;
   min-height: 400px;
   transition: all 0.6s cubic-bezier(0.83, 0, 0.17, 1);
 }
 
-/* Mobile - dostosuj pozycję tła i logo */
+/* Mobile - dostosuj pozycjÄ™ tĹ‚a i logo */
 @media (max-width: 768px) {
 
-  /* NIE dodawaj background tutaj - używamy tylko <img class="bg"> */
+  /* NIE dodawaj background tutaj - uĹĽywamy tylko <img class="bg"> */
   .bg {
     object-position: center 50%;
-    /* na mobile pokaż więcej środka */
+    /* na mobile pokaĹĽ wiÄ™cej Ĺ›rodka */
   }
 
-  /* podnieś logo wyżej, aby nie zasłaniało kieliszka */
+  /* podnieĹ› logo wyĹĽej, aby nie zasĹ‚aniaĹ‚o kieliszka */
   .hero-stack {
     top: 25%;
-    /* podniesione o 10% wyżej (z 28% do 25%) */
+    /* podniesione o 10% wyĹĽej (z 28% do 25%) */
     transform: translate(-50%, -50%);
   }
 }
 
-/* Desktop i większe ekrany – korekta pozycji logo */
+/* Desktop i wiÄ™ksze ekrany â€“ korekta pozycji logo */
 @media (min-width: 1025px) {
   .hero-stack {
     top: 26%;
-    /* prawie pod headerem na dużych ekranach */
+    /* prawie pod headerem na duĹĽych ekranach */
     transform: translate(-50%, -50%);
   }
 }
 
-/* Tryb immersyjny – chowamy logo elegancko */
+/* Tryb immersyjny â€“ chowamy logo elegancko */
 .freeflow.immersive .hero-stack {
   opacity: 0;
   transform: translate(-50%, calc(-50% - 80px)) scale(0.7);
@@ -117,7 +117,7 @@
   z-index: 50;
   /* nad bg */
   background: transparent;
-  /* backdrop-filter: blur(10px); USUNIĘTE */
+  /* backdrop-filter: blur(10px); USUNIÄTE */
   border-bottom: none;
   display: flex;
   justify-content: space-between;
@@ -169,7 +169,7 @@
   color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  /* backdrop-filter: blur(10px); USUNIĘTE */
+  /* backdrop-filter: blur(10px); USUNIÄTE */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -237,12 +237,12 @@
   transform: scale(0.98);
 }
 
-/* Wyłącz hover podczas nagrywania */
+/* WyĹ‚Ä…cz hover podczas nagrywania */
 .logo-container:has(.logo.recording):hover {
   transform: scale(1);
 }
 
-/* Warstwa tła - najniższy z-index */
+/* Warstwa tĹ‚a - najniĹĽszy z-index */
 .freeflow::before {
   content: '';
   position: absolute;
@@ -266,7 +266,7 @@
   /* najpierw */
 }
 
-/* Zatrzymaj animację float podczas nagrywania */
+/* Zatrzymaj animacjÄ™ float podczas nagrywania */
 .logo.recording {
   animation: none;
   transform: scale(1.02);
@@ -316,7 +316,7 @@
 .tiles {
   position: fixed;
   bottom: calc(6px + env(safe-area-inset-bottom));
-  /* bliżej krawędzi, nie zasłania blatu */
+  /* bliĹĽej krawÄ™dzi, nie zasĹ‚ania blatu */
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -330,7 +330,7 @@
   transition: all 0.6s ease;
 }
 
-/* Gdy voice panel jest aktywny, kafelki znikają */
+/* Gdy voice panel jest aktywny, kafelki znikajÄ… */
 .tiles.hidden {
   transform: translate(-50%, 150%);
   opacity: 0;
@@ -352,7 +352,7 @@
   cursor: pointer;
 }
 
-/* === VOICEBAR (przy dolnej krawędzi) === */
+/* === VOICEBAR (przy dolnej krawÄ™dzi) === */
 .voicebar {
   position: fixed;
   left: 50%;
@@ -363,7 +363,7 @@
   pointer-events: auto;
 }
 
-/* === PRZEŁĄCZNIK (pionowy dock po lewej) === */
+/* === PRZEĹÄ„CZNIK (pionowy dock po lewej) === */
 .mode-toggle {
   position: fixed;
   left: clamp(10px, 2vw, 20px);
@@ -375,7 +375,7 @@
   filter: drop-shadow(0 0 10px rgba(255, 107, 0, 0.35));
 }
 
-/* OBRAMÓWKA */
+/* OBRAMĂ“WKA */
 .electric-border {
   position: absolute;
   top: 0;
@@ -501,12 +501,12 @@
 
 /* === RESPONSIVE MEDIA QUERIES === */
 
-/* Tablet i małe laptopy */
+/* Tablet i maĹ‚e laptopy */
 @media (max-width: 1024px) {
   /* .header-left p { display: none; } - Removed to show subtitle on mobile */
 }
 
-/* Mobile landscape i małe tablety */
+/* Mobile landscape i maĹ‚e tablety */
 @media (max-width: 768px) {
   .top-header {
     padding: 0.75rem 1rem;
@@ -530,7 +530,7 @@
     justify-content: center;
     gap: clamp(6px, 3vw, 12px);
     padding-left: clamp(36px, 12vw, 64px);
-    /* dystans od przełącznika po lewej */
+    /* dystans od przeĹ‚Ä…cznika po lewej */
   }
 
   .tile img {
@@ -565,7 +565,7 @@
   }
 }
 
-/* Bardzo małe ekrany */
+/* Bardzo maĹ‚e ekrany */
 @media (max-width: 360px) {
   .tile img {
     width: 60px;
@@ -584,4 +584,149 @@
   /* IE and Edge */
   scrollbar-width: none;
   /* Firefox */
+}
+/* Full list mode: collapse central logo into compact header-size marker */
+.freeflow.island-full-list .hero-stack {
+  top: 76px;
+  left: 86px;
+  transform: translate(0, 0) scale(0.38);
+  min-width: 0;
+  min-height: 0;
+  z-index: 55;
+}
+
+.freeflow.island-full-list .logo-container {
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.freeflow.island-full-list .logo {
+  width: clamp(96px, 12vw, 136px);
+  animation: none;
+}
+
+@media (max-width: 768px) {
+  .freeflow.island-full-list .hero-stack {
+    top: 70px;
+    left: 16px;
+    transform: translate(0, 0) scale(0.32);
+  }
+}
+
+/* --- Contextual Island Layout Contract --- */
+.freeflow {
+  --island-height-closed: 30vh;
+  --island-height-peek: 60vh;
+  --island-height-expanded: 100vh;
+  --voice-safe-bottom: calc(env(safe-area-inset-bottom) + 84px);
+  --logo-expanded-scale: 0.55;
+}
+
+.contextual-island {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.contextual-island-sheet {
+  width: min(680px, 94vw);
+  height: var(--island-height-peek);
+  border-radius: 28px 28px 0 0;
+  overflow: visible;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+.contextual-island-sheet--closed {
+  height: var(--island-height-closed);
+  border-radius: 28px 28px 0 0;
+  overflow: visible;
+}
+
+.contextual-island-sheet--peek {
+  height: var(--island-height-peek);
+  border-radius: 28px 28px 0 0;
+  overflow: visible;
+}
+
+.contextual-island-sheet--expanded,
+.contextual-island-sheet.island-expanded {
+  height: var(--island-height-expanded);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.list-scroll {
+  overflow-y: auto;
+  height: 100%;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hero-stack {
+  z-index: 15;
+}
+
+.freeflow.island-full-list .hero-stack {
+  top: 72px;
+  left: 16px;
+  transform: translate(0, 0) scale(var(--logo-expanded-scale));
+  min-width: 0;
+  min-height: 0;
+  z-index: 30;
+}
+
+.freeflow.island-full-list .logo-container {
+  min-width: 0;
+  min-height: 0;
+  pointer-events: none;
+}
+
+.freeflow.island-full-list .logo {
+  width: clamp(110px, 16vw, 148px);
+  animation: none;
+}
+
+@media (min-width: 769px) {
+  .freeflow.island-full-list .hero-stack {
+    top: 76px;
+    left: 20px;
+  }
+}
+
+/* --- Island readability/layering overrides --- */
+.island-stack {
+  position: relative;
+  z-index: 55;
+}
+
+.background-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.island-focus-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.6) 0%,
+      rgba(0, 0, 0, 0.1) 25%,
+      rgba(0, 0, 0, 0) 45%,
+      rgba(0, 0, 0, 0) 55%,
+      rgba(0, 0, 0, 0.1) 75%,
+      rgba(0, 0, 0, 0.6) 100%
+    );
 }

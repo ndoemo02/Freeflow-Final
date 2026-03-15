@@ -1,127 +1,131 @@
-import React, { useCallback, useMemo } from 'react';
+﻿import React, { useCallback, useEffect, useMemo } from 'react';
 import SheetHandle from './sheet/SheetHandle';
 import SheetScrollable from './sheet/SheetScrollable';
+import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
 
-const HERO_HEIGHT = 256;
-const PEEK_TOP_OFFSET = HERO_HEIGHT + 16;
-const FLOATING_CARD_HEIGHT = 72;
-const FLOATING_CARD_GAP = 10;
-const FLOATING_STRIDE = FLOATING_CARD_HEIGHT + FLOATING_CARD_GAP;
+const CARD_HEIGHT = 96;
 
-function getMetaLine(item: any) {
-    return item?.city || item?.address || item?.delivery_time || 'Dostepna teraz';
-}
+function getDepthStyle(offset: number) {
+    const abs = Math.abs(offset);
 
-function getRestaurantSecondary(item: any) {
-    const parts = [item?.cuisine_type, item?.city];
-
-    if (item?.distance != null) {
-        parts.push(typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance);
-    } else if (item?.delivery_time) {
-        parts.push(item.delivery_time);
+    if (abs === 0) {
+        return { scale: 1, opacity: 1, y: 0, z: 80 };
     }
 
-    return parts.filter(Boolean).join(' / ');
+    if (abs === 1) {
+        return { scale: 0.96, opacity: 0.75, y: offset * 48, z: 70 };
+    }
+
+    return { scale: 0.92, opacity: 0.45, y: offset * 96, z: 60 };
+}
+
+function resolveStackAnchorTop(snap: SheetSnap, stackHeight: number) {
+    if (typeof window === 'undefined') {
+        return 112;
+    }
+
+    const viewportHeight = window.innerHeight;
+    const { peekPosition, closedPosition } = getSheetViewportSnapPositions(viewportHeight);
+    const sheetHeight = snap === 'closed' ? viewportHeight * 0.3 : viewportHeight * 0.6;
+    const sheetTop = viewportHeight - sheetHeight;
+    const desiredCenter = snap === 'closed' ? closedPosition : peekPosition;
+
+    return Math.max(8, desiredCenter - sheetTop - stackHeight / 2);
+}
+
+function formatDistance(item: any) {
+    if (item?.distance == null) {
+        return 'teraz';
+    }
+
+    return typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance;
+}
+
+function getMetaLine(item: any) {
+    const parts = [item?.city || item?.address, item?.delivery_time, item?.cuisine_type];
+    return parts.filter(Boolean).join(' / ') || 'Dostepna teraz';
 }
 
 function FloatingRestaurantFocusCard({
     item,
-    offsetFromCenter,
-    onClick,
+    stackOffset,
     isRecommended,
+    onClick,
 }: {
     item: any;
-    offsetFromCenter: number;
-    onClick: () => void;
+    stackOffset: number;
     isRecommended: boolean;
+    onClick: () => void;
 }) {
-    const secondary = getRestaurantSecondary(item) || getMetaLine(item);
-    const normalizedDistance = Math.min(Math.abs(offsetFromCenter) / (FLOATING_STRIDE * 1.8), 1);
-    const eased = normalizedDistance * normalizedDistance;
-    const scale = 1.03 - 0.19 * eased;
-    const blur = 3.2 * eased;
-    const opacity = 1 - 0.62 * eased;
-    const focused = normalizedDistance < 0.12;
-    const focusAccent = 'rgba(34,211,238,0.92)';
+    const depthStyle = getDepthStyle(stackOffset);
+    const isFocused = stackOffset === 0;
 
     return (
         <button
             type="button"
             onClick={onClick}
-            className="absolute left-0 right-0 mx-auto will-change-transform text-left"
+            className="w-full origin-center text-left"
             style={{
-                height: `${FLOATING_CARD_HEIGHT}px`,
-                top: `${offsetFromCenter}px`,
-                transform: `translate3d(0,0,0) scale(${scale.toFixed(4)})`,
-                filter: blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none',
-                opacity,
-                zIndex: focused ? 20 : 10 - Math.min(Math.abs(Math.round(offsetFromCenter / FLOATING_STRIDE)), 8),
-                transition: 'transform 180ms ease, opacity 180ms ease, filter 180ms ease',
+                gridArea: '1 / 1',
+                alignSelf: 'center',
+                height: `${CARD_HEIGHT}px`,
+                transform: `translate3d(0, ${depthStyle.y}px, 0) scale(${depthStyle.scale})`,
+                opacity: depthStyle.opacity,
+                zIndex: depthStyle.z,
+                transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease',
+                willChange: 'transform',
             }}
-            aria-label={item.name}
+            aria-label={item?.name || 'Restauracja'}
         >
             <div
-                className="relative h-full overflow-hidden rounded-[18px]"
+                className="relative h-full overflow-hidden rounded-[20px] px-3.5 py-2.5"
                 style={{
-                    background: focused
-                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
-                    boxShadow: focused
-                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 28px rgba(34,211,238,0.26), 0 16px 30px rgba(0,0,0,0.34)'
-                        : '0 10px 20px rgba(0,0,0,0.14)',
-                    border: focused ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
-                    backdropFilter: 'blur(16px) saturate(1.2)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+                    background: isFocused
+                        ? 'linear-gradient(140deg, rgba(34,211,238,0.24) 0%, rgba(6,10,18,0.97) 100%)'
+                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.74))',
+                    border: isFocused ? '1px solid rgba(34,211,238,0.6)' : '1px solid rgba(255,255,255,0.06)',
+                    boxShadow: isFocused
+                        ? '0 0 0 1px rgba(34,211,238,0.32) inset, 0 12px 26px rgba(0,0,0,0.32)'
+                        : '0 8px 16px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(12px) saturate(1.08)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(1.08)',
                 }}
             >
-                {focused ? (
+                {isFocused ? (
                     <>
-                        <div className="absolute inset-x-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${focusAccent}, transparent)` }} />
-                        <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.2)]">
+                        <div className="absolute inset-x-5 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.9), transparent)' }} />
+                        <div className="absolute right-3 top-3 rounded-full bg-cyan-400/16 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
                             Fokus
                         </div>
                     </>
                 ) : null}
 
-                <div className="flex h-full items-center gap-3 px-3.5">
-                    <div
-                        className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px]"
-                        style={{ boxShadow: focused ? '0 0 0 1px rgba(34,211,238,0.35) inset, 0 0 16px rgba(34,211,238,0.14)' : 'none' }}
-                    >
-                        {item?.image_url ? (
-                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
-                        ) : item?.image ? (
-                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                        ) : (
-                            <div className={`flex h-full w-full items-center justify-center text-xs ${focused ? 'bg-cyan-400/14 text-cyan-100' : 'bg-black/20 text-white/60'}`}>
-                                {item?.rating ? item.rating : '?'}
-                            </div>
-                        )}
+                <div className="flex h-full items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px] bg-black/28">
+                        {item?.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" /> : null}
+                        {!item?.image_url && item?.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
+                        {!item?.image_url && !item?.image ? (
+                            <div className="flex h-full w-full items-center justify-center text-xs text-white/62">{item?.rating || '?'}</div>
+                        ) : null}
                     </div>
 
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                            <div className={`truncate text-[13px] font-semibold leading-tight ${focused ? 'text-cyan-50' : 'text-white'}`}>{item.name}</div>
-                            <div
-                                className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                                style={{
-                                    color: focused ? 'rgba(224,255,255,0.96)' : isRecommended ? 'rgba(103,232,249,0.92)' : 'rgba(255,255,255,0.58)',
-                                    background: focused ? 'rgba(34,211,238,0.18)' : isRecommended ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.06)',
-                                }}
-                            >
-                                {item?.distance != null ? (typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance) : 'teraz'}
-                            </div>
+                            <div className={`truncate text-[14px] font-semibold ${isFocused ? 'text-cyan-50' : 'text-white'}`}>{item?.name || 'Restauracja'}</div>
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isFocused ? 'bg-cyan-400/20 text-cyan-100' : 'bg-white/8 text-white/64'}`}>
+                                {formatDistance(item)}
+                            </span>
                         </div>
 
-                        <div className={`mt-0.5 truncate text-[10px] uppercase tracking-[0.18em] ${focused ? 'text-cyan-200/78' : 'text-white/36'}`}>
+                        <div className={`mt-1 truncate text-[11px] uppercase tracking-[0.16em] ${isFocused ? 'text-cyan-200/80' : 'text-white/42'}`}>
                             {item?.cuisine_type || 'Restauracja'}
                         </div>
-                        <div className={`mt-1 truncate text-[11px] ${focused ? 'text-cyan-50/92' : 'text-white/62'}`}>{secondary}</div>
-                        <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${focused ? 'text-cyan-100/82' : 'text-white/55'}`}>
+                        <div className={`mt-1 truncate text-[12px] ${isFocused ? 'text-white/95' : 'text-white/68'}`}>{getMetaLine(item)}</div>
+                        <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${isFocused ? 'text-white/88' : 'text-white/56'}`}>
                             <span className="font-semibold text-amber-300">{item?.rating || '4.5'}</span>
-                            <span className="text-white/18">|</span>
-                            <span>{item?.city || item?.address || 'w poblizu'}</span>
+                            <span className="text-white/20">|</span>
+                            <span>{isRecommended ? 'Polecane' : 'W poblizu'}</span>
                         </div>
                     </div>
                 </div>
@@ -132,69 +136,61 @@ function FloatingRestaurantFocusCard({
 
 function FloatingRestaurantListCard({
     item,
-    onClick,
     isRecommended,
     isActive,
+    onClick,
 }: {
     item: any;
-    onClick: () => void;
     isRecommended: boolean;
     isActive: boolean;
+    onClick: () => void;
 }) {
-    const secondary = getRestaurantSecondary(item) || getMetaLine(item);
-
     return (
         <button type="button" onClick={onClick} className="w-full text-left">
             <div
-                className="relative overflow-hidden rounded-[22px] px-4 py-3.5"
+                className="relative overflow-hidden rounded-[20px] px-3 py-2.5"
                 style={{
+                    minHeight: '110px',
                     background: isActive
-                        ? `linear-gradient(135deg, ${isRecommended ? 'rgba(34,211,238,0.24)' : 'rgba(255,255,255,0.12)'} 0%, rgba(10,14,24,0.88) 100%)`
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))',
+                        ? 'linear-gradient(140deg, rgba(34,211,238,0.22) 0%, rgba(8,12,20,0.95) 100%)'
+                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.72))',
+                    border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.05)',
                     boxShadow: isActive
-                        ? `0 0 24px ${isRecommended ? 'rgba(34,211,238,0.18)' : 'rgba(255,255,255,0.08)'}, 0 14px 28px rgba(0,0,0,0.28)`
-                        : '0 10px 20px rgba(0,0,0,0.14)',
-                    backdropFilter: 'blur(16px) saturate(1.18)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(1.18)',
+                        ? '0 0 0 1px rgba(34,211,238,0.28) inset, 0 10px 22px rgba(0,0,0,0.28)'
+                        : '0 8px 16px rgba(0,0,0,0.16)',
+                    backdropFilter: 'blur(12px) saturate(1.08)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(1.08)',
                 }}
             >
                 {isActive ? (
-                    <div className="absolute inset-x-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${isRecommended ? 'rgba(34,211,238,0.65)' : 'rgba(255,255,255,0.35)'}, transparent)` }} />
+                    <div className="absolute inset-x-5 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.88), transparent)' }} />
                 ) : null}
 
                 <div className="flex items-start gap-3">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-black/20">
-                        {item?.image_url ? (
-                            <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
-                        ) : item?.image ? (
-                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                        ) : (
-                            <div className="flex h-full w-full items-center justify-center text-sm text-white/58">{item?.rating ? item.rating : '?'}</div>
-                        )}
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[12px] bg-black/20">
+                        {item?.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" /> : null}
+                        {!item?.image_url && item?.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
+                        {!item?.image_url && !item?.image ? (
+                            <div className="flex h-full w-full items-center justify-center text-sm text-white/62">{item?.rating || '?'}</div>
+                        ) : null}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                                <div className="truncate text-[15px] font-semibold text-white">{item.name}</div>
-                                <div className="mt-1 truncate text-[11px] uppercase tracking-[0.18em] text-white/38">{item?.cuisine_type || 'Restauracja'}</div>
+                                <div className="truncate text-[14px] font-semibold text-white">{item?.name || 'Restauracja'}</div>
+                                <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.15em] text-white/42">{item?.cuisine_type || 'Restauracja'}</div>
                             </div>
-                            <div
-                                className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold"
-                                style={{
-                                    color: isRecommended ? 'rgba(103,232,249,0.92)' : 'rgba(255,255,255,0.58)',
-                                    background: isRecommended ? 'rgba(34,211,238,0.12)' : 'rgba(255,255,255,0.06)',
-                                }}
-                            >
-                                {item?.distance != null ? (typeof item.distance === 'number' ? `${item.distance.toFixed(1)} km` : item.distance) : 'teraz'}
+                            <div className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isRecommended ? 'bg-cyan-400/14 text-cyan-100' : 'bg-white/8 text-white/60'}`}>
+                                {formatDistance(item)}
                             </div>
                         </div>
 
-                        <div className="mt-2 text-[13px] text-white/68">{secondary}</div>
-                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-white/52">
+                        <div className="mt-1.5 text-[12px] text-white/72">{getMetaLine(item)}</div>
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-white/56">
                             <span className="font-semibold text-amber-300">{item?.rating || '4.5'}</span>
-                            <span className="text-white/18">|</span>
-                            <span>{item?.city || item?.address || 'w poblizu'}</span>
+                            <span className="text-white/20">|</span>
+                            <span>{isRecommended ? 'Polecane' : 'W poblizu'}</span>
                         </div>
                     </div>
                 </div>
@@ -227,59 +223,87 @@ export default function RestaurantSheetContent({
         return found >= 0 ? found : 0;
     }, [highlightedId, items]);
 
-    const teaserItems = useMemo(() => items.slice(activeIndex), [activeIndex, items]);
+    const isExpanded = snap === 'expanded';
+    const isTeaser = snap === 'closed';
+    const stackOffsets = isTeaser ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
 
-    const selectIndex = useCallback((nextIndex: number) => {
-        const safeIndex = Math.max(0, Math.min(items.length - 1, nextIndex));
+    const stackItems = useMemo(
+        () => stackOffsets
+            .map((offset) => ({ offset, item: items[activeIndex + offset] }))
+            .filter((entry) => Boolean(entry.item)),
+        [activeIndex, items, stackOffsets],
+    );
+
+    const selectIndex = useCallback((targetIndex: number) => {
+        const safeIndex = Math.max(0, Math.min(items.length - 1, targetIndex));
         const nextItem = items[safeIndex];
         if (!nextItem) return;
         setHighlightedId(nextItem._uiId);
     }, [items, setHighlightedId]);
 
     const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-        if (Math.abs(event.deltaY) < 6) {
+        if (isExpanded || Math.abs(event.deltaY) < 5) {
             return;
         }
 
         event.preventDefault();
         const direction = event.deltaY > 0 ? 1 : -1;
         selectIndex(activeIndex + direction);
-    }, [activeIndex, selectIndex]);
+    }, [activeIndex, isExpanded, selectIndex]);
 
-    const viewportPaddingTop = snap === 'peek' ? PEEK_TOP_OFFSET : 24;
+    useEffect(() => {
+        const root = document.querySelector('.freeflow');
+        if (!root) return;
+
+        root.classList.toggle('island-full-list', isExpanded);
+
+        return () => {
+            root.classList.remove('island-full-list');
+        };
+    }, [isExpanded]);
+
+    const stackHeight = isTeaser ? 170 : 220;
+    const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
+    const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 70px)';
+    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
 
     return (
-        <div className="relative flex h-full min-h-0 flex-col text-white">
-            <SheetHandle className="relative z-20" mode={snap === 'peek' ? 'overlay' : 'bar'} />
+        <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
+            {!isExpanded ? <SheetHandle mode="surface" /> : null}
+            <SheetHandle className="relative z-[20]" mode={isExpanded ? 'bar' : 'overlay'} />
 
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pb-4" style={{ paddingTop: `${viewportPaddingTop}px` }}>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
-                            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/85">W poblizu</div>
-                        </div>
-                        <div className="mt-1.5 text-[14px] font-semibold tracking-tight text-white">Polecane miejsca</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="text-[10px] text-white/46">{snap === 'expanded' ? 'Lista' : `${items.length} opcji`}</div>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setSnap(snap === 'expanded' ? 'peek' : 'expanded');
-                            }}
-                            className="rounded-full bg-white/6 px-3 py-1.5 text-[11px] font-medium text-white/68 transition hover:bg-white/10 hover:text-white"
-                        >
-                            {snap === 'expanded' ? 'Zwin' : 'Rozwin'}
-                        </button>
-                    </div>
-                </div>
+            <div className="absolute right-3 top-3 z-[22]">
+                <button
+                    type="button"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        if (snap === 'closed') {
+                            setSnap('peek');
+                            return;
+                        }
+                        if (snap === 'peek') {
+                            setSnap('expanded');
+                            return;
+                        }
+                        setSnap('peek');
+                    }}
+                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                >
+                    {ctaLabel}
+                </button>
+            </div>
 
-                {snap === 'expanded' ? (
-                    <SheetScrollable className="tiny-scroll min-h-0 flex-1 space-y-2.5 pr-1">
+            {isExpanded ? (
+                <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-3">
+                    <div className="mb-1.5 pl-0.5">
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">W poblizu</div>
+                        <div className="mt-1 text-[14px] font-semibold text-white">Polecane miejsca</div>
+                    </div>
+
+                    <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-1.5 pr-1" style={{ paddingBottom: expandedSafeBottom }}>
                         {items.map((item, index) => (
-                            <div key={item._uiId} data-id={item._uiId} className="pb-2.5 last:pb-0">
+                            <div key={item._uiId} className="pb-1.5 last:pb-0">
                                 <FloatingRestaurantListCard
                                     item={item}
                                     isRecommended={item._uiId === recommendedId}
@@ -292,35 +316,53 @@ export default function RestaurantSheetContent({
                             </div>
                         ))}
                     </SheetScrollable>
-                ) : (
+                </div>
+            ) : (
+                <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3" style={{ paddingBottom: stackSafeBottom }}>
                     <div
-                        className="relative min-h-0 flex-1 overflow-hidden"
-                        onWheel={handlePeekWheel}
+                        className="absolute inset-x-3 z-[55] island-stack"
                         style={{
-                            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,1) 80px, rgba(0,0,0,1) 100%)',
-                            maskImage: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,1) 80px, rgba(0,0,0,1) 100%)',
+                            top: `${Math.round(stackAnchorTop)}px`,
+                            willChange: 'transform',
+                            contain: 'layout paint',
                         }}
                     >
-                        {teaserItems.map((item, index) => {
-                            const offsetFromCenter = index * FLOATING_STRIDE;
-                            if (offsetFromCenter > FLOATING_STRIDE * 2.2) return null;
+                        <div
+                            onWheel={handlePeekWheel}
+                            className="relative overflow-visible"
+                            style={{
+                                height: `${stackHeight}px`,
+                                perspective: '960px',
+                                transformStyle: 'preserve-3d',
+                                willChange: 'transform',
+                                contain: 'layout paint',
+                            }}
+                        >
+                            <div
+                                className="island-focus-mask absolute inset-0 z-[5] pointer-events-none"
+                                style={{
+                                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0) 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.6) 100%)',
+                                }}
+                            />
 
-                            return (
-                                <FloatingRestaurantFocusCard
-                                    key={item._uiId}
-                                    item={item}
-                                    offsetFromCenter={offsetFromCenter}
-                                    isRecommended={item._uiId === recommendedId}
-                                    onClick={() => {
-                                        setHighlightedId(item._uiId);
-                                        onSelect(item);
-                                    }}
-                                />
-                            );
-                        })}
+                            <div className="relative h-full w-full" style={{ display: 'grid', alignItems: 'center' }}>
+                                {stackItems.map(({ item, offset }) => (
+                                    <FloatingRestaurantFocusCard
+                                        key={`${item._uiId}-${offset}`}
+                                        item={item}
+                                        stackOffset={offset}
+                                        isRecommended={item._uiId === recommendedId}
+                                        onClick={() => {
+                                            setHighlightedId(item._uiId);
+                                            onSelect(item);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

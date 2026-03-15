@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { clampSheetDragOffset, resolveSheetSnap } from './sheetPhysics';
 import { BottomSheetRenderState, INITIAL_SHEET_BOUNDARY, SheetBoundaryState, SheetDragState, SheetSnap } from './sheetTypes';
@@ -20,6 +20,7 @@ interface BottomSheetContainerProps {
     position?: 'left' | 'right';
     placementClassName?: string;
     snapClassNames?: Partial<Record<SheetSnap, string>>;
+    lockScrollOn?: 'expanded' | 'open';
     children: React.ReactNode | ((state: BottomSheetRenderState) => React.ReactNode);
 }
 
@@ -42,6 +43,7 @@ export default function BottomSheetContainer({
     position = 'right',
     placementClassName,
     snapClassNames,
+    lockScrollOn = 'expanded',
     children,
 }: BottomSheetContainerProps) {
     const [snap, setSnapState] = useState<SheetSnap>(initialSnap);
@@ -56,21 +58,28 @@ export default function BottomSheetContainer({
     }, [onSnapChange]);
 
     useEffect(() => {
-        if (snap === 'closed') {
+        const shouldLock = lockScrollOn === 'open' ? snap !== 'closed' : snap === 'expanded';
+        if (!shouldLock) {
             return;
         }
 
         const previousHtmlOverflow = document.documentElement.style.overflow;
         const previousBodyOverflow = document.body.style.overflow;
+        const previousBodyTouchAction = document.body.style.touchAction;
+        const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
 
         document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
+        document.body.style.touchAction = 'none';
+        document.body.style.overscrollBehavior = 'none';
 
         return () => {
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
+            document.body.style.touchAction = previousBodyTouchAction;
+            document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
         };
-    }, [snap]);
+    }, [lockScrollOn, snap]);
 
     const finishDrag = useCallback(() => {
         const dragState = dragStateRef.current;
@@ -147,12 +156,11 @@ export default function BottomSheetContainer({
         },
     }), [boundary, finishDrag, snap]);
 
-    const sideClasses = position === 'left' ? 'left-4 md:left-10' : 'right-4 md:right-10';
-    const resolvedPlacementClassName = placementClassName || 'bottom-[172px]';
+    const resolvedPlacementClassName = placementClassName || 'bottom-0';
     const resolvedSnapClassNames = {
-        closed: 'pointer-events-none opacity-0 translate-y-full',
-        peek: 'w-[19rem] h-[15.5rem]',
-        expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
+        closed: 'contextual-island-sheet--closed',
+        peek: 'contextual-island-sheet--peek',
+        expanded: 'contextual-island-sheet--expanded island-expanded',
         ...snapClassNames,
     };
     const overflowClassName = snap === 'expanded' ? 'overflow-hidden' : 'overflow-visible';
@@ -174,14 +182,15 @@ export default function BottomSheetContainer({
     return (
         <BottomSheetContext.Provider value={contextValue}>
             <motion.div
-                className={`fixed ${resolvedPlacementClassName} ${sideClasses} z-[60] ${className}`}
-                initial={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
-                animate={{ opacity: snap === 'closed' ? 0 : 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: position === 'left' ? -40 : 40, scale: 0.94 }}
+                className={`contextual-island fixed left-0 right-0 ${resolvedPlacementClassName} z-10 ${className}`}
+                data-position={position}
+                initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                animate={{ opacity: snap === 'closed' ? 0 : 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 40, scale: 0.98 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 28 }}
             >
                 <motion.div
-                    className={`relative flex min-h-0 flex-col ${overflowClassName} ${resolvedSnapClassNames[snap]}`}
+                    className={`contextual-island-sheet relative flex min-h-0 flex-col ${overflowClassName} ${resolvedSnapClassNames[snap]}`}
                     layout
                     animate={{ y: dragOffsetY }}
                     transition={isDragging ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 34 }}

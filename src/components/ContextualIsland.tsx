@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import RestaurantSheetContent from './RestaurantSheetContent';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
 import SheetHandle from './sheet/SheetHandle';
 import SheetScrollable from './sheet/SheetScrollable';
+import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
 
 interface ContextualIslandProps {
@@ -19,9 +20,7 @@ interface ContextualIslandProps {
     subtitle?: string | null;
 }
 
-const FLOATING_CARD_HEIGHT = 92;
-const FLOATING_CARD_GAP = 10;
-const FLOATING_STRIDE = FLOATING_CARD_HEIGHT + FLOATING_CARD_GAP;
+const MENU_CARD_HEIGHT = 96;
 
 const formatPrice = (item: any) => {
     const value = Number(item?.price_pln ?? item?.price ?? 0);
@@ -30,20 +29,24 @@ const formatPrice = (item: any) => {
 
 const getItemId = (item: any, index = 0) => item?.id || item?.menuItemId || item?.menu_item_id || `${index}-${item?.name || 'item'}`;
 const getCuisine = (item: any) => item?.cuisine_type || item?.category || item?.section || 'Wybor dnia';
+
 const getMetaLine = (item: any, type: 'restaurant' | 'menu') => {
     if (type === 'restaurant') {
         return item?.city || item?.address || item?.delivery_time || 'Dostepna teraz';
     }
+
     return item?.description || item?.ingredients || item?.allergens || 'Kliknij, aby dodac do zamowienia';
 };
 
 function getResultsLabel(count: number) {
     if (count === 1) return '1 miejsce';
+
     const mod10 = count % 10;
     const mod100 = count % 100;
     if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) {
         return `${count} miejsca`;
     }
+
     return `${count} miejsc`;
 }
 
@@ -53,100 +56,108 @@ function getLocationLabel(items: any[]) {
     return city || address || null;
 }
 
+function getDepthStyle(offset: number) {
+    const abs = Math.abs(offset);
+
+    if (abs === 0) {
+        return { scale: 1, opacity: 1, y: 0, z: 80 };
+    }
+
+    if (abs === 1) {
+        return { scale: 0.96, opacity: 0.75, y: offset * 48, z: 70 };
+    }
+
+    return { scale: 0.92, opacity: 0.45, y: offset * 96, z: 60 };
+}
+
+function resolveStackAnchorTop(snap: SheetSnap, stackHeight: number) {
+    if (typeof window === 'undefined') {
+        return 112;
+    }
+
+    const viewportHeight = window.innerHeight;
+    const { peekPosition, closedPosition } = getSheetViewportSnapPositions(viewportHeight);
+    const sheetHeight = snap === 'closed' ? viewportHeight * 0.3 : viewportHeight * 0.6;
+    const sheetTop = viewportHeight - sheetHeight;
+    const desiredCenter = snap === 'closed' ? closedPosition : peekPosition;
+
+    return Math.max(8, desiredCenter - sheetTop - stackHeight / 2);
+}
+
 function FloatingMenuFocusCard({
     item,
-    offsetFromCenter,
-    isFocused,
+    stackOffset,
     isRecommended,
     onClick,
 }: {
     item: any;
-    offsetFromCenter: number;
-    isFocused: boolean;
+    stackOffset: number;
     isRecommended: boolean;
     onClick: () => void;
 }) {
+    const depthStyle = getDepthStyle(stackOffset);
+    const isFocused = stackOffset === 0;
     const price = formatPrice(item);
-    const metaLine = getMetaLine(item, 'menu');
-    const normalizedDistance = Math.min(Math.abs(offsetFromCenter) / (FLOATING_STRIDE * 1.8), 1);
-    const eased = normalizedDistance * normalizedDistance;
-    const scale = 1.03 - 0.19 * eased;
-    const blur = 3.2 * eased;
-    const opacity = 1 - 0.62 * eased;
 
     return (
         <button
             type="button"
             onClick={onClick}
-            className="absolute left-0 right-0 mx-auto will-change-transform text-left"
+            className="w-full origin-center text-left"
             style={{
-                height: `${FLOATING_CARD_HEIGHT}px`,
-                top: `calc(100% - 144px + ${offsetFromCenter}px)`,
-                transform: `translate3d(0,0,0) scale(${scale.toFixed(4)})`,
-                filter: blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none',
-                opacity,
-                zIndex: isFocused ? 20 : 10 - Math.min(Math.abs(Math.round(offsetFromCenter / FLOATING_STRIDE)), 8),
-                transition: 'transform 180ms ease, opacity 180ms ease, filter 180ms ease',
+                gridArea: '1 / 1',
+                alignSelf: 'center',
+                height: `${MENU_CARD_HEIGHT}px`,
+                transform: `translate3d(0, ${depthStyle.y}px, 0) scale(${depthStyle.scale})`,
+                opacity: depthStyle.opacity,
+                zIndex: depthStyle.z,
+                transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease',
+                willChange: 'transform',
             }}
-            aria-label={item.name}
+            aria-label={item?.name || 'Pozycja menu'}
         >
             <div
-                className="relative h-full overflow-hidden rounded-[18px]"
+                className="relative h-full overflow-hidden rounded-[20px] px-3.5 py-2.5"
                 style={{
                     background: isFocused
-                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
+                        ? 'linear-gradient(140deg, rgba(34,211,238,0.24) 0%, rgba(8,12,20,0.97) 100%)'
                         : isRecommended
-                            ? 'linear-gradient(135deg, rgba(255,184,77,0.14) 0%, rgba(10,14,24,0.88) 100%)'
-                            : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(10,14,24,0.54))',
+                            ? 'linear-gradient(140deg, rgba(255,184,77,0.16) 0%, rgba(8,16,28,0.92) 100%)'
+                            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.74))',
+                    border: isFocused ? '1px solid rgba(34,211,238,0.58)' : '1px solid rgba(255,255,255,0.06)',
                     boxShadow: isFocused
-                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 28px rgba(34,211,238,0.26), 0 16px 30px rgba(0,0,0,0.34)'
-                        : isRecommended
-                            ? '0 0 24px rgba(255,184,77,0.14), 0 14px 28px rgba(0,0,0,0.28)'
-                            : '0 10px 20px rgba(0,0,0,0.14)',
-                    border: isFocused ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
-                    backdropFilter: 'blur(16px) saturate(1.15)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
+                        ? '0 0 0 1px rgba(34,211,238,0.3) inset, 0 12px 24px rgba(0,0,0,0.3)'
+                        : '0 8px 16px rgba(0,0,0,0.18)',
+                    backdropFilter: 'blur(12px) saturate(1.08)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(1.08)',
                 }}
             >
-                {isFocused ? (
-                    <div
-                        className="pointer-events-none absolute inset-x-6 -bottom-8 h-16 rounded-full"
-                        style={{
-                            background: 'radial-gradient(circle, rgba(34,211,238,0.30) 0%, rgba(34,211,238,0.14) 40%, rgba(34,211,238,0) 74%)',
-                            filter: 'blur(16px)',
-                        }}
-                    />
-                ) : null}
-
                 {(isFocused || isRecommended) ? (
-                    <div
-                        className="absolute inset-x-5 top-0 h-px"
-                        style={{ background: `linear-gradient(90deg, transparent, ${isFocused ? 'rgba(34,211,238,0.92)' : 'rgba(255,184,77,0.55)'}, transparent)` }}
-                    />
+                    <div className="absolute inset-x-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${isFocused ? 'rgba(34,211,238,0.9)' : 'rgba(255,184,77,0.56)'}, transparent)` }} />
                 ) : null}
 
                 {isFocused ? (
-                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_16px_rgba(34,211,238,0.2)]">
+                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/16 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
                         Fokus
                     </div>
                 ) : null}
 
-                <div className="flex h-full items-center gap-3 px-3.5">
+                <div className="flex h-full items-center gap-3">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${isFocused ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/6 text-white/42'}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ${isFocused ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/8 text-white/44'}`}>
                                 {getCuisine(item)}
                             </span>
                             {price ? <span className={`text-[12px] font-semibold ${isFocused ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</span> : null}
                         </div>
-                        <div className={`mt-2 truncate text-[14px] font-semibold ${isFocused ? 'text-cyan-50' : 'text-white'}`}>{item.name}</div>
-                        <div className={`mt-1 line-clamp-3 text-[11px] leading-4 ${isFocused ? 'text-cyan-50/92' : 'text-white/62'}`}>{metaLine}</div>
+
+                        <div className={`mt-2 truncate text-[15px] font-semibold ${isFocused ? 'text-white' : 'text-white/92'}`}>{item?.name || 'Pozycja menu'}</div>
+                        <div className={`mt-1 line-clamp-2 text-[12px] ${isFocused ? 'text-white/94' : 'text-white/66'}`}>{getMetaLine(item, 'menu')}</div>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${isFocused ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/6 text-white/54'}`}>
-                            {isFocused ? 'Wybrane' : 'Wybierz'}
-                        </span>
-                    </div>
+
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${isFocused ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/7 text-white/58'}`}>
+                        {isFocused ? 'Wybrane' : 'Wybierz'}
+                    </span>
                 </div>
             </div>
         </button>
@@ -155,7 +166,6 @@ function FloatingMenuFocusCard({
 
 interface MenuSheetContentProps {
     normalizedItems: any[];
-    position: 'left' | 'right';
     highlightedId: string | null;
     setHighlightedId: (id: string | null) => void;
     recommendedId?: string | null;
@@ -170,7 +180,6 @@ interface MenuSheetContentProps {
 
 function MenuSheetContent({
     normalizedItems,
-    position,
     highlightedId,
     setHighlightedId,
     recommendedId,
@@ -183,30 +192,41 @@ function MenuSheetContent({
     setSnap,
 }: MenuSheetContentProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const peekRef = useRef<HTMLDivElement>(null);
-    const focusedItem = normalizedItems[currentIndex];
+    const stackRef = useRef<HTMLDivElement>(null);
+    const isExpanded = snap === 'expanded';
+    const isTeaser = snap === 'closed';
+    const stackOffsets = isTeaser ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
+
+    const stackItems = useMemo(
+        () => stackOffsets
+            .map((offset) => ({ offset, item: normalizedItems[currentIndex + offset] }))
+            .filter((entry) => Boolean(entry.item)),
+        [currentIndex, normalizedItems, stackOffsets],
+    );
 
     useEffect(() => {
-        if (snap === 'expanded' && highlightedId && scrollContainerRef.current) {
-            const activeElement = scrollContainerRef.current.querySelector(`[data-id="${highlightedId}"]`);
-            if (activeElement) {
-                (activeElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-        }
-    }, [highlightedId, snap]);
-
-    useEffect(() => {
-        if (snap !== 'peek') {
+        if (!isExpanded || !highlightedId || !scrollContainerRef.current) {
             return;
         }
 
-        const element = peekRef.current;
-        if (!element) {
+        const activeElement = scrollContainerRef.current.querySelector(`[data-id="${highlightedId}"]`);
+        if (activeElement) {
+            (activeElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [highlightedId, isExpanded]);
+
+    useEffect(() => {
+        if (isExpanded) {
+            return;
+        }
+
+        const node = stackRef.current;
+        if (!node) {
             return;
         }
 
         let wheelLocked = false;
-        let unlockTimer: number | null = null;
+        let releaseTimer: number | null = null;
 
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
@@ -217,100 +237,108 @@ function MenuSheetContent({
             }
 
             wheelLocked = true;
-            const direction = event.deltaY > 0 ? 1 : -1;
-            goTo(currentIndex + direction);
+            goTo(currentIndex + (event.deltaY > 0 ? 1 : -1));
 
-            unlockTimer = window.setTimeout(() => {
+            releaseTimer = window.setTimeout(() => {
                 wheelLocked = false;
             }, 180);
         };
 
-        element.addEventListener('wheel', onWheel, { passive: false, capture: true });
+        node.addEventListener('wheel', onWheel, { passive: false });
 
         return () => {
-            element.removeEventListener('wheel', onWheel, true);
-            if (unlockTimer !== null) {
-                window.clearTimeout(unlockTimer);
+            node.removeEventListener('wheel', onWheel);
+            if (releaseTimer !== null) {
+                window.clearTimeout(releaseTimer);
             }
         };
-    }, [currentIndex, goTo, snap]);
+    }, [currentIndex, goTo, isExpanded]);
+
+    useEffect(() => {
+        const root = document.querySelector('.freeflow');
+        if (!root) return;
+
+        root.classList.toggle('island-full-list', isExpanded);
+
+        return () => {
+            root.classList.remove('island-full-list');
+        };
+    }, [isExpanded]);
+
+    const stackHeight = isTeaser ? 170 : 220;
+    const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
+    const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 70px)';
+    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
 
     return (
         <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
-            {snap === 'peek' ? <SheetHandle mode="surface" /> : null}
-            <SheetHandle mode={snap === 'peek' ? 'overlay' : 'bar'} />
-            <div className="absolute right-3 top-3 z-20 md:right-4 md:top-4">
+            {!isExpanded ? <SheetHandle mode="surface" /> : null}
+            <SheetHandle className="relative z-[20]" mode={isExpanded ? 'bar' : 'overlay'} />
+
+            <div className="absolute right-3 top-3 z-[22]">
                 <button
                     type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setSnap(snap === 'expanded' ? 'peek' : 'expanded');
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        if (snap === 'closed') {
+                            setSnap('peek');
+                            return;
+                        }
+                        if (snap === 'peek') {
+                            setSnap('expanded');
+                            return;
+                        }
+                        setSnap('peek');
                     }}
-                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/76 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
                 >
-                    {snap === 'expanded' ? 'Zwin' : 'Rozwin'}
+                    {ctaLabel}
                 </button>
             </div>
 
-            {snap === 'peek' ? (
-                <div ref={peekRef} className="relative z-10 flex flex-1 flex-col px-3 pb-20 pt-32 md:pt-40">
+            {!isExpanded ? (
+                <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3" style={{ paddingBottom: stackSafeBottom }}>
                     <div
-                        className="relative mx-auto h-[16rem] md:h-[20rem] w-full overflow-visible"
+                        ref={stackRef}
+                        className="absolute inset-x-3 z-[55] island-stack"
                         style={{
-                            WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.88) 18%, rgba(0,0,0,1) 58%, rgba(0,0,0,1) 78%, rgba(0,0,0,0.76) 92%, rgba(0,0,0,0) 100%)',
-                            maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.88) 18%, rgba(0,0,0,1) 58%, rgba(0,0,0,1) 78%, rgba(0,0,0,0.76) 92%, rgba(0,0,0,0) 100%)',
+                            top: `${Math.round(stackAnchorTop)}px`,
+                            willChange: 'transform',
+                            contain: 'layout paint',
                         }}
                     >
                         <div
-                            className="absolute inset-0 transition-colors duration-500"
+                            className="relative overflow-visible"
                             style={{
-                                background: focusedItem
-                                    ? 'radial-gradient(circle at 50% 74%, rgba(34,211,238,0.22) 0%, rgba(34,211,238,0.12) 18%, transparent 62%)'
-                                    : 'none',
+                                height: `${stackHeight}px`,
+                                perspective: '960px',
+                                transformStyle: 'preserve-3d',
+                                willChange: 'transform',
+                                contain: 'layout paint',
                             }}
-                        />
-                        <div
-                            className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
-                            style={{
-                                background: 'linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,0.1) 18%, rgba(2,6,23,0.34) 56%, rgba(2,6,23,0.72) 100%)',
-                                filter: 'blur(18px)',
-                            }}
-                        />
-
-                        {normalizedItems.map((item, index) => {
-                            const offsetFromCenter = (index - currentIndex) * FLOATING_STRIDE;
-                            if (Math.abs(offsetFromCenter) > FLOATING_STRIDE * 4.8) return null;
-
-                            return (
-                                <FloatingMenuFocusCard
-                                    key={item._uiId}
-                                    item={item}
-                                    offsetFromCenter={offsetFromCenter}
-                                    isFocused={index === currentIndex}
-                                    isRecommended={item._uiId === recommendedId}
-                                    onClick={() => {
-                                        setHighlightedId(item._uiId);
-                                        onSelect(item);
-                                    }}
-                                />
-                            );
-                        })}
-                    </div>
-
-                    <div className="mt-2 hidden items-start justify-between gap-2 px-1 text-xs text-white/48 md:flex md:flex-row md:items-end md:gap-3">
-                        <div className="min-w-0 leading-5">Kolem zmieniasz fokus dan</div>
-                        <div className="flex items-center gap-2 self-stretch md:self-end">
-                            <span className="rounded-full bg-white/6 px-2 py-1 text-[11px] text-white/58">Rozwin, aby zobaczyc liste</span>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSnap('expanded');
+                        >
+                            <div
+                                className="island-focus-mask absolute inset-0 z-[5] pointer-events-none"
+                                style={{
+                                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0) 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.6) 100%)',
                                 }}
-                                className="rounded-full bg-amber-300/12 px-3 py-1 text-[11px] text-amber-50 transition hover:bg-amber-300/18"
-                            >
-                                Rozwin liste
-                            </button>
+                            />
+
+                            <div className="relative h-full w-full" style={{ display: 'grid', alignItems: 'center' }}>
+                                {stackItems.map(({ item, offset }) => (
+                                    <FloatingMenuFocusCard
+                                        key={`${item._uiId}-${offset}`}
+                                        item={item}
+                                        stackOffset={offset}
+                                        isRecommended={item._uiId === recommendedId}
+                                        onClick={() => {
+                                            setHighlightedId(item._uiId);
+                                            onSelect(item);
+                                        }}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -322,9 +350,14 @@ function MenuSheetContent({
                         exit={{ opacity: 0, height: 0 }}
                         className="flex min-h-0 flex-1 flex-col"
                     >
-                        <SheetScrollable className="tiny-scroll mt-3 min-h-0 flex-1 space-y-2 px-3 pb-3">
-                            <div ref={scrollContainerRef} className="space-y-2">
-                                {normalizedItems.map((item, idx) => {
+                        <div className="px-3 pt-2 pb-1.5">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">{headerTitle}</div>
+                            {resultSummary ? <div className="mt-1 text-[12px] text-white/56">{resultSummary}</div> : null}
+                        </div>
+
+                        <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-1.5 px-3" style={{ paddingBottom: expandedSafeBottom }}>
+                            <div ref={scrollContainerRef} className="space-y-1.5">
+                                {normalizedItems.map((item, index) => {
                                     const isActive = item._uiId === highlightedId;
                                     const price = formatPrice(item);
 
@@ -335,58 +368,50 @@ function MenuSheetContent({
                                             data-id={item._uiId}
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: Math.min(idx * 0.03, 0.2) }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
+                                            transition={{ delay: Math.min(index * 0.02, 0.14) }}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
                                                 setHighlightedId(item._uiId);
                                                 onSelect(item);
                                             }}
                                             className="w-full text-left"
                                         >
                                             <div
-                                                className="relative overflow-hidden rounded-[22px] px-4 py-3.5"
+                                                className="relative overflow-hidden rounded-[20px] px-3 py-2.5"
                                                 style={{
+                                                    minHeight: '110px',
                                                     background: isActive
-                                                        ? 'linear-gradient(135deg, rgba(34,211,238,0.18) 0%, rgba(8,16,28,0.94) 100%)'
-                                                        : (item._uiId === recommendedId
-                                                            ? 'linear-gradient(135deg, rgba(255,184,77,0.16) 0%, rgba(10,14,24,0.88) 100%)'
-                                                            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(10,14,24,0.68))'),
+                                                        ? 'linear-gradient(140deg, rgba(34,211,238,0.22) 0%, rgba(8,12,20,0.95) 100%)'
+                                                        : item._uiId === recommendedId
+                                                            ? 'linear-gradient(140deg, rgba(255,184,77,0.16) 0%, rgba(8,16,28,0.9) 100%)'
+                                                            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.72))',
+                                                    border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.05)',
                                                     boxShadow: isActive
-                                                        ? '0 0 0 1px rgba(34,211,238,0.7) inset, 0 0 30px rgba(34,211,238,0.24), 0 18px 34px rgba(0,0,0,0.3)'
-                                                        : (item._uiId === recommendedId
-                                                            ? '0 0 28px rgba(255,184,77,0.22), 0 16px 30px rgba(0,0,0,0.28)'
-                                                            : '0 10px 20px rgba(0,0,0,0.14)'),
-                                                    border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid transparent',
-                                                    backdropFilter: 'blur(16px) saturate(1.15)',
-                                                    WebkitBackdropFilter: 'blur(16px) saturate(1.15)',
+                                                        ? '0 0 0 1px rgba(34,211,238,0.28) inset, 0 10px 22px rgba(0,0,0,0.28)'
+                                                        : '0 8px 16px rgba(0,0,0,0.16)',
+                                                    backdropFilter: 'blur(12px) saturate(1.08)',
+                                                    WebkitBackdropFilter: 'blur(12px) saturate(1.08)',
                                                 }}
                                             >
                                                 {(isActive || item._uiId === recommendedId) ? (
-                                                    <div
-                                                        className="absolute inset-x-5 top-0 h-px"
-                                                        style={{ background: `linear-gradient(90deg, transparent, ${isActive ? 'rgba(34,211,238,0.92)' : 'rgba(255,184,77,0.45)'}, transparent)` }}
-                                                    />
-                                                ) : null}
-
-                                                {isActive ? (
-                                                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.22)]">
-                                                        Aktywne
-                                                    </div>
+                                                    <div className="absolute inset-x-5 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${isActive ? 'rgba(34,211,238,0.88)' : 'rgba(255,184,77,0.56)'}, transparent)` }} />
                                                 ) : null}
 
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] ${isActive ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/6 text-white/42'}`}>
+                                                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ${isActive ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/8 text-white/44'}`}>
                                                                 {getCuisine(item)}
                                                             </span>
                                                         </div>
-                                                        <div className="mt-2 text-[15px] font-semibold text-white">{item.name}</div>
-                                                        <div className={`mt-2 line-clamp-3 text-[13px] leading-5 ${isActive ? 'text-cyan-50/92' : 'text-white/66'}`}>{getMetaLine(item, 'menu')}</div>
+
+                                                        <div className="mt-2 text-[14px] font-semibold text-white">{item?.name || 'Pozycja menu'}</div>
+                                                        <div className={`mt-1.5 line-clamp-2 text-[12px] leading-5 ${isActive ? 'text-white/94' : 'text-white/70'}`}>{getMetaLine(item, 'menu')}</div>
                                                     </div>
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        {price ? <div className={`text-[15px] font-semibold ${isActive ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</div> : null}
-                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${isActive ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/6 text-white/54'}`}>
+
+                                                    <div className="flex flex-col items-end gap-1.5">
+                                                        {price ? <div className={`text-[14px] font-semibold ${isActive ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</div> : null}
+                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${isActive ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/7 text-white/58'}`}>
                                                             {isActive ? 'Wybrane' : 'Wybierz'}
                                                         </span>
                                                     </div>
@@ -418,14 +443,19 @@ export default function ContextualIsland({
 }: ContextualIslandProps) {
     const normalizedItems = useMemo(() => items.map((item, index) => ({ ...item, _uiId: getItemId(item, index) })), [items]);
 
-    if (!normalizedItems.length) return null;
+    if (!normalizedItems.length) {
+        return null;
+    }
 
     const activeIndex = normalizedItems.findIndex((item) => item._uiId === highlightedId);
     const currentIndex = activeIndex >= 0 ? activeIndex : 0;
     const headerTitle = title || (type === 'restaurant' ? 'Restauracje' : 'Menu restauracji');
 
     const resultSummary = useMemo(() => {
-        if (type !== 'restaurant') return subtitle || null;
+        if (type !== 'restaurant') {
+            return subtitle || null;
+        }
+
         const countLabel = getResultsLabel(normalizedItems.length);
         const locationLabel = getLocationLabel(normalizedItems);
         return locationLabel ? `${countLabel} / ${locationLabel}` : countLabel;
@@ -440,13 +470,14 @@ export default function ContextualIsland({
         return (
             <BottomSheetContainer
                 initialSnap="peek"
+                lockScrollOn="expanded"
                 position={position}
-                className="z-40"
-                placementClassName="bottom-[118px] sm:bottom-[126px] md:bottom-[164px]"
+                className="z-10"
+                placementClassName="bottom-0"
                 snapClassNames={{
-                    closed: 'w-[15rem] h-0 opacity-0',
-                    peek: 'w-[15.5rem] sm:w-[16.5rem] md:w-[20rem] h-[45vh] max-h-[45vh] overflow-hidden rounded-t-[28px]',
-                    expanded: 'w-[15.5rem] sm:w-[16.5rem] md:w-[20rem] h-[100vh] max-h-[100vh] overflow-hidden rounded-t-[28px]',
+                    closed: 'contextual-island-sheet--closed',
+                    peek: 'contextual-island-sheet--peek',
+                    expanded: 'contextual-island-sheet--expanded',
                 }}
             >
                 {({ snap, setSnap }) => (
@@ -467,17 +498,19 @@ export default function ContextualIsland({
     return (
         <BottomSheetContainer
             initialSnap="peek"
+            lockScrollOn="expanded"
             position={position}
-            className="z-[60]"
+            className="z-10"
+            placementClassName="bottom-0"
             snapClassNames={{
-                peek: 'w-[20.5rem] md:w-[22rem] h-[22.5rem] md:h-[25rem]',
-                expanded: 'w-[24rem] md:w-[27rem] h-[28rem] md:h-[32rem] max-h-[72vh]',
+                closed: 'contextual-island-sheet--closed',
+                peek: 'contextual-island-sheet--peek',
+                expanded: 'contextual-island-sheet--expanded',
             }}
         >
             {({ snap, setSnap }) => (
                 <MenuSheetContent
                     normalizedItems={normalizedItems}
-                    position={position}
                     highlightedId={highlightedId}
                     setHighlightedId={setHighlightedId}
                     recommendedId={recommendedId}
