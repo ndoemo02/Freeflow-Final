@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import RestaurantSheetContent from './RestaurantSheetContent';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
@@ -60,14 +60,14 @@ function getDepthStyle(offset: number) {
     const abs = Math.abs(offset);
 
     if (abs === 0) {
-        return { scale: 1, opacity: 1, y: 0, z: 80 };
+        return { scale: 1, opacity: 1, y: 0, z: 30, blur: 0, brightness: 1 };
     }
 
     if (abs === 1) {
-        return { scale: 0.96, opacity: 0.75, y: offset * 48, z: 70 };
+        return { scale: 0.92, opacity: 0.55, y: offset * 90, z: 20, blur: 6, brightness: 0.75 };
     }
 
-    return { scale: 0.92, opacity: 0.45, y: offset * 96, z: 60 };
+    return { scale: 0.84, opacity: 0.25, y: offset * 150, z: 10, blur: 12, brightness: 0.68 };
 }
 
 function resolveStackAnchorTop(snap: SheetSnap, stackHeight: number) {
@@ -79,9 +79,14 @@ function resolveStackAnchorTop(snap: SheetSnap, stackHeight: number) {
     const { peekPosition, closedPosition } = getSheetViewportSnapPositions(viewportHeight);
     const sheetHeight = snap === 'closed' ? viewportHeight * 0.3 : viewportHeight * 0.6;
     const sheetTop = viewportHeight - sheetHeight;
-    const desiredCenter = snap === 'closed' ? closedPosition : peekPosition;
 
-    return Math.max(8, desiredCenter - sheetTop - stackHeight / 2);
+    if (snap === 'peek') {
+        const desiredCenter = viewportHeight * 0.715;
+        return Math.max(56, desiredCenter - sheetTop - stackHeight / 2);
+    }
+
+    const desiredCenter = snap === 'closed' ? closedPosition : peekPosition;
+    return Math.max(20, desiredCenter - sheetTop - stackHeight / 2);
 }
 
 function FloatingMenuFocusCard({
@@ -110,8 +115,9 @@ function FloatingMenuFocusCard({
                 height: `${MENU_CARD_HEIGHT}px`,
                 transform: `translate3d(0, ${depthStyle.y}px, 0) scale(${depthStyle.scale})`,
                 opacity: depthStyle.opacity,
+                filter: `blur(${depthStyle.blur}px) brightness(${depthStyle.brightness})`,
                 zIndex: depthStyle.z,
-                transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease',
+                transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, filter 220ms ease',
                 willChange: 'transform',
             }}
             aria-label={item?.name || 'Pozycja menu'}
@@ -144,20 +150,26 @@ function FloatingMenuFocusCard({
 
                 <div className="flex h-full items-center gap-3">
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ${isFocused ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/8 text-white/44'}`}>
-                                {getCuisine(item)}
-                            </span>
-                            {price ? <span className={`text-[12px] font-semibold ${isFocused ? 'text-cyan-100' : 'text-amber-200'}`}>{price}</span> : null}
-                        </div>
+                        {isFocused ? (
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full bg-cyan-400/16 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+                                    {getCuisine(item)}
+                                </span>
+                                {price ? <span className="text-[12px] font-semibold text-cyan-100">{price}</span> : null}
+                            </div>
+                        ) : null}
 
-                        <div className={`mt-2 truncate text-[15px] font-semibold ${isFocused ? 'text-white' : 'text-white/92'}`}>{item?.name || 'Pozycja menu'}</div>
-                        <div className={`mt-1 line-clamp-2 text-[12px] ${isFocused ? 'text-white/94' : 'text-white/66'}`}>{getMetaLine(item, 'menu')}</div>
+                        <div className={`mt-2 truncate text-[15px] font-semibold ${isFocused ? 'text-white' : 'text-white/60'}`}>{item?.name || 'Pozycja menu'}</div>
+                        {isFocused ? (
+                            <div className="mt-1 line-clamp-2 text-[12px] text-white/94">{getMetaLine(item, 'menu')}</div>
+                        ) : null}
                     </div>
 
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${isFocused ? 'bg-cyan-400/18 text-cyan-100' : 'bg-white/7 text-white/58'}`}>
-                        {isFocused ? 'Wybrane' : 'Wybierz'}
-                    </span>
+                    {isFocused ? (
+                        <span className="rounded-full bg-cyan-400/18 px-2 py-0.5 text-[10px] text-cyan-100">
+                            Wybrane
+                        </span>
+                    ) : null}
                 </div>
             </div>
         </button>
@@ -195,7 +207,7 @@ function MenuSheetContent({
     const stackRef = useRef<HTMLDivElement>(null);
     const isExpanded = snap === 'expanded';
     const isTeaser = snap === 'closed';
-    const stackOffsets = isTeaser ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
+    const stackOffsets = [-1, 0, 1];
 
     const stackItems = useMemo(
         () => stackOffsets
@@ -265,10 +277,10 @@ function MenuSheetContent({
         };
     }, [isExpanded]);
 
-    const stackHeight = isTeaser ? 170 : 220;
+    const stackHeight = isTeaser ? 210 : 240;
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
     const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 70px)';
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
     const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
 
     return (
@@ -319,13 +331,22 @@ function MenuSheetContent({
                             }}
                         >
                             <div
-                                className="island-focus-mask absolute inset-0 z-[5] pointer-events-none"
+                                className="absolute -inset-x-2 -inset-y-3 z-[99] pointer-events-none"
                                 style={{
-                                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0) 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.1) 75%, rgba(0,0,0,0.6) 100%)',
+                                    backdropFilter: 'blur(8px)',
+                                    WebkitBackdropFilter: 'blur(8px)',
+                                    WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.35) 20%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,1) 100%)',
+                                    maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.35) 20%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.35) 80%, rgba(0,0,0,1) 100%)',
                                 }}
                             />
 
-                            <div className="relative h-full w-full" style={{ display: 'grid', alignItems: 'center' }}>
+                            <div
+                                className="relative h-full w-full z-[95]"
+                                style={{
+                                    display: 'grid',
+                                    alignItems: 'center',
+                                }}
+                            >
                                 {stackItems.map(({ item, offset }) => (
                                     <FloatingMenuFocusCard
                                         key={`${item._uiId}-${offset}`}
@@ -355,8 +376,8 @@ function MenuSheetContent({
                             {resultSummary ? <div className="mt-1 text-[12px] text-white/56">{resultSummary}</div> : null}
                         </div>
 
-                        <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-1.5 px-3" style={{ paddingBottom: expandedSafeBottom }}>
-                            <div ref={scrollContainerRef} className="space-y-1.5">
+                        <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-2 px-3" style={{ paddingBottom: expandedSafeBottom }}>
+                            <div ref={scrollContainerRef} className="space-y-2">
                                 {normalizedItems.map((item, index) => {
                                     const isActive = item._uiId === highlightedId;
                                     const price = formatPrice(item);
@@ -379,7 +400,7 @@ function MenuSheetContent({
                                             <div
                                                 className="relative overflow-hidden rounded-[20px] px-3 py-2.5"
                                                 style={{
-                                                    minHeight: '110px',
+                                                    minHeight: '102px',
                                                     background: isActive
                                                         ? 'linear-gradient(140deg, rgba(34,211,238,0.22) 0%, rgba(8,12,20,0.95) 100%)'
                                                         : item._uiId === recommendedId
@@ -470,7 +491,7 @@ export default function ContextualIsland({
         return (
             <BottomSheetContainer
                 initialSnap="peek"
-                lockScrollOn="expanded"
+                lockScrollOn="open"
                 position={position}
                 className="z-10"
                 placementClassName="bottom-0"
@@ -498,7 +519,7 @@ export default function ContextualIsland({
     return (
         <BottomSheetContainer
             initialSnap="peek"
-            lockScrollOn="expanded"
+            lockScrollOn="open"
             position={position}
             className="z-10"
             placementClassName="bottom-0"
@@ -526,3 +547,10 @@ export default function ContextualIsland({
         </BottomSheetContainer>
     );
 }
+
+
+
+
+
+
+

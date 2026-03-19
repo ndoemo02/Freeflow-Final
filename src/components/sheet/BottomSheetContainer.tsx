@@ -1,4 +1,4 @@
-﻿import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { clampSheetDragOffset, resolveSheetSnap } from './sheetPhysics';
 import { BottomSheetRenderState, INITIAL_SHEET_BOUNDARY, SheetBoundaryState, SheetDragState, SheetSnap } from './sheetTypes';
@@ -65,18 +65,15 @@ export default function BottomSheetContainer({
 
         const previousHtmlOverflow = document.documentElement.style.overflow;
         const previousBodyOverflow = document.body.style.overflow;
-        const previousBodyTouchAction = document.body.style.touchAction;
         const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
 
         document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
-        document.body.style.touchAction = 'none';
         document.body.style.overscrollBehavior = 'none';
 
         return () => {
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
-            document.body.style.touchAction = previousBodyTouchAction;
             document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
         };
     }, [lockScrollOn, snap]);
@@ -201,3 +198,4 @@ export default function BottomSheetContainer({
         </BottomSheetContext.Provider>
     );
 }
+
