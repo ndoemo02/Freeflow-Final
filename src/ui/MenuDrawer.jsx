@@ -165,7 +165,7 @@ export default function MenuDrawer() {
                   <MenuItem icon="🏢" text="Panel Biznesowy (Legacy)" route="/panel/business" isSubItem requiresAuth />
                   <MenuItem icon="🆕" text="Panel Biznesowy v2 (Legacy)" route="/panel/business-v2" isSubItem requiresAuth />
                   <MenuItem icon="🚗" text="Panel Kierowcy" route="/driver" isSubItem requiresAuth />
-                  <MenuItem icon="📈" text="Analytics" route="/admin" isSubItem requiresAuth />
+                  <MenuItem icon="📈" text="Analytics" route="/panel/admin" isSubItem requiresAuth />
                 </ExpandableSection>
 
                 {/* Moja Aktywność */}
@@ -227,7 +227,7 @@ export default function MenuDrawer() {
                     isExpanded={expandedSections['Zarządzanie']}
                   >
                     <MenuItem icon="📈" text="Panel Biznesowy" route="/business-panel" isSubItem />
-                    <MenuItem icon="🔑" text="Panel Admina" route="/admin-panel" isSubItem />
+                    <MenuItem icon="🔑" text="Panel Admina" route="/panel/admin" isSubItem />
                   </ExpandableSection>
                 )}
 

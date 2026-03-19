@@ -162,7 +162,7 @@ export function DrawerMenu({ isOpen, onClose, userRole = 'user', onOpenCart = nu
                 >
                   <MenuItem icon="🙍" text="Panel Klienta" route="/panel/customer" isSubItem />
                   <MenuItem icon="🏢" text="Panel Biznesowy" route="/panel/business" isSubItem />
-                  <MenuItem icon="📈" text="Analytics" route="/admin" isSubItem />
+                  <MenuItem icon="📈" text="Analytics" route="/panel/admin" isSubItem />
                 </ExpandableSection>
 
                 {/* Moja Aktywność */}
@@ -231,7 +231,7 @@ export function DrawerMenu({ isOpen, onClose, userRole = 'user', onOpenCart = nu
                     isExpanded={expandedSections['Zarządzanie']}
                   >
                     <MenuItem icon="📈" text="Panel Biznesowy" route="/business-panel" isSubItem />
-                    <MenuItem icon="🔑" text="Panel Admina" route="/admin-panel" isSubItem />
+                    <MenuItem icon="🔑" text="Panel Admina" route="/panel/admin" isSubItem />
                   </ExpandableSection>
                 )}
 
