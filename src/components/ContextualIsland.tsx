@@ -143,9 +143,7 @@ function FloatingMenuFocusCard({
                 ) : null}
 
                 {isFocused ? (
-                    <div className="absolute right-3 top-3 rounded-full bg-cyan-400/16 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
-                        Fokus
-                    </div>
+                    null
                 ) : null}
 
                 <div className="flex h-full items-center gap-3">
@@ -239,6 +237,7 @@ function MenuSheetContent({
 
         let wheelLocked = false;
         let releaseTimer: number | null = null;
+        let touchStartY: number | null = null;
 
         const onWheel = (event: WheelEvent) => {
             event.preventDefault();
@@ -256,10 +255,39 @@ function MenuSheetContent({
             }, 180);
         };
 
+        const onTouchStart = (event: TouchEvent) => {
+            touchStartY = event.touches[0]?.clientY ?? null;
+        };
+
+        const onTouchEnd = (event: TouchEvent) => {
+            if (touchStartY == null) {
+                return;
+            }
+
+            const endY = event.changedTouches[0]?.clientY;
+            if (typeof endY !== 'number') {
+                touchStartY = null;
+                return;
+            }
+
+            const delta = endY - touchStartY;
+            touchStartY = null;
+
+            if (Math.abs(delta) < 24) {
+                return;
+            }
+
+            goTo(currentIndex + (delta < 0 ? 1 : -1));
+        };
+
         node.addEventListener('wheel', onWheel, { passive: false });
+        node.addEventListener('touchstart', onTouchStart, { passive: true });
+        node.addEventListener('touchend', onTouchEnd, { passive: true });
 
         return () => {
             node.removeEventListener('wheel', onWheel);
+            node.removeEventListener('touchstart', onTouchStart);
+            node.removeEventListener('touchend', onTouchEnd);
             if (releaseTimer !== null) {
                 window.clearTimeout(releaseTimer);
             }

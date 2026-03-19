@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import SheetHandle from './sheet/SheetHandle';
 import SheetScrollable from './sheet/SheetScrollable';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
@@ -102,9 +102,6 @@ function FloatingRestaurantFocusCard({
                 {isFocused ? (
                     <>
                         <div className="absolute inset-x-5 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.9), transparent)' }} />
-                        <div className="absolute right-3 top-3 rounded-full bg-cyan-400/18 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-100">
-                            Fokus
-                        </div>
                     </>
                 ) : null}
 
@@ -233,6 +230,7 @@ export default function RestaurantSheetContent({
     snap,
     setSnap,
 }: RestaurantSheetContentProps) {
+    const touchStartYRef = useRef<number | null>(null);
     const activeIndex = useMemo(() => {
         const found = items.findIndex((item) => item._uiId === highlightedId);
         return found >= 0 ? found : 0;
@@ -263,6 +261,36 @@ export default function RestaurantSheetContent({
 
         event.preventDefault();
         const direction = event.deltaY > 0 ? 1 : -1;
+        selectIndex(activeIndex + direction);
+    }, [activeIndex, isExpanded, selectIndex]);
+
+    const handlePeekTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+        if (isExpanded) {
+            return;
+        }
+
+        touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    }, [isExpanded]);
+
+    const handlePeekTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+        if (isExpanded || touchStartYRef.current == null) {
+            return;
+        }
+
+        const endY = event.changedTouches[0]?.clientY;
+        if (typeof endY !== 'number') {
+            touchStartYRef.current = null;
+            return;
+        }
+
+        const delta = endY - touchStartYRef.current;
+        touchStartYRef.current = null;
+
+        if (Math.abs(delta) < 24) {
+            return;
+        }
+
+        const direction = delta < 0 ? 1 : -1;
         selectIndex(activeIndex + direction);
     }, [activeIndex, isExpanded, selectIndex]);
 
@@ -344,6 +372,8 @@ export default function RestaurantSheetContent({
                     >
                         <div
                             onWheel={handlePeekWheel}
+                            onTouchStart={handlePeekTouchStart}
+                            onTouchEnd={handlePeekTouchEnd}
                             className="relative overflow-visible"
                             style={{
                                 height: `${stackHeight}px`,
