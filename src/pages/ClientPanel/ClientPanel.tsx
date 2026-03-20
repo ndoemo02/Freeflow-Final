@@ -53,7 +53,7 @@ const bottomNavItems: NavItem[] = [
 
 export default function ClientPanel() {
     const { user } = useAuth();
-    const { orders, loading: loadingOrders } = useOrders({ userId: user?.id });
+    const { orders, loading: loadingOrders, error: ordersError } = useOrders({ userId: user?.id });
 
     // Local state for restaurants
     const [restaurants, setRestaurants] = useState<any[]>([]);
@@ -202,6 +202,11 @@ export default function ClientPanel() {
 
                 {/* Main Content */}
                 <main className="main-content">
+                    {ordersError && (
+                        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                            Nie udało się pobrać części danych zamówień. Panel pokazuje dostępne dane.
+                        </div>
+                    )}
                     {/* Dashboard */}
                     {activeSection === 'dashboard' && (
                         <section className="section animate-fade">
