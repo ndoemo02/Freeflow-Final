@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../state/CartContext';
 import { useAuth } from '../state/auth';
 import { useConversationStore } from '../store/useConversationStore';
+import { ROUTES } from '../app/routeConfig';
 
 export default function Cart() {
   const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
@@ -48,7 +49,7 @@ export default function Cart() {
       useConversationStore.getState().handleOrderSuccess();
       setDeliveryInfo({ name: '', phone: '', address: '', notes: '' });
       // Przejdź do panelu klienta
-      navigate('/panel/customer');
+      navigate(ROUTES.PANEL_CLIENT);
     }
   };
 

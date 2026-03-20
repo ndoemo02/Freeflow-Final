@@ -53,7 +53,7 @@ function AppContent() {
           <Route path={ROUTES.HOME} element={<Home />} />
           <Route path={ROUTES.UI_LAB} element={<UiLab />} />
           <Route path={ROUTES.BUSINESS_READONLY} element={<BusinessClientPanel />} />
-          <Route path={ROUTES.PANEL_CUSTOMER} element={<CustomerPanel />} />
+          <Route path={ROUTES.LEGACY_PANEL_CUSTOMER} element={<CustomerPanel />} />
           <Route path={ROUTES.PANEL_BUSINESS} element={<BusinessPanel />} />
           <Route path={ROUTES.PANEL_BUSINESS_V2} element={<BusinessPanelV2 />} />
           <Route path={ROUTES.PANEL_BUSINESS_KDS} element={<BusinessPanelNew />} />
