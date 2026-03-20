@@ -21,10 +21,10 @@ export const CONFIG = {
   SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
 
   APP_MODE: import.meta.env.MODE || "development",
-  DEBUG: true,
+  DEBUG: import.meta.env.DEV || String(import.meta.env.VITE_DEBUG || '').toLowerCase() === 'true',
 
-  AMBER_LOGS: true,
-  AMBER_BRAIN: true,
+  AMBER_LOGS: import.meta.env.DEV || String(import.meta.env.VITE_AMBER_LOGS || '').toLowerCase() === 'true',
+  AMBER_BRAIN: import.meta.env.DEV || String(import.meta.env.VITE_AMBER_BRAIN || '').toLowerCase() === 'true',
   USE_BRAIN_V2: true, // Switch to modular pipeline (ETAP 6 Substitution)
 };
 

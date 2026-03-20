@@ -143,14 +143,30 @@ const MOCK_ACTIVE_ORDERS: ActiveOrder[] = [
 // ============== API Functions ==============
 
 const USE_MOCK = false; // Production ready
-// TODO: Move token to env var in production
-const ADMIN_TOKEN = 'super_secret_key_amber_2025';
+
+function getAdminToken(): string {
+    const envToken = String(import.meta.env.VITE_ADMIN_TOKEN || '').trim();
+    if (envToken) return envToken;
+
+    if (typeof window === 'undefined') return '';
+
+    try {
+        return String(window.localStorage.getItem('admin-token') || '').trim();
+    } catch {
+        return '';
+    }
+}
 
 function getHeaders() {
-    return {
-        'Content-Type': 'application/json',
-        'x-admin-token': ADMIN_TOKEN
-    };
+    const token = getAdminToken();
+    return token
+        ? {
+            'Content-Type': 'application/json',
+            'x-admin-token': token
+        }
+        : {
+            'Content-Type': 'application/json'
+        };
 }
 
 /**
