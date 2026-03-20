@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
+import { repairMojibakeText } from '../lib/textSanitizer';
 
 interface ConversationState {
     sessionId: string;
@@ -36,8 +37,8 @@ const normalizeMenuItems = (items: any[] | null | undefined) => {
     return items.filter(Boolean).map((item, index) => ({
         ...item,
         id: item.id || item.menuItemId || item.menu_item_id || `menu-${index}`,
-        name: item.name || item.base_name || item.title || 'Pozycja menu',
-        description: item.description || item.desc || item.ingredients || '',
+        name: repairMojibakeText(item.name || item.base_name || item.title || 'Pozycja menu'),
+        description: repairMojibakeText(item.description || item.desc || item.ingredients || ''),
         category: item.category || item.section || item.cuisine_type || null,
         price: Number(item.price ?? item.price_pln ?? item.pricePln ?? 0),
         price_pln: Number(item.price_pln ?? item.price ?? item.pricePln ?? 0),
@@ -50,9 +51,9 @@ const normalizeRestaurants = (items: any[] | null | undefined) => {
     return items.filter(Boolean).map((item, index) => ({
         ...item,
         id: item.id || `restaurant-${index}`,
-        name: item.display_name || item.name || 'Restauracja',
-        cuisine_type: item.cuisine_type || item.category || item.city || 'Restauracja',
-        city: item.city || item.address || '',
+        name: repairMojibakeText(item.display_name || item.name || 'Restauracja'),
+        cuisine_type: repairMojibakeText(item.cuisine_type || item.category || item.city || 'Restauracja'),
+        city: repairMojibakeText(item.city || item.address || ''),
     }));
 };
 
@@ -174,7 +175,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Brain error');
 
-            const amberReply = data.reply || data.text || '';
+            const amberReply = repairMojibakeText(data.reply || data.text || '');
             const hasContext = !!data.context;
             const ctx = data.context || {};
             const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
