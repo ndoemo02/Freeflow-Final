@@ -164,8 +164,7 @@ export default function MenuDrawer() {
                   <MenuItem icon="🙍" text="Panel Klienta" route={ROUTES.PANEL_CLIENT} isSubItem requiresAuth />
                   <MenuItem icon="💼" text="Panel Właściciela (Read-only)" route={ROUTES.BUSINESS_READONLY} isSubItem requiresAuth />
                   <MenuItem icon="🍳" text="Kitchen Display (KDS)" route={ROUTES.PANEL_BUSINESS_KDS} isSubItem requiresAuth />
-                  <MenuItem icon="🏢" text="Panel Biznesowy (Legacy)" route={ROUTES.PANEL_BUSINESS} isSubItem requiresAuth />
-                  <MenuItem icon="🆕" text="Panel Biznesowy v2 (Legacy)" route={ROUTES.PANEL_BUSINESS_V2} isSubItem requiresAuth />
+                  <MenuItem icon="🏢" text="Zarządzanie restauracjami" route={ROUTES.PANEL_BUSINESS} isSubItem requiresAuth />
                   <MenuItem icon="🚗" text="Panel Kierowcy" route={ROUTES.PANEL_DRIVER} isSubItem requiresAuth />
                   <MenuItem icon="📈" text="Analytics" route={ROUTES.PANEL_ADMIN} isSubItem requiresAuth />
                 </ExpandableSection>

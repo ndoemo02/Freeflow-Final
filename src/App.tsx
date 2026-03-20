@@ -7,7 +7,6 @@ import { CartProvider } from "./state/CartContext";
 import Cart from "./components/Cart";
 import CustomerPanel from "./pages/Panel/CustomerPanel";
 import BusinessPanel from "./pages/Panel/BusinessPanel";
-import BusinessPanelV2 from "./pages/Panel/BusinessPanelV2";
 import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
 import AdminPanel from "./pages/AdminPanel";
@@ -55,7 +54,6 @@ function AppContent() {
           <Route path={ROUTES.BUSINESS_READONLY} element={<BusinessClientPanel />} />
           <Route path={ROUTES.LEGACY_PANEL_CUSTOMER} element={<CustomerPanel />} />
           <Route path={ROUTES.PANEL_BUSINESS} element={<BusinessPanel />} />
-          <Route path={ROUTES.PANEL_BUSINESS_V2} element={<BusinessPanelV2 />} />
           <Route path={ROUTES.PANEL_BUSINESS_KDS} element={<BusinessPanelNew />} />
           <Route path={ROUTES.PANEL_ADMIN} element={<AdminPanel />} />
           <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />

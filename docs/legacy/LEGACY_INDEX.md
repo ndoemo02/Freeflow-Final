@@ -43,3 +43,11 @@ Use this file to track every file moved to `src/legacy/`.
 - Replacement: `src/state/ui.ts`
 - Rollback: Restore only if older modules requiring `menuOpen/toggleMenu` are reintroduced.
 - Commit: `<pending>`
+
+## 2026-03-20 - Business panel v2 retired
+- Original path: `src/pages/Panel/BusinessPanelV2.jsx`
+- Legacy path: `src/legacy/pages/Panel/BusinessPanelV2.jsx`
+- Reason: Panel Biznesowy v2 removed from active routing/navigation to simplify architecture.
+- Replacement: `src/pages/Panel/BusinessPanel.jsx` (`/panel/business`)
+- Rollback: Move file back and re-add route/import only if canonical panel regression requires emergency fallback.
+- Commit: `<pending>`

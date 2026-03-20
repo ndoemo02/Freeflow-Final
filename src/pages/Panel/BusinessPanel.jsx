@@ -240,7 +240,7 @@ export default function BusinessPanel() {
 			<div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] px-4 py-8">
 				<div className="mx-auto max-w-6xl">
 					<PanelHeader
-						title="Panel Biznesowy"
+						title="Zarządzanie restauracjami"
 						subtitle="Zarządzaj lokalem, menu i zamówieniami"
 					/>
 
@@ -611,5 +611,4 @@ export default function BusinessPanel() {
 		</Fragment>
 	)
 }
-
 
