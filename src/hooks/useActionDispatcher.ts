@@ -1,4 +1,4 @@
-﻿import { useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useCart } from '../state/CartContext';
 import { useToast } from '../components/Toast';
 
@@ -14,6 +14,12 @@ interface BrainAction {
     };
 }
 
+interface BrainEvent {
+    type: string;
+    channel?: string;
+    payload?: Record<string, any>;
+}
+
 interface BrainMeta {
     cart?: {
         items: any[];
@@ -22,6 +28,7 @@ interface BrainMeta {
     restaurant?: any;
     source?: string;
     conversationClosed?: boolean;
+    menuBehavior?: 'preserve' | 'softClose' | 'forceClose' | 'switchContext';
 }
 
 export function useActionDispatcher() {
@@ -34,7 +41,7 @@ export function useActionDispatcher() {
     const resetCartLocal = cart?.resetCartLocal;
     const push = toast?.push;
 
-    const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta, responseKey?: string) => {
+    const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta, responseKey?: string, events?: BrainEvent[]) => {
         const fnTag = '[ActionDispatcher]';
 
         if (actions && Array.isArray(actions)) {
@@ -71,7 +78,7 @@ export function useActionDispatcher() {
                     case 'CONFIRM_ORDER':
                     case 'RESET_UI':
                     case 'order_confirmed':
-                        if (setIsOpen) setIsOpen(false);
+                        if (meta?.menuBehavior !== 'preserve' && setIsOpen) setIsOpen(false);
                         window.dispatchEvent(new CustomEvent('freeflow:orderConfirmed', { detail: action }));
                         console.log(`${fnTag} UI reset triggered by action: ${action.type}`);
                         break;
@@ -99,6 +106,32 @@ export function useActionDispatcher() {
             }
             console.log(`${fnTag} Cart synced from meta.cart`);
         }
+
+        // ── Event Processing ──────────────────────────────────────────
+        if (events && Array.isArray(events)) {
+            for (const evt of events) {
+                if (evt.type === 'EVENT_CART_UPDATED') {
+                    window.dispatchEvent(new CustomEvent('freeflow:cartUpdated', { detail: evt.payload }));
+                    console.log(`${fnTag} EVENT_CART_UPDATED dispatched:`, evt.payload);
+                }
+                if (evt.type === 'EVENT_ORDER_COMPLETED') {
+                    window.dispatchEvent(new CustomEvent('freeflow:orderCompleted', { detail: evt.payload }));
+                    if (resetCartLocal) {
+                        resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: false });
+                    }
+                    console.log(`${fnTag} EVENT_ORDER_COMPLETED dispatched:`, evt.payload);
+                }
+            }
+        }
+        // ──────────────────────────────────────────────────────────────
+
+        // ── menuBehavior: softClose (3s delay) ───────────────────────
+        if (meta?.menuBehavior === 'softClose' && setIsOpen) {
+            setTimeout(() => setIsOpen(false), 3000);
+        } else if (meta?.menuBehavior === 'forceClose' && setIsOpen) {
+            setIsOpen(false);
+        }
+        // ──────────────────────────────────────────────────────────────
 
         if (meta?.conversationClosed) {
             console.log(`${fnTag} Conversation closed. Source: ${meta.source || 'unknown'}`);

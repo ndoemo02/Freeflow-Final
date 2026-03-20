@@ -89,10 +89,14 @@ export default function Home() {
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
       // Keep sync enabled for confirm_order because response carries authoritative meta.cart.
-      if (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart) {
+      if (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
-        const fakeMeta = { ...lastFullResponse.meta, cart: lastFullResponse.cart || lastFullResponse.meta?.cart };
-        dispatch(lastFullResponse.actions, fakeMeta, responseKey);
+        const fakeMeta = {
+          ...lastFullResponse.meta,
+          cart: lastFullResponse.cart || lastFullResponse.meta?.cart,
+          menuBehavior: lastFullResponse.meta?.menuBehavior,
+        };
+        dispatch(lastFullResponse.actions, fakeMeta, responseKey, lastFullResponse.events);
       }
     }
   }, [lastFullResponse, setHints, play, dispatch]);
