@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import RestaurantSheetContent from './RestaurantSheetContent';
-import BottomSheetContainer from './sheet/BottomSheetContainer';
-import SheetHandle from './sheet/SheetHandle';
+import BottomSheetContainer, { useBottomSheetContext } from './sheet/BottomSheetContainer';
 import SheetScrollable from './sheet/SheetScrollable';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
@@ -201,8 +200,14 @@ function MenuSheetContent({
     snap,
     setSnap,
 }: MenuSheetContentProps) {
+    const { boundary } = useBottomSheetContext();
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const stackRef = useRef<HTMLDivElement>(null);
+    const swipeStartYRef = useRef<number | null>(null);
+    const swipeStartAtRef = useRef(0);
+    const lastWheelAtRef = useRef(0);
+    const pointerStartYRef = useRef<number | null>(null);
+    const pointerStartAtRef = useRef(0);
     const isExpanded = snap === 'expanded';
     const isTeaser = snap === 'closed';
     const stackOffsets = [-1, 0, 1];
@@ -225,74 +230,114 @@ function MenuSheetContent({
         }
     }, [highlightedId, isExpanded]);
 
-    useEffect(() => {
-        if (isExpanded) {
+    const handleCtaPress = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        if (snap === 'closed') {
+            setSnap('peek');
+            return;
+        }
+        if (snap === 'peek') {
+            setSnap('expanded');
+            return;
+        }
+        setSnap('peek');
+    }, [setSnap, snap]);
+
+    const handleSwipeStart = useCallback((event: React.TouchEvent<HTMLElement>) => {
+        swipeStartYRef.current = event.touches[0]?.clientY ?? null;
+        swipeStartAtRef.current = performance.now();
+    }, []);
+
+    const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
+        if (isExpanded || Math.abs(event.deltaY) < 8) {
             return;
         }
 
-        const node = stackRef.current;
-        if (!node) {
-            return;
-        }
-
-        let wheelLocked = false;
-        let releaseTimer: number | null = null;
-        let touchStartY: number | null = null;
-
-        const onWheel = (event: WheelEvent) => {
+        const now = performance.now();
+        if (now - lastWheelAtRef.current < 90) {
             event.preventDefault();
-            event.stopPropagation();
+            return;
+        }
 
-            if (wheelLocked) {
-                return;
-            }
-
-            wheelLocked = true;
-            goTo(currentIndex + (event.deltaY > 0 ? 1 : -1));
-
-            releaseTimer = window.setTimeout(() => {
-                wheelLocked = false;
-            }, 180);
-        };
-
-        const onTouchStart = (event: TouchEvent) => {
-            touchStartY = event.touches[0]?.clientY ?? null;
-        };
-
-        const onTouchEnd = (event: TouchEvent) => {
-            if (touchStartY == null) {
-                return;
-            }
-
-            const endY = event.changedTouches[0]?.clientY;
-            if (typeof endY !== 'number') {
-                touchStartY = null;
-                return;
-            }
-
-            const delta = endY - touchStartY;
-            touchStartY = null;
-
-            if (Math.abs(delta) < 24) {
-                return;
-            }
-
-            goTo(currentIndex + (delta < 0 ? 1 : -1));
-        };
-
-        node.addEventListener('wheel', onWheel, { passive: false });
-        node.addEventListener('touchstart', onTouchStart, { passive: true });
-        node.addEventListener('touchend', onTouchEnd, { passive: true });
-
-        return () => {
-            node.removeEventListener('wheel', onWheel);
-            node.removeEventListener('touchstart', onTouchStart);
-            node.removeEventListener('touchend', onTouchEnd);
-            if (releaseTimer !== null) {
-                window.clearTimeout(releaseTimer);
-            }
-        };
+        event.preventDefault();
+        event.stopPropagation();
+        lastWheelAtRef.current = now;
+        const direction = event.deltaY > 0 ? 1 : -1;
+        const steps = Math.min(3, Math.max(1, Math.round(Math.abs(event.deltaY) / 120)));
+        goTo(currentIndex + direction * steps);
     }, [currentIndex, goTo, isExpanded]);
+
+    const applyGesture = useCallback((
+        deltaY: number,
+        velocityY: number,
+        event?: { preventDefault?: () => void; stopPropagation?: () => void },
+    ) => {
+        const isStrongSwipe = Math.abs(deltaY) >= 96 || Math.abs(velocityY) >= 900;
+        if (!isStrongSwipe) {
+            if (snap !== 'expanded' && Math.abs(deltaY) >= 28) {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                goTo(currentIndex + (deltaY < 0 ? 1 : -1));
+            }
+            return;
+        }
+
+        if (deltaY < 0 && snap !== 'expanded') {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            setSnap('expanded');
+            return;
+        }
+
+        if (deltaY > 0 && snap === 'expanded' && boundary.atTop) {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            setSnap('peek');
+        }
+    }, [boundary.atTop, currentIndex, goTo, setSnap, snap]);
+
+    const handleSwipeEnd = useCallback((event: React.TouchEvent<HTMLElement>) => {
+        if (swipeStartYRef.current == null) {
+            return;
+        }
+
+        const endY = event.changedTouches[0]?.clientY;
+        if (typeof endY !== 'number') {
+            swipeStartYRef.current = null;
+            return;
+        }
+
+        const deltaY = endY - swipeStartYRef.current;
+        const elapsed = Math.max(performance.now() - swipeStartAtRef.current, 16);
+        const velocityY = (deltaY / elapsed) * 1000;
+        swipeStartYRef.current = null;
+        applyGesture(deltaY, velocityY, event);
+    }, [applyGesture]);
+
+    const handlePointerDown = useCallback((event: React.PointerEvent<HTMLElement>) => {
+        if (event.pointerType !== 'mouse') {
+            return;
+        }
+
+        pointerStartYRef.current = event.clientY;
+        pointerStartAtRef.current = performance.now();
+    }, []);
+
+    const handlePointerUp = useCallback((event: React.PointerEvent<HTMLElement>) => {
+        if (event.pointerType !== 'mouse' || pointerStartYRef.current == null) {
+            return;
+        }
+
+        const deltaY = event.clientY - pointerStartYRef.current;
+        const elapsed = Math.max(performance.now() - pointerStartAtRef.current, 16);
+        const velocityY = (deltaY / elapsed) * 1000;
+        pointerStartYRef.current = null;
+        applyGesture(deltaY, velocityY, event);
+    }, [applyGesture]);
+
+    const handlePointerCancel = useCallback(() => {
+        pointerStartYRef.current = null;
+    }, []);
 
     useEffect(() => {
         const root = document.querySelector('.freeflow');
@@ -312,33 +357,20 @@ function MenuSheetContent({
     const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
 
     return (
-        <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
-            {!isExpanded ? <SheetHandle mode="surface" /> : null}
-            <SheetHandle className="relative z-[20]" mode={isExpanded ? 'bar' : 'overlay'} />
-
-            <div className="absolute right-3 top-3 z-[22]">
-                <button
-                    type="button"
-                    onClick={(event) => {
-                        event.stopPropagation();
-                        if (snap === 'closed') {
-                            setSnap('peek');
-                            return;
-                        }
-                        if (snap === 'peek') {
-                            setSnap('expanded');
-                            return;
-                        }
-                        setSnap('peek');
-                    }}
-                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
-                >
-                    {ctaLabel}
-                </button>
-            </div>
-
+        <div
+            className="relative flex h-full min-h-0 flex-col overflow-visible text-white"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+        >
             {!isExpanded ? (
-                <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3" style={{ paddingBottom: stackSafeBottom }}>
+                <div
+                    className="relative z-10 flex min-h-0 flex-1 flex-col px-3"
+                    style={{ paddingBottom: stackSafeBottom }}
+                    onTouchStart={handleSwipeStart}
+                    onTouchEnd={handleSwipeEnd}
+                    onWheel={handlePeekWheel}
+                >
                     <div
                         ref={stackRef}
                         className="absolute inset-x-3 z-[55] island-stack"
@@ -390,6 +422,15 @@ function MenuSheetContent({
                             </div>
                         </div>
                     </div>
+                    <div className="pointer-events-auto mt-auto flex justify-end pb-[calc(env(safe-area-inset-bottom)+96px)] pr-1">
+                        <button
+                            type="button"
+                            onClick={handleCtaPress}
+                            className="rounded-full bg-black/45 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/55 hover:text-white"
+                        >
+                            {ctaLabel}
+                        </button>
+                    </div>
                 </div>
             ) : (
                 <AnimatePresence>
@@ -400,11 +441,27 @@ function MenuSheetContent({
                         className="flex min-h-0 flex-1 flex-col"
                     >
                         <div className="px-3 pt-2 pb-1.5">
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">{headerTitle}</div>
-                            {resultSummary ? <div className="mt-1 text-[12px] text-white/56">{resultSummary}</div> : null}
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">{headerTitle}</div>
+                                    {resultSummary ? <div className="mt-1 text-[12px] text-white/56">{resultSummary}</div> : null}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleCtaPress}
+                                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                                >
+                                    {ctaLabel}
+                                </button>
+                            </div>
                         </div>
 
-                        <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-2 px-3" style={{ paddingBottom: expandedSafeBottom }}>
+                        <SheetScrollable
+                            className="list-scroll tiny-scroll min-h-0 flex-1 space-y-2 px-3"
+                            style={{ paddingBottom: expandedSafeBottom }}
+                            onTouchStart={handleSwipeStart}
+                            onTouchEnd={handleSwipeEnd}
+                        >
                             <div ref={scrollContainerRef} className="space-y-2">
                                 {normalizedItems.map((item, index) => {
                                     const isActive = item._uiId === highlightedId;

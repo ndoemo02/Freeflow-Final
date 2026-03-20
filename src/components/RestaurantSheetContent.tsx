@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import SheetHandle from './sheet/SheetHandle';
 import SheetScrollable from './sheet/SheetScrollable';
+import { useBottomSheetContext } from './sheet/BottomSheetContainer';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
 
@@ -230,7 +230,12 @@ export default function RestaurantSheetContent({
     snap,
     setSnap,
 }: RestaurantSheetContentProps) {
-    const touchStartYRef = useRef<number | null>(null);
+    const { boundary } = useBottomSheetContext();
+    const swipeStartYRef = useRef<number | null>(null);
+    const swipeStartAtRef = useRef(0);
+    const lastWheelAtRef = useRef(0);
+    const pointerStartYRef = useRef<number | null>(null);
+    const pointerStartAtRef = useRef(0);
     const activeIndex = useMemo(() => {
         const found = items.findIndex((item) => item._uiId === highlightedId);
         return found >= 0 ? found : 0;
@@ -254,45 +259,114 @@ export default function RestaurantSheetContent({
         setHighlightedId(nextItem._uiId);
     }, [items, setHighlightedId]);
 
-    const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-        if (isExpanded || Math.abs(event.deltaY) < 5) {
+    const handleCtaPress = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        if (snap === 'closed') {
+            setSnap('peek');
+            return;
+        }
+        if (snap === 'peek') {
+            setSnap('expanded');
+            return;
+        }
+        setSnap('peek');
+    }, [setSnap, snap]);
+
+    const handleSwipeStart = useCallback((event: React.TouchEvent<HTMLElement>) => {
+        swipeStartYRef.current = event.touches[0]?.clientY ?? null;
+        swipeStartAtRef.current = performance.now();
+    }, []);
+
+    const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
+        if (isExpanded || Math.abs(event.deltaY) < 8) {
+            return;
+        }
+
+        const now = performance.now();
+        if (now - lastWheelAtRef.current < 90) {
+            event.preventDefault();
             return;
         }
 
         event.preventDefault();
+        event.stopPropagation();
+        lastWheelAtRef.current = now;
         const direction = event.deltaY > 0 ? 1 : -1;
-        selectIndex(activeIndex + direction);
+        const steps = Math.min(3, Math.max(1, Math.round(Math.abs(event.deltaY) / 120)));
+        selectIndex(activeIndex + direction * steps);
     }, [activeIndex, isExpanded, selectIndex]);
 
-    const handlePeekTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
-        if (isExpanded) {
+    const applyGesture = useCallback((
+        deltaY: number,
+        velocityY: number,
+        event?: { preventDefault?: () => void; stopPropagation?: () => void },
+    ) => {
+        const isStrongSwipe = Math.abs(deltaY) >= 96 || Math.abs(velocityY) >= 900;
+        if (!isStrongSwipe) {
+            if (snap !== 'expanded' && Math.abs(deltaY) >= 28) {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                selectIndex(activeIndex + (deltaY < 0 ? 1 : -1));
+            }
             return;
         }
 
-        touchStartYRef.current = event.touches[0]?.clientY ?? null;
-    }, [isExpanded]);
+        if (deltaY < 0 && snap !== 'expanded') {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            setSnap('expanded');
+            return;
+        }
 
-    const handlePeekTouchEnd = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
-        if (isExpanded || touchStartYRef.current == null) {
+        if (deltaY > 0 && snap === 'expanded' && boundary.atTop) {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            setSnap('peek');
+        }
+    }, [activeIndex, boundary.atTop, selectIndex, setSnap, snap]);
+
+    const handleSwipeEnd = useCallback((event: React.TouchEvent<HTMLElement>) => {
+        if (swipeStartYRef.current == null) {
             return;
         }
 
         const endY = event.changedTouches[0]?.clientY;
         if (typeof endY !== 'number') {
-            touchStartYRef.current = null;
+            swipeStartYRef.current = null;
             return;
         }
 
-        const delta = endY - touchStartYRef.current;
-        touchStartYRef.current = null;
+        const deltaY = endY - swipeStartYRef.current;
+        const elapsed = Math.max(performance.now() - swipeStartAtRef.current, 16);
+        const velocityY = (deltaY / elapsed) * 1000;
+        swipeStartYRef.current = null;
+        applyGesture(deltaY, velocityY, event);
+    }, [applyGesture]);
 
-        if (Math.abs(delta) < 24) {
+    const handlePointerDown = useCallback((event: React.PointerEvent<HTMLElement>) => {
+        if (event.pointerType !== 'mouse') {
             return;
         }
 
-        const direction = delta < 0 ? 1 : -1;
-        selectIndex(activeIndex + direction);
-    }, [activeIndex, isExpanded, selectIndex]);
+        pointerStartYRef.current = event.clientY;
+        pointerStartAtRef.current = performance.now();
+    }, []);
+
+    const handlePointerUp = useCallback((event: React.PointerEvent<HTMLElement>) => {
+        if (event.pointerType !== 'mouse' || pointerStartYRef.current == null) {
+            return;
+        }
+
+        const deltaY = event.clientY - pointerStartYRef.current;
+        const elapsed = Math.max(performance.now() - pointerStartAtRef.current, 16);
+        const velocityY = (deltaY / elapsed) * 1000;
+        pointerStartYRef.current = null;
+        applyGesture(deltaY, velocityY, event);
+    }, [applyGesture]);
+
+    const handlePointerCancel = useCallback(() => {
+        pointerStartYRef.current = null;
+    }, []);
 
     useEffect(() => {
         const root = document.querySelector('.freeflow');
@@ -312,39 +386,34 @@ export default function RestaurantSheetContent({
     const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
 
     return (
-        <div className="relative flex h-full min-h-0 flex-col overflow-visible text-white">
-            {!isExpanded ? <SheetHandle mode="surface" /> : null}
-            <SheetHandle className="relative z-[20]" mode={isExpanded ? 'bar' : 'overlay'} />
-
-            <div className="absolute right-3 top-3 z-[22]">
-                <button
-                    type="button"
-                    onClick={(event) => {
-                        event.stopPropagation();
-                        if (snap === 'closed') {
-                            setSnap('peek');
-                            return;
-                        }
-                        if (snap === 'peek') {
-                            setSnap('expanded');
-                            return;
-                        }
-                        setSnap('peek');
-                    }}
-                    className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
-                >
-                    {ctaLabel}
-                </button>
-            </div>
-
+        <div
+            className="relative flex h-full min-h-0 flex-col overflow-visible text-white"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+        >
             {isExpanded ? (
                 <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-3">
-                    <div className="mb-1.5 pl-0.5">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">W poblizu</div>
-                        <div className="mt-1 text-[14px] font-semibold text-white">Polecane miejsca</div>
+                    <div className="mb-1.5 pl-0.5 flex items-start justify-between gap-3">
+                        <div>
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">W poblizu</div>
+                            <div className="mt-1 text-[14px] font-semibold text-white">Polecane miejsca</div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleCtaPress}
+                            className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                        >
+                            {ctaLabel}
+                        </button>
                     </div>
 
-                    <SheetScrollable className="list-scroll tiny-scroll min-h-0 flex-1 space-y-0.5 pr-1" style={{ paddingBottom: expandedSafeBottom }}>
+                    <SheetScrollable
+                        className="list-scroll tiny-scroll min-h-0 flex-1 space-y-0.5 pr-1"
+                        style={{ paddingBottom: expandedSafeBottom }}
+                        onTouchStart={handleSwipeStart}
+                        onTouchEnd={handleSwipeEnd}
+                    >
                         {items.map((item, index) => (
                             <div key={item._uiId} className="pb-0.5 last:pb-0">
                                 <FloatingRestaurantListCard
@@ -361,7 +430,13 @@ export default function RestaurantSheetContent({
                     </SheetScrollable>
                 </div>
             ) : (
-                <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3" style={{ paddingBottom: stackSafeBottom }}>
+                <div
+                    className="relative z-10 flex min-h-0 flex-1 flex-col px-3"
+                    style={{ paddingBottom: stackSafeBottom }}
+                    onTouchStart={handleSwipeStart}
+                    onTouchEnd={handleSwipeEnd}
+                    onWheel={handlePeekWheel}
+                >
                     <div
                         className="absolute inset-x-3 z-[55] island-stack"
                         style={{
@@ -371,9 +446,6 @@ export default function RestaurantSheetContent({
                         }}
                     >
                         <div
-                            onWheel={handlePeekWheel}
-                            onTouchStart={handlePeekTouchStart}
-                            onTouchEnd={handlePeekTouchEnd}
                             className="relative overflow-visible"
                             style={{
                                 height: `${stackHeight}px`,
@@ -408,6 +480,15 @@ export default function RestaurantSheetContent({
                                 ))}
                             </div>
                         </div>
+                    </div>
+                    <div className="pointer-events-auto mt-auto flex justify-end pb-[calc(env(safe-area-inset-bottom)+96px)] pr-1">
+                        <button
+                            type="button"
+                            onClick={handleCtaPress}
+                            className="rounded-full bg-black/45 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/55 hover:text-white"
+                        >
+                            {ctaLabel}
+                        </button>
                     </div>
                 </div>
             )}

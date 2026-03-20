@@ -1,17 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React, { HTMLAttributes, useEffect, useRef } from 'react';
 import { CSSProperties } from 'react';
 import { useBottomSheetContext } from './BottomSheetContainer';
 import { readSheetBoundary } from './sheetBoundary';
 
-interface SheetScrollableProps {
+interface SheetScrollableProps extends Omit<HTMLAttributes<HTMLDivElement>, 'style' | 'className'> {
     children: React.ReactNode;
     className?: string;
     style?: CSSProperties;
 }
 
-export default function SheetScrollable({ children, className = '', style }: SheetScrollableProps) {
+export default function SheetScrollable({ children, className = '', style, ...restProps }: SheetScrollableProps) {
     const { reportBoundary } = useBottomSheetContext();
     const scrollRef = useRef<HTMLDivElement>(null);
+    const { onScroll, ...nativeProps } = restProps;
 
     useEffect(() => {
         reportBoundary(readSheetBoundary(scrollRef.current));
@@ -21,7 +22,11 @@ export default function SheetScrollable({ children, className = '', style }: She
         <div
             ref={scrollRef}
             className={className}
-            onScroll={() => reportBoundary(readSheetBoundary(scrollRef.current))}
+            onScroll={(event) => {
+                reportBoundary(readSheetBoundary(scrollRef.current));
+                onScroll?.(event);
+            }}
+            {...nativeProps}
             style={{
                 overflowY: 'auto',
                 touchAction: 'pan-y',
