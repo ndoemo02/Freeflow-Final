@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "./pages/Home";
 import { AuthProvider } from "./state/auth";
 import { useUI } from "./state/ui";
@@ -17,11 +17,11 @@ import AuthModal from "./components/AuthModal";
 import MenuDrawer from "./ui/MenuDrawer";
 import { ThemeProvider } from "./state/ThemeContext";
 import RestaurantBackground from "./components/RestaurantBackground";
-import MenuViewer from "./components/MenuViewer";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
 import DevOverlay from "./components/DevOverlay";
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
+import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
@@ -50,23 +50,20 @@ function AppContent() {
 
       <main className="relative z-10">
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/ui-lab" element={<UiLab />} />
-          <Route path="/business" element={<BusinessClientPanel />} />
-          <Route path="/panel/customer" element={<CustomerPanel />} />
-          <Route path="/panel/business" element={<BusinessPanel />} />
-          <Route path="/panel/business-v2" element={<BusinessPanelV2 />} />
-          <Route path="/panel/business-kds" element={<BusinessPanelNew />} />
-          <Route path="/panel/business_kds" element={<BusinessPanelNew />} />
-          <Route path="/business_kds" element={<BusinessPanelNew />} />
-          <Route path="/business-panel" element={<BusinessPanel />} />
-          <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/panel/admin" element={<AdminPanel />} />
-          <Route path="/admin-panel" element={<AdminPanel />} />
-          <Route path="/driver" element={<DriverPanel />} />
-          <Route path="/restaurants" element={<ClientPanel />} />
-          <Route path="/client" element={<ClientPanel />} />
-          <Route path="/panel/client" element={<ClientPanel />} />
+          <Route path={ROUTES.HOME} element={<Home />} />
+          <Route path={ROUTES.UI_LAB} element={<UiLab />} />
+          <Route path={ROUTES.BUSINESS_READONLY} element={<BusinessClientPanel />} />
+          <Route path={ROUTES.PANEL_CUSTOMER} element={<CustomerPanel />} />
+          <Route path={ROUTES.PANEL_BUSINESS} element={<BusinessPanel />} />
+          <Route path={ROUTES.PANEL_BUSINESS_V2} element={<BusinessPanelV2 />} />
+          <Route path={ROUTES.PANEL_BUSINESS_KDS} element={<BusinessPanelNew />} />
+          <Route path={ROUTES.PANEL_ADMIN} element={<AdminPanel />} />
+          <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />
+          <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
+          {ROUTE_ALIASES.map((alias) => (
+            <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />
+          ))}
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Routes>
       </main>
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUI } from "../state/ui"
 import { useAuth } from "../state/auth"
 
 import { getUserRole } from "../lib/menuBuilder"
+import { ROUTES, FEATURE_FLAGS, isRouteEnabled } from "../app/routeConfig"
 
 export default function MenuDrawer() {
   const isOpen = useUI((s) => s.drawerOpen)
@@ -146,8 +147,10 @@ export default function MenuDrawer() {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {/* Główne sekcje */}
                 <MenuItem icon="🏠" text="Główne" onClick={close} />
-                <MenuItem icon="🍽️" text="Odkrywaj Jedzenie" route="/restaurants" />
-                <MenuItem icon="📅" text="Rezerwacje Stolików" route="/reservations" />
+                <MenuItem icon="🍽️" text="Odkrywaj Jedzenie" route={ROUTES.PANEL_CLIENT} />
+                {isRouteEnabled('/reservations') && (
+                  <MenuItem icon="📅" text="Rezerwacje Stolików" route="/reservations" />
+                )}
 
                 {/* Separator */}
                 <div className="my-4 h-px bg-white/[0.12]"></div>
@@ -158,14 +161,14 @@ export default function MenuDrawer() {
                   icon="📂"
                   isExpanded={expandedSections['Panele']}
                 >
-                  <MenuItem icon="🙍" text="Panel Klienta" route="/panel/customer" isSubItem requiresAuth />
-                  <MenuItem icon="💼" text="Panel Właściciela (Read-only)" route="/business" isSubItem requiresAuth />
-                  <MenuItem icon="🍳" text="Kitchen Display (KDS)" route="/panel/business-kds" isSubItem requiresAuth />
-                  <MenuItem icon="🖥️" text="Client View" route="/client" isSubItem requiresAuth />
-                  <MenuItem icon="🏢" text="Panel Biznesowy (Legacy)" route="/panel/business" isSubItem requiresAuth />
-                  <MenuItem icon="🆕" text="Panel Biznesowy v2 (Legacy)" route="/panel/business-v2" isSubItem requiresAuth />
-                  <MenuItem icon="🚗" text="Panel Kierowcy" route="/driver" isSubItem requiresAuth />
-                  <MenuItem icon="📈" text="Analytics" route="/panel/admin" isSubItem requiresAuth />
+                  <MenuItem icon="🙍" text="Panel Klienta" route={ROUTES.PANEL_CLIENT} isSubItem requiresAuth />
+                  <MenuItem icon="💼" text="Panel Właściciela (Read-only)" route={ROUTES.BUSINESS_READONLY} isSubItem requiresAuth />
+                  <MenuItem icon="🍳" text="Kitchen Display (KDS)" route={ROUTES.PANEL_BUSINESS_KDS} isSubItem requiresAuth />
+                  <MenuItem icon="🖥️" text="Panel Klienta (Legacy)" route={ROUTES.PANEL_CUSTOMER} isSubItem requiresAuth />
+                  <MenuItem icon="🏢" text="Panel Biznesowy (Legacy)" route={ROUTES.PANEL_BUSINESS} isSubItem requiresAuth />
+                  <MenuItem icon="🆕" text="Panel Biznesowy v2 (Legacy)" route={ROUTES.PANEL_BUSINESS_V2} isSubItem requiresAuth />
+                  <MenuItem icon="🚗" text="Panel Kierowcy" route={ROUTES.PANEL_DRIVER} isSubItem requiresAuth />
+                  <MenuItem icon="📈" text="Analytics" route={ROUTES.PANEL_ADMIN} isSubItem requiresAuth />
                 </ExpandableSection>
 
                 {/* Moja Aktywność */}
@@ -175,10 +178,10 @@ export default function MenuDrawer() {
                   isExpanded={expandedSections['Moja Aktywność']}
                 >
                   <MenuItem icon="🛒" text="Koszyk" onClick={() => {/* TODO: otwórz koszyk */ }} isSubItem />
-                  <MenuItem icon="📜" text="Historia" route="/order-history" isSubItem />
-                  <MenuItem icon="❤️" text="Ulubione" route="/favorites" isSubItem />
-                  <MenuItem icon="🚕" text="Moje Taksówki" route="/my-taxis" isSubItem />
-                  <MenuItem icon="🏨" text="Moje Hotele" route="/my-hotels" isSubItem />
+                  {isRouteEnabled('/order-history') && <MenuItem icon="📜" text="Historia" route="/order-history" isSubItem />}
+                  {isRouteEnabled('/favorites') && <MenuItem icon="❤️" text="Ulubione" route="/favorites" isSubItem />}
+                  {isRouteEnabled('/my-taxis') && <MenuItem icon="🚕" text="Moje Taksówki" route="/my-taxis" isSubItem />}
+                  {isRouteEnabled('/my-hotels') && <MenuItem icon="🏨" text="Moje Hotele" route="/my-hotels" isSubItem />}
                 </ExpandableSection>
 
                 {/* Ustawienia i Pomoc */}
@@ -187,11 +190,11 @@ export default function MenuDrawer() {
                   icon="⚙️"
                   isExpanded={expandedSections['Ustawienia i Pomoc']}
                 >
-                  <MenuItem icon="👤" text="Profil" route="/profile" isSubItem />
-                  <MenuItem icon="🎤" text="Ustawienia Głosu" route="/voice-settings" isSubItem />
-                  <MenuItem icon="🔔" text="Powiadomienia" route="/notifications" isSubItem />
-                  <MenuItem icon="❓" text="FAQ" route="/faq" isSubItem />
-                  <MenuItem icon="📞" text="Kontakt" route="/contact" isSubItem />
+                  {isRouteEnabled('/profile') && <MenuItem icon="👤" text="Profil" route="/profile" isSubItem />}
+                  {isRouteEnabled('/voice-settings') && <MenuItem icon="🎤" text="Ustawienia Głosu" route="/voice-settings" isSubItem />}
+                  {isRouteEnabled('/notifications') && <MenuItem icon="🔔" text="Powiadomienia" route="/notifications" isSubItem />}
+                  {isRouteEnabled('/faq') && <MenuItem icon="❓" text="FAQ" route="/faq" isSubItem />}
+                  {isRouteEnabled('/contact') && <MenuItem icon="📞" text="Kontakt" route="/contact" isSubItem />}
                 </ExpandableSection>
 
                 {/* Separator */}
@@ -226,13 +229,13 @@ export default function MenuDrawer() {
                     icon="🔧"
                     isExpanded={expandedSections['Zarządzanie']}
                   >
-                    <MenuItem icon="📈" text="Panel Biznesowy" route="/business-panel" isSubItem />
-                    <MenuItem icon="🔑" text="Panel Admina" route="/panel/admin" isSubItem />
+                    <MenuItem icon="📈" text="Panel Biznesowy" route={ROUTES.PANEL_BUSINESS} isSubItem />
+                    <MenuItem icon="🔑" text="Panel Admina" route={ROUTES.PANEL_ADMIN} isSubItem />
                   </ExpandableSection>
                 )}
 
                 {/* Labs - tylko dla admin */}
-                {userRole === 'admin' && (
+                {userRole === 'admin' && FEATURE_FLAGS.DEV_LABS && (
                   <ExpandableSection
                     title="Labs (DEV)"
                     icon="🚀"
