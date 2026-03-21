@@ -224,9 +224,19 @@ function MenuSheetContent({
             return;
         }
 
-        const activeElement = scrollContainerRef.current.querySelector(`[data-id="${highlightedId}"]`);
+        const container = scrollContainerRef.current;
+        const activeElement = container.querySelector(`[data-id="${highlightedId}"]`);
         if (activeElement) {
-            (activeElement as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const target = activeElement as HTMLElement;
+            const containerRect = container.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const isVisible =
+                targetRect.top >= containerRect.top + 8 &&
+                targetRect.bottom <= containerRect.bottom - 8;
+
+            if (!isVisible) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
     }, [highlightedId, isExpanded]);
 
