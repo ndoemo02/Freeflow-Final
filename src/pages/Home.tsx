@@ -16,6 +16,7 @@ import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useUIPanels } from "../hooks/useUIPanels";
 import { useTTS } from "../hooks/useTTS";
 import { useActionDispatcher } from "../hooks/useActionDispatcher";
+import { useLiveEvents } from "../hooks/useLiveEvents";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
@@ -45,6 +46,8 @@ export default function Home() {
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
   const { dispatch } = useActionDispatcher();
+  const liveModeEnabled = String(import.meta.env.VITE_LIVE_MODE || '').toLowerCase() === 'true';
+  const { liveConnected } = useLiveEvents({ enabled: liveModeEnabled, sessionId, dispatch });
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
@@ -143,6 +146,11 @@ export default function Home() {
     window.addEventListener('freeflow:selectRestaurant', handler);
     return () => window.removeEventListener('freeflow:selectRestaurant', handler);
   }, [handleTextSubmit]);
+
+  useEffect(() => {
+    if (!liveModeEnabled) return;
+    console.log(`[LiveEvents] mode=on connected=${liveConnected}`);
+  }, [liveModeEnabled, liveConnected]);
 
   // Handle menu item order from MenuIsland "Kliknij pozycjÄ™"
   useEffect(() => {
