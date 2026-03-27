@@ -75,11 +75,7 @@ export function useIslandGestures({
     const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
         if (isExpanded || Math.abs(event.deltaY) < 8) return;
         const now = performance.now();
-        if (now - lastWheelAtRef.current < 90) {
-            event.preventDefault();
-            return;
-        }
-        event.preventDefault();
+        if (now - lastWheelAtRef.current < 90) return;
         event.stopPropagation();
         lastWheelAtRef.current = now;
         const direction = event.deltaY > 0 ? 1 : -1;

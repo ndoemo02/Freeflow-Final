@@ -58,7 +58,13 @@ const normalizeRestaurants = (items: any[] | null | undefined) => {
 };
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
-    sessionId: localStorage.getItem('amber-session-id') || generateSessionId(),
+    sessionId: (() => {
+        const stored = localStorage.getItem('amber-session-id');
+        if (stored) return stored;
+        const newId = generateSessionId();
+        localStorage.setItem('amber-session-id', newId);
+        return newId;
+    })(),
     isThinking: false,
     error: null,
     lastResponse: '',

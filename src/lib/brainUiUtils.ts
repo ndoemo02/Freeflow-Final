@@ -7,6 +7,22 @@ export function deriveUIHints(response: BrainV2Response): UIHints {
         return { panel: 'none' };
     }
 
+    // Explicit menu-request intents: open/keep menu without clicking a card.
+    // Must be checked before the restaurants panel so "pokaż menu" is not
+    // shadowed by a stale restaurants list in the response.
+    const intent = response.intent || '';
+    const menuRequestIntents = ['show_menu', 'menu_request', 'show_restaurant_menu', 'view_menu'];
+    if (menuRequestIntents.includes(intent)) {
+        const menuState = useConversationStore.getState();
+        const menuRestaurantId =
+            response.currentRestaurant?.id ||
+            (response.context && response.context.currentRestaurant?.id) ||
+            menuState.currentRestaurant?.id;
+        if (menuRestaurantId || menuState.currentRestaurant) {
+            return { panel: 'menu', context: { restaurantId: menuRestaurantId } };
+        }
+    }
+
     // Explicit restaurants list mapping goes first if it exists
     if (response.restaurants && response.restaurants.length > 0) {
         return { panel: 'restaurants' };
@@ -17,7 +33,6 @@ export function deriveUIHints(response: BrainV2Response): UIHints {
         return { panel: 'business' };
     }
 
-    const intent = response.intent || '';
     if (intent.includes('kds') || intent === 'show_kds' || intent === 'kitchen_display') {
         return { panel: 'kds' };
     }
