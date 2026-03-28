@@ -17,6 +17,7 @@ import { useUIPanels } from "../hooks/useUIPanels";
 import { useTTS } from "../hooks/useTTS";
 import { useActionDispatcher } from "../hooks/useActionDispatcher";
 import { useLiveEvents } from "../hooks/useLiveEvents";
+import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
@@ -47,7 +48,15 @@ export default function Home() {
   const { play, stop, isSpeaking } = useTTS();
   const { dispatch } = useActionDispatcher();
   const liveModeEnabled = String(import.meta.env.VITE_LIVE_MODE || '').toLowerCase() === 'true';
-  const { liveConnected } = useLiveEvents({ enabled: liveModeEnabled, sessionId, dispatch });
+  const { liveConnected, socketRef } = useLiveEvents({ enabled: liveModeEnabled, sessionId, dispatch });
+  const {
+    isActive: liveSessionActive,
+    start: startLiveSession,
+    stop: stopLiveSession,
+  } = useGeminiLiveSession({
+    wsRef: socketRef,
+    enabled: liveModeEnabled,
+  });
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
@@ -175,6 +184,11 @@ export default function Home() {
         <div className="flex flex-col gap-1 pointer-events-auto">
           <div className="flex items-center gap-2 pl-1 mt-1">
             <StateIsland />
+            {liveSessionActive && (
+              <span className="text-[11px] font-semibold text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">
+                ● LIVE
+              </span>
+            )}
           </div>
         </div>
         <div className="flex gap-4 pointer-events-auto">
@@ -265,6 +279,13 @@ export default function Home() {
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <ExpectedContextPrompts />
           <VoiceCommandCenterV2
+            {...({
+              liveSession: {
+                isActive: liveSessionActive,
+                start: startLiveSession,
+                stop: stopLiveSession,
+              },
+            } as any)}
             recording={isListening}
             isProcessing={isThinking}
             isSpeaking={isSpeaking}

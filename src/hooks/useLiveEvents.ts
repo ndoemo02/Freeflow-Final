@@ -114,6 +114,5 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
         return true;
     }, []);
 
-    return { liveConnected: connected, sendToolCall };
+    return { liveConnected: connected, sendToolCall, socketRef };
 }
-
