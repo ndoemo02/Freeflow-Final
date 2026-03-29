@@ -30,7 +30,8 @@ import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
 // Constants
 // ---------------------------------------------------------------------------
 
-const MODEL = 'gemini-live-2.5-flash-native-audio';
+const MODEL = (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined)
+  || 'gemini-3.1-flash-live-preview';
 const MIC_MIME = 'audio/pcm;rate=16000';
 
 const SYSTEM_INSTRUCTION = [
