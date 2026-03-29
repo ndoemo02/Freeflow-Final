@@ -203,6 +203,9 @@ export function useGeminiLiveSession({
         //    backend handles idempotency via ICM.
       };
 
+      // Track if server closes session before mic starts (race condition guard).
+      let closedBeforeMic = false;
+
       // ------ Connect to Gemini Live ------
       const session = await ai.live.connect({
         model: MODEL,
@@ -224,10 +227,15 @@ export function useGeminiLiveSession({
           onerror: (e: ErrorEvent) => {
             console.error('[GeminiLive] error:', e);
             setError(e.message || 'gemini_live_error');
+            closedBeforeMic = true;
             stop();
           },
           onclose: () => {
             console.log('[GeminiLive] closed by server');
+            closedBeforeMic = true;
+            // Stop mic immediately if it was already started.
+            stopMicRef.current?.();
+            stopMicRef.current = null;
             if (activeRef.current) stop();
           },
         },
@@ -237,7 +245,7 @@ export function useGeminiLiveSession({
 
       // ------ Start microphone streaming ------
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
-        if (!sessionRef.current) return;
+        if (!sessionRef.current || !activeRef.current) return;
         try {
           sessionRef.current.sendRealtimeInput({
             audio: {
@@ -249,6 +257,16 @@ export function useGeminiLiveSession({
           // Session may have closed between check and send — ignore.
         }
       });
+
+      // If session closed while we were setting up the mic, abort immediately.
+      if (closedBeforeMic) {
+        stopMic();
+        sessionRef.current = null;
+        activeRef.current = false;
+        setIsActive(false);
+        console.warn('[GeminiLive] session closed before mic started — aborting');
+        return;
+      }
 
       stopMicRef.current = stopMic;
       activeRef.current = true;
