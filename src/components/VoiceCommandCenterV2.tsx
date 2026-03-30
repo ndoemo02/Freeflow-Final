@@ -115,11 +115,11 @@ export default function VoiceCommandCenterV2({
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="text-[#00ffcc] truncate font-medium text-sm w-full cursor-pointer flex items-center gap-2"
+                      className="text-[#00ffcc] font-medium text-sm w-full cursor-pointer flex items-center gap-2 min-w-0"
                       onClick={onClearResponse}
                     >
-                      <i className="fas fa-robot text-[#00ffcc]/60 text-xs" />
-                      <span className="truncate">{amberResponse}</span>
+                      <i className="fas fa-robot text-[#00ffcc]/60 text-xs flex-shrink-0" />
+                      <span className="truncate min-w-0 flex-1" title={amberResponse}>{amberResponse}</span>
                     </motion.div>
                   ) : (
                     <input

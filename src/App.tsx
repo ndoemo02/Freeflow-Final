@@ -17,6 +17,7 @@ import MenuDrawer from "./ui/MenuDrawer";
 import { ThemeProvider } from "./state/ThemeContext";
 import RestaurantBackground from "./components/RestaurantBackground";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
+import Settings from "./pages/Settings";
 import DevOverlay from "./components/DevOverlay";
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
@@ -58,6 +59,7 @@ function AppContent() {
           <Route path={ROUTES.PANEL_ADMIN} element={<AdminPanel />} />
           <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
+          <Route path={ROUTES.SETTINGS} element={<Settings />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />
           ))}

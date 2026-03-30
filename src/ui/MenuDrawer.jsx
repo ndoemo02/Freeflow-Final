@@ -188,6 +188,7 @@ export default function MenuDrawer() {
                   icon="⚙️"
                   isExpanded={expandedSections['Ustawienia i Pomoc']}
                 >
+                  <MenuItem icon="⚙️" text="Ustawienia" route={ROUTES.SETTINGS} isSubItem />
                   {isRouteEnabled('/profile') && <MenuItem icon="👤" text="Profil" route="/profile" isSubItem />}
                   {isRouteEnabled('/voice-settings') && <MenuItem icon="🎤" text="Ustawienia Głosu" route="/voice-settings" isSubItem />}
                   {isRouteEnabled('/notifications') && <MenuItem icon="🔔" text="Powiadomienia" route="/notifications" isSubItem />}

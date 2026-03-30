@@ -187,13 +187,16 @@ export default function Home() {
             {liveModeEnabled && (
               <button
                 onClick={liveSessionActive ? stopLiveSession : startLiveSession}
+                data-live={liveSessionActive}
+                aria-label={liveSessionActive ? 'Wyłącz tryb Live' : 'Włącz tryb Live'}
+                aria-pressed={liveSessionActive}
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
                   liveSessionActive
                     ? 'text-emerald-400 bg-emerald-400/10 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                     : 'text-white/50 bg-white/10 hover:bg-white/20'
                 }`}
               >
-                {liveSessionActive ? '● LIVE' : '○ LIVE'}
+                {liveSessionActive ? '● LIVE ON' : '○ LIVE'}
               </button>
             )}
           </div>

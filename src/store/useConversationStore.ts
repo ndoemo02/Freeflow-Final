@@ -59,8 +59,9 @@ const normalizeRestaurants = (items: any[] | null | undefined) => {
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
     sessionId: (() => {
-        const stored = localStorage.getItem('amber-session-id');
-        if (stored) return stored;
+        // Always generate a fresh session on page load to prevent stale FSM state restore.
+        // Session continuity within a tab is maintained by the store; cross-tab/reload resume
+        // is intentionally disabled to avoid ghost ordering states (BUG NEW-3).
         const newId = generateSessionId();
         localStorage.setItem('amber-session-id', newId);
         return newId;
@@ -165,23 +166,36 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             };
             const coords = await getBrowserCoords();
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    input: trimmed,
-                    text: trimmed,
-                    includeTTS: false,
-                    meta: { channel: 'web' },
-                    ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
-                })
-            });
+            const fetchController = new AbortController();
+            const fetchTimeoutId = window.setTimeout(() => fetchController.abort(), 20000);
+
+            let response: Response;
+            try {
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        input: trimmed,
+                        text: trimmed,
+                        includeTTS: false,
+                        meta: { channel: 'web' },
+                        ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
+                    }),
+                    signal: fetchController.signal
+                });
+            } finally {
+                window.clearTimeout(fetchTimeoutId);
+            }
 
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Brain error');
 
-            const amberReply = repairMojibakeText(data.reply || data.text || '');
+            const rawReply = repairMojibakeText(data.reply || data.text || '');
+            // Only show fallback when backend explicitly has no reply AND no FSM state change
+            // (empty reply + context change = backend processed but chose not to respond - that's valid)
+            const hasStateChange = !!data.context?.conversationPhase || !!data.restaurants?.length;
+            const amberReply = rawReply || (hasStateChange ? '' : 'Przepraszam, coś poszło nie tak. Spróbuj jeszcze raz.');
             const hasContext = !!data.context;
             const ctx = data.context || {};
             const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
@@ -238,7 +252,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: data.meta?.cart || ctx.cart || get().cart,
-                expectedContext: hasContext ? (ctx.expectedContext || null) : get().expectedContext,
+                // When phase resets to idle, always clear expectedContext to prevent UI desynchro (P4)
+                expectedContext: isIdle ? null : (hasContext ? (ctx.expectedContext || null) : get().expectedContext),
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
@@ -263,9 +278,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }
 
         } catch (err) {
+            const isTimeout = err instanceof Error && err.name === 'AbortError';
             set({
                 isThinking: false,
-                error: err instanceof Error ? err.message : 'Unknown error'
+                lastResponse: isTimeout ? 'Przepraszam, odpowiedź trwa zbyt długo. Spróbuj jeszcze raz.' : '',
+                error: isTimeout ? null : (err instanceof Error ? err.message : 'Unknown error')
             });
         }
     }
