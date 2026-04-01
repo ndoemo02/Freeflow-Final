@@ -20,7 +20,7 @@ import { useLiveEvents } from "../hooks/useLiveEvents";
 import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
-import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
+import VoiceDock from "../components/VoiceDock";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -71,6 +71,7 @@ export default function Home() {
 
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
+  const setVoiceActive = useUI((s) => s.setVoiceActive);
   const { setIsOpen } = useCart() as any;
 
   // --- Effect: Handle Brain Response ---
@@ -94,14 +95,16 @@ export default function Home() {
       const audioContent = lastFullResponse.audioContent;
       const ttsText = lastFullResponse.tts?.text || lastFullResponse.tts_text || lastFullResponse.text;
 
-      if (ttsText) {
+      if (ttsText && !liveSessionActive) {
         // play(text, audioContent) - hook handles priority
+        // Guard: when Live owns the session, Gemini handles audio natively
         play(ttsText, audioContent);
       }
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
-      // Keep sync enabled for confirm_order because response carries authoritative meta.cart.
-      if (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length) {
+      // During Live mode useLiveEvents already dispatched these actions from the same
+      // tool_result message — skip here to prevent double SHOW_CART / SYNC_CART.
+      if (!liveSessionActive && (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length)) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
         const fakeMeta = {
           ...lastFullResponse.meta,
@@ -111,7 +114,7 @@ export default function Home() {
         dispatch(lastFullResponse.actions, fakeMeta, responseKey, lastFullResponse.events);
       }
     }
-  }, [lastFullResponse, setHints, play, dispatch]);
+  }, [lastFullResponse, liveSessionActive, setHints, play, dispatch]);
 
   // --- Handlers ---
 
@@ -133,9 +136,24 @@ export default function Home() {
   }, [isListening, startListening, stop, resetTranscript]);
 
   const handleTextSubmit = useCallback(async (text: string) => {
-    stop(); // Stop TTS
-    await sendMessage(text);
-  }, [sendMessage, stop]);
+    const sanitized = text.trim();
+    if (!sanitized) return;
+
+    // Block non-user content: raw HTML, JSON blobs, JS error prefixes
+    if (/^[<{[]/.test(sanitized) || /^(Error|TypeError|SyntaxError|Failed|Uncaught)\b/.test(sanitized)) {
+      console.warn('[IntakeGate] Blocked non-user input:', sanitized.slice(0, 80));
+      return;
+    }
+
+    // When Gemini Live is active it owns the session.
+    // BrainV2 must only be reached via ToolRouter (Gemini tool calls), never directly.
+    if (liveSessionActive) {
+      return;
+    }
+
+    stop(); // Stop TTS before sending
+    await sendMessage(sanitized);
+  }, [liveSessionActive, sendMessage, stop]);
 
   // Handle voice transcript finalization
   useEffect(() => {
@@ -143,6 +161,18 @@ export default function Home() {
       handleTextSubmit(transcript);
     }
   }, [isListening, transcript, handleTextSubmit]);
+
+  // Sync isListening → global voiceActive (consumed by BottomTabBar FAB)
+  useEffect(() => {
+    setVoiceActive(isListening);
+  }, [isListening, setVoiceActive]);
+
+  // Handle voice trigger from BottomTabBar FAB
+  useEffect(() => {
+    const handler = () => handleMicClick();
+    window.addEventListener('freeflow:voice:trigger', handler);
+    return () => window.removeEventListener('freeflow:voice:trigger', handler);
+  }, [handleMicClick]);
 
   // Handle restaurant selection from carousel "Wybierz" button
   useEffect(() => {
@@ -286,16 +316,9 @@ export default function Home() {
 
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-[70] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <ExpectedContextPrompts />
-          <VoiceCommandCenterV2
-            {...({
-              liveSession: {
-                isActive: liveSessionActive,
-                start: startLiveSession,
-                stop: stopLiveSession,
-              },
-            } as any)}
+          <VoiceDock
             recording={isListening}
             isProcessing={isThinking}
             isSpeaking={isSpeaking}
@@ -309,6 +332,11 @@ export default function Home() {
             }}
             visible={true}
             isPresenting={uiHints.panel !== 'none'}
+            liveSession={{
+              isActive: liveSessionActive,
+              start: startLiveSession,
+              stop: stopLiveSession,
+            }}
           />
         </div>
       )}

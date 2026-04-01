@@ -1,3 +1,4 @@
+// @deprecated — zastąpiony przez VoiceDock. Nieużywany. Etap 8 (Codex cleanup).
 import { useState, useEffect } from "react";
 import styles from "./VoiceInputBar.module.css";
 

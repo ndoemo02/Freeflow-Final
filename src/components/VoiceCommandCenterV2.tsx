@@ -1,3 +1,4 @@
+// @deprecated — zastąpiony przez VoiceDock. Nie usuwać ręcznie — Etap 8 (Codex cleanup).
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AmberIndicator, AmberStatusNode } from "./AmberIndicator";

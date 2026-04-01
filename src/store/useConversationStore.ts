@@ -1,6 +1,7 @@
 ﻿import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
 import { repairMojibakeText } from '../lib/textSanitizer';
+import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 
 interface ConversationState {
     sessionId: string;
@@ -32,30 +33,6 @@ interface ConversationState {
 
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-const normalizeMenuItems = (items: any[] | null | undefined) => {
-    if (!Array.isArray(items)) return null;
-    return items.filter(Boolean).map((item, index) => ({
-        ...item,
-        id: item.id || item.menuItemId || item.menu_item_id || `menu-${index}`,
-        name: repairMojibakeText(item.name || item.base_name || item.title || 'Pozycja menu'),
-        description: repairMojibakeText(item.description || item.desc || item.ingredients || ''),
-        category: item.category || item.section || item.cuisine_type || null,
-        price: Number(item.price ?? item.price_pln ?? item.pricePln ?? 0),
-        price_pln: Number(item.price_pln ?? item.price ?? item.pricePln ?? 0),
-        available: item.available !== false,
-    }));
-};
-
-const normalizeRestaurants = (items: any[] | null | undefined) => {
-    if (!Array.isArray(items)) return null;
-    return items.filter(Boolean).map((item, index) => ({
-        ...item,
-        id: item.id || `restaurant-${index}`,
-        name: repairMojibakeText(item.display_name || item.name || 'Restauracja'),
-        cuisine_type: repairMojibakeText(item.cuisine_type || item.category || item.city || 'Restauracja'),
-        city: repairMojibakeText(item.city || item.address || ''),
-    }));
-};
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
     sessionId: (() => {
@@ -192,10 +169,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             if (!response.ok) throw new Error(data.error || 'Brain error');
 
             const rawReply = repairMojibakeText(data.reply || data.text || '');
-            // Only show fallback when backend explicitly has no reply AND no FSM state change
-            // (empty reply + context change = backend processed but chose not to respond - that's valid)
-            const hasStateChange = !!data.context?.conversationPhase || !!data.restaurants?.length;
-            const amberReply = rawReply || (hasStateChange ? '' : 'Przepraszam, coś poszło nie tak. Spróbuj jeszcze raz.');
+            // Show fallback only when there is no reply AND no visible UI content (restaurants/menu).
+            // A phase-only change with no visible content should still show a fallback (T06/T08).
+            const hasVisibleContent = !!(data.restaurants?.length || data.menuItems?.length || data.menu);
+            const amberReply = rawReply || (hasVisibleContent ? '' : 'Przepraszam, coś poszło nie tak. Spróbuj jeszcze raz.');
             const hasContext = !!data.context;
             const ctx = data.context || {};
             const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
@@ -207,10 +184,21 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 console.warn('⚠️ [useConversationStore] Backend response missing `context`. Retaining current FSM phase to prevent UI reset.');
                 newPhase = get().conversationPhase;
             } else if (!newPhase) {
-                newPhase = 'idle';
+                // Context exists but backend didn't include conversationPhase — retain current
+                // to avoid spurious reset to idle (T04: ordering→idle desynchro).
+                newPhase = get().conversationPhase || 'idle';
+                console.debug('[FSM_PHASE] context present but no phase — retained:', newPhase);
             }
+            // When find_nearby returns fresh restaurants, treat as discovery/idle regardless
+            // of whatever phase the backend carried over. This covers the case where the user
+            // was in restaurant_selected and says "show me restaurants again" — the backend may
+            // keep phase=restaurant_selected in its FSM, but the UI should return to list mode.
+            const isFindNearby = data.intent === 'find_nearby' && !!restaurantsFromResponse?.length;
+            if (isFindNearby) newPhase = 'idle';
+
             const isIdle = newPhase === 'idle';
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
+            console.debug('[UI_STATE] listVisible:', isIdle && !!restaurantsFromResponse?.length, 'resultsCount:', restaurantsFromResponse?.length ?? 0, 'focusedRestaurant:', isFindNearby ? null : get().selectedRestaurantPreviewId, 'mode:', newPhase);
 
             const isOrderSuccess = data.intent === 'order_success'
                 || data.intent === 'order_complete'
@@ -249,11 +237,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 lastContext: ctx,
                 lastFullResponse: data,
                 conversationPhase: newPhase,
-                currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant),
+                currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: data.meta?.cart || ctx.cart || get().cart,
-                // When phase resets to idle, always clear expectedContext to prevent UI desynchro (P4)
-                expectedContext: isIdle ? null : (hasContext ? (ctx.expectedContext || null) : get().expectedContext),
+                // When phase resets to idle (or find_nearby forces discovery), clear expectedContext to prevent UI desynchro (P4)
+                expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : get().expectedContext),
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,

@@ -15,6 +15,9 @@ type UIState = {
   openAuth: () => void;
   closeAuth: () => void;
 
+  voiceActive: boolean;
+  setVoiceActive: (active: boolean) => void;
+
   // Presentation State
   mode: UIMode;
   presentationItems: CardData[];
@@ -35,6 +38,9 @@ export const useUI = create<UIState>((set) => ({
   closeDrawer: () => set({ drawerOpen: false }),
   openAuth: () => set({ authOpen: true }),
   closeAuth: () => set({ authOpen: false }),
+
+  voiceActive: false,
+  setVoiceActive: (active) => set({ voiceActive: active }),
 
   // Presentation Defaults
   mode: 'standard_chat',

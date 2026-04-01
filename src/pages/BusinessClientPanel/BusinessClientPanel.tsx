@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
     fetchBusinessDashboard,
     BusinessDashboardData,
@@ -31,7 +31,6 @@ import ActiveOrdersList from '../../components/business/ActiveOrdersList';
 
 // Styles
 import './BusinessClientPanel.css';
-import StarfieldBackground from '../../components/StarfieldBackground';
 
 // Icons as simple components
 const IconDollar = () => <span>💰</span>;
@@ -42,6 +41,8 @@ const IconUsers = () => <span>👥</span>;
 const REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function BusinessClientPanel() {
+    const navigate = useNavigate();
+
     // Data state
     const [data, setData] = useState<BusinessDashboardData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -75,7 +76,6 @@ export default function BusinessClientPanel() {
     if (loading) {
         return (
             <div className="business-panel">
-                <StarfieldBackground />
                 <div className="business-panel__loading">
                     <div className="business-panel__spinner" />
                     <p>Ładowanie danych...</p>
@@ -105,7 +105,6 @@ export default function BusinessClientPanel() {
 
     return (
         <div className="business-panel">
-            <StarfieldBackground />
             {/* Header */}
             <header className="business-panel__header">
                 <div className="business-panel__header-left">
@@ -115,11 +114,31 @@ export default function BusinessClientPanel() {
                     </p>
                 </div>
                 <div className="business-panel__header-right">
-                    <button onClick={loadData} className="business-panel__refresh-btn" title="Odśwież">
-                        🔄
+                    {/* 1 — Return: always visible, labeled, first in scan order */}
+                    <button
+                        onClick={() => navigate('/')}
+                        className="business-panel__back-btn"
+                        aria-label="Wróć na stronę główną"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <polyline points="12 19 5 12 12 5" />
+                        </svg>
+                        Strona główna
                     </button>
+
+                    {/* 2 — Refresh: small utility, icon only */}
+                    <button onClick={loadData} className="business-panel__refresh-btn" title="Odśwież dane">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                    </button>
+
+                    {/* 3 — KDS: primary workspace destination */}
                     <Link to="/panel/business-kds" className="business-panel__kds-link">
-                        🍳 Kitchen Display
+                        Kitchen Display
                     </Link>
                 </div>
             </header>

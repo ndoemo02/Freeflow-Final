@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatusToggle } from '../components/driver/StatusToggle';
 import { SidebarMetrics } from '../components/driver/SidebarMetrics';
 import { DriverMap } from '../components/driver/DriverMap';
@@ -6,6 +7,7 @@ import { motion } from 'framer-motion';
 
 export default function DriverPanel() {
     const [isOnline, setIsOnline] = useState(false);
+    const navigate = useNavigate();
 
     return (
         <div className="w-full h-screen bg-[#0f0f13] text-white flex overflow-hidden">
@@ -61,6 +63,24 @@ export default function DriverPanel() {
                 <div className="absolute inset-0 z-0">
                     <DriverMap isOnline={isOnline} />
                 </div>
+
+                {/* Back to home — top-left, always visible */}
+                <button
+                    onClick={() => navigate('/')}
+                    className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium"
+                    style={{
+                        background: 'rgba(13,16,32,0.85)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        color: 'rgba(255,255,255,0.60)',
+                    }}
+                >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    Strona główna
+                </button>
 
                 {/* Overlay elements if needed (e.g. current trip) */}
                 {isOnline && (

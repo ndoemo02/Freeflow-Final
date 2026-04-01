@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getApiUrl } from '../lib/config';
 import { useConversationStore } from '../store/useConversationStore';
+import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
 
 type DispatchFn = (
     actions: any[] | undefined,
@@ -38,18 +39,23 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
     useEffect(() => {
         if (!wsUrl) return;
 
+        console.log('LIVE EVENTS WS CONNECTING —', wsUrl);
         const socket = new WebSocket(wsUrl);
         socketRef.current = socket;
 
         socket.onopen = () => {
             setConnected(true);
-            console.log('[LiveEvents] connected');
+            console.log('LIVE EVENTS WS OPEN — backend tool relay ready');
         };
 
-        socket.onclose = () => {
+        socket.onclose = (e) => {
             setConnected(false);
             if (socketRef.current === socket) socketRef.current = null;
-            console.log('[LiveEvents] disconnected');
+            console.log('[LiveEvents] disconnected — code:', e.code, 'reason:', e.reason || '(none)');
+        };
+
+        socket.onerror = (e) => {
+            console.error('[LiveEvents] WS error:', e);
         };
 
         socket.onmessage = (event) => {
@@ -67,6 +73,16 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             const state = useConversationStore.getState();
             const history = [...state.conversationHistory, { role: 'assistant', content: reply }];
 
+            const newPhase = response.context?.conversationPhase || response.phase || state.conversationPhase;
+            const isIdle = newPhase === 'idle';
+
+            const restaurants = normalizeRestaurants(
+                response.restaurants || response.context?.last_restaurants_list || null,
+            );
+            const menuItems = normalizeMenuItems(
+                response.menuItems || response.menu || response.context?.last_menu || null,
+            );
+
             dispatch(
                 response.actions,
                 {
@@ -83,13 +99,19 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 lastResponse: reply,
                 lastFullResponse: response,
                 conversationHistory: history,
-                conversationPhase: response.context?.conversationPhase || response.phase || state.conversationPhase,
+                conversationPhase: newPhase,
                 currentRestaurant: response.context?.currentRestaurant || state.currentRestaurant,
                 pendingOrder: response.context?.pendingOrder || null,
                 cart: response.meta?.cart || response.cart || state.cart,
-                expectedContext: response.context?.expectedContext || state.expectedContext,
+                expectedContext: isIdle ? null : (response.context?.expectedContext || state.expectedContext),
                 lastIntent: response.intent || state.lastIntent,
                 lastSource: response.meta?.source || 'live_tool',
+                // Map domain data so phase-gated UI components (SuggestedRestaurantsCarousel,
+                // MenuIsland) update correctly — these read exclusively from the store, never
+                // from lastFullResponse directly.
+                suggestedRestaurants: restaurants || (isIdle ? null : state.suggestedRestaurants),
+                selectedRestaurantPreviewId: restaurants?.[0]?.id || (isIdle ? null : state.selectedRestaurantPreviewId),
+                menuItems: menuItems || (isIdle ? null : state.menuItems),
             });
         };
 

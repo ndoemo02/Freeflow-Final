@@ -1,261 +1,322 @@
-import React, { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import React, { useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUI } from "../state/ui"
 import { useAuth } from "../state/auth"
-
 import { getUserRole } from "../lib/menuBuilder"
 import { ROUTES, FEATURE_FLAGS, isRouteEnabled } from "../app/routeConfig"
 
-export default function MenuDrawer() {
-  const isOpen = useUI((s) => s.drawerOpen)
-  const close = useUI((s) => s.closeDrawer)
-  const openAuth = useUI((s) => s.openAuth)
-  const { user, signOut } = useAuth()
+// Routes considered "operational" — show return-to-consumer action when here
+const OPERATIONAL_PREFIXES = ['/business', '/panel/', '/settings']
+const isOperational = (pathname) =>
+  OPERATIONAL_PREFIXES.some((p) => pathname.startsWith(p))
+
+// ─── SVG Icons ───────────────────────────────────────────────────────────────
+const Icon = ({ name, size = 15 }) => {
+  const icons = {
+    cart:       <><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" /></>,
+    business:   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinecap="round" strokeLinejoin="round" />,
+    kds:        <path d="M9 17H5a2 2 0 0 0-2 2v0M15 17h4a2 2 0 0 1 2 2v0M12 3v14M8 7l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />,
+    driver:     <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5m-9 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" strokeLinecap="round" strokeLinejoin="round" />,
+    analytics:  <path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" strokeLinejoin="round" />,
+    settings:   <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
+    logout:     <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>,
+    login:      <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></>,
+    close:      <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />,
+    faq:        <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" strokeLinecap="round" strokeLinejoin="round" /></>,
+    history:    <><polyline points="12 8 12 12 14 14" /><path d="M3.05 11a9 9 0 1 0 .5-4" strokeLinecap="round" strokeLinejoin="round" /><polyline points="3 3 3.05 11 11 11" strokeLinecap="round" strokeLinejoin="round" /></>,
+    debug:      <><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="M12 8v4M12 16h.01" strokeLinecap="round" /></>,
+    arrowLeft:  <><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>,
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      {icons[name] ?? null}
+    </svg>
+  )
+}
+
+// ─── NavItem — primary consumer weight ───────────────────────────────────────
+function NavItem({ iconName, label, route, onClick, isDanger = false, badge, requiresAuth = false }) {
+  const { user } = useAuth()
+  const { openAuth, closeDrawer } = useUI()
   const navigate = useNavigate()
-  const [expandedSections, setExpandedSections] = useState({})
+  const location = useLocation()
 
-  // Określ rolę użytkownika
-  const userRole = getUserRole(user)
+  const isActive = route
+    ? (route === '/' ? location.pathname === '/' : location.pathname.startsWith(route))
+    : false
 
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && isOpen && close()
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [isOpen, close])
-
-  const toggleSection = (sectionId) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }))
+  const handleClick = () => {
+    if (route) {
+      if ((requiresAuth || route.startsWith('/panel')) && !user?.id) {
+        openAuth(); return
+      }
+      navigate(route); closeDrawer()
+    } else if (onClick) {
+      onClick()
+    }
   }
 
-  const MenuItem = ({ icon, text, onClick, isSubItem = false, isDanger = false, route = null, requiresAuth = false }) => {
-    const handleClick = () => {
-      if (route) {
-        // Wymagaj zalogowania dla paneli
-        if ((requiresAuth || route.startsWith('/panel')) && !user?.id) {
-          openAuth();
-          return;
-        }
-        navigate(route);
-        close();
-      } else if (onClick) {
-        onClick();
-      }
-    };
+  return (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={handleClick}
+      className="w-full flex items-center gap-3 text-left transition-colors"
+      style={{
+        padding: '9px 10px',
+        borderRadius: 'var(--radius-sm)',
+        background: isActive ? 'rgba(249,115,22,0.08)' : 'transparent',
+        color: isDanger
+          ? 'rgba(248,113,113,0.85)'
+          : isActive
+            ? 'var(--ff-orange)'
+            : 'rgba(255,255,255,0.70)',
+      }}
+    >
+      <span style={{
+        color: isDanger ? 'rgba(248,113,113,0.65)' : isActive ? 'rgba(249,115,22,0.80)' : 'rgba(255,255,255,0.28)',
+        flexShrink: 0,
+      }}>
+        <Icon name={iconName} size={15} />
+      </span>
+      <span className="flex-1 text-[13.5px] font-medium tracking-tight">{label}</span>
+      {badge > 0 && (
+        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+          style={{ background: 'rgba(249,115,22,0.18)', color: '#f97316' }}>
+          {badge}
+        </span>
+      )}
+    </motion.button>
+  )
+}
 
-    return (
-      <motion.li
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.98 }}
-        className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer ${isSubItem ? 'ml-6 text-sm' : 'text-base'
-          } ${isDanger ? 'text-red-400 hover:bg-red-500/20' : 'text-white/90 hover:bg-white/[0.08] hover:backdrop-blur-sm'
-          }`}
-        onClick={handleClick}
-      >
-        <span className="text-lg">{icon}</span>
-        <span className="flex-1">{text}</span>
-      </motion.li>
-    );
-  };
+// ─── OpItem — operational / secondary weight ──────────────────────────────────
+function OpItem({ iconName, label, route, requiresAuth = false }) {
+  const { user } = useAuth()
+  const { openAuth, closeDrawer } = useUI()
+  const navigate = useNavigate()
 
-  const ExpandableSection = ({ title, icon, children, isExpanded }) => (
-    <>
-      <motion.button
-        whileHover={{ x: 4 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => toggleSection(title)}
-        className="w-full flex items-center justify-between p-4 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.12] hover:bg-white/[0.12] transition-all duration-200 group"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-lg">{icon}</span>
-          <span className="text-white font-semibold">{title}</span>
-        </div>
-        <motion.span
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="text-white/60"
-        >
-          ▼
-        </motion.span>
-      </motion.button>
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
-  );
+  const handleClick = () => {
+    if ((requiresAuth || route?.startsWith('/panel')) && !user?.id) {
+      openAuth(); return
+    }
+    if (route) { navigate(route); closeDrawer() }
+  }
+
+  return (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={handleClick}
+      className="w-full flex items-center gap-2.5 text-left transition-colors"
+      style={{
+        padding: '7px 10px',
+        borderRadius: 'var(--radius-sm)',
+        color: 'rgba(255,255,255,0.42)',
+      }}
+    >
+      <span style={{ color: 'rgba(255,255,255,0.20)', flexShrink: 0 }}>
+        <Icon name={iconName} size={13} />
+      </span>
+      <span className="flex-1 text-[12.5px] font-medium">{label}</span>
+    </motion.button>
+  )
+}
+
+// ─── GroupLabel ───────────────────────────────────────────────────────────────
+function GroupLabel({ children }) {
+  return (
+    <div className="px-2 pt-5 pb-0.5 text-[9.5px] uppercase tracking-[0.20em] font-semibold select-none"
+      style={{ color: 'rgba(255,255,255,0.18)' }}>
+      {children}
+    </div>
+  )
+}
+
+// ─── Hairline ─────────────────────────────────────────────────────────────────
+function Hairline() {
+  return <div className="my-2.5 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+}
+
+// ─── MenuDrawer ───────────────────────────────────────────────────────────────
+export default function MenuDrawer() {
+  const isOpen = useUI((s) => s.drawerOpen)
+  const close  = useUI((s) => s.closeDrawer)
+  const openAuth = useUI((s) => s.openAuth)
+  const { user, signOut } = useAuth()
+  const userRole = getUserRole(user)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const onOperational = isOperational(location.pathname)
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && isOpen && close()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, close])
+
+  const displayName = user?.email?.split('@')[0] || null
+  const roleLabel = userRole === 'admin' ? 'Administrator'
+    : userRole === 'business' ? 'Właściciel'
+    : 'Użytkownik'
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop - frosted overlay */}
+          {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xl"
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.22 }}
             onClick={close}
           />
 
-          {/* Menu Panel - glassmorphism */}
+          {/* Panel */}
           <motion.aside
             role="dialog"
-            aria-label="Menu"
-            className="fixed top-4 right-4 z-50 w-80 h-[calc(100vh-2rem)] bg-white/[0.08] backdrop-blur-3xl rounded-2xl border border-white/[0.18] shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
-            style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' }}
-            initial={{ scale: 0.95, opacity: 0, x: 20 }}
-            animate={{ scale: 1, opacity: 1, x: 0 }}
-            exit={{ scale: 0.95, opacity: 0, x: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            aria-modal="true"
+            aria-label="Menu nawigacji"
+            className="fixed top-0 right-0 z-50 flex flex-col"
+            style={{
+              width: 288,
+              height: '100dvh',
+              background: 'rgba(8,11,20,0.96)',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              borderLeft: '1px solid rgba(255,255,255,0.06)',
+              boxShadow: '-20px 0 56px rgba(0,0,0,0.60)',
+            }}
+            initial={{ x: 300, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 300, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 36 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header - glass layer */}
-            <div className="flex items-center justify-between p-5 border-b border-white/[0.12] bg-white/[0.05] backdrop-blur-xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/[0.15] backdrop-blur-md border border-white/[0.2] flex items-center justify-center shadow-lg">
-                  <span className="text-orange-300 font-bold text-lg">FF</span>
+            {/* ── Header ─────────────────────────────────── */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center text-[11px] font-bold"
+                  style={{
+                    width: 28, height: 28,
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'linear-gradient(135deg, rgba(249,115,22,0.22), rgba(249,115,22,0.08))',
+                    border: '1px solid rgba(249,115,22,0.24)',
+                    color: 'var(--ff-orange)',
+                  }}>
+                  FF
                 </div>
-                <h2 className="text-white font-bold text-lg">FreeFlow</h2>
+                <span className="text-[14px] font-semibold" style={{ color: 'rgba(255,255,255,0.80)' }}>
+                  FreeFlow
+                </span>
               </div>
               <button
                 onClick={close}
-                className="w-10 h-10 rounded-xl bg-white/[0.1] backdrop-blur-md border border-white/[0.15] text-white/80 hover:text-white hover:bg-white/[0.2] transition-all duration-300 flex items-center justify-center"
-                aria-label="Zamknij menu"
+                aria-label="Zamknij"
+                className="flex items-center justify-center transition-colors"
+                style={{
+                  width: 28, height: 28,
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'rgba(255,255,255,0.30)',
+                }}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <Icon name="close" size={14} />
               </button>
             </div>
 
-            {/* Menu Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/[0.2] scrollbar-track-transparent hover:scrollbar-thumb-white/30">
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                {/* Główne sekcje */}
-                <MenuItem icon="🏠" text="Główne" onClick={close} />
-                <MenuItem icon="🍽️" text="Odkrywaj Jedzenie" route={ROUTES.PANEL_CLIENT} />
-                {isRouteEnabled('/reservations') && (
-                  <MenuItem icon="📅" text="Rezerwacje Stolików" route="/reservations" />
-                )}
+            {/* ── Scrollable content ─────────────────────── */}
+            <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: 'none' }}>
 
-                {/* Separator */}
-                <div className="my-4 h-px bg-white/[0.12]"></div>
+              {/* — Consumer section — top of drawer on operational surfaces ── */}
+              {/* Two distinct entries: home feed vs. client ordering panel.      */}
+              {/* Both use NavItem weight — they're primary consumer destinations. */}
+              {onOperational && (
+                <>
+                  <GroupLabel>Aplikacja klienta</GroupLabel>
+                  <NavItem iconName="arrowLeft" label="Strona główna"  route={ROUTES.HOME} />
+                  <NavItem iconName="cart"      label="Panel Klienta"  route={ROUTES.PANEL_CLIENT} />
+                  <Hairline />
+                </>
+              )}
 
-                {/* Panele */}
-                <ExpandableSection
-                  title="Panele"
-                  icon="📂"
-                  isExpanded={expandedSections['Panele']}
-                >
-                  <MenuItem icon="🙍" text="Panel Klienta" route={ROUTES.PANEL_CLIENT} isSubItem requiresAuth />
-                  <MenuItem icon="💼" text="Panel Właściciela (Read-only)" route={ROUTES.BUSINESS_READONLY} isSubItem requiresAuth />
-                  <MenuItem icon="🍳" text="Kitchen Display (KDS)" route={ROUTES.PANEL_BUSINESS_KDS} isSubItem requiresAuth />
-                  <MenuItem icon="🏢" text="Zarządzanie restauracjami" route={ROUTES.PANEL_BUSINESS} isSubItem requiresAuth />
-                  <MenuItem icon="🚗" text="Panel Kierowcy" route={ROUTES.PANEL_DRIVER} isSubItem requiresAuth />
-                  <MenuItem icon="📈" text="Analytics" route={ROUTES.PANEL_ADMIN} isSubItem requiresAuth />
-                </ExpandableSection>
-
-                {/* Moja Aktywność */}
-                <ExpandableSection
-                  title="Moja Aktywność"
-                  icon="📊"
-                  isExpanded={expandedSections['Moja Aktywność']}
-                >
-                  <MenuItem icon="🛒" text="Koszyk" onClick={() => {/* TODO: otwórz koszyk */ }} isSubItem />
-                  {isRouteEnabled('/order-history') && <MenuItem icon="📜" text="Historia" route="/order-history" isSubItem />}
-                  {isRouteEnabled('/favorites') && <MenuItem icon="❤️" text="Ulubione" route="/favorites" isSubItem />}
-                  {isRouteEnabled('/my-taxis') && <MenuItem icon="🚕" text="Moje Taksówki" route="/my-taxis" isSubItem />}
-                  {isRouteEnabled('/my-hotels') && <MenuItem icon="🏨" text="Moje Hotele" route="/my-hotels" isSubItem />}
-                </ExpandableSection>
-
-                {/* Ustawienia i Pomoc */}
-                <ExpandableSection
-                  title="Ustawienia i Pomoc"
-                  icon="⚙️"
-                  isExpanded={expandedSections['Ustawienia i Pomoc']}
-                >
-                  <MenuItem icon="⚙️" text="Ustawienia" route={ROUTES.SETTINGS} isSubItem />
-                  {isRouteEnabled('/profile') && <MenuItem icon="👤" text="Profil" route="/profile" isSubItem />}
-                  {isRouteEnabled('/voice-settings') && <MenuItem icon="🎤" text="Ustawienia Głosu" route="/voice-settings" isSubItem />}
-                  {isRouteEnabled('/notifications') && <MenuItem icon="🔔" text="Powiadomienia" route="/notifications" isSubItem />}
-                  {isRouteEnabled('/faq') && <MenuItem icon="❓" text="FAQ" route="/faq" isSubItem />}
-                  {isRouteEnabled('/contact') && <MenuItem icon="📞" text="Kontakt" route="/contact" isSubItem />}
-                </ExpandableSection>
-
-                {/* Separator */}
-                <div className="my-4 h-px bg-white/[0.12]"></div>
-
-                {/* User Info - glass card */}
-                <div className="p-4 rounded-xl bg-white/[0.06] backdrop-blur-xl border border-white/[0.12]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.12] backdrop-blur-md border border-white/[0.18] flex items-center justify-center">
-                      <span className="text-blue-300 font-bold text-sm">
-                        {user?.email?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-semibold text-sm">
-                        {user?.email || 'Gość'}
-                      </p>
-                      <p className="text-white/60 text-xs">
-                        {user?.id ? (userRole === 'admin' ? 'Administrator' : userRole === 'business' ? 'Właściciel' : 'Użytkownik') : 'Niezalogowany'}
-                      </p>
-                    </div>
-                  </div>
+              {/* — Koszyk (not in TabBar, visible on consumer surfaces) — */}
+              {!onOperational && (
+                <div className="pt-1">
+                  <NavItem iconName="cart" label="Koszyk" onClick={() => {}} />
                 </div>
+              )}
 
-                {/* Separator */}
-                <div className="my-4 h-px bg-white/[0.12]"></div>
+              {/* — Przestrzeń pracy (operational panels) — */}
+              <GroupLabel>Przestrzeń pracy</GroupLabel>
+              <OpItem iconName="business"  label="Panel Właściciela"  route={ROUTES.BUSINESS_READONLY}  requiresAuth />
+              <OpItem iconName="kds"       label="Kitchen Display"    route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
+              <OpItem iconName="analytics" label="Analityka"          route={ROUTES.PANEL_ADMIN}        requiresAuth />
 
-                {/* Zarządzanie - tylko dla admin/business */}
-                {(userRole === 'admin' || userRole === 'business') && (
-                  <ExpandableSection
-                    title="Zarządzanie"
-                    icon="🔧"
-                    isExpanded={expandedSections['Zarządzanie']}
-                  >
-                    <MenuItem icon="📈" text="Panel Biznesowy" route={ROUTES.PANEL_BUSINESS} isSubItem />
-                    <MenuItem icon="🔑" text="Panel Admina" route={ROUTES.PANEL_ADMIN} isSubItem />
-                  </ExpandableSection>
-                )}
+              {/* — Dev (admin only) — */}
+              {userRole === 'admin' && FEATURE_FLAGS.DEV_LABS && (
+                <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />
+              )}
 
-                {/* Labs - tylko dla admin */}
-                {userRole === 'admin' && FEATURE_FLAGS.DEV_LABS && (
-                  <ExpandableSection
-                    title="Labs (DEV)"
-                    icon="🚀"
-                    isExpanded={expandedSections['Labs (DEV)']}
-                  >
-                    <MenuItem icon="🧪" text="Testy API" route="/dev/api-tests" isSubItem />
-                    <MenuItem icon="📊" text="Analytics" route="/dev/analytics" isSubItem />
-                    <MenuItem icon="🔧" text="Debug Tools" route="/dev/debug" isSubItem />
-                    <MenuItem icon="🗄️" text="Database" route="/dev/database" isSubItem />
-                    <MenuItem icon="📝" text="Logs" route="/dev/logs" isSubItem />
-                  </ExpandableSection>
-                )}
+              <Hairline />
 
-                {/* Auth action */}
-                {user?.id ? (
-                  <MenuItem icon="🚪" text="Wyloguj się" onClick={() => { signOut(); close(); }} isDanger />
-                ) : (
-                  <MenuItem icon="🔐" text="Zaloguj się" onClick={() => { openAuth(); }} />
-                )}
-              </ul>
+              {/* — Utility — */}
+              <NavItem iconName="settings" label="Ustawienia" route={ROUTES.SETTINGS} />
+              {isRouteEnabled('/order-history') && (
+                <NavItem iconName="history" label="Historia zamówień" route="/order-history" />
+              )}
+              {isRouteEnabled('/faq') && (
+                <NavItem iconName="faq" label="FAQ" route="/faq" />
+              )}
+
+              <Hairline />
+
+              {/* — Auth — */}
+              {user?.id ? (
+                <NavItem
+                  iconName="logout"
+                  label="Wyloguj się"
+                  isDanger
+                  onClick={() => { signOut(); close() }}
+                />
+              ) : (
+                <NavItem
+                  iconName="login"
+                  label="Zaloguj się"
+                  onClick={() => openAuth()}
+                />
+              )}
             </div>
+
+            {/* ── User footer ─────────────────────────────── */}
+            {user?.id && (
+              <div
+                className="shrink-0 px-4 py-3 flex items-center gap-2.5"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <div
+                  className="flex items-center justify-center text-[11px] font-bold shrink-0"
+                  style={{
+                    width: 28, height: 28,
+                    borderRadius: 'var(--radius-pill)',
+                    background: 'rgba(255,255,255,0.07)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    color: 'rgba(255,255,255,0.60)',
+                  }}
+                >
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-medium truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                    {displayName || user.email}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    {roleLabel}
+                  </p>
+                </div>
+              </div>
+            )}
           </motion.aside>
         </>
       )}

@@ -181,10 +181,10 @@ export default function BottomSheetContainer({
             <motion.div
                 className={`contextual-island fixed left-0 right-0 ${resolvedPlacementClassName} z-10 ${className}`}
                 data-position={position}
-                initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                initial={{ opacity: 0, y: 200, scale: 0.94 }}
                 animate={{ opacity: snap === 'closed' ? 0 : 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 40, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                exit={{ opacity: 0, y: 160, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 220, damping: 26 }}
             >
                 <motion.div
                     className={`contextual-island-sheet relative flex min-h-0 flex-col ${overflowClassName} ${resolvedSnapClassNames[snap]}`}

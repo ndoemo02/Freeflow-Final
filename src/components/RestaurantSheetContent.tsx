@@ -53,6 +53,24 @@ function getMetaLine(item: any) {
     return parts.filter(Boolean).join(' / ') || 'Dostepna teraz';
 }
 
+function RestaurantAvatar({ item, size = 44 }: { item: any; size?: number }) {
+    const initial = (item?.name || 'R')[0].toUpperCase();
+    if (item?.image_url) {
+        return <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />;
+    }
+    if (item?.image) {
+        return <img src={item.image} alt={item.name} className="h-full w-full object-cover" />;
+    }
+    return (
+        <div
+            className="flex h-full w-full items-center justify-center text-sm font-bold text-white/90"
+            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.35) 0%, rgba(6,10,22,0.85) 100%)' }}
+        >
+            {initial}
+        </div>
+    );
+}
+
 function FloatingRestaurantFocusCard({
     item,
     stackOffset,
@@ -86,56 +104,92 @@ function FloatingRestaurantFocusCard({
             aria-label={item?.name || 'Restauracja'}
         >
             <div
-                className="relative h-full overflow-hidden rounded-[20px] px-3.5 py-2.5"
+                className="relative h-full overflow-hidden px-3.5 py-2.5"
                 style={{
+                    borderRadius: 'var(--radius-md)',
                     background: isFocused
-                        ? 'linear-gradient(140deg, rgba(34,211,238,0.26) 0%, rgba(6,10,18,0.98) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.04), rgba(8,13,24,0.82))',
-                    border: isFocused ? '1px solid rgba(34,211,238,0.62)' : '1px solid rgba(255,255,255,0.06)',
+                        ? 'linear-gradient(155deg, rgba(6,182,212,0.24) 0%, rgba(6,182,212,0.06) 45%, rgba(5,8,16,0.98) 100%)'
+                        : isRecommended
+                            ? 'linear-gradient(155deg, rgba(249,115,22,0.14) 0%, rgba(6,10,18,0.90) 100%)'
+                            : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(5,8,16,0.88) 100%)',
+                    border: isFocused
+                        ? '1px solid rgba(6,182,212,0.52)'
+                        : isRecommended
+                            ? '1px solid rgba(249,115,22,0.22)'
+                            : '1px solid rgba(255,255,255,0.05)',
                     boxShadow: isFocused
-                        ? '0 0 0 1px rgba(34,211,238,0.34) inset, 0 10px 24px rgba(0,0,0,0.34)'
-                        : '0 8px 14px rgba(0,0,0,0.2)',
-                    backdropFilter: 'blur(10px) saturate(1.06)',
-                    WebkitBackdropFilter: 'blur(10px) saturate(1.06)',
+                        ? '0 0 0 1px rgba(6,182,212,0.22) inset, 0 16px 36px rgba(0,0,0,0.45), 0 0 48px rgba(6,182,212,0.07)'
+                        : '0 8px 16px rgba(0,0,0,0.22)',
+                    backdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
+                    WebkitBackdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
                 }}
             >
-                {isFocused ? (
-                    <>
-                        <div className="absolute inset-x-5 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.9), transparent)' }} />
-                    </>
-                ) : null}
+                {/* top shimmer line */}
+                {isFocused && (
+                    <div
+                        className="absolute inset-x-6 top-0 h-px"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.95), transparent)' }}
+                    />
+                )}
+                {isRecommended && !isFocused && (
+                    <div
+                        className="absolute inset-x-6 top-0 h-px"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.6), transparent)' }}
+                    />
+                )}
 
                 <div className="flex h-full items-center gap-3">
-                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px] bg-black/30">
-                        {item?.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" /> : null}
-                        {!item?.image_url && item?.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
-                        {!item?.image_url && !item?.image ? (
-                            <div className="flex h-full w-full items-center justify-center text-xs text-white/62">{item?.rating || '?'}</div>
-                        ) : null}
+                    {/* avatar */}
+                    <div
+                        className="shrink-0 overflow-hidden"
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 'var(--radius-sm)',
+                            border: isFocused ? '1px solid rgba(6,182,212,0.28)' : '1px solid rgba(255,255,255,0.06)',
+                        }}
+                    >
+                        <RestaurantAvatar item={item} />
                     </div>
 
+                    {/* content */}
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                            <div className={`truncate text-[14px] font-semibold ${isFocused ? 'text-white' : 'text-white/84'}`}>{item?.name || 'Restauracja'}</div>
-                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isFocused ? 'bg-cyan-400/20 text-cyan-100' : 'bg-white/8 text-white/62'}`}>
+                            <div className={`truncate text-[14px] font-semibold leading-tight ${isFocused ? 'text-white' : 'text-white/78'}`}>
+                                {item?.name || 'Restauracja'}
+                            </div>
+                            <span
+                                className="shrink-0 text-[10px] font-medium"
+                                style={{
+                                    borderRadius: 'var(--radius-pill)',
+                                    padding: '2px 8px',
+                                    background: isFocused ? 'rgba(6,182,212,0.18)' : 'rgba(255,255,255,0.07)',
+                                    color: isFocused ? 'rgba(207,250,254,0.95)' : 'rgba(255,255,255,0.55)',
+                                }}
+                            >
                                 {formatDistance(item)}
                             </span>
                         </div>
 
                         {isFocused ? (
                             <>
-                                <div className="mt-1 truncate text-[11px] uppercase tracking-[0.16em] text-cyan-200/80">
+                                <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.18em] text-cyan-300/75">
                                     {item?.cuisine_type || 'Restauracja'}
                                 </div>
-                                <div className="mt-1 truncate text-[12px] text-white/96">{getMetaLine(item)}</div>
-                                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/88">
-                                    <span className="font-semibold text-amber-300">{item?.rating || '4.5'}</span>
-                                    <span className="text-white/20">|</span>
-                                    <span>{isRecommended ? 'Polecane' : 'W poblizu'}</span>
+                                <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                    <span className="font-semibold text-amber-300">★ {item?.rating || '4.5'}</span>
+                                    <span className="text-white/18">·</span>
+                                    <span className="text-white/65">{item?.delivery_time || (isRecommended ? 'Polecane' : 'W pobliżu')}</span>
+                                    {item?.city && (
+                                        <>
+                                            <span className="text-white/18">·</span>
+                                            <span className="truncate text-white/50">{item.city}</span>
+                                        </>
+                                    )}
                                 </div>
                             </>
                         ) : (
-                            <div className="mt-1 truncate text-[11px] uppercase tracking-[0.12em] text-white/38">
+                            <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.13em] text-white/32">
                                 {item?.cuisine_type || 'Restauracja'}
                             </div>
                         )}
@@ -160,49 +214,78 @@ function FloatingRestaurantListCard({
     return (
         <button type="button" onClick={onClick} className="w-full text-left">
             <div
-                className="relative overflow-hidden rounded-[20px] px-3 py-1.5"
+                className="relative overflow-hidden px-3 py-2"
                 style={{
-                    minHeight: '88px',
+                    minHeight: '80px',
+                    borderRadius: 'var(--radius-md)',
                     background: isActive
-                        ? 'linear-gradient(140deg, rgba(34,211,238,0.22) 0%, rgba(8,12,20,0.95) 100%)'
-                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.72))',
-                    border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.05)',
+                        ? 'linear-gradient(155deg, rgba(6,182,212,0.20) 0%, rgba(6,182,212,0.05) 45%, rgba(5,8,16,0.96) 100%)'
+                        : isRecommended
+                            ? 'linear-gradient(155deg, rgba(249,115,22,0.11) 0%, rgba(5,8,16,0.88) 100%)'
+                            : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(5,8,16,0.84) 100%)',
+                    border: isActive
+                        ? '1px solid rgba(6,182,212,0.45)'
+                        : isRecommended
+                            ? '1px solid rgba(249,115,22,0.18)'
+                            : '1px solid rgba(255,255,255,0.05)',
                     boxShadow: isActive
-                        ? '0 0 0 1px rgba(34,211,238,0.28) inset, 0 10px 20px rgba(0,0,0,0.26)'
-                        : '0 8px 14px rgba(0,0,0,0.16)',
-                    backdropFilter: 'blur(12px) saturate(1.08)',
-                    WebkitBackdropFilter: 'blur(12px) saturate(1.08)',
+                        ? '0 0 0 1px rgba(6,182,212,0.22) inset, 0 10px 22px rgba(0,0,0,0.28)'
+                        : '0 6px 12px rgba(0,0,0,0.16)',
                 }}
             >
-                {isActive ? (
-                    <div className="absolute inset-x-5 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(34,211,238,0.88), transparent)' }} />
-                ) : null}
+                {isActive && (
+                    <div className="absolute inset-x-6 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.90), transparent)' }} />
+                )}
+                {isRecommended && !isActive && (
+                    <div className="absolute inset-x-6 top-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.55), transparent)' }} />
+                )}
 
-                <div className="flex items-start gap-3">
-                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px] bg-black/20">
-                        {item?.image_url ? <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" /> : null}
-                        {!item?.image_url && item?.image ? <img src={item.image} alt={item.name} className="h-full w-full object-cover" /> : null}
-                        {!item?.image_url && !item?.image ? (
-                            <div className="flex h-full w-full items-center justify-center text-sm text-white/62">{item?.rating || '?'}</div>
-                        ) : null}
+                <div className="flex items-center gap-3">
+                    <div
+                        className="shrink-0 overflow-hidden"
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 'var(--radius-sm)',
+                            border: isActive ? '1px solid rgba(6,182,212,0.25)' : '1px solid rgba(255,255,255,0.06)',
+                        }}
+                    >
+                        <RestaurantAvatar item={item} size={40} />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0">
-                                <div className="truncate text-[14px] font-semibold text-white">{item?.name || 'Restauracja'}</div>
-                                <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.15em] text-white/42">{item?.cuisine_type || 'Restauracja'}</div>
+                                <div className={`truncate text-[13px] font-semibold leading-tight ${isActive ? 'text-white' : 'text-white/85'}`}>
+                                    {item?.name || 'Restauracja'}
+                                </div>
+                                <div className="mt-0.5 truncate text-[10px] uppercase tracking-[0.14em] text-white/38">
+                                    {item?.cuisine_type || 'Restauracja'}
+                                </div>
                             </div>
-                            <div className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isRecommended ? 'bg-cyan-400/14 text-cyan-100' : 'bg-white/8 text-white/60'}`}>
+                            <div
+                                className="shrink-0 text-[10px] font-medium"
+                                style={{
+                                    borderRadius: 'var(--radius-pill)',
+                                    padding: '2px 7px',
+                                    background: isActive ? 'rgba(6,182,212,0.16)' : 'rgba(255,255,255,0.07)',
+                                    color: isActive ? 'rgba(207,250,254,0.90)' : 'rgba(255,255,255,0.55)',
+                                }}
+                            >
                                 {formatDistance(item)}
                             </div>
                         </div>
 
-                        <div className="mt-1 text-[12px] text-white/72">{getMetaLine(item)}</div>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/56">
-                            <span className="font-semibold text-amber-300">{item?.rating || '4.5'}</span>
-                            <span className="text-white/20">|</span>
-                            <span>{isRecommended ? 'Polecane' : 'W poblizu'}</span>
+                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/50">
+                            <span className="font-semibold text-amber-300/90">★ {item?.rating || '4.5'}</span>
+                            <span className="text-white/15">·</span>
+                            <span>{isRecommended ? 'Polecane' : 'W pobliżu'}</span>
+                            {item?.delivery_time && (
+                                <>
+                                    <span className="text-white/15">·</span>
+                                    <span>{item.delivery_time}</span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -378,7 +461,7 @@ export default function RestaurantSheetContent({
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
     const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
     const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 80px)';
-    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
+    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pełna lista' : 'Wyspa';
 
     return (
         <div
@@ -391,13 +474,19 @@ export default function RestaurantSheetContent({
                 <div className="relative z-10 flex min-h-0 flex-1 flex-col px-3 pt-3">
                     <div className="mb-1.5 pl-0.5 flex items-start justify-between gap-3">
                         <div>
-                            <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78">W poblizu</div>
-                            <div className="mt-1 text-[14px] font-semibold text-white">Polecane miejsca</div>
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-300/65">Restauracje w pobliżu</div>
+                            <div className="mt-0.5 text-[13px] font-semibold text-white/90">{items.length} {items.length === 1 ? 'miejsce' : items.length < 5 ? 'miejsca' : 'miejsc'}</div>
                         </div>
                         <button
                             type="button"
                             onClick={handleCtaPress}
-                            className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                            className="shrink-0 text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
+                            style={{
+                                borderRadius: 'var(--radius-pill)',
+                                padding: '5px 12px',
+                                background: 'rgba(0,0,0,0.45)',
+                                border: '1px solid rgba(255,255,255,0.10)',
+                            }}
                         >
                             {ctaLabel}
                         </button>
@@ -480,7 +569,13 @@ export default function RestaurantSheetContent({
                         <button
                             type="button"
                             onClick={handleCtaPress}
-                            className="rounded-full bg-black/45 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/55 hover:text-white"
+                            className="text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
+                            style={{
+                                borderRadius: 'var(--radius-pill)',
+                                padding: '5px 12px',
+                                background: 'rgba(0,0,0,0.45)',
+                                border: '1px solid rgba(255,255,255,0.10)',
+                            }}
                         >
                             {ctaLabel}
                         </button>

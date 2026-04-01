@@ -1,4 +1,5 @@
 // src/lib/DialogManager.ts
+import { getApiUrl } from './config';
 
 // ── Typy ───────────────────────────────────────────────────────────────────────
 export type Slots = {
@@ -254,7 +255,7 @@ export async function manageTurn(userText: string, prev: Slots): Promise<TurnRes
     q = q.trim();
 
     console.log("🔎 /api/restaurants?q=", q);
-    const resp = await fetch(`/api/restaurants?q=${encodeURIComponent(q)}`);
+    const resp = await fetch(getApiUrl(`/api/restaurants?q=${encodeURIComponent(q)}`));
     const json = await resp.json();
     const restaurants = Array.isArray(json?.results) ? json.results : [];
 
@@ -318,7 +319,7 @@ if (!prev.restaurantId && isFoodItem) {
   console.log("🔍 No restaurant selected, searching for dish in available restaurants:", normalized);
   
   // Wyszukaj w dostępnych restauracjach
-  const resp = await fetch(`/api/restaurants?q=`);
+  const resp = await fetch(getApiUrl(`/api/restaurants?q=`));
   const json = await resp.json();
   const restaurants = Array.isArray(json?.results) ? json.results : [];
   

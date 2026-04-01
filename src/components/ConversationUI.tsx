@@ -148,6 +148,8 @@ export function SuggestedRestaurantsCarousel() {
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
 
+    console.debug('[UI_STATE] SuggestedRestaurantsCarousel render — listVisible: true, resultsCount:', suggestedRestaurants.length, 'focusedRestaurant:', selectedRestaurantPreviewId, 'recommended:', recommendedId, 'currentRestaurant:', currentRestaurant?.name ?? null);
+
     return (
         <ContextualIsland
             items={suggestedRestaurants}

@@ -118,6 +118,9 @@ export function useGeminiFunctionRelay({
     const relay = useCallback((functionCall: GeminiFunctionCall): Promise<GeminiFunctionResponse> => {
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
+            // ── DIAG: WS not ready ────────────────────────────────────
+            console.error(`[LiveDiag] ❌ relay: WS not connected (readyState=${ws?.readyState ?? 'null'}) for tool=${functionCall.name}`);
+            // ──────────────────────────────────────────────────────────
             return Promise.reject(new Error('ws_not_connected'));
         }
 
@@ -125,9 +128,16 @@ export function useGeminiFunctionRelay({
 
         const requestId = functionCall.id || `relay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
+        // ── DIAG: WS send ─────────────────────────────────────────────
+        console.log(`[LiveDiag] 🔀 relay WS.send: ${functionCall.name}  req:${requestId}  ws:${ws.readyState}`);
+        // ──────────────────────────────────────────────────────────────
+
         return new Promise<GeminiFunctionResponse>((resolve, reject) => {
             const timer = setTimeout(() => {
                 pendingRef.current.delete(requestId);
+                // ── DIAG: timeout ─────────────────────────────────────
+                console.error(`[LiveDiag] ⏱ relay TIMEOUT for ${functionCall.name}  req:${requestId}`);
+                // ──────────────────────────────────────────────────────
                 reject(new Error('relay_timeout'));
             }, RELAY_TIMEOUT_MS);
 

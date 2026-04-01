@@ -4,11 +4,22 @@ import { IslandBackdrop } from './IslandBackdrop';
 const STACK_CARD_HEIGHT = 96;
 
 // No blur on non-focused cards — reduces GPU compositing cost.
-function getDepthStyle(offset: number) {
+// hasFocused: when a card is explicitly highlighted, non-focus cards dim further (FOCUS mode).
+function getDepthStyle(offset: number, hasFocused: boolean) {
     const abs = Math.abs(offset);
     if (abs === 0) return { scale: 1, opacity: 1, y: 0, z: 30 };
-    if (abs === 1) return { scale: 0.92, opacity: 0.55, y: offset * 90, z: 20 };
-    return { scale: 0.84, opacity: 0.25, y: offset * 150, z: 10 };
+    if (abs === 1) return {
+        scale: hasFocused ? 0.88 : 0.92,
+        opacity: hasFocused ? 0.30 : 0.55,
+        y: offset * 90,
+        z: 20,
+    };
+    return {
+        scale: hasFocused ? 0.82 : 0.84,
+        opacity: hasFocused ? 0.14 : 0.25,
+        y: offset * 150,
+        z: 10,
+    };
 }
 
 function formatPrice(item: any) {
@@ -28,11 +39,12 @@ interface StackCardProps {
     item: any;
     stackOffset: number;
     isRecommended: boolean;
+    hasFocused: boolean;
     onClick: () => void;
 }
 
-function StackCard({ item, stackOffset, isRecommended, onClick }: StackCardProps) {
-    const depth = getDepthStyle(stackOffset);
+function StackCard({ item, stackOffset, isRecommended, onClick, hasFocused }: StackCardProps & { hasFocused: boolean }) {
+    const depth = getDepthStyle(stackOffset, hasFocused);
     const isFocused = stackOffset === 0;
     const price = formatPrice(item);
 
@@ -55,28 +67,38 @@ function StackCard({ item, stackOffset, isRecommended, onClick }: StackCardProps
             aria-label={item?.name || 'Pozycja menu'}
         >
             <div
-                className="relative h-full overflow-hidden rounded-[20px] px-3.5 py-2.5"
+                className="relative h-full overflow-hidden px-3.5 py-2.5"
                 style={{
+                    borderRadius: 'var(--radius-md)',
                     background: isFocused
-                        ? 'linear-gradient(140deg, rgba(34,211,238,0.24) 0%, rgba(8,12,20,0.97) 100%)'
+                        ? 'linear-gradient(155deg, rgba(6,182,212,0.22) 0%, rgba(6,182,212,0.05) 45%, rgba(5,8,16,0.98) 100%)'
                         : isRecommended
-                            ? 'linear-gradient(140deg, rgba(255,184,77,0.16) 0%, rgba(8,16,28,0.92) 100%)'
-                            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.74))',
-                    border: isFocused ? '1px solid rgba(34,211,238,0.58)' : '1px solid rgba(255,255,255,0.06)',
+                            ? 'linear-gradient(155deg, rgba(249,115,22,0.13) 0%, rgba(5,8,16,0.90) 100%)'
+                            : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(5,8,16,0.86) 100%)',
+                    border: isFocused
+                        ? '1px solid rgba(6,182,212,0.52)'
+                        : isRecommended
+                            ? '1px solid rgba(249,115,22,0.20)'
+                            : '1px solid rgba(255,255,255,0.05)',
                     boxShadow: isFocused
-                        ? '0 0 0 1px rgba(34,211,238,0.3) inset, 0 12px 24px rgba(0,0,0,0.3)'
+                        ? hasFocused
+                            ? '0 0 0 1px rgba(6,182,212,0.30) inset, 0 18px 36px rgba(0,0,0,0.52), 0 0 24px rgba(6,182,212,0.12)'
+                            : '0 0 0 1px rgba(6,182,212,0.20) inset, 0 14px 28px rgba(0,0,0,0.38)'
                         : '0 8px 16px rgba(0,0,0,0.18)',
-                    // backdropFilter only on focused card — non-focused cards skip compositing layer
-                    backdropFilter: isFocused ? 'blur(12px) saturate(1.08)' : 'none',
-                    WebkitBackdropFilter: isFocused ? 'blur(12px) saturate(1.08)' : 'none',
+                    backdropFilter: isFocused ? 'blur(var(--blur-md)) saturate(1.08)' : 'none',
+                    WebkitBackdropFilter: isFocused ? 'blur(var(--blur-md)) saturate(1.08)' : 'none',
                 }}
             >
-                {(isFocused || isRecommended) && (
+                {isFocused && (
                     <div
-                        className="absolute inset-x-5 top-0 h-px"
-                        style={{
-                            background: `linear-gradient(90deg, transparent, ${isFocused ? 'rgba(34,211,238,0.9)' : 'rgba(255,184,77,0.56)'}, transparent)`,
-                        }}
+                        className="absolute inset-x-6 top-0 h-px"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.95), transparent)' }}
+                    />
+                )}
+                {isRecommended && !isFocused && (
+                    <div
+                        className="absolute inset-x-6 top-0 h-px"
+                        style={{ background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.60), transparent)' }}
                     />
                 )}
 
@@ -84,7 +106,10 @@ function StackCard({ item, stackOffset, isRecommended, onClick }: StackCardProps
                     <div className="min-w-0 flex-1">
                         {isFocused && (
                             <div className="flex items-center gap-2">
-                                <span className="rounded-full bg-cyan-400/16 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-cyan-100">
+                                <span
+                                    className="text-[10px] uppercase tracking-[0.16em] text-cyan-100"
+                                    style={{ borderRadius: 'var(--radius-pill)', padding: '2px 8px', background: 'rgba(6,182,212,0.15)' }}
+                                >
                                     {getCuisine(item)}
                                 </span>
                                 {price && <span className="text-[12px] font-semibold text-cyan-100">{price}</span>}
@@ -115,6 +140,8 @@ export interface IslandStackViewProps {
     stackSafeBottom: string;
     ctaLabel: string;
     recommendedId?: string | null;
+    /** True when a card is explicitly highlighted (FOCUS mode) */
+    hasFocused?: boolean;
     onSwipeStart: (event: React.TouchEvent<HTMLElement>) => void;
     onSwipeEnd: (event: React.TouchEvent<HTMLElement>) => void;
     onWheel: (event: React.WheelEvent<HTMLElement>) => void;
@@ -129,6 +156,7 @@ export function IslandStackView({
     stackSafeBottom,
     ctaLabel,
     recommendedId,
+    hasFocused = false,
     onSwipeStart,
     onSwipeEnd,
     onWheel,
@@ -172,6 +200,7 @@ export function IslandStackView({
                                 item={item}
                                 stackOffset={offset}
                                 isRecommended={item._uiId === recommendedId}
+                                hasFocused={hasFocused}
                                 onClick={() => onItemClick(item)}
                             />
                         ))}
@@ -183,7 +212,13 @@ export function IslandStackView({
                 <button
                     type="button"
                     onClick={onCtaPress}
-                    className="rounded-full bg-black/45 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/55 hover:text-white"
+                    className="text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
+                    style={{
+                        borderRadius: 'var(--radius-pill)',
+                        padding: '5px 12px',
+                        background: 'rgba(0,0,0,0.45)',
+                        border: '1px solid rgba(255,255,255,0.10)',
+                    }}
                 >
                     {ctaLabel}
                 </button>

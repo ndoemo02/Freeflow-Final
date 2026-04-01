@@ -17,6 +17,7 @@ export default defineConfig({
         target: 'http://localhost:3000', // 🔗 backend Express
         changeOrigin: true, // 🧠 zmienia nagłówek Host → backend akceptuje żądanie
         secure: false,      // 🔓 pozwala na HTTP (bez SSL)
+        ws: true,           // 🔌 proxy WebSocket upgrades (required for /api/voice/live/ws)
         rewrite: (path) => path.replace(/^\/api/, '/api'), // 🔁 zachowuje ścieżkę
       },
     },

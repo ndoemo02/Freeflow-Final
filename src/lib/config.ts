@@ -1,16 +1,13 @@
 const detectBackend = () => {
-  // Lokalnie kieruj na port 3000 jeśli brak env
   if (typeof window !== 'undefined') {
     const h = window.location.hostname;
-    // Jeśli jesteśmy na Cloudflare tunnel, używaj względnych ścieżek (Vite proxy)
-    if (h.includes('trycloudflare.com')) {
-      return ''; // Pusty string = względne ścieżki, używa Vite proxy
-    }
-    if (h === 'localhost' || h === '127.0.0.1') {
-      return 'http://localhost:3005';
+    // Dev: localhost or Cloudflare tunnel — use relative paths so Vite proxy handles routing.
+    // This avoids CORS entirely and keeps a single consistent path in all dev environments.
+    if (h === 'localhost' || h === '127.0.0.1' || h.includes('trycloudflare.com')) {
+      return ''; // '' = relative /api/... → Vite proxy → http://localhost:3000
     }
   }
-  // Production backend URL (update if deployment changes)
+  // Production backend URL
   return 'https://backend-one-gilt-89.vercel.app';
 };
 
