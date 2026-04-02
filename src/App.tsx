@@ -47,6 +47,7 @@ function AppContent() {
   const closeAuth = useUI((s) => s.closeAuth);
   const { pathname } = useLocation();
   const showWallpaper = !SUPPRESS_WALLPAPER_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isConsumerVoiceScene = pathname === ROUTES.HOME;
 
   useEffect(() => {
     const killTTS = () => {
@@ -94,7 +95,7 @@ function AppContent() {
       <Cart />
       {authOpen && <AuthModal onClose={closeAuth} />}
       <DevOverlay />
-      <BottomTabBar />
+      {!isConsumerVoiceScene && <BottomTabBar />}
     </div>
   );
 }

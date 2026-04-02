@@ -8,7 +8,7 @@ import { useConversationStore } from '../store/useConversationStore';
 import { ROUTES } from '../app/routeConfig';
 
 export default function Cart() {
-  const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen } = useCart();
+  const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen, syncCart } = useCart();
 
   const restaurantLabel = activeRestaurant
     ? (typeof activeRestaurant === 'object'
@@ -54,6 +54,9 @@ export default function Cart() {
   };
 
   const phase = useConversationStore(state => state.conversationPhase);
+  const uiMode = useConversationStore(state => state.uiMode);
+  const storeCart = useConversationStore(state => state.cart);
+  const pendingOrder = useConversationStore(state => state.pendingOrder);
 
   // Zabezpieczenie przed "wiszacym" koszykiem - jeśli użytkownik w 'checkout' zamknie koszyk z palca, nie otwieraj go
   const [closedInCheckout, setClosedInCheckout] = useState(false);
@@ -66,6 +69,43 @@ export default function Cart() {
   }, [phase]);
 
   const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
+
+  React.useEffect(() => {
+    const checkoutVisible = phase === 'checkout' || uiMode === 'checkout';
+    if (!checkoutVisible || cart.length > 0 || typeof syncCart !== 'function') return;
+
+    const backendItems = Array.isArray(storeCart?.items)
+      ? storeCart.items
+      : (Array.isArray(storeCart) ? storeCart : []);
+    if (backendItems.length === 0) return;
+
+    const restaurantFromPendingOrder = pendingOrder?.restaurant
+      ? {
+          name: pendingOrder.restaurant,
+          id: pendingOrder.restaurant_id || 'unknown-sync',
+        }
+      : null;
+
+    const restaurantData =
+      storeCart?.restaurant
+      || pendingOrder?.restaurant_details
+      || restaurantFromPendingOrder
+      || activeRestaurant
+      || null;
+
+    syncCart(backendItems, restaurantData);
+  }, [phase, uiMode, cart.length, storeCart, pendingOrder, activeRestaurant, syncCart]);
+
+  React.useEffect(() => {
+    if (phase !== 'checkout' && uiMode !== 'checkout') return;
+    const renderedCartItems = cart.map((item, index) => ({
+      id: String(item?.id ?? index),
+      name: String(item?.name ?? ''),
+      qty: Number(item?.quantity ?? item?.qty ?? 1),
+    }));
+    console.log(`[LIVE_CART] checkoutVisible=${String(isCartVisible)}`);
+    console.log(`[LIVE_CART] renderedCartItems=${JSON.stringify(renderedCartItems)}`);
+  }, [phase, uiMode, isCartVisible, cart]);
 
   const handleClose = () => {
     setIsOpen(false);

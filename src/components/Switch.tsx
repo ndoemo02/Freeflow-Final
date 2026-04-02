@@ -10,15 +10,24 @@ type Props = {
 export default function Switch({ onToggle, initial = false, amberReady = true }: Props) {
   const [checked, setChecked] = useState<boolean>(initial)
   const switchBodyRef = useRef<HTMLDivElement | null>(null)
+  const knobRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (typeof window === "undefined") return
     const updateDockCenter = () => {
-      const el = switchBodyRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const center = rect.top + rect.height / 2
-      document.documentElement.style.setProperty("--voice-dock-center", `${center}px`)
+      const bodyEl = switchBodyRef.current
+      const knobEl = knobRef.current
+      if (!bodyEl) return
+
+      const bodyRect = bodyEl.getBoundingClientRect()
+      const bodyCenter = bodyRect.top + bodyRect.height / 2
+      document.documentElement.style.setProperty("--voice-dock-center", `${bodyCenter}px`)
+
+      if (knobEl) {
+        const knobRect = knobEl.getBoundingClientRect()
+        const knobCenter = knobRect.top + knobRect.height / 2
+        document.documentElement.style.setProperty("--status-dot-center-y", `${knobCenter}px`)
+      }
     }
 
     updateDockCenter()
@@ -28,11 +37,19 @@ export default function Switch({ onToggle, initial = false, amberReady = true }:
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const el = switchBodyRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const center = rect.top + rect.height / 2
-    document.documentElement.style.setProperty("--voice-dock-center", `${center}px`)
+    const bodyEl = switchBodyRef.current
+    const knobEl = knobRef.current
+    if (!bodyEl) return
+
+    const bodyRect = bodyEl.getBoundingClientRect()
+    const bodyCenter = bodyRect.top + bodyRect.height / 2
+    document.documentElement.style.setProperty("--voice-dock-center", `${bodyCenter}px`)
+
+    if (knobEl) {
+      const knobRect = knobEl.getBoundingClientRect()
+      const knobCenter = knobRect.top + knobRect.height / 2
+      document.documentElement.style.setProperty("--status-dot-center-y", `${knobCenter}px`)
+    }
   }, [checked])
 
   return (
@@ -50,7 +67,7 @@ export default function Switch({ onToggle, initial = false, amberReady = true }:
         />
 
         {/* Kulka na górze */}
-        <div className="switch-knob" />
+        <div className="switch-knob" ref={knobRef} data-ui-role="status-dot" />
 
         {/* Pasek */}
         <div className="switch-track" />

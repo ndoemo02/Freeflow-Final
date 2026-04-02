@@ -31,6 +31,21 @@ export default function AmberControlDeck({ adminToken }) {
   const [stylizationPrompt, setStylizationPrompt] = useState('');
   const [stylizationSaving, setStylizationSaving] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [liveMetrics, setLiveMetrics] = useState({
+    liveModel: 'gemini-2.5-flash-live',
+    sessionsOpened: 0,
+    sessionsClosed: 0,
+    reconnects: 0,
+    toolCalls: 0,
+    toolCallsByName: {},
+    audioFramesSent: 0,
+    audioBytesSent: 0,
+    avgSessionDurationSec: 0,
+    estimatedCostSession: 0,
+    estimatedCostToday: 0,
+    estimatedCostMonth: 0,
+    burnRateLastHour: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [aliases, setAliases] = useState({});
   const [aliasForm, setAliasForm] = useState({ alias: '', canonical: '' });
@@ -58,14 +73,16 @@ export default function AmberControlDeck({ adminToken }) {
 
   const fetchData = async () => {
     try {
-      const [cfgRes, liveRes, aliasRes] = await Promise.all([
+      const [cfgRes, liveRes, aliasRes, liveMetricsRes] = await Promise.all([
         fetch(getApiUrl('/api/admin/config'), { headers }),
         fetch(getApiUrl('/api/admin/live'), { headers }),
-        fetch(getApiUrl('/api/admin/aliases'), { headers })
+        fetch(getApiUrl('/api/admin/aliases'), { headers }),
+        fetch(getApiUrl('/api/admin/live/metrics'), { headers })
       ]);
       const cfgJson = await cfgRes.json();
       const live = await liveRes.json();
       const aliasJson = await aliasRes.json().catch(() => ({ ok: false }));
+      const liveMetricsJson = await liveMetricsRes.json().catch(() => ({ ok: false }));
       if (cfgJson && cfgJson.ok !== false) {
         const cfg = cfgJson.config || {};
         setConfig(prev => ({
@@ -85,6 +102,24 @@ export default function AmberControlDeck({ adminToken }) {
       }
       if (live && live.ok !== false) setLogs(live.data || []);
       if (aliasJson && aliasJson.ok !== false) setAliases(aliasJson.aliases || {});
+      if (liveMetricsJson && liveMetricsJson.ok !== false) {
+        setLiveMetrics((prev) => ({
+          ...prev,
+          liveModel: liveMetricsJson.liveModel || prev.liveModel,
+          sessionsOpened: Number(liveMetricsJson.sessionsOpened || 0),
+          sessionsClosed: Number(liveMetricsJson.sessionsClosed || 0),
+          reconnects: Number(liveMetricsJson.reconnects || 0),
+          toolCalls: Number(liveMetricsJson.toolCalls || 0),
+          toolCallsByName: liveMetricsJson.toolCallsByName || {},
+          audioFramesSent: Number(liveMetricsJson.audioFramesSent || 0),
+          audioBytesSent: Number(liveMetricsJson.audioBytesSent || 0),
+          avgSessionDurationSec: Number(liveMetricsJson.avgSessionDurationSec || 0),
+          estimatedCostSession: Number(liveMetricsJson.estimatedCostSession || 0),
+          estimatedCostToday: Number(liveMetricsJson.estimatedCostToday || 0),
+          estimatedCostMonth: Number(liveMetricsJson.estimatedCostMonth || 0),
+          burnRateLastHour: Number(liveMetricsJson.burnRateLastHour || 0),
+        }));
+      }
       setLoading(false);
     } catch (e) {
       setLoading(false);
@@ -243,6 +278,14 @@ export default function AmberControlDeck({ adminToken }) {
   const InputClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none";
   const SelectClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none cursor-pointer";
   const CardClass = "glass-strong rounded-xl p-6 border border-[var(--border)]";
+  const formatUsd = (value) => `$${Number(value || 0).toFixed(4)}`;
+  const formatBytes = (bytes) => {
+    const safe = Number(bytes || 0);
+    if (safe < 1024) return `${safe.toFixed(0)} B`;
+    if (safe < 1024 * 1024) return `${(safe / 1024).toFixed(1)} KB`;
+    if (safe < 1024 * 1024 * 1024) return `${(safe / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(safe / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
 
   return (
     <div className="space-y-6">
@@ -428,6 +471,54 @@ export default function AmberControlDeck({ adminToken }) {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className={CardClass}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
+            <span className="text-xl">đź“Š</span> Live Usage (Estimate)
+          </div>
+          <div className="text-xs text-[var(--muted)]">
+            Model: <span className="font-mono text-[var(--fg0)]">{liveMetrics.liveModel || '-'}</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Sesje (today)</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.sessionsOpened || 0}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Reconnects</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.reconnects || 0}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Tool calls</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.toolCalls || 0}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Audio sent</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{formatBytes(liveMetrics.audioBytesSent)}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Cost today</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostToday)}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Cost month</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostMonth)}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Burn / hour</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.burnRateLastHour)}</div>
+          </div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
+            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Avg session</div>
+            <div className="text-[var(--fg0)] font-semibold text-lg">{Number(liveMetrics.avgSessionDurationSec || 0).toFixed(1)}s</div>
+          </div>
+        </div>
+        <div className="mt-3 text-[11px] text-[var(--muted)]">
+          Operational estimate only (internal panel). Not a Google Cloud billing source of truth.
         </div>
       </div>
 

@@ -8,6 +8,7 @@ interface ConversationState {
     isThinking: boolean;
     error: string | null;
     lastResponse: string;
+    uiMode: 'list' | 'restaurant' | 'checkout';
     conversationPhase: 'idle' | 'restaurant_selected' | 'ordering' | 'checkout' | 'unknown' | string;
     currentRestaurant: any | null;
     pendingOrder: any | null;
@@ -46,6 +47,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     isThinking: false,
     error: null,
     lastResponse: '',
+    uiMode: 'list',
     conversationPhase: 'idle',
     currentRestaurant: null,
     pendingOrder: null,
@@ -76,6 +78,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             cart: null,
             pendingOrder: null,
             expectedContext: null,
+            uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
             lastFullResponse: null,
@@ -94,6 +97,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         localStorage.setItem('amber-session-id', newId);
         set({
             sessionId: newId,
+            uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
             pendingOrder: null,
@@ -196,9 +200,23 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             const isFindNearby = data.intent === 'find_nearby' && !!restaurantsFromResponse?.length;
             if (isFindNearby) newPhase = 'idle';
 
+            const currentUiMode = get().uiMode;
+            const nextIntent = data.intent || null;
+            let nextUiMode: ConversationState['uiMode'] = currentUiMode;
+            if (nextIntent === 'find_nearby') {
+                nextUiMode = 'list';
+            } else if (nextIntent === 'select_restaurant' || nextIntent === 'show_menu' || nextIntent === 'menu_request') {
+                nextUiMode = 'restaurant';
+            } else if (nextIntent === 'open_checkout') {
+                nextUiMode = 'checkout';
+            }
+
             const isIdle = newPhase === 'idle';
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
             console.debug('[UI_STATE] listVisible:', isIdle && !!restaurantsFromResponse?.length, 'resultsCount:', restaurantsFromResponse?.length ?? 0, 'focusedRestaurant:', isFindNearby ? null : get().selectedRestaurantPreviewId, 'mode:', newPhase);
+            console.debug(`[UI_MODE] mode=${nextUiMode}`);
+            console.debug(`[UI_MODE] resultsCount=${restaurantsFromResponse?.length ?? 0}`);
+            console.debug(`[UI_MODE] currentRestaurant=${ctx.currentRestaurant?.name || data.currentRestaurant?.name || get().currentRestaurant?.name || 'null'}`);
 
             const isOrderSuccess = data.intent === 'order_success'
                 || data.intent === 'order_complete'
@@ -213,6 +231,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     conversationHistory: newHistory,
                     lastContext: ctx,
                     lastFullResponse: data,
+                    uiMode: 'list',
                     conversationPhase: 'idle',
                     currentRestaurant: null,
                     pendingOrder: null,
@@ -236,6 +255,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationHistory: newHistory,
                 lastContext: ctx,
                 lastFullResponse: data,
+                uiMode: nextUiMode,
                 conversationPhase: newPhase,
                 currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),

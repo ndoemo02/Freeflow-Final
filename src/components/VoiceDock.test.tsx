@@ -2,19 +2,28 @@ import { render, screen } from "@testing-library/react";
 import VoiceDock from "./VoiceDock";
 
 describe("VoiceDock", () => {
-  it("renders dock", () => {
+  it("renders dock with placeholder", () => {
     render(
       <VoiceDock
-        messages={[]}               // pusta lista
-        value=""                    // pusty input
-        onChange={() => {}}         // fake handler
-        onSubmit={() => {}}         // fake handler
-        recording={false}           // mikrofon wyłączony
-        onMicClick={() => {}}       // fake handler
+        recording={false}
+        onMicClick={() => {}}
+        onTextSubmit={() => {}}
+        visible={true}
       />
     );
 
-    // sprawdzamy czy placeholder inputu istnieje
-    expect(screen.getByPlaceholderText(/Powiedz lub wpisz/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/napisz lub powiedz/i)).toBeInTheDocument();
+  });
+
+  it("shows listening placeholder when recording", () => {
+    render(
+      <VoiceDock
+        recording={true}
+        onMicClick={() => {}}
+        visible={true}
+      />
+    );
+
+    expect(screen.getByPlaceholderText(/słucham/i)).toBeInTheDocument();
   });
 });

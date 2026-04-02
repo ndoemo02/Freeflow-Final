@@ -119,8 +119,8 @@ function MenuSheetContent({
     const stackHeight = isTeaser ? 210 : 240;
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
     const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
-    // LIST mode: account for VoiceDock (z-70) + BottomTabBar (z-60) floating above
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 160px)';
+    // LIST mode: reserve only VoiceDock + safe area
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 96px)';
 
     return (
         <div

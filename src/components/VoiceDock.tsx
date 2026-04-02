@@ -1,5 +1,5 @@
 /**
- * VoiceDock — canonical voice bar for FreeFlow
+ * VoiceDock Ă˘â‚¬â€ť canonical voice bar for FreeFlow
  * Replaces VoiceCommandCenterV2 and VoiceInputBar.
  * Dark premium glass, interaction-first, token-based styling.
  */
@@ -41,8 +41,14 @@ export default function VoiceDock({
   onClearResponse,
 }: VoiceDockProps) {
   const [inputValue, setInputValue] = useState("");
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 768px)").matches;
+  });
   const inputRef = useRef<HTMLInputElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const handleSubmit = onTextSubmit ?? onSubmitText;
+  const hasTypedText = inputValue.trim().length > 0;
 
   // Amber status mapping
   let amberStatus: AmberStatusNode = "idle";
@@ -60,22 +66,41 @@ export default function VoiceDock({
     }
   }, [recording]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 768px)");
+    const handleMedia = () => setIsMobile(mq.matches);
+    handleMedia();
+    mq.addEventListener("change", handleMedia);
+    return () => mq.removeEventListener("change", handleMedia);
+  }, []);
+
   const submit = () => {
-    if (inputValue.trim()) {
+    if (hasTypedText) {
       handleSubmit?.(inputValue);
       setInputValue("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") submit();
+    if (e.key !== "Enter") return;
+    if (hasTypedText) {
+      submit();
+      return;
+    }
+    onMicClick?.();
   };
+
+  const dockWrapperStyle = isMobile
+    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)" }
+    : undefined;
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+          style={dockWrapperStyle}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 24 }}
@@ -83,9 +108,12 @@ export default function VoiceDock({
         >
           <div
             className="w-full pointer-events-auto"
-            style={{ maxWidth: 600 }}
+            style={{
+              width: isMobile ? "92vw" : "100%",
+              maxWidth: isMobile ? 500 : 600,
+            }}
           >
-            {/* Amber response bubble — above bar */}
+            {/* Amber response bubble Ă˘â‚¬â€ť above bar */}
             <AnimatePresence>
               {showResponse && (
                 <motion.div
@@ -121,6 +149,8 @@ export default function VoiceDock({
 
             {/* Voice bar */}
             <div
+              ref={barRef}
+              data-ui-role="voice-dock-bar"
               className="flex items-center gap-2.5 px-3 py-2"
               style={{
                 borderRadius: "var(--radius-pill)",
@@ -134,29 +164,10 @@ export default function VoiceDock({
                 backdropFilter: "blur(var(--blur-lg))",
                 WebkitBackdropFilter: "blur(var(--blur-lg))",
                 transition: "border-color var(--anim-fast), box-shadow var(--anim-normal)",
+                position: "relative",
+                overflow: "visible",
               }}
             >
-              {/* Amber status orb */}
-              <motion.button
-                type="button"
-                onClick={onMicClick}
-                className="shrink-0 relative flex items-center justify-center"
-                style={{ width: 36, height: 36 }}
-                whileTap={{ scale: 0.92 }}
-                aria-label={recording ? "Zatrzymaj nagrywanie" : "Zacznij mówić"}
-                aria-pressed={recording}
-              >
-                <AmberIndicator status={amberStatus} />
-                {/* Red dot overlay when recording */}
-                {recording && (
-                  <motion.div
-                    className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"
-                    animate={{ opacity: [1, 0.3, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  />
-                )}
-              </motion.button>
-
               {/* Text input */}
               <input
                 ref={inputRef}
@@ -164,14 +175,14 @@ export default function VoiceDock({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={recording ? "Słucham…" : "Napisz lub powiedz…"}
+                placeholder={recording ? "SÄąâ€šuchamĂ˘â‚¬Â¦" : "Napisz lub powiedzĂ˘â‚¬Â¦"}
                 className="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/28 focus:outline-none caret-cyan-400"
                 style={{ letterSpacing: "0.01em" }}
               />
 
-              {/* Send / clear buttons */}
+              {/* Send / mic button */}
               <AnimatePresence mode="wait">
-                {inputValue.trim() ? (
+                {hasTypedText ? (
                   <motion.button
                     key="send"
                     type="button"
@@ -189,38 +200,37 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.9 }}
                     transition={{ duration: 0.15 }}
-                    aria-label="Wyślij"
+                    aria-label="Wyslij"
                   >
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                       <path d="M1 7.5h13M8.5 2 14 7.5 8.5 13" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </motion.button>
                 ) : (
-                  <motion.div
-                    key="idle"
-                    className="shrink-0 flex items-center justify-center"
+                  <motion.button
+                    key="mic"
+                    type="button"
+                    data-ui-role="action-orb"
+                    onClick={onMicClick}
+                    className="shrink-0 relative flex items-center justify-center"
                     style={{ width: 36, height: 36 }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.7 }}
+                    whileTap={{ scale: 0.92 }}
                     transition={{ duration: 0.15 }}
+                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Wlacz mikrofon"}
+                    aria-pressed={recording}
                   >
-                    {/* Pulse dots — idle state visual */}
-                    <div className="flex gap-[3px]">
-                      {[0, 0.15, 0.3].map((delay, i) => (
-                        <motion.div
-                          key={i}
-                          className="rounded-full"
-                          style={{ width: 4, height: 4, background: "rgba(255,255,255,0.22)" }}
-                          animate={isProcessing
-                            ? { opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }
-                            : { opacity: 0.22 }
-                          }
-                          transition={{ duration: 0.8, delay, repeat: Infinity }}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
+                    <AmberIndicator status={amberStatus} />
+                    {recording && (
+                      <motion.div
+                        className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                    )}
+                  </motion.button>
                 )}
               </AnimatePresence>
             </div>

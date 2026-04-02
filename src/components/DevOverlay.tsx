@@ -56,7 +56,7 @@ export default function DevOverlay() {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed top-20 left-4 z-[9999] bg-black/80 backdrop-blur w-8 h-8 flex items-center justify-center border border-white/20 rounded-full text-green-400 hover:bg-black/90 transition-colors shadow-lg"
+                className="fixed top-20 right-4 z-[9999] bg-black/80 backdrop-blur w-8 h-8 flex items-center justify-center border border-white/20 rounded-full text-green-400 hover:bg-black/90 transition-colors shadow-lg"
                 title="Pokaż stan aplikacji (FSM)"
             >
                 <i className="fas fa-bug text-sm"></i>
@@ -65,7 +65,7 @@ export default function DevOverlay() {
     }
 
     return (
-        <div className="fixed top-20 left-4 z-[9999] bg-black/80 backdrop-blur border border-white/20 p-4 rounded-xl text-[10px] font-mono text-green-400 w-80 shadow-2xl">
+        <div className="fixed top-20 right-4 z-[9999] bg-black/80 backdrop-blur border border-white/20 p-4 rounded-xl text-[10px] font-mono text-green-400 w-80 shadow-2xl">
             <div className="flex justify-between items-center mb-2 border-b border-white/20 pb-1">
                 <h3 className="text-white font-bold flex items-center gap-2">
                     🧠 V2 FSM State
