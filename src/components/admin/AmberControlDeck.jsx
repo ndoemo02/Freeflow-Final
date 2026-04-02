@@ -477,7 +477,7 @@ export default function AmberControlDeck({ adminToken }) {
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
-            <span className="text-xl">đź“Š</span> Live Usage (Estimate)
+            <span className="text-xl">📊</span> Live Usage (Estimate)
           </div>
           <div className="text-xs text-[var(--muted)]">
             Model: <span className="font-mono text-[var(--fg0)]">{liveMetrics.liveModel || '-'}</span>

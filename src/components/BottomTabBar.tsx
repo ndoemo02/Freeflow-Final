@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ROUTES } from '../app/routeConfig'
 import { useUI } from '../state/ui'
 
-// ─── Routes where bar is hidden ─────────────────────────────────────────────
 const HIDDEN_ON: string[] = [
+  ROUTES.PANEL_CLIENT,
   ROUTES.PANEL_BUSINESS_KDS,
   ROUTES.PANEL_BUSINESS,
   ROUTES.PANEL_ADMIN,
@@ -15,17 +15,18 @@ const HIDDEN_ON: string[] = [
   ROUTES.LEGACY_PANEL_CUSTOMER,
 ]
 
-// ─── Icons ───────────────────────────────────────────────────────────────────
 const HomeIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12L12 3l9 9M5 10v9h4v-5h6v5h4V10" />
   </svg>
 )
+
 const FoodIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 2C8 2 5 5 5 9c0 3.9 2.7 7.2 6.4 8.7L12 22l.6-4.3C16.3 16.2 19 12.9 19 9c0-4-3-7-7-7z" />
   </svg>
 )
+
 const OrdersIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
@@ -33,33 +34,42 @@ const OrdersIcon = () => (
     <path d="M9 12h6M9 16h4" />
   </svg>
 )
+
 const ProfileIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
   </svg>
 )
+
 const MicIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="2" width="6" height="12" rx="3" />
     <path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8" />
   </svg>
 )
+
 const StopIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
     <rect x="6" y="6" width="12" height="12" rx="2" />
   </svg>
 )
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'home',    label: 'Home',       Icon: HomeIcon,    path: ROUTES.HOME },
-  { id: 'food',    label: 'Jedzenie',   Icon: FoodIcon,    path: ROUTES.PANEL_CLIENT },
-  null, // FAB slot
-  { id: 'orders',  label: 'Zamówienia', Icon: OrdersIcon,  path: ROUTES.ORDERS },
-  { id: 'profile', label: 'Profil',     Icon: ProfileIcon, path: ROUTES.PROFILE },
-] as const
+type TabSection = 'food' | 'orders' | 'profile'
+type TabConfig = {
+  id: 'home' | 'food' | 'orders' | 'profile'
+  label: string
+  Icon: () => React.JSX.Element
+  to: string
+  activeSection?: TabSection
+}
 
-// ─── Z-index hierarchy: VoiceDock(70) > FAB(65) > TabBar(60) > content ───────
+const TABS: Array<TabConfig | null> = [
+  { id: 'home', label: 'Home', Icon: HomeIcon, to: ROUTES.HOME },
+  { id: 'food', label: 'Jedzenie', Icon: FoodIcon, to: `${ROUTES.PANEL_CLIENT}?section=food`, activeSection: 'food' },
+  null,
+  { id: 'orders', label: 'Zamowienia', Icon: OrdersIcon, to: ROUTES.ORDERS, activeSection: 'orders' },
+  { id: 'profile', label: 'Profil', Icon: ProfileIcon, to: ROUTES.PROFILE, activeSection: 'profile' },
+]
 
 export default function BottomTabBar() {
   const location = useLocation()
@@ -67,7 +77,6 @@ export default function BottomTabBar() {
   const voiceActive = useUI((s) => s.voiceActive)
   const [islandExpanded, setIslandExpanded] = useState(false)
 
-  // Watch .freeflow element for 'island-full-list' class (set by useIslandStateMachine)
   useEffect(() => {
     const attach = () => {
       const target = document.querySelector('.freeflow')
@@ -80,32 +89,43 @@ export default function BottomTabBar() {
     }
 
     const obs = attach()
-    // Re-attach on route change (element may re-mount)
     return () => obs?.disconnect()
   }, [location.pathname])
 
-  // Hide on excluded routes
+  useEffect(() => {
+    if (location.pathname === ROUTES.PANEL_CLIENT) {
+      console.log('[NAV_FIX] hidden bottom tab on /panel/client')
+    }
+  }, [location.pathname])
+
   if (HIDDEN_ON.includes(location.pathname)) return null
 
   const handleVoiceFAB = () => {
     window.dispatchEvent(new CustomEvent('freeflow:voice:trigger'))
   }
 
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/'
-    return location.pathname.startsWith(path)
+  const currentSection = new URLSearchParams(location.search).get('section')
+  const isTabActive = (tab: TabConfig) => {
+    if (!tab.activeSection) {
+      if (tab.to === ROUTES.HOME) return location.pathname === ROUTES.HOME
+      return location.pathname.startsWith(tab.to)
+    }
+
+    if (location.pathname === ROUTES.PANEL_CLIENT && currentSection === tab.activeSection) {
+      return true
+    }
+
+    return location.pathname === tab.to
   }
 
   const dimmed = islandExpanded
   const fabActive = voiceActive
 
   return (
-    // z-[60]: TabBar < FAB(65) < VoiceDock(70)
     <div
       className="fixed bottom-0 left-0 right-0 z-[60] lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* Bar surface */}
       <div
         className="mx-3 mb-3 flex items-center justify-around relative transition-opacity duration-300"
         style={{
@@ -124,14 +144,14 @@ export default function BottomTabBar() {
             return <div key="fab-slot" style={{ width: 64 }} />
           }
 
-          const active = isActive(tab.path)
-          const { Icon, label, path } = tab
+          const active = isTabActive(tab)
+          const { Icon, label, to } = tab
 
           return (
             <motion.button
               key={tab.id}
               whileTap={{ scale: 0.88 }}
-              onClick={() => navigate(path)}
+              onClick={() => navigate(to)}
               className="flex flex-col items-center justify-center gap-0.5 transition-colors"
               style={{
                 minWidth: 44,
@@ -156,7 +176,6 @@ export default function BottomTabBar() {
         })}
       </div>
 
-      {/* Voice FAB — z-[65], floats above center of bar */}
       <motion.button
         whileTap={{ scale: 0.9 }}
         onClick={handleVoiceFAB}
@@ -178,7 +197,7 @@ export default function BottomTabBar() {
         }}
         animate={fabActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
         transition={fabActive ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : {}}
-        aria-label={fabActive ? 'Zatrzymaj nasłuchiwanie' : 'Aktywuj głos'}
+        aria-label={fabActive ? 'Zatrzymaj nasluchiwanie' : 'Aktywuj glos'}
         aria-pressed={fabActive}
       >
         <AnimatePresence mode="wait" initial={false}>

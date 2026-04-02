@@ -108,29 +108,22 @@ function FloatingRestaurantFocusCard({
                 style={{
                     borderRadius: 'var(--radius-md)',
                     background: isFocused
-                        ? 'linear-gradient(155deg, rgba(6,182,212,0.24) 0%, rgba(6,182,212,0.06) 45%, rgba(5,8,16,0.98) 100%)'
+                        ? 'linear-gradient(155deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, rgba(5,8,16,0.98) 100%)'
                         : isRecommended
                             ? 'linear-gradient(155deg, rgba(249,115,22,0.14) 0%, rgba(6,10,18,0.90) 100%)'
                             : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(5,8,16,0.88) 100%)',
                     border: isFocused
-                        ? '1px solid rgba(6,182,212,0.52)'
+                        ? '1px solid rgba(255,255,255,0.08)'
                         : isRecommended
                             ? '1px solid rgba(249,115,22,0.22)'
                             : '1px solid rgba(255,255,255,0.05)',
                     boxShadow: isFocused
-                        ? '0 0 0 1px rgba(6,182,212,0.22) inset, 0 16px 36px rgba(0,0,0,0.45), 0 0 48px rgba(6,182,212,0.07)'
+                        ? '0 0 0 1px rgba(255,255,255,0.08) inset, 0 16px 36px rgba(0,0,0,0.45)'
                         : '0 8px 16px rgba(0,0,0,0.22)',
                     backdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
                     WebkitBackdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
                 }}
             >
-                {/* top shimmer line */}
-                {isFocused && (
-                    <div
-                        className="absolute inset-x-6 top-0 h-px"
-                        style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.95), transparent)' }}
-                    />
-                )}
                 {isRecommended && !isFocused && (
                     <div
                         className="absolute inset-x-6 top-0 h-px"
@@ -460,7 +453,7 @@ export default function RestaurantSheetContent({
     const stackHeight = isTeaser ? 170 : 220;
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
     const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 80px)';
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 112px)';
     const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pełna lista' : 'Wyspa';
 
     return (

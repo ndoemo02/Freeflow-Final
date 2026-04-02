@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { supabase } from "../lib/supabase"
 
-type User = { id: string; email?: string | null } | null
+type User = {
+  id: string
+  email?: string | null
+  user_metadata?: Record<string, any>
+  role?: string | null
+} | null
 
 type AuthContextType = {
   user: User
@@ -21,12 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // initial session
     supabase.auth.getSession().then(({ data }: any) => {
       const u = data.session?.user
-      setUser(u ? { id: u.id, email: u.email } : null)
+      setUser(u ? { id: u.id, email: u.email, user_metadata: u.user_metadata || {}, role: u.role || null } : null)
     })
     // listen for auth state changes
     const { data: sub } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       const u = session?.user
-      setUser(u ? { id: u.id, email: u.email } : null)
+      setUser(u ? { id: u.id, email: u.email, user_metadata: u.user_metadata || {}, role: u.role || null } : null)
     })
     return () => sub.subscription.unsubscribe()
   }, [])

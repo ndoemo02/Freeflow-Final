@@ -229,6 +229,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                         ...(response.meta || {}),
                         cart: response.cart || response.meta?.cart,
                         intent: response.intent || response.meta?.intent,
+                        tool: liveToolName || response.meta?.tool || null,
                     },
                     response.turn_id || response.timestamp || parsed.request_id,
                     response.events,

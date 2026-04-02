@@ -162,8 +162,8 @@ export default function MenuDrawer() {
   const roleLabel = userRole === "admin"
     ? "Administrator"
     : userRole === "business"
-      ? "WĹ‚aĹ›ciciel"
-      : "UĹĽytkownik";
+      ? "Właściciel"
+      : "Użytkownik";
 
   const handleDrawerHome = () => {
     console.log("[NAV] drawer: home");
@@ -176,6 +176,9 @@ export default function MenuDrawer() {
   };
   const handleDrawerClientPanel = () => {
     console.log("[NAV] drawer: client_panel");
+  };
+  const handleDrawerOrders = () => {
+    console.log("[NAV_FIX] orders route -> /panel/client?section=orders");
   };
 
   return (
@@ -250,12 +253,13 @@ export default function MenuDrawer() {
               <GroupLabel>Aplikacja</GroupLabel>
               <NavItem iconName="home" label="Home" route={ROUTES.HOME} onClick={handleDrawerHome} />
               <NavItem iconName="cart" label="Koszyk" onClick={handleDrawerCart} badge={itemCount} />
+              <NavItem iconName="history" label="Moje zamówienia" route={ROUTES.ORDERS} onClick={handleDrawerOrders} />
               <NavItem iconName="profile" label="Panel Klienta" route={ROUTES.PANEL_CLIENT} onClick={handleDrawerClientPanel} />
 
               <Hairline />
 
-              <GroupLabel>PrzestrzeĹ„ pracy</GroupLabel>
-              <OpItem iconName="business" label="Panel WĹ‚aĹ›ciciela" route={ROUTES.BUSINESS_READONLY} requiresAuth />
+              <GroupLabel>Przestrzeń pracy</GroupLabel>
+              <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.BUSINESS_READONLY} requiresAuth />
               <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
               <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
 
@@ -268,7 +272,7 @@ export default function MenuDrawer() {
               <GroupLabel>Ustawienia</GroupLabel>
               <NavItem iconName="settings" label="Ustawienia" route={ROUTES.SETTINGS} />
               {isRouteEnabled("/order-history") && (
-                <NavItem iconName="history" label="Historia zamĂłwieĹ„" route="/order-history" />
+                <NavItem iconName="history" label="Historia zamówień" route="/order-history" />
               )}
               {isRouteEnabled("/faq") && (
                 <NavItem iconName="faq" label="FAQ" route="/faq" />
@@ -279,7 +283,7 @@ export default function MenuDrawer() {
               {user?.id ? (
                 <NavItem
                   iconName="logout"
-                  label="Wyloguj siÄ™"
+                  label="Wyloguj się"
                   isDanger
                   onClick={() => {
                     signOut();
@@ -289,7 +293,7 @@ export default function MenuDrawer() {
               ) : (
                 <NavItem
                   iconName="login"
-                  label="Zaloguj siÄ™"
+                  label="Zaloguj się"
                   onClick={() => openAuth()}
                 />
               )}
@@ -329,3 +333,4 @@ export default function MenuDrawer() {
     </AnimatePresence>
   );
 }
+

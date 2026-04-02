@@ -618,7 +618,8 @@
 .freeflow {
   --island-height-closed: 30vh;
   --island-height-peek: 60vh;
-  --island-height-expanded: 100vh;
+  --island-expanded-top-clearance: 92px;
+  --island-height-expanded: calc(100dvh - var(--island-expanded-top-clearance));
   --voice-safe-bottom: calc(env(safe-area-inset-bottom) + 84px);
   --logo-expanded-scale: 0.55;
 }
@@ -631,7 +632,7 @@
   display: flex;
   justify-content: center;
   pointer-events: none;
-  z-index: 10;
+  z-index: 46;
 }
 
 .contextual-island-sheet {
@@ -668,8 +669,10 @@
 .contextual-island-sheet--expanded,
 .contextual-island-sheet.island-expanded {
   height: var(--island-height-expanded);
+  max-height: calc(100dvh - var(--island-expanded-top-clearance));
   border-radius: 0;
   overflow: hidden;
+  z-index: 48;
 }
 
 .list-scroll {
@@ -681,7 +684,7 @@
 }
 
 .hero-stack {
-  z-index: 15;
+  z-index: 60;
 }
 
 .freeflow.island-full-list .hero-stack {
@@ -690,7 +693,7 @@
   transform: translate(0, 0) scale(var(--logo-expanded-scale));
   min-width: 0;
   min-height: 0;
-  z-index: 30;
+  z-index: 62;
 }
 
 .freeflow.island-full-list .logo-container {
@@ -708,6 +711,12 @@
   .freeflow.island-full-list .hero-stack {
     top: 76px;
     left: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .freeflow {
+    --island-expanded-top-clearance: clamp(84px, 12vh, 112px);
   }
 }
 
