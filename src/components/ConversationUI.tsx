@@ -45,7 +45,7 @@ export function StateIsland() {
         label = 'Menu restauracji';
         color = 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
     } else if (isChoosingRestaurant) {
-        label = 'Wybor restauracji';
+        label = 'Wybór restauracji';
         color = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
     } else if (isIdle) {
         label = 'Odkrywanie';
@@ -147,6 +147,8 @@ export function SuggestedRestaurantsCarousel() {
     }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
+
+    console.debug('[UI_STATE] SuggestedRestaurantsCarousel render — listVisible: true, resultsCount:', suggestedRestaurants.length, 'focusedRestaurant:', selectedRestaurantPreviewId, 'recommended:', recommendedId, 'currentRestaurant:', currentRestaurant?.name ?? null);
 
     return (
         <ContextualIsland

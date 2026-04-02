@@ -27,6 +27,7 @@ interface BrainMeta {
     } | any[];
     restaurant?: any;
     source?: string;
+    intent?: string;
     conversationClosed?: boolean;
     menuBehavior?: 'preserve' | 'softClose' | 'forceClose' | 'switchContext';
 }
@@ -91,7 +92,12 @@ export function useActionDispatcher() {
 
         const cartItems = Array.isArray(meta?.cart) ? meta.cart : (meta?.cart?.items || null);
 
-        if (cartItems && syncCart) {
+        // Guard: only auto-sync cart on intents that explicitly mutated it.
+        // Prevents silent session restore on page reload (BUG NEW-3).
+        const CART_MUTATION_INTENTS = ['confirm_add_to_cart', 'confirm_order', 'create_order', 'add_to_cart', 'modify_order', 'cancel_order'];
+        const isCartMutation = meta?.intent && CART_MUTATION_INTENTS.includes(meta.intent);
+
+        if (cartItems && cartItems.length > 0 && syncCart && isCartMutation) {
             console.log(`${fnTag} Syncing cart from meta.cart (${cartItems.length} items)`);
 
             const restaurantData = meta?.restaurant || null;

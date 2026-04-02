@@ -119,7 +119,8 @@ function MenuSheetContent({
     const stackHeight = isTeaser ? 210 : 240;
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);
     const stackSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 84px)';
+    // LIST mode: reserve only VoiceDock + safe area
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 96px)';
 
     return (
         <div
@@ -136,6 +137,7 @@ function MenuSheetContent({
                     stackSafeBottom={stackSafeBottom}
                     ctaLabel={ctaLabel}
                     recommendedId={recommendedId}
+                    hasFocused={!!highlightedId}
                     onSwipeStart={gestures.handleSwipeStart}
                     onSwipeEnd={gestures.handleSwipeEnd}
                     onWheel={gestures.handlePeekWheel}
@@ -156,7 +158,13 @@ function MenuSheetContent({
                             <button
                                 type="button"
                                 onClick={handleCtaPress}
-                                className="rounded-full bg-black/35 px-3 py-1.5 text-[11px] font-medium text-white/78 backdrop-blur-md transition hover:bg-black/45 hover:text-white"
+                                className="shrink-0 text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
+                                style={{
+                                    borderRadius: 'var(--radius-pill)',
+                                    padding: '5px 12px',
+                                    background: 'rgba(0,0,0,0.45)',
+                                    border: '1px solid rgba(255,255,255,0.10)',
+                                }}
                             >
                                 {ctaLabel}
                             </button>
@@ -190,34 +198,50 @@ function MenuSheetContent({
                                         className="w-full text-left"
                                     >
                                         <div
-                                            className="relative overflow-hidden rounded-[20px] px-3 py-2.5"
+                                            className="relative overflow-hidden px-3 py-2.5"
                                             style={{
-                                                minHeight: '102px',
+                                                borderRadius: 'var(--radius-md)',
+                                                minHeight: '96px',
                                                 background: isActive
-                                                    ? 'linear-gradient(140deg, rgba(34,211,238,0.22) 0%, rgba(8,12,20,0.95) 100%)'
+                                                    ? 'linear-gradient(155deg, rgba(6,182,212,0.20) 0%, rgba(6,182,212,0.05) 45%, rgba(5,8,16,0.96) 100%)'
                                                     : item._uiId === recommendedId
-                                                        ? 'linear-gradient(140deg, rgba(255,184,77,0.16) 0%, rgba(8,16,28,0.9) 100%)'
-                                                        : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(8,13,24,0.72))',
-                                                border: isActive ? '1px solid rgba(34,211,238,0.5)' : '1px solid rgba(255,255,255,0.05)',
+                                                        ? 'linear-gradient(155deg, rgba(249,115,22,0.12) 0%, rgba(5,8,16,0.88) 100%)'
+                                                        : 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(5,8,16,0.84) 100%)',
+                                                border: isActive
+                                                    ? '1px solid rgba(6,182,212,0.45)'
+                                                    : item._uiId === recommendedId
+                                                        ? '1px solid rgba(249,115,22,0.18)'
+                                                        : '1px solid rgba(255,255,255,0.05)',
                                                 boxShadow: isActive
-                                                    ? '0 0 0 1px rgba(34,211,238,0.28) inset, 0 10px 22px rgba(0,0,0,0.28)'
-                                                    : '0 8px 16px rgba(0,0,0,0.16)',
+                                                    ? '0 0 0 1px rgba(6,182,212,0.20) inset, 0 10px 20px rgba(0,0,0,0.26)'
+                                                    : '0 6px 14px rgba(0,0,0,0.16)',
                                                 // no backdropFilter in expanded list — avoids per-item compositing layers
                                             }}
                                         >
-                                            {(isActive || item._uiId === recommendedId) && (
+                                            {isActive && (
                                                 <div
-                                                    className="absolute inset-x-5 top-0 h-px"
-                                                    style={{
-                                                        background: `linear-gradient(90deg, transparent, ${isActive ? 'rgba(34,211,238,0.88)' : 'rgba(255,184,77,0.56)'}, transparent)`,
-                                                    }}
+                                                    className="absolute inset-x-6 top-0 h-px"
+                                                    style={{ background: 'linear-gradient(90deg, transparent, rgba(6,182,212,0.90), transparent)' }}
+                                                />
+                                            )}
+                                            {!isActive && item._uiId === recommendedId && (
+                                                <div
+                                                    className="absolute inset-x-6 top-0 h-px"
+                                                    style={{ background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.58), transparent)' }}
                                                 />
                                             )}
 
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] ${isActive ? 'bg-cyan-400/16 text-cyan-100' : 'bg-white/8 text-white/44'}`}>
+                                                        <span
+                                                            className={`text-[10px] uppercase tracking-[0.16em] ${isActive ? 'text-cyan-100' : 'text-white/44'}`}
+                                                            style={{
+                                                                borderRadius: 'var(--radius-pill)',
+                                                                padding: '2px 8px',
+                                                                background: isActive ? 'rgba(6,182,212,0.16)' : 'rgba(255,255,255,0.06)',
+                                                            }}
+                                                        >
                                                             {getCuisine(item)}
                                                         </span>
                                                     </div>

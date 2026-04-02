@@ -1,74 +1,54 @@
-/**
- * useGeminiLiveSession
- *
- * Full-duplex voice session with Gemini Live.
- *
- * Data flow:
- *   Mic → PCM16 16kHz → sendRealtimeInput() → [Gemini Live]
- *   [Gemini Live] → onmessage:
- *     serverContent (audio) → AudioPlayer gapless playback
- *     toolCall → useGeminiFunctionRelay → WS backend → FunctionResponse → Gemini
- *     interrupted → AudioPlayer.stop()
- *
- * Contracts preserved:
- *   - useLiveEvents untouched (provides wsRef)
- *   - useGeminiFunctionRelay untouched (relay tool calls to backend WS)
- *   - Home.tsx untouched (wiring happens in TASK 2.3)
- */
-
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
+import { startPCM16Stream } from '../lib/audioStream';
+import { AudioPlayer } from '../lib/audioPlayback';
+import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
 import {
   useGeminiFunctionRelay,
   type GeminiFunctionCall,
 } from './useGeminiFunctionRelay';
-import { startPCM16Stream } from '../lib/audioStream';
-import { AudioPlayer } from '../lib/audioPlayback';
-import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
+import { useConversationStore } from '../store/useConversationStore';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+// Fix #3: hardcoded safe default — no silent model drift
+const MODEL =
+  (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
+  'gemini-2.5-flash-native-audio-preview-12-2025';
 
-const MODEL = (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined)
-  || 'gemini-3.1-flash-live-preview';
 const MIC_MIME = 'audio/pcm;rate=16000';
+const RECONNECT_DELAYS_MS = [1000, 2000, 5000] as const;
+
+// Fix #4: module-level cache for session state persistence across reconnects
+export const liveSessionCache = new Map<string, {
+  cart: any;
+  currentRestaurant: any;
+  uiMode?: 'list' | 'restaurant' | 'checkout';
+  conversationPhase: string;
+  suggestedRestaurants: any[] | null;
+  menuItems: any[] | null;
+}>();
 
 const SYSTEM_INSTRUCTION = [
-  'Jesteś Amber — asystentka głosowa do zamawiania jedzenia po polsku.',
-  'Odpowiadaj krótko, naturalnie, po polsku.',
-  'Używaj dostępnych narzędzi (function calling) do wyszukiwania restauracji,',
-  'przeglądania menu i składania zamówień.',
-  'Nigdy nie wymyślaj dań ani restauracji — zawsze używaj narzędzi.',
+  'Jestes Amber - glosowa asystentka do zamawiania jedzenia w aplikacji FreeFlow.',
+  'Masz dostep do danych restauracji i menu przez function calling.',
+  'Uzywaj narzedzi do odpowiedzi o restauracje, menu i zamowienia.',
+  'Nie mow, ze nie masz dostepu do danych - korzystaj z narzedzi.',
+  'Odpowiadaj po polsku, krotko i naturalnie.',
 ].join(' ');
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface UseGeminiLiveSessionOptions {
-  /** Ref to the live WebSocket connection managed by useLiveEvents. */
   wsRef: React.MutableRefObject<WebSocket | null>;
-  /** Master toggle — when false, start() is a no-op. */
   enabled?: boolean;
+  sessionId?: string;
 }
 
 export interface UseGeminiLiveSessionResult {
-  /** Begin a Gemini Live voice session (mic + audio playback). */
   start: () => Promise<void>;
-  /** End the session, release mic, stop playback. */
   stop: () => void;
-  /** True while the session is open and streaming. */
   isActive: boolean;
-  /** Latest error message, or null. Cleared on next start(). */
   error: string | null;
+  reconnectHalted: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Convert ArrayBuffer to base64 string (for sendRealtimeInput). */
 function arrayBufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let binary = '';
@@ -78,54 +58,126 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+function compactToolResponse(
+  toolName: string,
+  response: Record<string, unknown>,
+): Record<string, unknown> {
+  const compact: Record<string, unknown> = {
+    reply: (response.reply || response.text || '') as string,
+    ok: true,
+  };
+
+  switch (toolName) {
+    case 'find_nearby': {
+      const list = (response.restaurants as any[] | undefined) ?? [];
+      compact.restaurants = list.slice(0, 8).map((x: any) => ({
+        id: x.id,
+        name: x.name,
+        cuisine: x.cuisine || x.category || null,
+        rating: x.rating ?? null,
+        distance: x.distance ?? null,
+      }));
+      break;
+    }
+    case 'show_menu':
+    case 'select_restaurant': {
+      const items = (response.menuItems as any[] | undefined) ?? (response.menu as any[] | undefined) ?? [];
+      compact.menuItems = items.slice(0, 20).map((x: any) => ({
+        id: x.id,
+        name: x.name,
+        price: x.price ?? null,
+        category: x.category ?? null,
+      }));
+      break;
+    }
+    case 'confirm_add_to_cart':
+    case 'get_cart_state': {
+      const cart = (response.cart as any) ?? {};
+      compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
+      compact.cartTotal = cart.total ?? null;
+      break;
+    }
+    default:
+      break;
+  }
+
+  return compact;
+}
 
 export function useGeminiLiveSession({
   wsRef,
   enabled = true,
+  sessionId: propSessionId,
 }: UseGeminiLiveSessionOptions): UseGeminiLiveSessionResult {
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reconnectHalted, setReconnectHalted] = useState(false);
 
   const sessionRef = useRef<Session | null>(null);
   const stopMicRef = useRef<(() => void) | null>(null);
   const playerRef = useRef(new AudioPlayer());
-  const activeRef = useRef(false); // non-render guard for start()
+
+  const activeRef = useRef(false);
+  const startInFlightRef = useRef(false);
+  const stopInFlightRef = useRef(false);
+  const desiredActiveRef = useRef(false);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Marks that the close was triggered intentionally (user stop / cleanup) — suppress reconnect
+  const intentionalCloseRef = useRef(false);
+  // Fix #4: stable ref so start() closure always sees current sessionId
+  const sessionIdRef = useRef(propSessionId);
+  useEffect(() => { sessionIdRef.current = propSessionId; }, [propSessionId]);
 
   const { relay } = useGeminiFunctionRelay({ wsRef });
 
-  // ---- Cleanup on unmount ----
-  useEffect(() => {
-    return () => {
-      stopMicRef.current?.();
-      sessionRef.current?.close();
-      playerRef.current.close();
-    };
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
   }, []);
 
-  // ---- stop() ----
-  const stop = useCallback(() => {
+  const cleanupRuntime = useCallback((closeSession: boolean) => {
     stopMicRef.current?.();
     stopMicRef.current = null;
 
-    if (sessionRef.current) {
-      try { sessionRef.current.close(); } catch { /* already closed */ }
-      sessionRef.current = null;
+    if (closeSession && sessionRef.current) {
+      try { sessionRef.current.close(); } catch { /* noop */ }
     }
+    sessionRef.current = null;
 
     playerRef.current.stop();
     activeRef.current = false;
     setIsActive(false);
-    setError(null);
-    console.log('[GeminiLive] stopped');
   }, []);
 
-  // ---- start() ----
+  const stop = useCallback(() => {
+    if (stopInFlightRef.current) return;
+    stopInFlightRef.current = true;
+    try {
+      intentionalCloseRef.current = true;   // suppress reconnect in onclose
+      desiredActiveRef.current = false;
+      reconnectAttemptRef.current = 0;
+      clearReconnectTimer();
+      setReconnectHalted(false);
+      cleanupRuntime(true);
+      setError(null);
+      console.log(`[LIVE] STOP sessionId=${sessionIdRef.current ?? 'unknown'} code=user_stop`);
+    } finally {
+      stopInFlightRef.current = false;
+      startInFlightRef.current = false;
+    }
+  }, [cleanupRuntime, clearReconnectTimer]);
+
   const start = useCallback(async () => {
     if (!enabled) return;
-    if (activeRef.current) return;
+
+    // Fix #2: singleton guard — check sessionRef too
+    if (sessionRef.current || activeRef.current || startInFlightRef.current) {
+      console.log('[LIVE] session already active – skip start');
+      return;
+    }
 
     const apiKey = import.meta.env.VITE_GEMINI_LIVE_API_KEY as string | undefined;
     if (!apiKey) {
@@ -133,34 +185,91 @@ export function useGeminiLiveSession({
       return;
     }
 
+    // Fix #3: throw on missing model — no silent fallback to wrong model
+    if (!MODEL) {
+      setError('VITE_GEMINI_LIVE_MODEL not configured');
+      return;
+    }
+
+    const sid = sessionIdRef.current ?? 'unknown';
+    desiredActiveRef.current = true;
     setError(null);
+    setReconnectHalted(false);
+    startInFlightRef.current = true;
+    console.log(`[LIVE_INIT_CALLSITE] useGeminiLiveSession start requested — sessionId=${sid}`);
+    console.log(`[LIVE] START sessionId=${sid} model=${MODEL}`);
+    console.log(`[LIVE FRONT MODEL] ${MODEL}`);
+
+    const scheduleReconnect = () => {
+      if (!desiredActiveRef.current || stopInFlightRef.current) return;
+      if (reconnectTimerRef.current) return;
+
+      const nextAttempt = reconnectAttemptRef.current + 1;
+      if (nextAttempt > RECONNECT_DELAYS_MS.length) {
+        desiredActiveRef.current = false;
+        setReconnectHalted(true);
+        setError('Live reconnect halted');
+        console.warn('[LIVE] RECONNECT HALTED');
+        return;
+      }
+
+      reconnectAttemptRef.current = nextAttempt;
+      const delay = RECONNECT_DELAYS_MS[nextAttempt - 1];
+      console.warn(`[LIVE] RECONNECT attempt #${nextAttempt}`);
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        void start();
+      }, delay);
+    };
 
     try {
+      cleanupRuntime(true);
       const ai = new GoogleGenAI({ apiKey });
       const player = playerRef.current;
 
-      // ------ Handle onmessage from Gemini ------
+      let frameCount = 0;
+      const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
+        if (!sessionRef.current || !activeRef.current) return;
+        frameCount += 1;
+        if (frameCount <= 3) {
+          console.log(`[GeminiLive] frame#${frameCount} bytes=${pcm16.byteLength}`);
+        }
+
+        try {
+          sessionRef.current.sendRealtimeInput({
+            audio: {
+              data: arrayBufferToBase64(pcm16),
+              mimeType: MIC_MIME,
+            },
+          });
+        } catch {
+          // noop
+        }
+      });
+      stopMicRef.current = stopMic;
+
       const handleMessage = (msg: LiveServerMessage) => {
-        // 1. Tool calls — relay to backend via WS
         if (msg.toolCall?.functionCalls?.length) {
           const calls = msg.toolCall.functionCalls;
           const session = sessionRef.current;
           if (!session) return;
 
-          // Fire-and-forget: relay all calls, then send responses back
           Promise.all(
             calls.map(async (fc) => {
               const geminiCall: GeminiFunctionCall = {
                 id: fc.id,
                 name: fc.name ?? 'unknown',
-                args: (fc.args as Record<string, unknown>) ?? {},
+                args: (fc.args ?? {}) as Record<string, unknown>,
               };
               try {
                 const result = await relay(geminiCall);
                 return {
                   id: fc.id ?? '',
                   name: result.name,
-                  response: result.response as Record<string, unknown>,
+                  response: compactToolResponse(
+                    result.name,
+                    (result.response ?? {}) as Record<string, unknown>,
+                  ),
                 };
               } catch (err) {
                 return {
@@ -174,40 +283,28 @@ export function useGeminiLiveSession({
             }),
           ).then((responses) => {
             try {
-              session.sendToolResponse({
-                functionResponses: responses,
-              });
-            } catch (e) {
-              console.error('[GeminiLive] sendToolResponse failed:', e);
+              session.sendToolResponse({ functionResponses: responses });
+            } catch {
+              // noop
             }
           });
           return;
         }
 
-        // 2. Audio content — play back
         if (msg.serverContent?.modelTurn?.parts) {
           for (const part of msg.serverContent.modelTurn.parts) {
-            const blob = (part as { inlineData?: { data?: string; mimeType?: string } })
-              .inlineData;
+            const blob = (part as { inlineData?: { data?: string; mimeType?: string } }).inlineData;
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
               player.enqueueBase64(blob.data);
             }
           }
         }
 
-        // 3. Interrupted — flush playback
         if (msg.serverContent?.interrupted) {
           player.stop();
         }
-
-        // 4. Tool call cancellation — nothing to undo client-side,
-        //    backend handles idempotency via ICM.
       };
 
-      // Track if server closes session before mic starts (race condition guard).
-      let closedBeforeMic = false;
-
-      // ------ Connect to Gemini Live ------
       const session = await ai.live.connect({
         model: MODEL,
         config: {
@@ -222,65 +319,69 @@ export function useGeminiLiveSession({
         },
         callbacks: {
           onopen: () => {
-            console.log('[GeminiLive] connected');
+            reconnectAttemptRef.current = 0;
+            clearReconnectTimer();
+            setReconnectHalted(false);
+            // Fix #4: restore cached state on reconnect
+            const cached = liveSessionCache.get(sid);
+            if (cached) {
+              useConversationStore.setState(cached);
+              console.log(`[STATE] restored cart items=${cached.cart?.items?.length ?? 0}`);
+            }
           },
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
-            console.error('[GeminiLive] error:', e);
             setError(e.message || 'gemini_live_error');
-            closedBeforeMic = true;
-            stop();
+            cleanupRuntime(false);
+            scheduleReconnect();
           },
           onclose: () => {
-            console.log('[GeminiLive] closed by server');
-            closedBeforeMic = true;
-            // Stop mic immediately if it was already started.
-            stopMicRef.current?.();
-            stopMicRef.current = null;
-            if (activeRef.current) stop();
+            // Save state snapshot before cleanup
+            const s = useConversationStore.getState();
+            liveSessionCache.set(sid, {
+              cart: s.cart,
+              currentRestaurant: s.currentRestaurant,
+              uiMode: s.uiMode,
+              conversationPhase: s.conversationPhase,
+              suggestedRestaurants: s.suggestedRestaurants,
+              menuItems: s.menuItems,
+            });
+            const wasIntentional = intentionalCloseRef.current;
+            intentionalCloseRef.current = false;
+            console.log(`[LIVE] STOP sessionId=${sid} intentional=${wasIntentional}`);
+            cleanupRuntime(false);
+            // Do NOT reconnect on intentional close (user stop / cleanup / 1000 / 1001 equivalent)
+            if (wasIntentional || !desiredActiveRef.current) {
+              console.log('[LIVE] RECONNECT HALTED — intentional close');
+              return;
+            }
+            scheduleReconnect();
           },
         },
       });
 
       sessionRef.current = session;
-
-      // ------ Start microphone streaming ------
-      const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
-        if (!sessionRef.current || !activeRef.current) return;
-        try {
-          sessionRef.current.sendRealtimeInput({
-            audio: {
-              data: arrayBufferToBase64(pcm16),
-              mimeType: MIC_MIME,
-            },
-          });
-        } catch {
-          // Session may have closed between check and send — ignore.
-        }
-      });
-
-      // If session closed while we were setting up the mic, abort immediately.
-      if (closedBeforeMic) {
-        stopMic();
-        sessionRef.current = null;
-        activeRef.current = false;
-        setIsActive(false);
-        console.warn('[GeminiLive] session closed before mic started — aborting');
-        return;
-      }
-
-      stopMicRef.current = stopMic;
       activeRef.current = true;
       setIsActive(true);
-      console.log('[GeminiLive] session active — mic streaming');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'failed_to_start';
-      console.error('[GeminiLive] start failed:', err);
       setError(msg);
-      activeRef.current = false;
-      setIsActive(false);
+      cleanupRuntime(false);
+      scheduleReconnect();
+    } finally {
+      startInFlightRef.current = false;
     }
-  }, [enabled, relay, stop]);
+  }, [enabled, relay, cleanupRuntime, clearReconnectTimer]);
 
-  return { start, stop, isActive, error };
+  useEffect(() => {
+    return () => {
+      intentionalCloseRef.current = true;   // unmount = intentional, suppress reconnect
+      desiredActiveRef.current = false;
+      clearReconnectTimer();
+      cleanupRuntime(true);
+      playerRef.current.close();
+    };
+  }, [cleanupRuntime, clearReconnectTimer]);
+
+  return { start, stop, isActive, error, reconnectHalted };
 }

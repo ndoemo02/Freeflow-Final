@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useMotionValue, useTransform, AnimatePresence, type Variants } from "framer-motion";
 import { useState } from "react";
 import {
     ShoppingCart,
@@ -65,18 +65,18 @@ const menuItems = [
     },
 ];
 
-const subMenuItems = {
+const subMenuItems: Record<string, { icon: React.ReactNode; label: string; desc: string; route?: string }[]> = {
     settings: [
-        { icon: <User size={16} />, label: "Profil użytkownika", desc: "Nazwa, język, preferencje" },
-        { icon: <Mic size={16} />, label: "Asystent głosowy", desc: "Voice Mode, TTS/STT" },
-        { icon: <Palette size={16} />, label: "Motyw / UI", desc: "Jasny/ciemny, akcent" },
-        { icon: <Bell size={16} />, label: "Powiadomienia", desc: "Push, SMS, e-mail" },
-        { icon: <Shield size={16} />, label: "Prywatność", desc: "Brak profilowania ❤️" },
+        { icon: <User size={16} />, label: "Profil użytkownika", desc: "Nazwa, język, preferencje", route: "/profile" },
+        { icon: <Mic size={16} />, label: "Asystent głosowy", desc: "Voice Mode, TTS/STT", route: "/settings" },
+        { icon: <Palette size={16} />, label: "Motyw / UI", desc: "Jasny/ciemny, akcent", route: "/settings" },
+        { icon: <Bell size={16} />, label: "Powiadomienia", desc: "Push, SMS, e-mail", route: "/settings" },
+        { icon: <Shield size={16} />, label: "Prywatność", desc: "Brak profilowania ❤️", route: "/settings" },
     ],
     orders: [
-        { icon: <ShoppingCart size={16} />, label: "Mój koszyk", desc: "Produkty w koszyku" },
-        { icon: <Package size={16} />, label: "Historia", desc: "Poprzednie zamówienia" },
-        { icon: <Eye size={16} />, label: "Status", desc: "Śledzenie zamówień" },
+        { icon: <ShoppingCart size={16} />, label: "Mój koszyk", desc: "Produkty w koszyku", route: "/cart" },
+        { icon: <Package size={16} />, label: "Historia", desc: "Poprzednie zamówienia", route: "/orders" },
+        { icon: <Eye size={16} />, label: "Status", desc: "Śledzenie zamówień", route: "/orders" },
     ]
 };
 
@@ -117,14 +117,14 @@ export default function FreeFlowMenu({ variant = "advanced", onNavigate }: FreeF
         mouseY.set(event.clientY - rect.top - rect.height / 2);
     };
 
-    const containerVariants = {
+    const containerVariants: Variants = {
         hidden: { opacity: 0, y: variant === "advanced" ? 100 : 80, scale: variant === "advanced" ? 0.8 : 1 },
         visible: {
             opacity: 1,
             y: 0,
             scale: 1,
             transition: {
-                type: "spring",
+                type: "spring" as const,
                 stiffness: 100,
                 damping: 15,
                 staggerChildren: 0.1,
@@ -133,30 +133,30 @@ export default function FreeFlowMenu({ variant = "advanced", onNavigate }: FreeF
         }
     };
 
-    const itemVariants = {
+    const itemVariants: Variants = {
         hidden: { opacity: 0, y: variant === "advanced" ? 30 : 20, scale: variant === "advanced" ? 0.8 : 1 },
         visible: {
             opacity: 1,
             y: 0,
             scale: 1,
             transition: {
-                type: "spring",
-                stiffness: variant === "advanced" ? 200 : 200,
-                damping: variant === "advanced" ? 20 : 20
+                type: "spring" as const,
+                stiffness: 200,
+                damping: 20
             }
         },
         hover: {
             scale: variant === "advanced" ? 1.15 : 1.1,
             y: variant === "advanced" ? -8 : -2,
             transition: {
-                type: "spring",
+                type: "spring" as const,
                 stiffness: variant === "advanced" ? 400 : 300,
                 damping: 10
             }
         }
     };
 
-    const subMenuVariants = {
+    const subMenuVariants: Variants = {
         hidden: {
             opacity: 0,
             height: 0,
@@ -169,7 +169,7 @@ export default function FreeFlowMenu({ variant = "advanced", onNavigate }: FreeF
             y: 0,
             scale: 1,
             transition: {
-                type: "spring",
+                type: "spring" as const,
                 stiffness: 300,
                 damping: variant === "advanced" ? 25 : 30
             }

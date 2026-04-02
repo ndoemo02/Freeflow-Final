@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Home.tsx - Thin Orchestration Layer
  * 
  * Responsibilities:
@@ -20,13 +20,12 @@ import { useLiveEvents } from "../hooks/useLiveEvents";
 import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
-import VoiceCommandCenterV2 from "../components/VoiceCommandCenterV2";
+import VoiceDock from "../components/VoiceDock";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
 import { StateIsland, ExpectedContextPrompts, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
 import MenuIsland from "../components/MenuIsland";
-import CartBadge from "../components/CartBadge";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
 import ErrorFallback from "../components/ErrorFallback";
@@ -41,7 +40,7 @@ export default function Home() {
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
   const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
-  const phase = useConversationStore(state => state.conversationPhase);
+  const uiMode = useConversationStore(state => state.uiMode);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
@@ -56,13 +55,14 @@ export default function Home() {
   } = useGeminiLiveSession({
     wsRef: socketRef,
     enabled: liveModeEnabled,
+    sessionId,
   });
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyĹ›lnie voice bar
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyÄąâ€şlnie voice bar
 
-  // đź”„ Auto-reset UI po potwierdzeniu zamĂłwienia
+  // Ä‘Ĺşâ€ťâ€ž Auto-reset UI po potwierdzeniu zamÄ‚Ĺ‚wienia
   usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
@@ -71,7 +71,9 @@ export default function Home() {
 
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
-  const { setIsOpen } = useCart() as any;
+  const setVoiceActive = useUI((s) => s.setVoiceActive);
+  const { setIsOpen, itemCount } = useCart() as any;
+  const cartItemsCount = Number(itemCount || 0);
 
   // --- Effect: Handle Brain Response ---
   // When lastFullResponse updates, we derive UI hints and trigger TTS
@@ -94,14 +96,16 @@ export default function Home() {
       const audioContent = lastFullResponse.audioContent;
       const ttsText = lastFullResponse.tts?.text || lastFullResponse.tts_text || lastFullResponse.text;
 
-      if (ttsText) {
+      if (ttsText && !liveSessionActive) {
         // play(text, audioContent) - hook handles priority
+        // Guard: when Live owns the session, Gemini handles audio natively
         play(ttsText, audioContent);
       }
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
-      // Keep sync enabled for confirm_order because response carries authoritative meta.cart.
-      if (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length) {
+      // During Live mode useLiveEvents already dispatched these actions from the same
+      // tool_result message â€” skip here to prevent double SHOW_CART / SYNC_CART.
+      if (!liveSessionActive && (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length)) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
         const fakeMeta = {
           ...lastFullResponse.meta,
@@ -111,7 +115,7 @@ export default function Home() {
         dispatch(lastFullResponse.actions, fakeMeta, responseKey, lastFullResponse.events);
       }
     }
-  }, [lastFullResponse, setHints, play, dispatch]);
+  }, [lastFullResponse, liveSessionActive, setHints, play, dispatch]);
 
   // --- Handlers ---
 
@@ -133,9 +137,24 @@ export default function Home() {
   }, [isListening, startListening, stop, resetTranscript]);
 
   const handleTextSubmit = useCallback(async (text: string) => {
-    stop(); // Stop TTS
-    await sendMessage(text);
-  }, [sendMessage, stop]);
+    const sanitized = text.trim();
+    if (!sanitized) return;
+
+    // Block non-user content: raw HTML, JSON blobs, JS error prefixes
+    if (/^[<{[]/.test(sanitized) || /^(Error|TypeError|SyntaxError|Failed|Uncaught)\b/.test(sanitized)) {
+      console.warn('[IntakeGate] Blocked non-user input:', sanitized.slice(0, 80));
+      return;
+    }
+
+    // When Gemini Live is active it owns the session.
+    // BrainV2 must only be reached via ToolRouter (Gemini tool calls), never directly.
+    if (liveSessionActive) {
+      return;
+    }
+
+    stop(); // Stop TTS before sending
+    await sendMessage(sanitized);
+  }, [liveSessionActive, sendMessage, stop]);
 
   // Handle voice transcript finalization
   useEffect(() => {
@@ -143,6 +162,18 @@ export default function Home() {
       handleTextSubmit(transcript);
     }
   }, [isListening, transcript, handleTextSubmit]);
+
+  // Sync isListening â†’ global voiceActive (consumed by BottomTabBar FAB)
+  useEffect(() => {
+    setVoiceActive(isListening);
+  }, [isListening, setVoiceActive]);
+
+  // Handle voice trigger from BottomTabBar FAB
+  useEffect(() => {
+    const handler = () => handleMicClick();
+    window.addEventListener('freeflow:voice:trigger', handler);
+    return () => window.removeEventListener('freeflow:voice:trigger', handler);
+  }, [handleMicClick]);
 
   // Handle restaurant selection from carousel "Wybierz" button
   useEffect(() => {
@@ -160,13 +191,52 @@ export default function Home() {
     if (!liveModeEnabled) return;
     console.log(`[LiveEvents] mode=on connected=${liveConnected}`);
   }, [liveModeEnabled, liveConnected]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  // Handle menu item order from MenuIsland "Kliknij pozycjÄ™"
+    const logLayout = () => {
+      const voiceDock = document.querySelector('[data-ui-role="voice-dock-bar"]') as HTMLElement | null;
+      const statusDot = document.querySelector('[data-ui-role="status-dot"]') as HTMLElement | null;
+      const orb = document.querySelector('[data-ui-role="action-orb"]') as HTMLElement | null;
+
+      const voiceDockCenterY = voiceDock
+        ? Math.round(voiceDock.getBoundingClientRect().top + (voiceDock.getBoundingClientRect().height / 2))
+        : 'null';
+      const statusDotCenterY = statusDot
+        ? Math.round(statusDot.getBoundingClientRect().top + (statusDot.getBoundingClientRect().height / 2))
+        : 'null';
+
+      let orbPosition: string;
+      if (orb) {
+        const rect = orb.getBoundingClientRect();
+        orbPosition = JSON.stringify({
+          x: Math.round(rect.left + (rect.width / 2)),
+          y: Math.round(rect.top + (rect.height / 2)),
+        });
+      } else {
+        orbPosition = 'null';
+      }
+
+      console.log(`[UI_LAYOUT] voiceDockCenterY=${voiceDockCenterY}`);
+      console.log(`[UI_LAYOUT] statusDotCenterY=${statusDotCenterY}`);
+      console.log(`[UI_LAYOUT] orbPosition=${orbPosition}`);
+    };
+
+    const onResize = () => window.requestAnimationFrame(logLayout);
+    const rafId = window.requestAnimationFrame(logLayout);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [viewMode, uiMode, isListening, isThinking, isSpeaking, cartItemsCount]);
+
+  // Handle menu item order from MenuIsland "Kliknij pozycjĂ„â„˘"
   useEffect(() => {
     const handler = (e: Event) => {
       const { item } = (e as CustomEvent).detail;
       if (item?.name) {
-        handleTextSubmit(`ChcÄ™ zamĂłwiÄ‡ ${item.name}`);
+        handleTextSubmit(`ChcĂ„â„˘ zamÄ‚Ĺ‚wiĂ„â€ˇ ${item.name}`);
       }
     };
     window.addEventListener('freeflow:orderItem', handler);
@@ -187,19 +257,34 @@ export default function Home() {
             {liveModeEnabled && (
               <button
                 onClick={liveSessionActive ? stopLiveSession : startLiveSession}
+                data-live={liveSessionActive}
+                aria-label={liveSessionActive ? 'WyĹ‚Ä…cz tryb Live' : 'WĹ‚Ä…cz tryb Live'}
+                aria-pressed={liveSessionActive}
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
                   liveSessionActive
                     ? 'text-emerald-400 bg-emerald-400/10 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                     : 'text-white/50 bg-white/10 hover:bg-white/20'
                 }`}
               >
-                {liveSessionActive ? '● LIVE' : '○ LIVE'}
+                {liveSessionActive ? 'â—Ź LIVE ON' : 'â—‹ LIVE'}
               </button>
             )}
           </div>
         </div>
         <div className="flex gap-4 pointer-events-auto">
-          {/* Cart triggers now managed below or via the CartBadge directly */}
+          {cartItemsCount > 0 && uiMode !== 'checkout' && (
+            <button
+              onClick={() => setIsOpen(true)}
+              className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
+              aria-label={`OtwĂłrz koszyk (${cartItemsCount})`}
+            >
+              <i className="fas fa-shopping-cart text-white" />
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-[10px] leading-[18px] font-bold text-white text-center">
+                {cartItemsCount}
+              </span>
+            </button>
+          )}
+          {/* Drawer remains the global navigation entry point */}
           <button onClick={openDrawer} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
             <i className="fas fa-bars text-white" />
           </button>
@@ -207,7 +292,7 @@ export default function Home() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pb-32 w-full max-w-7xl mx-auto">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">
 
         {/* Brain UI Router - Renders "Configurable Islands" */}
         <div className="w-full mb-8">
@@ -239,7 +324,7 @@ export default function Home() {
 
       </main>
 
-      {/* Switch (PaĹ‚Ä…k) - staĹ‚a pozycja po lewej */}
+      {/* Switch (PaÄąâ€šĂ„â€¦k) - staÄąâ€ša pozycja po lewej */}
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
@@ -261,38 +346,28 @@ export default function Home() {
         </div>
       )}
 
-      {/* PHASE: IDLE */}
-      {viewMode === 'bar' && phase === 'idle' && (
+      {/* UI MODE: LIST */}
+      {viewMode === 'bar' && uiMode === 'list' && (
         <SuggestedRestaurantsCarousel />
       )}
 
-      {/* PHASE: RESTAURANT_SELECTED || ORDERING */}
-      {viewMode === 'bar' && (phase === 'restaurant_selected' || phase === 'ordering') && (
+      {/* UI MODE: RESTAURANT */}
+      {viewMode === 'bar' && uiMode === 'restaurant' && (
         <>
           <MenuIsland />
-          <div className="fixed top-4 right-20 z-50 pointer-events-auto">
-            <CartBadge />
-          </div>
         </>
       )}
 
-      {/* PHASE: CHECKOUT */}
-      {viewMode === 'bar' && phase === 'checkout' && (
+      {/* UI MODE: CHECKOUT */}
+      {viewMode === 'bar' && uiMode === 'checkout' && (
         <Cart />
       )}
 
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-[70] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <ExpectedContextPrompts />
-          <VoiceCommandCenterV2
-            {...({
-              liveSession: {
-                isActive: liveSessionActive,
-                start: startLiveSession,
-                stop: stopLiveSession,
-              },
-            } as any)}
+          <VoiceDock
             recording={isListening}
             isProcessing={isThinking}
             isSpeaking={isSpeaking}
@@ -306,6 +381,11 @@ export default function Home() {
             }}
             visible={true}
             isPresenting={uiHints.panel !== 'none'}
+            liveSession={{
+              isActive: liveSessionActive,
+              start: startLiveSession,
+              stop: stopLiveSession,
+            }}
           />
         </div>
       )}
@@ -313,6 +393,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 

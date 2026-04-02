@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useKDSPolling } from '../hooks/useKDSPolling';
 import { KDSOrder } from '../lib/kdsApi';
 import '../components/panels/KitchenDisplay.css'; // Dodany CSS prototypu
@@ -153,6 +154,7 @@ function StatusColumn({
 }
 
 export default function BusinessPanelNew() {
+    const navigate = useNavigate();
     const [activeStation, setActiveStation] = useState<StationFilter>('all');
     const [isMobile, setIsMobile] = useState(false);
     const [activeColumn, setActiveColumn] = useState(0);
@@ -279,7 +281,22 @@ export default function BusinessPanelNew() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+                        <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                            {/* Return — always first, labeled */}
+                            <button
+                                onClick={() => navigate('/')}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 md:px-3 md:py-2 rounded-xl border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors text-xs md:text-sm font-medium"
+                                style={{ background: 'rgba(255,255,255,0.03)' }}
+                                aria-label="Wróć na stronę główną"
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                    <line x1="19" y1="12" x2="5" y2="12" />
+                                    <polyline points="12 19 5 12 12 5" />
+                                </svg>
+                                <span>Strona główna</span>
+                            </button>
+
+                            {/* Clock + polling indicator */}
                             <div className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-slate-900 rounded-xl border border-slate-800">
                                 <div className={`w-2 h-2 rounded-full ${isPolling ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`} />
                                 <span className="font-mono text-sm md:text-lg text-slate-200">
@@ -290,7 +307,11 @@ export default function BusinessPanelNew() {
                                 ↺ <span className="hidden lg:inline ml-1 text-xs">Cofnij</span>
                             </button>
                             <button onClick={refresh} className="p-2 md:p-3 bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors border border-slate-800 text-slate-300">
-                                🔄
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+                                    <polyline points="23 4 23 10 17 10" />
+                                    <polyline points="1 20 1 14 7 14" />
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                </svg>
                             </button>
                         </div>
                     </div>

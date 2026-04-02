@@ -25,13 +25,19 @@ function pickRecommendedMenuId(items: any[], response: any) {
 
 export default function MenuIsland() {
     const conversationPhase = useConversationStore(s => s.conversationPhase);
+    const uiMode = useConversationStore(s => s.uiMode);
     const menuItems = useConversationStore(s => s.menuItems);
     const currentRestaurant = useConversationStore(s => s.currentRestaurant);
     const lastFullResponse = useConversationStore(s => s.lastFullResponse);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-    const isVisible = MENU_PHASES.includes(conversationPhase);
+    const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
     const recommendedId = useMemo(() => pickRecommendedMenuId(menuItems || [], lastFullResponse), [menuItems, lastFullResponse]);
+
+    useEffect(() => {
+        const renderVisible = isVisible && !!menuItems?.length;
+        console.log(`[LIVE_MENU] renderVisible=${renderVisible}`);
+    }, [isVisible, menuItems?.length]);
 
     useEffect(() => {
         const onCartUpdated = (event: Event) => {

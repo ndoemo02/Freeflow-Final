@@ -15,6 +15,9 @@ export const ROUTES = {
   PANEL_ADMIN: "/panel/admin",
   PANEL_DRIVER: "/panel/driver",
   PANEL_CLIENT: "/panel/client",
+  SETTINGS: "/settings",
+  ORDERS: "/orders",
+  PROFILE: "/profile",
 } as const;
 
 export const ROUTE_ALIASES = [

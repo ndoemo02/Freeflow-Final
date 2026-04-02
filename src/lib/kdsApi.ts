@@ -191,10 +191,71 @@ export function getChannelDisplay(channel: OrderChannel): {
     }
 }
 
+// ============== Mock fallback ==============
+// Used when backend is unreachable (dev with no backend, demo mode).
+// Returns clearly-labelled demo orders so KDS UI is testable without a live backend.
+
+function getMockKDSData(): KDSDashboardResponse {
+    const now = Date.now();
+    return {
+        ok: true,
+        orders: [
+            {
+                id: 'mock-1',
+                order_number: '#0001',
+                channel: 'restaurant',
+                status: 'new',
+                items: [
+                    { id: 'i1', name: 'Burger Klasyczny', quantity: 2, station: 'kuchnia', done: false },
+                    { id: 'i2', name: 'Frytki duże', quantity: 2, station: 'kuchnia', done: false },
+                ],
+                total: 52.00,
+                total_formatted: '52,00 zł',
+                location: 'Stolik 4',
+                priority: false,
+                created_at: new Date(now - 3 * 60_000).toISOString(),
+            },
+            {
+                id: 'mock-2',
+                order_number: '#0002',
+                channel: 'delivery',
+                status: 'preparing',
+                items: [
+                    { id: 'i3', name: 'Pizza Margherita', quantity: 1, station: 'kuchnia', done: false },
+                    { id: 'i4', name: 'Cola 0.5l', quantity: 2, station: 'bar', done: true },
+                ],
+                total: 41.50,
+                total_formatted: '41,50 zł',
+                location: 'Dostawa',
+                priority: true,
+                customer_name: 'Jan Kowalski',
+                created_at: new Date(now - 8 * 60_000).toISOString(),
+            },
+            {
+                id: 'mock-3',
+                order_number: '#0003',
+                channel: 'hotel',
+                status: 'ready',
+                items: [
+                    { id: 'i5', name: 'Zupa dnia', quantity: 1, station: 'kuchnia', done: true },
+                    { id: 'i6', name: 'Sok pomarańczowy', quantity: 1, station: 'bar', done: true },
+                ],
+                total: 24.00,
+                total_formatted: '24,00 zł',
+                location: 'Pokój 201',
+                priority: false,
+                customer_name: 'Anna Nowak',
+                created_at: new Date(now - 15 * 60_000).toISOString(),
+            },
+        ],
+        stats: { new_count: 1, preparing_count: 1, ready_count: 1, avg_time_minutes: 12 },
+        last_updated: new Date(now).toISOString(),
+    };
+}
+
 // ============== API Functions ==============
 
-// TODO: Move token to env var
-const ADMIN_TOKEN = 'super_secret_key_amber_2025';
+const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || '';
 
 function getHeaders() {
     return {
@@ -261,8 +322,8 @@ export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
             last_updated: new Date().toISOString()
         };
     } catch (error) {
-        console.error('[KDS API] Fetch error:', error);
-        throw error;
+        console.warn('[KDS API] Backend unavailable, using mock data:', error instanceof Error ? error.message : error);
+        return getMockKDSData();
     }
 }
 

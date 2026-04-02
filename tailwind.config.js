@@ -81,6 +81,17 @@ export default {
       backdropBlur: {
         xs: '2px',
       },
+      borderRadius: {
+        'ff-sm': 'var(--radius-sm)',
+        'ff-md': 'var(--radius-md)',
+        'ff-lg': 'var(--radius-lg)',
+        'ff-pill': 'var(--radius-pill)',
+      },
+      transitionDuration: {
+        fast: '150ms',
+        normal: '300ms',
+        slow: '600ms',
+      },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'bounce-slow': 'bounce 2s infinite',

@@ -1,12 +1,14 @@
 ﻿import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
 import { repairMojibakeText } from '../lib/textSanitizer';
+import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 
 interface ConversationState {
     sessionId: string;
     isThinking: boolean;
     error: string | null;
     lastResponse: string;
+    uiMode: 'list' | 'restaurant' | 'checkout';
     conversationPhase: 'idle' | 'restaurant_selected' | 'ordering' | 'checkout' | 'unknown' | string;
     currentRestaurant: any | null;
     pendingOrder: any | null;
@@ -32,35 +34,12 @@ interface ConversationState {
 
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-const normalizeMenuItems = (items: any[] | null | undefined) => {
-    if (!Array.isArray(items)) return null;
-    return items.filter(Boolean).map((item, index) => ({
-        ...item,
-        id: item.id || item.menuItemId || item.menu_item_id || `menu-${index}`,
-        name: repairMojibakeText(item.name || item.base_name || item.title || 'Pozycja menu'),
-        description: repairMojibakeText(item.description || item.desc || item.ingredients || ''),
-        category: item.category || item.section || item.cuisine_type || null,
-        price: Number(item.price ?? item.price_pln ?? item.pricePln ?? 0),
-        price_pln: Number(item.price_pln ?? item.price ?? item.pricePln ?? 0),
-        available: item.available !== false,
-    }));
-};
-
-const normalizeRestaurants = (items: any[] | null | undefined) => {
-    if (!Array.isArray(items)) return null;
-    return items.filter(Boolean).map((item, index) => ({
-        ...item,
-        id: item.id || `restaurant-${index}`,
-        name: repairMojibakeText(item.display_name || item.name || 'Restauracja'),
-        cuisine_type: repairMojibakeText(item.cuisine_type || item.category || item.city || 'Restauracja'),
-        city: repairMojibakeText(item.city || item.address || ''),
-    }));
-};
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
     sessionId: (() => {
-        const stored = localStorage.getItem('amber-session-id');
-        if (stored) return stored;
+        // Always generate a fresh session on page load to prevent stale FSM state restore.
+        // Session continuity within a tab is maintained by the store; cross-tab/reload resume
+        // is intentionally disabled to avoid ghost ordering states (BUG NEW-3).
         const newId = generateSessionId();
         localStorage.setItem('amber-session-id', newId);
         return newId;
@@ -68,6 +47,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     isThinking: false,
     error: null,
     lastResponse: '',
+    uiMode: 'list',
     conversationPhase: 'idle',
     currentRestaurant: null,
     pendingOrder: null,
@@ -98,6 +78,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             cart: null,
             pendingOrder: null,
             expectedContext: null,
+            uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
             lastFullResponse: null,
@@ -116,6 +97,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         localStorage.setItem('amber-session-id', newId);
         set({
             sessionId: newId,
+            uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
             pendingOrder: null,
@@ -165,23 +147,36 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             };
             const coords = await getBrowserCoords();
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    input: trimmed,
-                    text: trimmed,
-                    includeTTS: false,
-                    meta: { channel: 'web' },
-                    ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
-                })
-            });
+            const fetchController = new AbortController();
+            const fetchTimeoutId = window.setTimeout(() => fetchController.abort(), 20000);
+
+            let response: Response;
+            try {
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        input: trimmed,
+                        text: trimmed,
+                        includeTTS: false,
+                        meta: { channel: 'web' },
+                        ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
+                    }),
+                    signal: fetchController.signal
+                });
+            } finally {
+                window.clearTimeout(fetchTimeoutId);
+            }
 
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Brain error');
 
-            const amberReply = repairMojibakeText(data.reply || data.text || '');
+            const rawReply = repairMojibakeText(data.reply || data.text || '');
+            // Show fallback only when there is no reply AND no visible UI content (restaurants/menu).
+            // A phase-only change with no visible content should still show a fallback (T06/T08).
+            const hasVisibleContent = !!(data.restaurants?.length || data.menuItems?.length || data.menu);
+            const amberReply = rawReply || (hasVisibleContent ? '' : 'Przepraszam, coś poszło nie tak. Spróbuj jeszcze raz.');
             const hasContext = !!data.context;
             const ctx = data.context || {};
             const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
@@ -193,10 +188,35 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 console.warn('⚠️ [useConversationStore] Backend response missing `context`. Retaining current FSM phase to prevent UI reset.');
                 newPhase = get().conversationPhase;
             } else if (!newPhase) {
-                newPhase = 'idle';
+                // Context exists but backend didn't include conversationPhase — retain current
+                // to avoid spurious reset to idle (T04: ordering→idle desynchro).
+                newPhase = get().conversationPhase || 'idle';
+                console.debug('[FSM_PHASE] context present but no phase — retained:', newPhase);
             }
+            // When find_nearby returns fresh restaurants, treat as discovery/idle regardless
+            // of whatever phase the backend carried over. This covers the case where the user
+            // was in restaurant_selected and says "show me restaurants again" — the backend may
+            // keep phase=restaurant_selected in its FSM, but the UI should return to list mode.
+            const isFindNearby = data.intent === 'find_nearby' && !!restaurantsFromResponse?.length;
+            if (isFindNearby) newPhase = 'idle';
+
+            const currentUiMode = get().uiMode;
+            const nextIntent = data.intent || null;
+            let nextUiMode: ConversationState['uiMode'] = currentUiMode;
+            if (nextIntent === 'find_nearby') {
+                nextUiMode = 'list';
+            } else if (nextIntent === 'select_restaurant' || nextIntent === 'show_menu' || nextIntent === 'menu_request') {
+                nextUiMode = 'restaurant';
+            } else if (nextIntent === 'open_checkout') {
+                nextUiMode = 'checkout';
+            }
+
             const isIdle = newPhase === 'idle';
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
+            console.debug('[UI_STATE] listVisible:', isIdle && !!restaurantsFromResponse?.length, 'resultsCount:', restaurantsFromResponse?.length ?? 0, 'focusedRestaurant:', isFindNearby ? null : get().selectedRestaurantPreviewId, 'mode:', newPhase);
+            console.debug(`[UI_MODE] mode=${nextUiMode}`);
+            console.debug(`[UI_MODE] resultsCount=${restaurantsFromResponse?.length ?? 0}`);
+            console.debug(`[UI_MODE] currentRestaurant=${ctx.currentRestaurant?.name || data.currentRestaurant?.name || get().currentRestaurant?.name || 'null'}`);
 
             const isOrderSuccess = data.intent === 'order_success'
                 || data.intent === 'order_complete'
@@ -211,6 +231,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     conversationHistory: newHistory,
                     lastContext: ctx,
                     lastFullResponse: data,
+                    uiMode: 'list',
                     conversationPhase: 'idle',
                     currentRestaurant: null,
                     pendingOrder: null,
@@ -234,11 +255,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationHistory: newHistory,
                 lastContext: ctx,
                 lastFullResponse: data,
+                uiMode: nextUiMode,
                 conversationPhase: newPhase,
-                currentRestaurant: (isIdle && hasContext) ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant),
+                currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: data.meta?.cart || ctx.cart || get().cart,
-                expectedContext: hasContext ? (ctx.expectedContext || null) : get().expectedContext,
+                // When phase resets to idle (or find_nearby forces discovery), clear expectedContext to prevent UI desynchro (P4)
+                expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : get().expectedContext),
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
@@ -263,9 +286,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }
 
         } catch (err) {
+            const isTimeout = err instanceof Error && err.name === 'AbortError';
             set({
                 isThinking: false,
-                error: err instanceof Error ? err.message : 'Unknown error'
+                lastResponse: isTimeout ? 'Przepraszam, odpowiedź trwa zbyt długo. Spróbuj jeszcze raz.' : '',
+                error: isTimeout ? null : (err instanceof Error ? err.message : 'Unknown error')
             });
         }
     }

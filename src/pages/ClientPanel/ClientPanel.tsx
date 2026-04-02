@@ -110,35 +110,25 @@ export default function ClientPanel() {
         <div className="client-panel">
             <StarfieldBackground />
             {/* Mobile Header */}
-            <header className="mobile-header lg:hidden">
-                <button onClick={() => setSidebarOpen(true)} className="header-btn">
-                    <i className="fas fa-bars" />
+            <header className="cp-mobile-header lg:hidden">
+                <button onClick={() => setSidebarOpen(true)} className="cp-header-btn" aria-label="Menu">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round">
+                        <path d="M3 12h18M3 6h18M3 18h18" />
+                    </svg>
                 </button>
-                <div className="header-logo">
-                    <div className="logo-icon">
-                        <i className="fas fa-cube" />
-                    </div>
-                    <span className="logo-text">FreeFlow</span>
+                <div className="flex items-center gap-2">
+                    <div className="cp-logo-badge">FF</div>
+                    <span className="cp-logo-text">FreeFlow</span>
                 </div>
-                <button onClick={() => handleSectionChange('orders')} className="header-btn">
-                    <i className="fas fa-bell" />
-                    {stats.activeCount > 0 && <span className="notification-dot" />}
+                <button onClick={() => handleSectionChange('orders')} className="cp-header-btn" aria-label="Zamówienia">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {stats.activeCount > 0 && <span className="cp-notification-dot" />}
                 </button>
             </header>
 
-            {/* Mobile Bottom Navigation */}
-            <nav className="bottom-nav lg:hidden">
-                {bottomNavItems.map(item => (
-                    <button
-                        key={item.id}
-                        onClick={() => handleSectionChange(item.id)}
-                        className={`bottom-nav-item ${activeSection === item.id ? 'active' : ''}`}
-                    >
-                        <i className={`fas ${item.icon}`} />
-                        <span>{item.label}</span>
-                    </button>
-                ))}
-            </nav>
+            {/* Global BottomTabBar handles mobile navigation */}
 
             <div className="panel-layout">
                 {/* Sidebar */}
@@ -207,163 +197,183 @@ export default function ClientPanel() {
                             Nie udało się pobrać części danych zamówień. Panel pokazuje dostępne dane.
                         </div>
                     )}
-                    {/* Dashboard */}
+                    {/* Dashboard — action-first consumer home */}
                     {activeSection === 'dashboard' && (
-                        <section className="section animate-fade">
-                            <div className="section-header">
-                                <div>
-                                    <h2>Witaj, {user?.email?.split('@')[0] || 'Gościu'}! 👋</h2>
-                                    <p>Co chciałbyś dzisiaj zamówić?</p>
-                                </div>
-                                <div className="search-box hidden lg:flex">
-                                    <i className="fas fa-search" />
-                                    <input type="text" placeholder="Szukaj usług..." />
-                                </div>
+                        <section className="section animate-fade cp-home">
+
+                            {/* Greeting */}
+                            <div className="cp-greeting">
+                                <h2 className="cp-greeting-title">
+                                    Cześć, {user?.email?.split('@')[0] || 'Gościu'}
+                                </h2>
+                                <p className="cp-greeting-sub">Co zamawiamy dzisiaj?</p>
                             </div>
 
-                            {/* Quick Services */}
-                            <div className="quick-services">
-                                <button onClick={() => handleSectionChange('food')} className="service-card orange">
-                                    <div className="service-icon"><i className="fas fa-utensils" /></div>
-                                    <h3>Jedzenie</h3>
-                                    <p>{restaurants.length || '0'} restauracji</p>
+                            {/* ── HERO: Jedzenie ────────────────────────────── */}
+                            <button
+                                onClick={() => handleSectionChange('food')}
+                                className="cp-hero-card"
+                                aria-label="Zamów jedzenie"
+                            >
+                                <div className="cp-hero-glow" />
+                                <div className="cp-hero-inner">
+                                    <div className="cp-hero-icon-wrap">
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M12 2C8 2 5 5 5 9c0 3.9 2.7 7.2 6.4 8.7L12 22l.6-4.3C16.3 16.2 19 12.9 19 9c0-4-3-7-7-7z" />
+                                        </svg>
+                                    </div>
+                                    <div className="cp-hero-body">
+                                        <span className="cp-hero-eyebrow">Główna kategoria</span>
+                                        <h3 className="cp-hero-title">Jedzenie</h3>
+                                        <p className="cp-hero-meta">
+                                            {restaurants.length > 0
+                                                ? `${restaurants.length} restauracji w pobliżu`
+                                                : 'Odkryj restauracje'}
+                                        </p>
+                                    </div>
+                                    <div className="cp-hero-arrow">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M5 12h14M12 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="cp-hero-cta">Zamów teraz</div>
+                            </button>
+
+                            {/* ── SECONDARY: Taxi + Hotele ──────────────────── */}
+                            <div className="cp-secondary-row">
+                                <button
+                                    onClick={() => handleSectionChange('taxi')}
+                                    className="cp-secondary-card"
+                                    aria-label="Zamów taxi"
+                                >
+                                    <div className="cp-secondary-icon">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5m-9 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 className="cp-secondary-title">Taxi</h4>
+                                        <p className="cp-secondary-meta">Dostępne 24/7</p>
+                                    </div>
                                 </button>
-                                <button onClick={() => handleSectionChange('taxi')} className="service-card yellow">
-                                    <div className="service-icon"><i className="fas fa-car" /></div>
-                                    <h3>Taxi</h3>
-                                    <p>Dostępne 24/7</p>
-                                </button>
-                                <button onClick={() => handleSectionChange('hotels')} className="service-card blue">
-                                    <div className="service-icon"><i className="fas fa-hotel" /></div>
-                                    <h3>Hotele</h3>
-                                    <p>Znajdź nocleg</p>
-                                </button>
-                                <button onClick={() => handleSectionChange('orders')} className="service-card green">
-                                    <div className="service-icon"><i className="fas fa-history" /></div>
-                                    <h3>Zamówienia</h3>
-                                    <p>{stats.activeCount} aktywne</p>
+                                <button
+                                    onClick={() => handleSectionChange('hotels')}
+                                    className="cp-secondary-card"
+                                    aria-label="Znajdź hotel"
+                                >
+                                    <div className="cp-secondary-icon">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                            <polyline points="9 22 9 12 15 12 15 22" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h4 className="cp-secondary-title">Hotele</h4>
+                                        <p className="cp-secondary-meta">Znajdź nocleg</p>
+                                    </div>
                                 </button>
                             </div>
 
-                            {/* Stats & Active Order */}
-                            <div className="dashboard-grid">
-                                <div className="stats-group">
-                                    <div className="stat-card">
-                                        <div className="stat-header">
-                                            <span>Wydatki</span>
-                                            <span className="trend positive">PLN</span>
-                                        </div>
-                                        <p className="stat-value">{stats.totalSpent.toFixed(2)} zł</p>
-                                        <p className="stat-label">Razem</p>
+                            {/* ── ORDERS CONTEXT ────────────────────────────── */}
+                            {stats.activeOrder ? (
+                                <div className="active-order-card">
+                                    <div className="card-header">
+                                        <h4>Aktywne zamówienie</h4>
+                                        <span className="status-badge green">{stats.activeOrder.status}</span>
                                     </div>
-                                    <div className="stat-card">
-                                        <div className="stat-header">
-                                            <span>Zamówienia</span>
-                                            <span className="trend positive">Nowe</span>
+                                    <div className="order-info">
+                                        <div className="cp-order-channel-icon">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                                                {stats.activeOrder.channel === 'taxi'
+                                                    ? <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5m-9 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+                                                    : <path d="M12 2C8 2 5 5 5 9c0 3.9 2.7 7.2 6.4 8.7L12 22l.6-4.3C16.3 16.2 19 12.9 19 9c0-4-3-7-7-7z" />
+                                                }
+                                            </svg>
                                         </div>
-                                        <p className="stat-value">{stats.monthCount}</p>
-                                        <p className="stat-label">Ten miesiąc</p>
+                                        <div>
+                                            <p className="order-restaurant">
+                                                {stats.activeOrder.restaurant_name ||
+                                                    (stats.activeOrder.items && stats.activeOrder.items[0]?.name) ||
+                                                    'Zamówienie'}
+                                            </p>
+                                            <p className="order-items">
+                                                #{stats.activeOrder.id.slice(0, 8)} • {(Number(stats.activeOrder.total_price) || 0).toFixed(2)} zł
+                                            </p>
+                                        </div>
                                     </div>
-                                    {/* Placeholders for Loyalty - could be wired later */}
-                                    <div className="stat-card">
-                                        <div className="stat-header">
-                                            <span>Punkty</span>
-                                            <span className="trend gold">Gold</span>
+                                    <div className="order-progress">
+                                        <div className="progress-bar">
+                                            <div className="progress-fill" style={{ width: '50%' }} />
                                         </div>
-                                        <p className="stat-value">0</p>
-                                        <p className="stat-label">Program lojalnościowy</p>
+                                        <div className="progress-labels">
+                                            <span>Przyjęte</span>
+                                            <span className="current">W realizacji</span>
+                                            <span className="pending">Gotowe</span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {/* Active Order Card */}
-                                {stats.activeOrder ? (
-                                    <div className="active-order-card">
-                                        <div className="card-header">
-                                            <h4>Aktywne zamówienie</h4>
-                                            <span className="status-badge green">{stats.activeOrder.status}</span>
-                                        </div>
-                                        <div className="order-info">
-                                            <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-2xl">
-                                                {stats.activeOrder.channel === 'taxi' ? '🚕' :
-                                                    stats.activeOrder.channel === 'hotel' ? '🏨' : '🍔'}
-                                            </div>
-                                            <div>
-                                                <p className="order-restaurant">
-                                                    {stats.activeOrder.restaurant_name ||
-                                                        (stats.activeOrder.items && stats.activeOrder.items[0]?.name) ||
-                                                        'Zamówienie'}
-                                                </p>
-                                                <p className="order-items">
-                                                    #{stats.activeOrder.id.slice(0, 8)} • {(Number(stats.activeOrder.total_price) || 0).toFixed(2)} zł
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="order-progress">
-                                            <div className="progress-bar">
-                                                <div className="progress-fill" style={{ width: '50%' }} />
-                                            </div>
-                                            <div className="progress-labels">
-                                                <span>Przyjęte</span>
-                                                <span className="current">W realizacji</span>
-                                                <span className="pending">Gotowe</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="active-order-card empty flex flex-col items-center justify-center text-center p-6 text-gray-400">
-                                        <i className="fas fa-check-circle text-4xl mb-2 opacity-30" />
-                                        <p>Brak aktywnych zamówień</p>
-                                        <button onClick={() => handleSectionChange('food')} className="text-blue-400 text-sm mt-2 hover:underline">
-                                            Zamów coś pysznego
+                            ) : orders.length > 0 ? (
+                                <div className="active-order-card">
+                                    <div className="card-header">
+                                        <h4>Ostatnie zamówienie</h4>
+                                        <button
+                                            onClick={() => handleSectionChange('orders')}
+                                            className="cp-link-btn"
+                                        >
+                                            Historia
                                         </button>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Recent Orders & Promotions */}
-                            <div className="bottom-grid">
-                                <div className="recent-orders-card">
-                                    <div className="card-header">
-                                        <h4>Ostatnie zamówienia</h4>
-                                        <button onClick={() => handleSectionChange('orders')}>Zobacz wszystkie</button>
-                                    </div>
-                                    <div className="orders-list">
+                                    <div className="orders-list" style={{ margin: 0 }}>
                                         {orders.slice(0, 3).map((order: any, i: number) => (
                                             <div key={i} className="order-row">
                                                 <div className={`order-icon ${order.channel === 'taxi' ? 'yellow' : 'orange'}`}>
-                                                    <i className={`fas ${order.channel === 'taxi' ? 'fa-car' : 'fa-utensils'}`} />
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                                                        {order.channel === 'taxi'
+                                                            ? <path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5m-9 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+                                                            : <path d="M12 2C8 2 5 5 5 9c0 3.9 2.7 7.2 6.4 8.7L12 22l.6-4.3C16.3 16.2 19 12.9 19 9c0-4-3-7-7-7z" />
+                                                        }
+                                                    </svg>
                                                 </div>
                                                 <div className="order-details">
                                                     <p>{order.restaurant_name || 'Zamówienie'}</p>
-                                                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                                                    <span>{new Date(order.created_at).toLocaleDateString('pl-PL')}</span>
                                                 </div>
                                                 <span className="order-price">{(Number(order.total_price) || 0).toFixed(2)} zł</span>
                                             </div>
                                         ))}
-                                        {orders.length === 0 && (
-                                            <p className="text-center text-gray-500 py-4">Brak historii zamówień</p>
-                                        )}
                                     </div>
                                 </div>
+                            ) : (
+                                <div className="cp-orders-empty">
+                                    <div className="cp-orders-empty-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                                            <rect x="9" y="3" width="6" height="4" rx="1" />
+                                            <path d="M9 12h6M9 16h4" />
+                                        </svg>
+                                    </div>
+                                    <p className="cp-orders-empty-label">Brak zamówień</p>
+                                    <button
+                                        onClick={() => handleSectionChange('food')}
+                                        className="cp-orders-empty-cta"
+                                    >
+                                        Zamów pierwsze danie →
+                                    </button>
+                                </div>
+                            )}
 
-                                <div className="promotions-card">
-                                    <div className="card-header">
-                                        <h4>Promocje dla Ciebie</h4>
+                            {/* ── PROMO ─────────────────────────────────────── */}
+                            <div className="cp-promo-strip">
+                                <div className="cp-promo-inner">
+                                    <div>
+                                        <p className="cp-promo-title">-20% na jedzenie</p>
+                                        <p className="cp-promo-desc">Min. zamówienie 50 zł · Kod: FOOD20 · Ważny 3 dni</p>
                                     </div>
-                                    <div className="promos-list">
-                                        <div className="promo-banner purple">
-                                            <div>
-                                                <p className="promo-title">-20% na jedzenie</p>
-                                                <p className="promo-desc">Min. zamówienie 50 zł</p>
-                                            </div>
-                                            <div className="promo-code">
-                                                <p>FOOD20</p>
-                                                <span>Ważny 3 dni</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <button className="cp-promo-use">Użyj</button>
                                 </div>
                             </div>
+
                         </section>
                     )}
 

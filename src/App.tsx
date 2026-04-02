@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import { AuthProvider } from "./state/auth";
 import { useUI } from "./state/ui";
@@ -17,14 +17,37 @@ import MenuDrawer from "./ui/MenuDrawer";
 import { ThemeProvider } from "./state/ThemeContext";
 import RestaurantBackground from "./components/RestaurantBackground";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
+import Settings from "./pages/Settings";
+import OrdersPlaceholder from "./pages/Orders.placeholder";
+import ProfilePlaceholder from "./pages/Profile.placeholder";
 import DevOverlay from "./components/DevOverlay";
+import BottomTabBar from "./components/BottomTabBar";
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 
+// Operational surfaces suppress the consumer restaurant wallpaper (RestaurantBackground).
+// Rules use startsWith so sub-routes are covered automatically.
+//
+// Suppressed:
+//   /business*      → BusinessClientPanel (BUSINESS_READONLY = "/business", no redirect)
+//   /panel/*        → all operational panels (business, admin, driver, kds, client)
+//   /settings*      → utility surface
+//
+// NOT suppressed (keep wallpaper):
+//   /               → Home (consumer)
+//   /ui-lab         → dev only, consumer-style
+//
+// Note: /panel/client (ClientPanel) has its own CSS background-image and does not
+// rely on RestaurantBackground, so suppressing it there is harmless.
+const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings'];
+
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
   const closeAuth = useUI((s) => s.closeAuth);
+  const { pathname } = useLocation();
+  const showWallpaper = !SUPPRESS_WALLPAPER_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isConsumerVoiceScene = pathname === ROUTES.HOME;
 
   useEffect(() => {
     const killTTS = () => {
@@ -45,7 +68,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen text-slate-100 relative overflow-hidden">
-      <RestaurantBackground />
+      {showWallpaper && <RestaurantBackground />}
 
       <main className="relative z-10">
         <Routes>
@@ -58,6 +81,9 @@ function AppContent() {
           <Route path={ROUTES.PANEL_ADMIN} element={<AdminPanel />} />
           <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
+          <Route path={ROUTES.SETTINGS} element={<Settings />} />
+          <Route path={ROUTES.ORDERS} element={<OrdersPlaceholder />} />
+          <Route path={ROUTES.PROFILE} element={<ProfilePlaceholder />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />
           ))}
@@ -69,6 +95,7 @@ function AppContent() {
       <Cart />
       {authOpen && <AuthModal onClose={closeAuth} />}
       <DevOverlay />
+      {!isConsumerVoiceScene && <BottomTabBar />}
     </div>
   );
 }

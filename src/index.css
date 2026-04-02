@@ -40,6 +40,33 @@ body,
   --good: #22C55E;
   --warn: #F59E0B;
   --bad: #EF4444;
+
+  /* === Radius Scale === */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+
+  /* === Blur Scale === */
+  --blur-sm: 8px;
+  --blur-md: 12px;
+  --blur-lg: 20px;
+
+  /* === Animation Timing === */
+  --anim-fast: 0.15s;
+  --anim-normal: 0.3s;
+  --anim-slow: 0.6s;
+
+  /* === Service Domain Colors === */
+  --domain-food: #f97316;
+  --domain-taxi: #f59e0b;
+  --domain-hotel: #3b82f6;
+  --domain-orders: #22c55e;
+
+  /* === Operational Surfaces === */
+  --kds-bg: #0a0a10;
+  --kds-card: #12121a;
+  --op-surface: #0d1020;
 }
 
 html:not(.dark) {
@@ -62,6 +89,21 @@ body.admin-theme {
     radial-gradient(900px 600px at 85% 20%, rgba(56, 189, 248, 0.16), transparent 55%),
     radial-gradient(700px 500px at 55% 85%, rgba(139, 92, 246, 0.12), transparent 60%),
     linear-gradient(180deg, var(--bg0), var(--bg1));
+  min-height: 100vh;
+}
+
+/* ── Business surface — functional, no glow, no texture ────────────────────
+   Rules:
+   - Flat single-color background (--op-surface), no radial gradients
+   - Blur only on sticky/floating elements (--blur-sm = 8px), never on cards
+   - Borders at 0.09–0.12 opacity (structural vs consumer's decorative 0.06)
+   - --radius-sm (12px) max for cards; --radius-pill for badges only
+   - Semantic color (--good/--warn/--bad) for status; no brand glow
+   - No box-shadow glow; tight elevation shadows only
+   ────────────────────────────────────────────────────────────────────────── */
+body.business-theme {
+  background: var(--op-surface);
+  color: var(--fg0);
   min-height: 100vh;
 }
 
