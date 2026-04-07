@@ -18,8 +18,6 @@ import { ThemeProvider } from "./state/ThemeContext";
 import RestaurantBackground from "./components/RestaurantBackground";
 import ClientPanel from "./pages/ClientPanel/ClientPanel";
 import Settings from "./pages/Settings";
-import OrdersPlaceholder from "./pages/Orders.placeholder";
-import ProfilePlaceholder from "./pages/Profile.placeholder";
 import DevOverlay from "./components/DevOverlay";
 import BottomTabBar from "./components/BottomTabBar";
 import { ttsManager } from "./tts/ttsManager";
@@ -41,6 +39,13 @@ import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 // Note: /panel/client (ClientPanel) has its own CSS background-image and does not
 // rely on RestaurantBackground, so suppressing it there is harmless.
 const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings'];
+
+function OrdersRouteRedirect() {
+  useEffect(() => {
+    console.log("[NAV_FIX] orders route -> /panel/client?section=orders");
+  }, []);
+  return <Navigate to={`${ROUTES.PANEL_CLIENT}?section=orders`} replace />;
+}
 
 function AppContent() {
   const authOpen = useUI((s) => s.authOpen);
@@ -82,8 +87,8 @@ function AppContent() {
           <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
-          <Route path={ROUTES.ORDERS} element={<OrdersPlaceholder />} />
-          <Route path={ROUTES.PROFILE} element={<ProfilePlaceholder />} />
+          <Route path={ROUTES.ORDERS} element={<OrdersRouteRedirect />} />
+          <Route path={ROUTES.PROFILE} element={<Navigate to={`${ROUTES.PANEL_CLIENT}?section=profile`} replace />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />
           ))}

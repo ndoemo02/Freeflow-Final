@@ -60,9 +60,9 @@ export default function Home() {
   const lastProcessedResponseRef = useRef<any>(null);
 
   // --- UI View State (tiles vs voicebar) ---
-  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyÄąâ€şlnie voice bar
+  const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
 
-  // Ä‘Ĺşâ€ťâ€ž Auto-reset UI po potwierdzeniu zamÄ‚Ĺ‚wienia
+  // Auto-reset UI po potwierdzeniu zamówienia
   usePostOrderReset();
 
   // --- Amber Status (green = free, red = processing) ---
@@ -104,12 +104,14 @@ export default function Home() {
 
       // 3. Dispatch backend actions (cart sync, show cart, etc.)
       // During Live mode useLiveEvents already dispatched these actions from the same
-      // tool_result message â€” skip here to prevent double SHOW_CART / SYNC_CART.
+      // tool_result message - skip here to prevent double SHOW_CART / SYNC_CART.
       if (!liveSessionActive && (lastFullResponse.actions || lastFullResponse.meta?.cart || lastFullResponse.cart || lastFullResponse.events?.length)) {
         const responseKey = lastFullResponse.turn_id || lastFullResponse.timestamp || lastFullResponse.session_id;
         const fakeMeta = {
           ...lastFullResponse.meta,
           cart: lastFullResponse.cart || lastFullResponse.meta?.cart,
+          intent: lastFullResponse.intent || lastFullResponse.meta?.intent,
+          tool: lastFullResponse.meta?.tool || lastFullResponse.tool || lastFullResponse.name,
           menuBehavior: lastFullResponse.meta?.menuBehavior,
         };
         dispatch(lastFullResponse.actions, fakeMeta, responseKey, lastFullResponse.events);
@@ -195,9 +197,13 @@ export default function Home() {
     if (typeof window === 'undefined') return;
 
     const logLayout = () => {
+      const voiceDockLayer = document.querySelector('[data-ui-role="voice-dock-layer"]') as HTMLElement | null;
       const voiceDock = document.querySelector('[data-ui-role="voice-dock-bar"]') as HTMLElement | null;
       const statusDot = document.querySelector('[data-ui-role="status-dot"]') as HTMLElement | null;
       const orb = document.querySelector('[data-ui-role="action-orb"]') as HTMLElement | null;
+      const expandedPanel = document.querySelector('.contextual-island-sheet.island-expanded') as HTMLElement | null;
+      const expandedPanelLayer = expandedPanel?.closest('.contextual-island') as HTMLElement | null;
+      const expandedScroll = expandedPanel?.querySelector('.list-scroll') as HTMLElement | null;
 
       const voiceDockCenterY = voiceDock
         ? Math.round(voiceDock.getBoundingClientRect().top + (voiceDock.getBoundingClientRect().height / 2))
@@ -217,26 +223,53 @@ export default function Home() {
         orbPosition = 'null';
       }
 
+      const voiceDockZ = voiceDockLayer ? window.getComputedStyle(voiceDockLayer).zIndex : 'null';
+      const expandedPanelZ = expandedPanel
+        ? (
+          (window.getComputedStyle(expandedPanel).zIndex !== 'auto'
+            ? window.getComputedStyle(expandedPanel).zIndex
+            : (expandedPanelLayer ? window.getComputedStyle(expandedPanelLayer).zIndex : 'auto'))
+        )
+        : 'null';
+      const expandedMaxHeight = expandedPanel ? window.getComputedStyle(expandedPanel).maxHeight : 'null';
+      const scrollContainerActive = !!(expandedScroll && expandedScroll.scrollHeight > expandedScroll.clientHeight + 1);
+
+      console.log(`[UI_LAYER] voiceDockZ=${voiceDockZ}`);
+      console.log(`[UI_LAYER] expandedPanelZ=${expandedPanelZ}`);
       console.log(`[UI_LAYOUT] voiceDockCenterY=${voiceDockCenterY}`);
       console.log(`[UI_LAYOUT] statusDotCenterY=${statusDotCenterY}`);
       console.log(`[UI_LAYOUT] orbPosition=${orbPosition}`);
+      console.log(`[UI_LAYOUT] expandedMaxHeight=${expandedMaxHeight}`);
+      console.log(`[UI_LAYOUT] scrollContainerActive=${String(scrollContainerActive)}`);
     };
 
     const onResize = () => window.requestAnimationFrame(logLayout);
+    const mutationObserver = new MutationObserver(() => {
+      window.requestAnimationFrame(logLayout);
+    });
     const rafId = window.requestAnimationFrame(logLayout);
+    const freeflowRoot = document.querySelector('.home-page.freeflow');
+    const sheetRoot = document.querySelector('.contextual-island-sheet');
+    if (freeflowRoot) {
+      mutationObserver.observe(freeflowRoot, { attributes: true, attributeFilter: ['class'] });
+    }
+    if (sheetRoot) {
+      mutationObserver.observe(sheetRoot, { attributes: true, attributeFilter: ['class'] });
+    }
     window.addEventListener('resize', onResize);
     return () => {
       window.cancelAnimationFrame(rafId);
+      mutationObserver.disconnect();
       window.removeEventListener('resize', onResize);
     };
   }, [viewMode, uiMode, isListening, isThinking, isSpeaking, cartItemsCount]);
 
-  // Handle menu item order from MenuIsland "Kliknij pozycjĂ„â„˘"
+  // Handle menu item order from MenuIsland "Kliknij pozycję"
   useEffect(() => {
     const handler = (e: Event) => {
       const { item } = (e as CustomEvent).detail;
       if (item?.name) {
-        handleTextSubmit(`ChcĂ„â„˘ zamÄ‚Ĺ‚wiĂ„â€ˇ ${item.name}`);
+        handleTextSubmit(`Chcę zamówić ${item.name}`);
       }
     };
     window.addEventListener('freeflow:orderItem', handler);
@@ -258,7 +291,7 @@ export default function Home() {
               <button
                 onClick={liveSessionActive ? stopLiveSession : startLiveSession}
                 data-live={liveSessionActive}
-                aria-label={liveSessionActive ? 'WyĹ‚Ä…cz tryb Live' : 'WĹ‚Ä…cz tryb Live'}
+                aria-label={liveSessionActive ? 'Wyłącz tryb Live' : 'Włącz tryb Live'}
                 aria-pressed={liveSessionActive}
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
                   liveSessionActive
@@ -266,7 +299,7 @@ export default function Home() {
                     : 'text-white/50 bg-white/10 hover:bg-white/20'
                 }`}
               >
-                {liveSessionActive ? 'â—Ź LIVE ON' : 'â—‹ LIVE'}
+                {liveSessionActive ? '● LIVE ON' : '○ LIVE'}
               </button>
             )}
           </div>
@@ -276,7 +309,7 @@ export default function Home() {
             <button
               onClick={() => setIsOpen(true)}
               className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
-              aria-label={`OtwĂłrz koszyk (${cartItemsCount})`}
+              aria-label={`Otwórz koszyk (${cartItemsCount})`}
             >
               <i className="fas fa-shopping-cart text-white" />
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-[10px] leading-[18px] font-bold text-white text-center">
@@ -324,7 +357,7 @@ export default function Home() {
 
       </main>
 
-      {/* Switch (PaÄąâ€šĂ„â€¦k) - staÄąâ€ša pozycja po lewej */}
+      {/* Switch (Pająk) - stała pozycja po lewej */}
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
@@ -365,7 +398,7 @@ export default function Home() {
 
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
-        <div className="fixed bottom-0 left-0 right-0 z-[70] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+        <div className="fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <ExpectedContextPrompts />
           <VoiceDock
             recording={isListening}

@@ -1,5 +1,5 @@
 /**
- * VoiceDock Ă˘â‚¬â€ť canonical voice bar for FreeFlow
+ * VoiceDock - canonical voice bar for FreeFlow
  * Replaces VoiceCommandCenterV2 and VoiceInputBar.
  * Dark premium glass, interaction-first, token-based styling.
  */
@@ -99,7 +99,8 @@ export default function VoiceDock({
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+          data-ui-role="voice-dock-layer"
+          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
           style={dockWrapperStyle}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -113,7 +114,7 @@ export default function VoiceDock({
               maxWidth: isMobile ? 500 : 600,
             }}
           >
-            {/* Amber response bubble Ă˘â‚¬â€ť above bar */}
+            {/* Amber response bubble - above bar */}
             <AnimatePresence>
               {showResponse && (
                 <motion.div
@@ -175,7 +176,7 @@ export default function VoiceDock({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={recording ? "SÄąâ€šuchamĂ˘â‚¬Â¦" : "Napisz lub powiedzĂ˘â‚¬Â¦"}
+                placeholder={recording ? "Słucham…" : "Napisz lub powiedz…"}
                 className="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/28 focus:outline-none caret-cyan-400"
                 style={{ letterSpacing: "0.01em" }}
               />
@@ -200,7 +201,7 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.9 }}
                     transition={{ duration: 0.15 }}
-                    aria-label="Wyslij"
+                    aria-label="Wyślij"
                   >
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                       <path d="M1 7.5h13M8.5 2 14 7.5 8.5 13" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -219,7 +220,7 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.92 }}
                     transition={{ duration: 0.15 }}
-                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Wlacz mikrofon"}
+                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Włącz mikrofon"}
                     aria-pressed={recording}
                   >
                     <AmberIndicator status={amberStatus} />

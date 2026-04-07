@@ -19,6 +19,7 @@ const Icon = ({ name, size = 15 }) => {
     logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></>,
     login: <><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" /></>,
     close: <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />,
+    bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
     faq: <><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" strokeLinecap="round" strokeLinejoin="round" /></>,
     history: <><polyline points="12 8 12 12 14 14" /><path d="M3.05 11a9 9 0 1 0 .5-4" strokeLinecap="round" strokeLinejoin="round" /><polyline points="3 3 3.05 11 11 11" strokeLinecap="round" strokeLinejoin="round" /></>,
     profile: <><path d="M20 21a8 8 0 1 0-16 0" strokeLinecap="round" strokeLinejoin="round" /><circle cx="12" cy="8" r="4" /></>,
@@ -162,8 +163,8 @@ export default function MenuDrawer() {
   const roleLabel = userRole === "admin"
     ? "Administrator"
     : userRole === "business"
-      ? "WĹ‚aĹ›ciciel"
-      : "UĹĽytkownik";
+      ? "Właściciel"
+      : "Użytkownik";
 
   const handleDrawerHome = () => {
     console.log("[NAV] drawer: home");
@@ -176,6 +177,9 @@ export default function MenuDrawer() {
   };
   const handleDrawerClientPanel = () => {
     console.log("[NAV] drawer: client_panel");
+  };
+  const handleDrawerOrders = () => {
+    console.log("[NAV_FIX] orders route -> /panel/client?section=orders");
   };
 
   return (
@@ -231,31 +235,50 @@ export default function MenuDrawer() {
                   FreeFlow
                 </span>
               </div>
-              <button
-                onClick={close}
-                aria-label="Zamknij"
-                className="flex items-center justify-center transition-colors"
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "var(--radius-sm)",
-                  color: "rgba(255,255,255,0.30)",
-                }}
-              >
-                <Icon name="close" size={14} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    navigate(`${ROUTES.PANEL_CLIENT}?section=orders`);
+                    close();
+                  }}
+                  aria-label="Powiadomienia"
+                  className="flex items-center justify-center transition-colors hover:bg-white/5"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-sm)",
+                    color: "rgba(255,255,255,0.30)",
+                  }}
+                >
+                  <Icon name="bell" size={14} />
+                </button>
+                <button
+                  onClick={close}
+                  aria-label="Zamknij"
+                  className="flex items-center justify-center transition-colors hover:bg-white/5"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "var(--radius-sm)",
+                    color: "rgba(255,255,255,0.30)",
+                  }}
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 pb-3" style={{ scrollbarWidth: "none" }}>
               <GroupLabel>Aplikacja</GroupLabel>
               <NavItem iconName="home" label="Home" route={ROUTES.HOME} onClick={handleDrawerHome} />
               <NavItem iconName="cart" label="Koszyk" onClick={handleDrawerCart} badge={itemCount} />
+              <NavItem iconName="history" label="Moje zamówienia" route={ROUTES.ORDERS} onClick={handleDrawerOrders} />
               <NavItem iconName="profile" label="Panel Klienta" route={ROUTES.PANEL_CLIENT} onClick={handleDrawerClientPanel} />
 
               <Hairline />
 
-              <GroupLabel>PrzestrzeĹ„ pracy</GroupLabel>
-              <OpItem iconName="business" label="Panel WĹ‚aĹ›ciciela" route={ROUTES.BUSINESS_READONLY} requiresAuth />
+              <GroupLabel>Przestrzeń pracy</GroupLabel>
+              <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.BUSINESS_READONLY} requiresAuth />
               <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
               <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
 
@@ -268,7 +291,7 @@ export default function MenuDrawer() {
               <GroupLabel>Ustawienia</GroupLabel>
               <NavItem iconName="settings" label="Ustawienia" route={ROUTES.SETTINGS} />
               {isRouteEnabled("/order-history") && (
-                <NavItem iconName="history" label="Historia zamĂłwieĹ„" route="/order-history" />
+                <NavItem iconName="history" label="Historia zamówień" route="/order-history" />
               )}
               {isRouteEnabled("/faq") && (
                 <NavItem iconName="faq" label="FAQ" route="/faq" />
@@ -279,7 +302,7 @@ export default function MenuDrawer() {
               {user?.id ? (
                 <NavItem
                   iconName="logout"
-                  label="Wyloguj siÄ™"
+                  label="Wyloguj się"
                   isDanger
                   onClick={() => {
                     signOut();
@@ -289,7 +312,7 @@ export default function MenuDrawer() {
               ) : (
                 <NavItem
                   iconName="login"
-                  label="Zaloguj siÄ™"
+                  label="Zaloguj się"
                   onClick={() => openAuth()}
                 />
               )}
@@ -329,3 +352,4 @@ export default function MenuDrawer() {
     </AnimatePresence>
   );
 }
+

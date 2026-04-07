@@ -185,7 +185,13 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     response.restaurants || response.context?.last_restaurants_list || null,
                 );
                 const menuItems = normalizeMenuItems(
-                    response.menuItems || response.menu || response.context?.last_menu || null,
+                    response.menuItems
+                    || response.menu
+                    || response.context?.menuItems
+                    || response.context?.menu_items
+                    || response.context?.last_menu
+                    || response.context?.lastMenu
+                    || null,
                 );
 
                 const nextIntent = response.intent || state.lastIntent || null;
@@ -207,8 +213,20 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
                 const nextCurrentRestaurant =
                     response.context?.currentRestaurant
+                    || response.context?.current_restaurant
                     || response.currentRestaurant
+                    || response.restaurant
                     || state.currentRestaurant;
+
+                const hasMenuItems = Array.isArray(menuItems) && menuItems.length > 0;
+                const menuSurfaceIntent = nextIntent === 'show_menu'
+                    || nextIntent === 'menu_request'
+                    || nextIntent === 'show_restaurant_menu'
+                    || nextIntent === 'view_menu';
+                const menuSurfaceTool = liveToolName === 'show_menu' || liveToolName === 'select_restaurant';
+                if (hasMenuItems && (menuSurfaceIntent || menuSurfaceTool || nextCurrentRestaurant)) {
+                    nextUiMode = 'restaurant';
+                }
 
                 const liveMenuRenderVisible = nextUiMode === 'restaurant' && !!(menuItems && menuItems.length);
                 if (liveToolName === 'show_menu' || nextIntent === 'show_menu' || nextIntent === 'menu_request') {
@@ -217,6 +235,12 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     console.log(`[LIVE_MENU] currentRestaurant=${nextCurrentRestaurant?.name || 'null'}`);
                     console.log(`[LIVE_MENU] uiMode=${nextUiMode}`);
                     console.log(`[LIVE_MENU] renderVisible=${liveMenuRenderVisible}`);
+                }
+                if (menuSurfaceTool || menuSurfaceIntent || hasMenuItems) {
+                    console.log('[MENU_UI] show_menu received');
+                    console.log(`[MENU_UI] uiMode=${nextUiMode}`);
+                    console.log(`[MENU_UI] currentRestaurant=${nextCurrentRestaurant?.name || 'null'}`);
+                    console.log(`[MENU_UI] menuItemsCount=${menuItems?.length ?? 0}`);
                 }
                 if (isLiveCartTool) {
                     console.log(`[LIVE_CART] tool=${liveToolName}`);
@@ -229,6 +253,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                         ...(response.meta || {}),
                         cart: response.cart || response.meta?.cart,
                         intent: response.intent || response.meta?.intent,
+                        tool: liveToolName || response.meta?.tool || null,
                     },
                     response.turn_id || response.timestamp || parsed.request_id,
                     response.events,

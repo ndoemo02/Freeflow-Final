@@ -48,9 +48,17 @@ function OrderCard({
         : order.items.filter(i => i.station === activeStation);
 
     const isNew = mappedStatus === 'new';
+    const cardStatusClass =
+        mappedStatus === 'new'
+            ? 'kds-order-card--new'
+            : mappedStatus === 'preparing'
+                ? 'kds-order-card--preparing'
+                : mappedStatus === 'ready'
+                    ? 'kds-order-card--ready'
+                    : 'kds-order-card--completed';
 
     return (
-        <div className={`bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 border ${mappedStatus === 'new' ? 'border-orange-500/50' : 'border-slate-700'} shadow-xl hover:shadow-2xl hover:border-slate-600 transition-all duration-300`}>
+        <div className={`kds-order-card ${cardStatusClass}`}>
             <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 text-white font-bold text-xs shadow-lg p-1 text-center leading-tight overflow-hidden whitespace-normal">
@@ -73,7 +81,7 @@ function OrderCard({
                         </div>
                     </div>
                 </div>
-                <div className={`text-xl font-mono font-bold flex-shrink-0 ${mappedStatus === 'new' ? 'text-orange-500' : mappedStatus === 'ready' ? 'text-green-500' : 'text-blue-500'}`}>
+                <div className={`kds-order-card__timer ${cardStatusClass}`}>
                     {formatDuration(elapsedTime)}
                 </div>
             </div>

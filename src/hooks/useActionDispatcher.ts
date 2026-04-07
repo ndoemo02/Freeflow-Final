@@ -28,6 +28,7 @@ interface BrainMeta {
     restaurant?: any;
     source?: string;
     intent?: string;
+    tool?: string;
     conversationClosed?: boolean;
     menuBehavior?: 'preserve' | 'softClose' | 'forceClose' | 'switchContext';
 }
@@ -42,20 +43,45 @@ export function useActionDispatcher() {
     const resetCartLocal = cart?.resetCartLocal;
     const push = toast?.push;
 
+    const ADD_TO_CART_INTENTS = ['confirm_add_to_cart', 'add_to_cart', 'add_item_to_cart'];
+    const EXPLICIT_CART_OPEN_INTENTS = ['show_cart', 'get_cart_state', 'open_checkout', 'proceed_to_checkout', 'confirm_order', 'create_order'];
+    const EXPLICIT_CART_OPEN_TOOLS = ['open_checkout', 'open_cart', 'get_cart_state'];
+
     const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta, responseKey?: string, events?: BrainEvent[]) => {
         const fnTag = '[ActionDispatcher]';
+        const intent = String(meta?.intent || '').toLowerCase();
+        const tool = String(meta?.tool || '').toLowerCase();
 
         if (actions && Array.isArray(actions)) {
             for (const action of actions) {
                 console.log(`${fnTag} Executing action:`, action.type, action.payload);
 
                 switch (action.type) {
-                    case 'SHOW_CART':
+                    case 'SHOW_CART': {
+                        // UX contract: add-to-cart should not auto-open cart.
+                        // Keep explicit cart open behavior for checkout/cart intents/tools.
+                        const isAddToCartFlow = ADD_TO_CART_INTENTS.includes(intent) || tool === 'add_item_to_cart';
+                        const explicitOpenRequested =
+                            EXPLICIT_CART_OPEN_INTENTS.includes(intent) ||
+                            EXPLICIT_CART_OPEN_TOOLS.includes(tool);
+                        const checkoutConfirmationRequired = action.payload?.mode === 'checkout';
+
+                        if (isAddToCartFlow && !explicitOpenRequested) {
+                            console.log(`${fnTag} SHOW_CART skipped (add-to-cart flow, no explicit open request)`);
+                            break;
+                        }
+
+                        if (!explicitOpenRequested && !checkoutConfirmationRequired) {
+                            console.log(`${fnTag} SHOW_CART skipped (no explicit cart-open request)`);
+                            break;
+                        }
+
                         if (setIsOpen) {
                             setIsOpen(true);
                             console.log(`${fnTag} Cart drawer opened`);
                         }
                         break;
+                    }
 
                     case 'SYNC_CART':
                         if (action.payload?.items && syncCart) {
@@ -95,7 +121,10 @@ export function useActionDispatcher() {
         // Guard: only auto-sync cart on intents that explicitly mutated it.
         // Prevents silent session restore on page reload (BUG NEW-3).
         const CART_MUTATION_INTENTS = ['confirm_add_to_cart', 'confirm_order', 'create_order', 'add_to_cart', 'modify_order', 'cancel_order'];
-        const isCartMutation = meta?.intent && CART_MUTATION_INTENTS.includes(meta.intent);
+        const isCartMutation =
+            (meta?.intent && CART_MUTATION_INTENTS.includes(meta.intent))
+            || tool === 'add_item_to_cart'
+            || tool === 'open_checkout';
 
         if (cartItems && cartItems.length > 0 && syncCart && isCartMutation) {
             console.log(`${fnTag} Syncing cart from meta.cart (${cartItems.length} items)`);

@@ -296,20 +296,22 @@ export async function fetchActiveOrders(): Promise<ActiveOrder[]> {
 /**
  * Get status display properties
  */
-export function getStatusDisplay(status: OrderStatus): { label: string; color: string; bgColor: string } {
+export type StatusTone = 'new' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'neutral';
+
+export function getStatusDisplay(status: OrderStatus): { label: string; tone: StatusTone } {
     switch (status) {
         case 'new':
-            return { label: 'Nowe', color: '#92400e', bgColor: '#fef3c7' };
+            return { label: 'Nowe', tone: 'new' };
         case 'preparing':
-            return { label: 'W przygotowaniu', color: '#1e40af', bgColor: '#dbeafe' };
+            return { label: 'W przygotowaniu', tone: 'preparing' };
         case 'ready':
-            return { label: 'Gotowe', color: '#065f46', bgColor: '#d1fae5' };
+            return { label: 'Gotowe', tone: 'ready' };
         case 'delivered':
-            return { label: 'Dostarczone', color: '#374151', bgColor: '#e5e7eb' };
+            return { label: 'Dostarczone', tone: 'delivered' };
         case 'cancelled':
-            return { label: 'Anulowane', color: '#991b1b', bgColor: '#fee2e2' };
+            return { label: 'Anulowane', tone: 'cancelled' };
         default:
-            return { label: status, color: '#374151', bgColor: '#e5e7eb' };
+            return { label: status, tone: 'neutral' };
     }
 }
 

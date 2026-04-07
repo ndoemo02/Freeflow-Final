@@ -6,12 +6,15 @@
 .stat-card {
     border-radius: 1rem;
     padding: 1.25rem 1.5rem;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--orange);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow), 0 8px 25px rgba(91, 124, 255, 0.12);
+    box-shadow: var(--shadow);
 }
 
 .stat-card__header {
@@ -58,7 +61,7 @@
 
 .stat-card__label {
     font-size: 0.875rem;
-    color: var(--muted);
+    color: var(--fg1);
     margin: 0.25rem 0 0 0;
 }
 

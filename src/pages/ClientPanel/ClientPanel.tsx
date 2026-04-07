@@ -11,11 +11,14 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
 import { supabase } from '../../lib/supabase';
+import { ROUTES } from '../../app/routeConfig';
 import StarfieldBackground from '../../components/StarfieldBackground';
 import ErrorFallback from '../../components/ErrorFallback';
+import { useToast } from '../../components/Toast';
 import './ClientPanel.css';
 
 // Types
@@ -26,6 +29,16 @@ interface NavItem {
     icon: string;
     label: string;
     badge?: number;
+}
+
+interface ProfileFormState {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    address: string;
+    postal_code: string;
+    city: string;
 }
 
 // Navigation items
@@ -51,8 +64,28 @@ const bottomNavItems: NavItem[] = [
     { id: 'profile', icon: 'fa-user', label: 'Profil' },
 ];
 
+const PANEL_SECTIONS = new Set<SectionName>([
+    'dashboard',
+    'food',
+    'taxi',
+    'hotels',
+    'orders',
+    'payments',
+    'profile',
+    'settings',
+]);
+
+function getSectionFromSearch(search: string): SectionName | null {
+    const value = new URLSearchParams(search).get('section');
+    if (!value) return null;
+    return PANEL_SECTIONS.has(value as SectionName) ? (value as SectionName) : null;
+}
+
 export default function ClientPanel() {
-    const { user } = useAuth();
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { user, setUser } = useAuth() as any;
+    const { push } = useToast() as any;
     const { orders, loading: loadingOrders, error: ordersError } = useOrders({ userId: user?.id });
 
     // Local state for restaurants
@@ -60,9 +93,19 @@ export default function ClientPanel() {
     const [loadingRestaurants, setLoadingRestaurants] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
 
-    const [activeSection, setActiveSection] = useState<SectionName>('dashboard');
+    const [activeSection, setActiveSection] = useState<SectionName>(() => getSectionFromSearch(location.search) || 'dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showAddCardModal, setShowAddCardModal] = useState(false);
+    const [profileSaving, setProfileSaving] = useState(false);
+    const [profileForm, setProfileForm] = useState<ProfileFormState>({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        address: '',
+        postal_code: '',
+        city: '',
+    });
 
     // Fetch restaurants
     useEffect(() => {
@@ -84,6 +127,89 @@ export default function ClientPanel() {
         setActiveSection(section);
         setSidebarOpen(false);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleGoHome = () => {
+        setSidebarOpen(false);
+        navigate(ROUTES.HOME);
+    };
+
+    useEffect(() => {
+        const nextSection = getSectionFromSearch(location.search);
+        if (nextSection) {
+            setActiveSection(nextSection);
+        }
+    }, [location.search]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadProfile = async () => {
+            if (!user?.id) return;
+
+            const authUserMeta = (user as any)?.user_metadata || {};
+            let metadata = authUserMeta;
+            let email = user?.email || '';
+
+            if (!metadata || Object.keys(metadata).length === 0) {
+                const { data } = await supabase.auth.getUser();
+                metadata = data?.user?.user_metadata || {};
+                email = data?.user?.email || email;
+            }
+
+            if (cancelled) return;
+
+            setProfileForm({
+                first_name: String(metadata?.first_name || ''),
+                last_name: String(metadata?.last_name || ''),
+                email: String(email || ''),
+                phone: String(metadata?.phone || ''),
+                address: String(metadata?.address || ''),
+                postal_code: String(metadata?.postal_code || ''),
+                city: String(metadata?.city || ''),
+            });
+        };
+
+        loadProfile();
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id, user?.email]);
+
+    const handleProfileFieldChange = (key: keyof ProfileFormState, value: string) => {
+        setProfileForm(prev => ({ ...prev, [key]: value }));
+    };
+
+    const handleProfileSave = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!user?.id || profileSaving) return;
+
+        setProfileSaving(true);
+        try {
+            const payload = {
+                first_name: profileForm.first_name.trim(),
+                last_name: profileForm.last_name.trim(),
+                phone: profileForm.phone.trim(),
+                address: profileForm.address.trim(),
+                postal_code: profileForm.postal_code.trim(),
+                city: profileForm.city.trim(),
+            };
+
+            const { data, error } = await supabase.auth.updateUser({ data: payload });
+            if (error) throw error;
+
+            if (data?.user && typeof setUser === 'function') {
+                setUser(data.user);
+            }
+
+            console.log('[PROFILE_SAVE] saved');
+            push?.('Dane profilu zapisane', 'success');
+        } catch (saveError: any) {
+            console.error('[PROFILE_SAVE] failed', saveError);
+            push?.(saveError?.message || 'Nie udało się zapisać danych profilu', 'error');
+        } finally {
+            setProfileSaving(false);
+        }
     };
 
     // Calculated Stats
@@ -120,7 +246,14 @@ export default function ClientPanel() {
                     <div className="cp-logo-badge">FF</div>
                     <span className="cp-logo-text">FreeFlow</span>
                 </div>
-                <button onClick={() => handleSectionChange('orders')} className="cp-header-btn" aria-label="Zamówienia">
+                <button
+                    onClick={() => {
+                        console.log('[NAV_FIX] orders route -> /panel/client?section=orders');
+                        navigate(ROUTES.ORDERS);
+                    }}
+                    className="cp-header-btn"
+                    aria-label="Zamówienia"
+                >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
                     </svg>
@@ -150,6 +283,10 @@ export default function ClientPanel() {
 
                     <nav className="sidebar-nav">
                         <p className="nav-label">Menu główne</p>
+                        <button onClick={handleGoHome} className="nav-btn">
+                            <i className="fas fa-home" />
+                            <span>Home</span>
+                        </button>
                         {navItemsWithBadge.map(item => (
                             <button
                                 key={item.id}
@@ -645,7 +782,7 @@ export default function ClientPanel() {
                                             </div>
                                             <div className="order-full-details">
                                                 <p>
-                                                    {order.items && order.items.map((i: any) => `${i.quantity}x ${i.name}`).join(', ')}
+                                                    {order.items && order.items.map((i: any) => `${Number(i?.quantity ?? i?.qty ?? 1) || 1}x ${i.name}`).join(', ')}
                                                 </p>
                                                 <div className="order-full-meta">
                                                     <span>{new Date(order.created_at).toLocaleString()}</span>
@@ -774,12 +911,17 @@ export default function ClientPanel() {
                             <div className="profile-grid">
                                 <div className="profile-card">
                                     <div className="profile-avatar">
-                                        <img src="https://ui-avatars.com/api/?name=Jan+Kowalski&background=667eea&color=fff&size=128" alt="Avatar" />
+                                        <img
+                                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                `${profileForm.first_name || ''} ${profileForm.last_name || ''}`.trim() || profileForm.email || 'Guest',
+                                            )}&background=667eea&color=fff&size=128`}
+                                            alt="Avatar"
+                                        />
                                         <button className="avatar-edit">
                                             <i className="fas fa-camera" />
                                         </button>
                                     </div>
-                                    <h4>Jan Kowalski</h4>
+                                    <h4>{`${profileForm.first_name || ''} ${profileForm.last_name || ''}`.trim() || profileForm.email || 'Gość'}</h4>
                                     <p className="member-since">Członek od Styczeń 2023</p>
                                     <div className="member-badge">
                                         <i className="fas fa-crown" /> Gold Member
@@ -802,24 +944,39 @@ export default function ClientPanel() {
 
                                 <div className="profile-form-card">
                                     <h4>Dane osobowe</h4>
-                                    <form className="profile-form">
+                                    <form className="profile-form" onSubmit={handleProfileSave}>
                                         <div className="form-row">
                                             <div className="form-group">
                                                 <label>Imię</label>
-                                                <input type="text" defaultValue="Jan" />
+                                                <input
+                                                    type="text"
+                                                    value={profileForm.first_name}
+                                                    onChange={(e) => handleProfileFieldChange('first_name', e.target.value)}
+                                                    autoComplete="given-name"
+                                                />
                                             </div>
                                             <div className="form-group">
                                                 <label>Nazwisko</label>
-                                                <input type="text" defaultValue="Kowalski" />
+                                                <input
+                                                    type="text"
+                                                    value={profileForm.last_name}
+                                                    onChange={(e) => handleProfileFieldChange('last_name', e.target.value)}
+                                                    autoComplete="family-name"
+                                                />
                                             </div>
                                         </div>
                                         <div className="form-group">
                                             <label>Email</label>
-                                            <input type="email" defaultValue="jan.kowalski@email.com" />
+                                            <input type="email" value={profileForm.email} readOnly autoComplete="email" />
                                         </div>
                                         <div className="form-group">
                                             <label>Telefon</label>
-                                            <input type="tel" defaultValue="+48 123 456 789" />
+                                            <input
+                                                type="tel"
+                                                value={profileForm.phone}
+                                                onChange={(e) => handleProfileFieldChange('phone', e.target.value)}
+                                                autoComplete="tel"
+                                            />
                                         </div>
 
                                         <hr />
@@ -827,21 +984,36 @@ export default function ClientPanel() {
                                         <h4>Adres dostawy</h4>
                                         <div className="form-group">
                                             <label>Ulica i numer</label>
-                                            <input type="text" defaultValue="ul. Kwiatowa 15/3" />
+                                            <input
+                                                type="text"
+                                                value={profileForm.address}
+                                                onChange={(e) => handleProfileFieldChange('address', e.target.value)}
+                                                autoComplete="street-address"
+                                            />
                                         </div>
                                         <div className="form-row">
                                             <div className="form-group">
                                                 <label>Kod pocztowy</label>
-                                                <input type="text" defaultValue="00-001" />
+                                                <input
+                                                    type="text"
+                                                    value={profileForm.postal_code}
+                                                    onChange={(e) => handleProfileFieldChange('postal_code', e.target.value)}
+                                                    autoComplete="postal-code"
+                                                />
                                             </div>
                                             <div className="form-group">
                                                 <label>Miasto</label>
-                                                <input type="text" defaultValue="Warszawa" />
+                                                <input
+                                                    type="text"
+                                                    value={profileForm.city}
+                                                    onChange={(e) => handleProfileFieldChange('city', e.target.value)}
+                                                    autoComplete="address-level2"
+                                                />
                                             </div>
                                         </div>
 
-                                        <button type="button" className="primary-btn full">
-                                            <i className="fas fa-save" /> Zapisz zmiany
+                                        <button type="submit" className="primary-btn full" disabled={profileSaving}>
+                                            <i className="fas fa-save" /> {profileSaving ? 'Zapisywanie...' : 'Zapisz zmiany'}
                                         </button>
                                     </form>
                                 </div>
@@ -952,6 +1124,20 @@ export default function ClientPanel() {
                     )}
                 </main>
             </div>
+
+            <nav className="bottom-nav lg:hidden" aria-label="Nawigacja panelu klienta">
+                {bottomNavItems.map(item => (
+                    <button
+                        key={item.id}
+                        onClick={() => handleSectionChange(item.id)}
+                        className={`bottom-nav-btn ${activeSection === item.id ? 'active' : ''}`}
+                        aria-label={item.label}
+                    >
+                        <i className={`fas ${item.icon}`} />
+                        <span>{item.label}</span>
+                    </button>
+                ))}
+            </nav>
 
             {/* Add Card Modal */}
             {showAddCardModal && (

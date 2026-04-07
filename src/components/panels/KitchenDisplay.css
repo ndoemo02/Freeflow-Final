@@ -1,3 +1,57 @@
+/* Unified KDS order card tokens */
+.kds-order-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--neon);
+    border-radius: 1rem;
+    padding: 0.75rem;
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kds-order-card:hover {
+    border-color: color-mix(in srgb, var(--orange) 22%, var(--border));
+}
+
+.kds-order-card--new {
+    border-top-color: var(--neon);
+}
+
+.kds-order-card--preparing {
+    border-top-color: var(--orange);
+}
+
+.kds-order-card--ready {
+    border-top-color: var(--good);
+}
+
+.kds-order-card--completed {
+    border-top-color: var(--muted);
+}
+
+.kds-order-card__timer {
+    font-size: 1.25rem;
+    line-height: 1;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: var(--neon);
+}
+
+.kds-order-card__timer.kds-order-card--preparing {
+    color: var(--orange);
+}
+
+.kds-order-card__timer.kds-order-card--ready {
+    color: var(--good);
+}
+
+.kds-order-card__timer.kds-order-card--completed {
+    color: var(--muted);
+}
+
 /* Responsive improvements for KDS */
 @media (max-width: 768px) {
 
