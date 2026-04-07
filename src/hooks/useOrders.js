@@ -15,11 +15,40 @@ export const useOrders = (options = {}) => {
   const [error, setError] = useState(null);
   const [currentOrder, setCurrentOrder] = useState(null);
 
+  const normalizeQuantity = (item) => {
+    const raw = item?.quantity ?? item?.qty ?? 1;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  };
+
+  const normalizeOrderItems = (items) => {
+    if (!Array.isArray(items)) return [];
+    return items.map((item) => {
+      const quantity = normalizeQuantity(item);
+      return {
+        ...item,
+        quantity,
+        qty: quantity,
+      };
+    });
+  };
+
+  const normalizeOrder = (order) => {
+    if (!order || typeof order !== "object") return order;
+    return {
+      ...order,
+      items: normalizeOrderItems(order.items),
+    };
+  };
+
   const normalizeOrders = (payload) => {
     if (!payload) return [];
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload.orders)) return payload.orders;
-    return [];
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload.orders)
+        ? payload.orders
+        : [];
+    return list.map(normalizeOrder);
   };
 
   const fetchFromApi = useCallback(async () => {
@@ -53,7 +82,7 @@ export const useOrders = (options = {}) => {
 
     const { data, error: supabaseError } = await query;
     if (supabaseError) throw supabaseError;
-    return Array.isArray(data) ? data : [];
+    return normalizeOrders(data);
   }, [restaurantId, userId]);
 
   const fetchOrders = useCallback(async () => {
@@ -104,7 +133,7 @@ export const useOrders = (options = {}) => {
       }
 
       const data = await res.json();
-      const newOrder = data.order || data;
+      const newOrder = normalizeOrder(data.order || data);
 
       setOrders((prev) => [newOrder, ...prev]);
       setCurrentOrder(newOrder);
@@ -135,7 +164,7 @@ export const useOrders = (options = {}) => {
       }
 
       const data = await res.json();
-      const updatedOrder = data.order || data;
+      const updatedOrder = normalizeOrder(data.order || data);
 
       setOrders((prev) => prev.map((order) => (order.id === orderId ? updatedOrder : order)));
       setCurrentOrder((prev) => (prev?.id === orderId ? updatedOrder : prev));

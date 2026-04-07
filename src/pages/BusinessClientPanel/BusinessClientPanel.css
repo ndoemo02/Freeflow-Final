@@ -4,10 +4,23 @@
  */
 
 .business-panel {
+    /* Force dark business tokens in this surface regardless of global theme mode */
+    --bg0: #070A12;
+    --bg1: #0B1222;
+    --fg0: #EAF0FF;
+    --fg1: #9AA7C2;
+    --fg2: #5A6882;
+    --muted: var(--fg1);
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass2: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.10);
+
     min-height: 100vh;
     padding: 1.5rem;
-    background-color: var(--op-surface, #0d1020); /* flat operational surface — no wallpaper */
-    color: #EAF0FF;
+    background:
+        radial-gradient(ellipse 100% 38% at 50% 0%, rgba(91, 124, 255, 0.06) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    color: var(--fg0);
     position: relative;
     isolation: isolate;
 }
@@ -41,7 +54,7 @@
 
 .business-panel__subtitle {
     font-size: 0.875rem;
-    color: var(--muted);
+    color: var(--fg1);
     margin: 0;
 }
 
@@ -57,10 +70,10 @@
     align-items: center;
     gap: 0.375rem;
     padding: 0.5rem 0.875rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: var(--glass);
+    border: 1px solid var(--border);
     border-radius: 0.625rem;
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--fg1);
     font-size: 0.8125rem;
     font-weight: 500;
     cursor: pointer;
@@ -69,8 +82,8 @@
 }
 
 .business-panel__back-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.88);
+    background: var(--glass2);
+    color: var(--fg0);
 }
 
 /* Refresh — small utility icon, no label */
@@ -80,17 +93,17 @@
     justify-content: center;
     width: 34px;
     height: 34px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: var(--glass);
+    border: 1px solid var(--border);
     border-radius: 0.625rem;
-    color: rgba(255, 255, 255, 0.40);
+    color: var(--fg2);
     cursor: pointer;
     transition: background 0.15s, color 0.15s, transform 0.4s;
 }
 
 .business-panel__refresh-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.70);
+    background: var(--glass2);
+    color: var(--fg1);
     transform: rotate(180deg);
 }
 
@@ -100,9 +113,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: rgba(249, 115, 22, 0.12);
-    border: 1px solid rgba(249, 115, 22, 0.28);
-    color: rgba(249, 115, 22, 0.90);
+    background: color-mix(in srgb, var(--orange) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--orange) 36%, var(--border));
+    color: var(--orange);
     text-decoration: none;
     border-radius: 0.625rem;
     font-weight: 600;
@@ -113,8 +126,8 @@
 }
 
 .business-panel__kds-link:hover {
-    background: rgba(249, 115, 22, 0.18);
-    border-color: rgba(249, 115, 22, 0.40);
+    background: color-mix(in srgb, var(--orange) 22%, transparent);
+    border-color: color-mix(in srgb, var(--orange) 46%, var(--border));
 }
 
 /* ===== KPIs Grid ===== */
@@ -144,6 +157,15 @@
     gap: 1.5rem;
 }
 
+.business-panel__orders,
+.business-panel__channels > .channel-card,
+.business-panel__quick-stats {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
+}
+
 @media (max-width: 1024px) {
     .business-panel__content {
         grid-template-columns: 1fr;
@@ -160,6 +182,10 @@
 .business-panel__quick-stats {
     border-radius: 1rem;
     padding: 1.5rem;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(var(--blur-md));
+    -webkit-backdrop-filter: blur(var(--blur-md));
 }
 
 .business-panel__section-title {
@@ -194,7 +220,7 @@
 
 .quick-stat__label {
     font-size: 0.875rem;
-    color: var(--muted);
+    color: var(--fg1);
 }
 
 /* ===== Loading State ===== */
@@ -205,7 +231,7 @@
     justify-content: center;
     min-height: 60vh;
     gap: 1rem;
-    color: var(--muted);
+    color: var(--fg1);
 }
 
 .business-panel__spinner {
@@ -232,7 +258,7 @@
     min-height: 60vh;
     gap: 1rem;
     text-align: center;
-    color: var(--muted);
+    color: var(--fg1);
 }
 
 .business-panel__error-icon {
@@ -261,7 +287,7 @@
     left: 50%;
     transform: translateX(-50%);
     background: rgba(245, 158, 11, 0.95);
-    color: #1e1e1e;
+    color: #10131b;
     padding: 0.875rem 1.5rem;
     border-radius: 0.75rem;
     font-weight: 500;
@@ -283,17 +309,3 @@
     }
 }
 
-/* --- High-End Minimalist Glassmorphism Upgrade --- */
-.business-panel__quick-stats,
-.business-panel__channels>div,
-.business-panel__orders,
-.business-panel__settings,
-.stats-card,
-.stat-card,
-.quick-stat {
-    background: rgba(0, 0, 0, 0.4) !important;
-    backdrop-filter: blur(25px) !important;
-    -webkit-backdrop-filter: blur(25px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
-}

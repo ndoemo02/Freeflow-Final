@@ -147,21 +147,21 @@ export default function BusinessClientPanel() {
             <section className="business-panel__kpis">
                 <StatCard
                     icon={<IconReceipt />}
-                    iconBgColor="#22c55e"
+                    iconBgColor="var(--good)"
                     value={kpis?.ordersToday || 0}
                     label="Zamówień dziś"
                     trend={kpis?.trends.orders}
                 />
                 <StatCard
                     icon={<IconDollar />}
-                    iconBgColor="#3b82f6"
+                    iconBgColor="var(--neon)"
                     value={kpis?.revenueTodayFormatted || '0 zł'}
                     label="Przychód dziś"
                     trend={kpis?.trends.revenue}
                 />
                 <StatCard
                     icon={<IconClock />}
-                    iconBgColor="#f59e0b"
+                    iconBgColor="var(--warn)"
                     value={`${kpis?.avgFulfillmentTime || 0} min`}
                     label="Śr. czas realizacji"
                     trend={kpis?.trends.avgTime}
@@ -169,7 +169,7 @@ export default function BusinessClientPanel() {
                 />
                 <StatCard
                     icon={<IconUsers />}
-                    iconBgColor="#8b5cf6"
+                    iconBgColor="var(--neon2)"
                     value={kpis?.customersToday || 0}
                     label="Klienci dziś"
                     trend={kpis?.trends.customers}

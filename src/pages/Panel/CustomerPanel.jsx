@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../state/auth'
 import { supabase } from '../../lib/supabase'
@@ -14,6 +14,7 @@ export default function CustomerPanel() {
   const { user, setUser } = useAuth()
   const { push } = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
   const { addToCart, itemCount, setIsOpen } = useCart()
 
   const [tab, setTab] = useState('profile')
@@ -41,6 +42,15 @@ export default function CustomerPanel() {
       navigate('/');
     }
   }, [user, navigate]);
+
+  // Handle section query param
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section && ['profile', 'orders', 'restaurants', 'reservations', 'cart', 'settings'].includes(section)) {
+      setTab(section);
+    }
+  }, [location.search]);
 
   // Load profile and orders
   useEffect(() => {

@@ -782,7 +782,7 @@ export default function ClientPanel() {
                                             </div>
                                             <div className="order-full-details">
                                                 <p>
-                                                    {order.items && order.items.map((i: any) => `${i.quantity}x ${i.name}`).join(', ')}
+                                                    {order.items && order.items.map((i: any) => `${Number(i?.quantity ?? i?.qty ?? 1) || 1}x ${i.name}`).join(', ')}
                                                 </p>
                                                 <div className="order-full-meta">
                                                     <span>{new Date(order.created_at).toLocaleString()}</span>

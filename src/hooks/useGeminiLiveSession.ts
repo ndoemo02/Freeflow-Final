@@ -64,7 +64,7 @@ function compactToolResponse(
 ): Record<string, unknown> {
   const compact: Record<string, unknown> = {
     reply: (response.reply || response.text || '') as string,
-    ok: true,
+    ok: response.ok !== false,
   };
 
   switch (toolName) {

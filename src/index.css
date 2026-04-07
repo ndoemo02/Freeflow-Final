@@ -24,6 +24,8 @@ body,
   --bg0: #070A12;
   --bg1: #0B1222;
   --fg0: #EAF0FF;
+  --fg1: #9AA7C2;
+  --fg2: #5A6882;
   --muted: #9AA7C2;
 
   /* === Glass & Borders === */
@@ -33,6 +35,7 @@ body,
   --shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
 
   /* === Accent Colors === */
+  --orange: #F97316;
   --neon: #5B7CFF;
   --neon2: #38BDF8;
 
@@ -73,6 +76,8 @@ html:not(.dark) {
   --bg0: #F6F8FF;
   --bg1: #EEF2FF;
   --fg0: #0A1020;
+  --fg1: #54607A;
+  --fg2: #6E7A96;
   --muted: #54607A;
   --border: rgba(10, 16, 32, 0.12);
   --glass: rgba(255, 255, 255, 0.65);
@@ -80,6 +85,7 @@ html:not(.dark) {
   --shadow: 0 14px 30px rgba(10, 16, 32, 0.10);
   --neon: #2F5BFF;
   --neon2: #0891B2;
+  --orange: #F97316;
 }
 
 body.admin-theme {
