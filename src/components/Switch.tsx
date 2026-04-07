@@ -70,10 +70,10 @@ export default function Switch({ onToggle, initial = false, amberReady = true }:
         <div className="switch-knob" ref={knobRef} data-ui-role="status-dot" />
 
         {/* Pasek */}
-        <div className="switch-track" />
+        <div className="switch-track" data-ui-role="status-rail-track" />
 
         {/* Podstawa na dole */}
-        <div className="switch-base">
+        <div className="switch-base" data-ui-role="status-base-dot">
           <div className="switch-base-inner" />
         </div>
       </div>

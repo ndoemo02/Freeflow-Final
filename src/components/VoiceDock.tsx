@@ -41,6 +41,7 @@ export default function VoiceDock({
   onClearResponse,
 }: VoiceDockProps) {
   const [inputValue, setInputValue] = useState("");
+  const [mobileYOffset, setMobileYOffset] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 768px)").matches;
@@ -75,6 +76,48 @@ export default function VoiceDock({
     return () => mq.removeEventListener("change", handleMedia);
   }, []);
 
+  useEffect(() => {
+    if (!isMobile || typeof window === "undefined") {
+      setMobileYOffset(0);
+      return;
+    }
+
+    const alignToStatusRail = () => {
+      const statusDot = document.querySelector('[data-ui-role="status-dot"]') as HTMLElement | null;
+      const statusBaseDot = document.querySelector('[data-ui-role="status-base-dot"]') as HTMLElement | null;
+      const railTrack = document.querySelector('[data-ui-role="status-rail-track"]') as HTMLElement | null;
+      const voiceBar = barRef.current;
+      if (!statusDot || !voiceBar) return;
+
+      const statusRect = statusDot.getBoundingClientRect();
+      const baseRect = statusBaseDot?.getBoundingClientRect();
+      const trackRect = railTrack?.getBoundingClientRect();
+      const barRect = voiceBar.getBoundingClientRect();
+      const statusCenterY = statusRect.top + statusRect.height / 2;
+      const baseCenterY = baseRect ? baseRect.top + baseRect.height / 2 : statusCenterY;
+      const fallbackBetweenDots = statusCenterY + (baseCenterY - statusCenterY) * 0.5;
+      const targetCenterY = trackRect
+        ? Math.round(trackRect.top + trackRect.height / 2)
+        : Math.round(fallbackBetweenDots);
+      const barCenterY = barRect.top + barRect.height / 2;
+      const rawDelta = targetCenterY - barCenterY;
+      const upwardNudge = 6;
+
+      // Keep micro-adjustment small and stable across devices.
+      const nextDelta = Math.max(-22, Math.min(22, Math.round(rawDelta + upwardNudge)));
+      setMobileYOffset((prev) => (prev === nextDelta ? prev : nextDelta));
+    };
+
+    const rafId = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(alignToStatusRail);
+    });
+    window.addEventListener("resize", alignToStatusRail);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", alignToStatusRail);
+    };
+  }, [isMobile, hasTypedText, recording, showResponse]);
+
   const submit = () => {
     if (hasTypedText) {
       handleSubmit?.(inputValue);
@@ -92,7 +135,7 @@ export default function VoiceDock({
   };
 
   const dockWrapperStyle = isMobile
-    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)" }
+    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }
     : undefined;
 
   return (
@@ -102,16 +145,16 @@ export default function VoiceDock({
           data-ui-role="voice-dock-layer"
           className="fixed inset-x-0 bottom-0 z-[120] flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
           style={dockWrapperStyle}
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
+          animate={{ opacity: 1, y: isMobile ? mobileYOffset : 0 }}
+          exit={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <div
             className="w-full pointer-events-auto"
             style={{
-              width: isMobile ? "92vw" : "100%",
-              maxWidth: isMobile ? 500 : 600,
+              width: isMobile ? "88vw" : "100%",
+              maxWidth: isMobile ? 460 : 600,
             }}
           >
             {/* Amber response bubble - above bar */}
