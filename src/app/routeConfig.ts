@@ -11,6 +11,8 @@ export const ROUTES = {
   BUSINESS_READONLY: "/business",
   LEGACY_PANEL_CUSTOMER: "/legacy/panel/customer",
   PANEL_BUSINESS: "/panel/business",
+  PANEL_MANAGE: "/panel/manage",
+  PANEL_RESTAURANT_MANAGER: "/panel/restaurant-manager",
   PANEL_BUSINESS_KDS: "/panel/business-kds",
   PANEL_ADMIN: "/panel/admin",
   PANEL_DRIVER: "/panel/driver",

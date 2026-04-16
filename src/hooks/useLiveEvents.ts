@@ -1,8 +1,73 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getApiUrl } from '../lib/config';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { resolveLiveWsBase } from '../lib/config';
 import { useConversationStore } from '../store/useConversationStore';
 import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
 import { liveSessionCache } from './useGeminiLiveSession';
+import { useLiveUiSessionStore } from '../state/liveUiSession';
+
+// Module-level GPS cache — survives WS reconnects within the same page session
+let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
+const GPS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const GPS_PERSIST_KEY = 'ff_last_gps';
+
+function readPersistedGps(): { lat: number; lng: number; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(GPS_PERSIST_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { lat?: unknown; lng?: unknown; ts?: unknown };
+        const lat = Number(parsed?.lat);
+        const lng = Number(parsed?.lng);
+        const ts = Number(parsed?.ts);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(ts)) return null;
+        return { lat, lng, ts };
+    } catch {
+        return null;
+    }
+}
+
+function persistGps(lat: number, lng: number): void {
+    try {
+        localStorage.setItem(GPS_PERSIST_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
+    } catch {
+        // noop
+    }
+}
+
+async function getGPSCoords(): Promise<{ lat: number; lng: number } | null> {
+    // Return cache immediately if fresh — eliminates race condition on reconnect
+    if (_gpsCache && Date.now() - _gpsCache.ts < GPS_CACHE_TTL_MS) {
+        return { lat: _gpsCache.lat, lng: _gpsCache.lng };
+    }
+    const persisted = readPersistedGps();
+    if (persisted && Date.now() - persisted.ts < GPS_CACHE_TTL_MS) {
+        _gpsCache = persisted;
+        return { lat: persisted.lat, lng: persisted.lng };
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
+    return new Promise((resolve) => {
+        let settled = false;
+        const timeoutMs = 8000;
+        const tid = window.setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, timeoutMs);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(tid);
+                const lat = Number(pos.coords.latitude);
+                const lng = Number(pos.coords.longitude);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    _gpsCache = { lat, lng, ts: Date.now() };
+                    persistGps(lat, lng);
+                    resolve({ lat, lng });
+                } else {
+                    resolve(null);
+                }
+            },
+            () => { if (!settled) { settled = true; window.clearTimeout(tid); resolve(null); } },
+            { enableHighAccuracy: false, maximumAge: 120000, timeout: timeoutMs },
+        );
+    });
+}
 
 type DispatchFn = (
     actions: any[] | undefined,
@@ -17,12 +82,24 @@ type UseLiveEventsOptions = {
     dispatch: DispatchFn;
 };
 
-function toWsUrl(path: string) {
-    const httpUrl = getApiUrl(path);
-    if (httpUrl.startsWith('http://')) return `ws://${httpUrl.slice('http://'.length)}`;
-    if (httpUrl.startsWith('https://')) return `wss://${httpUrl.slice('https://'.length)}`;
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${proto}://${window.location.host}${httpUrl.startsWith('/') ? '' : '/'}${httpUrl}`;
+function buildLiveWsUrl(sessionId: string): { wsUrl: string | null; source: string; base: string | null } {
+    const resolved = resolveLiveWsBase();
+    if (!resolved.base) {
+        return { wsUrl: null, source: resolved.source, base: null };
+    }
+
+    try {
+        const url = new URL(resolved.base);
+        const normalizedPath = url.pathname.replace(/\/+$/, '');
+        if (normalizedPath !== '/api/voice/live/ws') {
+            const prefix = normalizedPath && normalizedPath !== '/' ? normalizedPath : '';
+            url.pathname = `${prefix}/api/voice/live/ws`;
+        }
+        url.searchParams.set('session_id', sessionId);
+        return { wsUrl: url.toString(), source: resolved.source, base: resolved.base };
+    } catch {
+        return { wsUrl: null, source: `invalid:${resolved.source}`, base: resolved.base };
+    }
 }
 
 function extractCartItems(cartData: any): any[] {
@@ -39,6 +116,102 @@ function summarizeCartItems(cartData: any): Array<{ id: string; name: string; qt
     }));
 }
 
+function normalizeLooseText(value: any): string {
+    return String(value ?? '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function findRestaurantIdByReference(restaurants: any[], reference: any): string | null {
+    if (!Array.isArray(restaurants) || restaurants.length === 0 || !reference) return null;
+
+    const refId = reference?.id != null ? String(reference.id) : null;
+    if (refId) {
+        const byId = restaurants.find((restaurant: any) => String(restaurant?.id ?? '') === refId);
+        if (byId?.id != null) return String(byId.id);
+    }
+
+    const refName = normalizeLooseText(reference?.display_name || reference?.name || '');
+    if (!refName) return null;
+
+    const byName = restaurants.find((restaurant: any) => {
+        const restaurantName = normalizeLooseText(restaurant?.display_name || restaurant?.name || '');
+        return restaurantName && (restaurantName === refName || restaurantName.includes(refName) || refName.includes(restaurantName));
+    });
+
+    return byName?.id != null ? String(byName.id) : null;
+}
+
+function resolveFocusedRestaurantPreviewId({
+    isIdle,
+    restaurants,
+    response,
+    nextCurrentRestaurant,
+    previousSelectedRestaurantPreviewId,
+}: {
+    isIdle: boolean;
+    restaurants: any[] | null;
+    response: any;
+    nextCurrentRestaurant: any;
+    previousSelectedRestaurantPreviewId: string | null;
+}): string | null {
+    if (isIdle) return null;
+    if (!Array.isArray(restaurants) || restaurants.length === 0) {
+        return previousSelectedRestaurantPreviewId;
+    }
+
+    const referencedRestaurantId = findRestaurantIdByReference(restaurants, nextCurrentRestaurant)
+        || findRestaurantIdByReference(restaurants, response?.restaurant)
+        || findRestaurantIdByReference(restaurants, response?.currentRestaurant)
+        || findRestaurantIdByReference(restaurants, response?.context?.currentRestaurant)
+        || findRestaurantIdByReference(restaurants, response?.context?.current_restaurant);
+    if (referencedRestaurantId) return referencedRestaurantId;
+
+    const replyText = normalizeLooseText(response?.reply || response?.text || response?.tts?.text || '');
+    if (replyText) {
+        const byReplyMention = restaurants.find((restaurant: any) => {
+            const restaurantName = normalizeLooseText(restaurant?.display_name || restaurant?.name || '');
+            return restaurantName && replyText.includes(restaurantName);
+        });
+        if (byReplyMention?.id != null) return String(byReplyMention.id);
+    }
+
+    const hasPreviousSelection = !!previousSelectedRestaurantPreviewId
+        && restaurants.some((restaurant: any) =>
+            String(restaurant?.id || '') === String(previousSelectedRestaurantPreviewId),
+        );
+    if (hasPreviousSelection) return previousSelectedRestaurantPreviewId;
+
+    return restaurants[0]?.id != null ? String(restaurants[0].id) : null;
+}
+
+function extractMentionOrderedRestaurantIds(restaurants: any[], response: any): string[] {
+    if (!Array.isArray(restaurants) || restaurants.length === 0) return [];
+
+    const replyText = normalizeLooseText(response?.reply || response?.text || response?.tts?.text || '');
+    if (!replyText) return [];
+
+    const ranked = restaurants
+        .map((restaurant: any, idx: number) => {
+            const restaurantId = restaurant?.id != null ? String(restaurant.id) : null;
+            const restaurantName = normalizeLooseText(restaurant?.display_name || restaurant?.name || '');
+            if (!restaurantId || !restaurantName || restaurantName.length < 3) return null;
+            const mentionIndex = replyText.indexOf(restaurantName);
+            return mentionIndex >= 0 ? { restaurantId, mentionIndex, idx } : null;
+        })
+        .filter(Boolean)
+        .sort((a: any, b: any) => {
+            if (a.mentionIndex !== b.mentionIndex) return a.mentionIndex - b.mentionIndex;
+            return a.idx - b.idx;
+        });
+
+    return ranked.map((entry: any) => entry.restaurantId);
+}
+
 export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOptions) {
     const socketRef = useRef<WebSocket | null>(null);
     const [connected, setConnected] = useState(false);
@@ -48,6 +221,8 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
     const activeSocketSessionIdRef = useRef<string | null>(null);
     const shouldReconnectRef = useRef(false);
     const connectNonceRef = useRef(0);
+    const focusSyncTokenRef = useRef(0);
+    const focusSyncTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
     const RECONNECT_DELAYS_MS = [1000, 2000, 5000] as const;
 
     // ROOT CAUSE FIX: dispatch comes from useActionDispatcher whose useCallback deps
@@ -59,10 +234,11 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
     const wsUrl = useMemo(() => {
         if (!enabled || !sessionId) return null;
-        const base = toWsUrl('/api/voice/live/ws');
-        const url = new URL(base);
-        url.searchParams.set('session_id', sessionId);
-        return url.toString();
+        const resolved = buildLiveWsUrl(sessionId);
+        console.log(`[LIVE_WS] source=${resolved.source}`);
+        console.log(`[LIVE_WS] resolvedBase=${resolved.base ?? 'null'}`);
+        console.log(`[LIVE_WS] finalWsUrl=${resolved.wsUrl ?? 'null'}`);
+        return resolved.wsUrl;
     }, [enabled, sessionId]);
 
     const clearReconnectTimer = useCallback(() => {
@@ -72,12 +248,87 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
         }
     }, []);
 
+    const clearFocusSyncTimers = useCallback(() => {
+        focusSyncTokenRef.current += 1;
+        for (const timer of focusSyncTimersRef.current) {
+            clearTimeout(timer);
+        }
+        focusSyncTimersRef.current = [];
+    }, []);
+
+    const focusRestaurantById = useCallback((restaurantId: string | null, reason: string) => {
+        if (!restaurantId) return;
+        useConversationStore.setState((current) => {
+            const hasRestaurant = Array.isArray(current.suggestedRestaurants)
+                && current.suggestedRestaurants.some((restaurant: any) => String(restaurant?.id ?? '') === restaurantId);
+            if (!hasRestaurant) return {};
+            if (String(current.selectedRestaurantPreviewId || '') === restaurantId) return {};
+            console.log(`[UI_LIVE_FOCUS_SYNC] reason=${reason} id=${restaurantId}`);
+            return { selectedRestaurantPreviewId: restaurantId };
+        });
+    }, []);
+
+    const scheduleFocusSequence = useCallback((restaurantIds: string[], reason: string) => {
+        const dedupedIds = Array.from(new Set((restaurantIds || []).filter(Boolean)));
+        if (dedupedIds.length < 2) {
+            clearFocusSyncTimers();
+            return;
+        }
+
+        clearFocusSyncTimers();
+        const token = focusSyncTokenRef.current;
+        const initialDelayMs = 550;
+        const stepDelayMs = 1200;
+
+        dedupedIds.forEach((restaurantId, idx) => {
+            const timer = setTimeout(() => {
+                if (token !== focusSyncTokenRef.current) return;
+                focusRestaurantById(restaurantId, `${reason}:${idx + 1}`);
+            }, initialDelayMs + idx * stepDelayMs);
+            focusSyncTimersRef.current.push(timer);
+        });
+    }, [clearFocusSyncTimers, focusRestaurantById]);
+
     useEffect(() => {
-        console.log(`[LIVE_EFFECT] useLiveEvents effect fired — wsUrl=${wsUrl ? 'set' : 'null'} sessionId=${sessionId || 'none'}`);
+        if (!enabled || !sessionId) return;
+
+        const onAssistantSpeechPart = (rawEvent: Event) => {
+            const event = rawEvent as CustomEvent<any>;
+            const eventSessionId = String(event?.detail?.sessionId || '').trim();
+            if (eventSessionId && eventSessionId !== sessionId) return;
+
+            const speechText = normalizeLooseText(event?.detail?.text || '');
+            if (!speechText) return;
+
+            const state = useConversationStore.getState();
+            const isDiscoveryList = state.uiMode === 'list';
+            if (!isDiscoveryList) return;
+            const restaurants = Array.isArray(state.suggestedRestaurants) ? state.suggestedRestaurants : [];
+            if (!restaurants.length) return;
+
+            const mentioned = restaurants.find((restaurant: any) => {
+                const restaurantName = normalizeLooseText(restaurant?.display_name || restaurant?.name || '');
+                return restaurantName && speechText.includes(restaurantName);
+            });
+            if (!mentioned?.id) return;
+
+            clearFocusSyncTimers();
+            focusRestaurantById(String(mentioned.id), 'assistant_part');
+        };
+
+        window.addEventListener('freeflow:live-assistant-part', onAssistantSpeechPart as EventListener);
+        return () => {
+            window.removeEventListener('freeflow:live-assistant-part', onAssistantSpeechPart as EventListener);
+        };
+    }, [enabled, sessionId, clearFocusSyncTimers, focusRestaurantById]);
+
+    useEffect(() => {
+        console.log(`[LIVE_EFFECT] useLiveEvents effect fired â€” wsUrl=${wsUrl ? 'set' : 'null'} sessionId=${sessionId || 'none'}`);
 
         if (!wsUrl || !sessionId) {
             shouldReconnectRef.current = false;
             clearReconnectTimer();
+            clearFocusSyncTimers();
             if (socketRef.current) {
                 try { socketRef.current.close(1000, 'disabled_or_no_session'); } catch { /* noop */ }
             }
@@ -91,6 +342,44 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
         shouldReconnectRef.current = true;
         let disposed = false;
         const effectSessionId = sessionId;
+        let gpsInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
+        let gpsInitRetryCount = 0;
+        const MAX_GPS_INIT_RETRIES = 6;
+
+        const clearGpsInitRetry = () => {
+            if (gpsInitRetryTimer) {
+                clearTimeout(gpsInitRetryTimer);
+                gpsInitRetryTimer = null;
+            }
+        };
+
+        const sendSessionInitWithRetry = (socket: WebSocket) => {
+            if (disposed) return;
+            clearGpsInitRetry();
+
+            void getGPSCoords().then((coords) => {
+                if (disposed || socket.readyState !== WebSocket.OPEN) return;
+                if (coords) {
+                    socket.send(JSON.stringify({
+                        type: 'session_init',
+                        lat: coords.lat,
+                        lng: coords.lng,
+                    }));
+                    console.log(`[LIVE_GPS_INIT] sent lat=${coords.lat} lng=${coords.lng} retry=${gpsInitRetryCount}`);
+                    return;
+                }
+
+                if (gpsInitRetryCount >= MAX_GPS_INIT_RETRIES) {
+                    console.log('[LIVE_GPS_INIT] no coords after retries, stop retrying');
+                    return;
+                }
+
+                gpsInitRetryCount += 1;
+                gpsInitRetryTimer = setTimeout(() => {
+                    sendSessionInitWithRetry(socket);
+                }, 1500);
+            });
+        };
 
         const scheduleReconnect = () => {
             if (!shouldReconnectRef.current || disposed) return;
@@ -124,12 +413,12 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 activeSocketSessionIdRef.current === effectSessionId &&
                 (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)
             ) {
-                console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect skipped — socket already ${existing.readyState === WebSocket.OPEN ? 'OPEN' : 'CONNECTING'}`);
+                console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect skipped â€” socket already ${existing.readyState === WebSocket.OPEN ? 'OPEN' : 'CONNECTING'}`);
                 return;
             }
 
             const nonce = ++connectNonceRef.current;
-            console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect requested — reason=${reason} session=${effectSessionId} nonce=${nonce}`);
+            console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);
             const socket = new WebSocket(wsUrl);
             socketRef.current = socket;
             activeSocketSessionIdRef.current = effectSessionId;
@@ -140,6 +429,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 reconnectAttemptRef.current = 0;
                 clearReconnectTimer();
                 console.log('LIVE EVENTS WS OPEN - backend tool relay ready');
+                // Send GPS bootstrap as early as possible to avoid first-turn
+                // fallback prompts ("podaj miasto") before live_ready arrives.
+                gpsInitRetryCount = 0;
+                sendSessionInitWithRetry(socket);
             };
 
             socket.onclose = (e) => {
@@ -147,10 +440,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 setConnected(false);
                 if (socketRef.current === socket) socketRef.current = null;
                 console.log(`[LIVE] STOP sessionId=${effectSessionId} code=${e.code} reason=${e.reason || '(none)'}`);
-                // Do NOT reconnect on normal/intentional close codes
-                // 1000 = Normal closure, 1001 = Going Away (tab/server shutdown)
-                if (e.code === 1000 || e.code === 1001) {
-                    console.log(`[LIVE] RECONNECT HALTED — intentional close (${e.code})`);
+                // Do NOT reconnect on intentional close or permanent policy errors.
+                // 1000 = Normal closure, 4001/4002 = live disabled or missing session id
+                if (e.code === 1000 || e.code === 4001 || e.code === 4002) {
+                    console.log(`[LIVE] RECONNECT HALTED - intentional/policy close (${e.code})`);
                     return;
                 }
                 scheduleReconnect();
@@ -169,6 +462,26 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     return;
                 }
 
+                const liveUiStore = useLiveUiSessionStore.getState();
+                if (parsed?.type === 'live_ready') {
+                    liveUiStore.setListening('Slucham...');
+                    gpsInitRetryCount = 0;
+                    sendSessionInitWithRetry(socket);
+                    return;
+                }
+
+                if (parsed?.type === 'tool_error') {
+                    const toolName = String(parsed?.tool || parsed?.name || '').trim();
+                    const errorText = String(parsed?.error || 'tool_error').trim() || 'tool_error';
+                    liveUiStore.setSessionState('results_ready', {
+                        statusText: `Blad narzedzia: ${errorText}`,
+                        isLiveActive: true,
+                        isPaused: false,
+                        lastTool: toolName || liveUiStore.lastTool,
+                    });
+                    return;
+                }
+
                 if (parsed?.type !== 'tool_result' || !parsed?.response) return;
 
                 const response = parsed.response;
@@ -177,6 +490,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 const history = [...state.conversationHistory, { role: 'assistant', content: reply }];
                 const liveToolName = String(parsed.tool || parsed.name || '');
                 const isLiveCartTool = liveToolName === 'add_item_to_cart' || liveToolName === 'open_checkout';
+                liveUiStore.applyToolResult(liveToolName || null, response);
+                if (reply) {
+                    liveUiStore.setTranscript('assistant', reply);
+                }
 
                 const newPhase = response.context?.conversationPhase || response.phase || state.conversationPhase;
                 const isIdle = newPhase === 'idle';
@@ -185,8 +502,8 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     response.restaurants || response.context?.last_restaurants_list || null,
                 );
                 const menuItems = normalizeMenuItems(
-                    response.menuItems
-                    || response.menu
+                    response.menu       // Full menu for UI (set by menuHandler)
+                    || response.menuItems  // Shortlist fallback
                     || response.context?.menuItems
                     || response.context?.menu_items
                     || response.context?.last_menu
@@ -259,6 +576,49 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     response.events,
                 );
 
+                const previousSelectedRestaurantPreviewId = state.selectedRestaurantPreviewId;
+                const resolvedSelectedRestaurantPreviewId = resolveFocusedRestaurantPreviewId({
+                    isIdle,
+                    restaurants,
+                    response,
+                    nextCurrentRestaurant,
+                    previousSelectedRestaurantPreviewId,
+                });
+                const currentRestaurantId = nextCurrentRestaurant?.id != null
+                    ? String(nextCurrentRestaurant.id)
+                    : null;
+                const hasRestaurants = Array.isArray(restaurants) && restaurants.length > 0;
+                const isMenuFocusLocked = nextUiMode === 'restaurant'
+                    || newPhase === 'restaurant_selected'
+                    || newPhase === 'ordering';
+                const currentRestaurantInList = Boolean(
+                    currentRestaurantId
+                    && hasRestaurants
+                    && restaurants.some((restaurant: any) => String(restaurant?.id ?? '') === currentRestaurantId),
+                );
+                let nextSelectedRestaurantPreviewId = resolvedSelectedRestaurantPreviewId;
+                if (isMenuFocusLocked) {
+                    if (currentRestaurantId && (!hasRestaurants || currentRestaurantInList)) {
+                        nextSelectedRestaurantPreviewId = currentRestaurantId;
+                    } else if (previousSelectedRestaurantPreviewId) {
+                        nextSelectedRestaurantPreviewId = previousSelectedRestaurantPreviewId;
+                    }
+                    if (nextSelectedRestaurantPreviewId !== resolvedSelectedRestaurantPreviewId) {
+                        console.log(
+                            `[UI_LIVE_FOCUS_LOCK] mode=${nextUiMode} phase=${newPhase} selected=${nextSelectedRestaurantPreviewId}`,
+                        );
+                    }
+                }
+                const shouldAnimateFocusSequence = !isIdle
+                    && nextUiMode === 'list'
+                    && !isMenuFocusLocked
+                    && liveToolName === 'find_nearby'
+                    && Array.isArray(restaurants)
+                    && restaurants.length > 1;
+                const mentionedRestaurantIds = shouldAnimateFocusSequence
+                    ? extractMentionOrderedRestaurantIds(restaurants || [], response)
+                    : [];
+
                 const nextStoreState = {
                     isThinking: false,
                     error: null,
@@ -273,8 +633,8 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     expectedContext: isIdle ? null : (response.context?.expectedContext || state.expectedContext),
                     lastIntent: response.intent || state.lastIntent,
                     lastSource: response.meta?.source || 'live_tool',
-                    suggestedRestaurants: restaurants || (isIdle ? null : state.suggestedRestaurants),
-                    selectedRestaurantPreviewId: restaurants?.[0]?.id || (isIdle ? null : state.selectedRestaurantPreviewId),
+                    suggestedRestaurants: (restaurants && restaurants.length > 0) ? restaurants : (isIdle ? null : state.suggestedRestaurants),
+                    selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
                     menuItems: menuItems || (isIdle ? null : state.menuItems),
                 };
                 if (isLiveCartTool) {
@@ -283,6 +643,20 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     console.log(`[LIVE_CART] checkoutVisible=${String(nextUiMode === 'checkout')}`);
                 }
                 useConversationStore.setState(nextStoreState);
+
+                if (shouldAnimateFocusSequence) {
+                    const fallbackSequence = (restaurants || [])
+                        .map((restaurant: any) => (restaurant?.id != null ? String(restaurant.id) : null))
+                        .filter((value: string | null): value is string => Boolean(value));
+                    const sequence = mentionedRestaurantIds.length > 1 ? mentionedRestaurantIds : fallbackSequence;
+                    const sequenceWithAnchor = (nextSelectedRestaurantPreviewId
+                        ? [nextSelectedRestaurantPreviewId, ...sequence]
+                        : sequence)
+                        .filter((value: string | null): value is string => Boolean(value));
+                    scheduleFocusSequence(sequenceWithAnchor, 'tool_result_find_nearby');
+                } else {
+                    clearFocusSyncTimers();
+                }
 
                 // Fix #4: persist state to live session cache for reconnect resilience
                 liveSessionCache.set(effectSessionId, {
@@ -302,6 +676,8 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             disposed = true;
             shouldReconnectRef.current = false;
             clearReconnectTimer();
+            clearFocusSyncTimers();
+            clearGpsInitRetry();
             const socket = socketRef.current;
             if (socket && activeSocketSessionIdRef.current === effectSessionId) {
                 try { socket.close(1000, 'effect_cleanup'); } catch { /* noop */ }
@@ -312,9 +688,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             }
             setConnected(false);
         };
-    // dispatch intentionally excluded — stored in dispatchRef to prevent WS teardown
+    // dispatch intentionally excluded â€” stored in dispatchRef to prevent WS teardown
     // on every CartProvider re-render (unstable function refs from CartContext).
-    }, [wsUrl, sessionId, clearReconnectTimer]);
+    }, [wsUrl, sessionId, clearReconnectTimer, clearFocusSyncTimers, scheduleFocusSequence]);
 
     const sendToolCall = useCallback((tool: string, args: Record<string, any> = {}) => {
         const socket = socketRef.current;

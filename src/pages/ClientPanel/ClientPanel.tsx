@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Client Panel - ServiceHub-style Customer Dashboard
  * 
  * Features:
@@ -10,7 +10,7 @@
  * - Settings
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
@@ -19,6 +19,7 @@ import { ROUTES } from '../../app/routeConfig';
 import StarfieldBackground from '../../components/StarfieldBackground';
 import ErrorFallback from '../../components/ErrorFallback';
 import { useToast } from '../../components/Toast';
+import { getApiUrl } from '../../lib/config';
 import './ClientPanel.css';
 
 // Types
@@ -75,6 +76,59 @@ const PANEL_SECTIONS = new Set<SectionName>([
     'settings',
 ]);
 
+const ORDER_STATUS_LABELS: Record<string, string> = {
+    pending: 'Oczekujące',
+    new: 'Nowe',
+    accepted: 'Przyjęte',
+    preparing: 'W przygotowaniu',
+    ready: 'Gotowe',
+    completed: 'Zrealizowane',
+    delivered: 'Do odbioru',
+    confirmed: 'Potwierdzone',
+    cancelled: 'Anulowane',
+};
+
+const STATUS_NORMALIZATION_MAP: Record<string, string> = {
+    inprogress: 'preparing',
+    in_progress: 'preparing',
+    processing: 'preparing',
+    done: 'completed',
+    finished: 'completed',
+};
+
+const HISTORY_ORDER_STATUSES = new Set(['ready', 'completed', 'delivered', 'cancelled']);
+
+function normalizeOrderStatus(status: any): string {
+    const raw = String(status || '').trim().toLowerCase();
+    if (!raw) return 'pending';
+    return STATUS_NORMALIZATION_MAP[raw] || raw;
+}
+
+function isHistoryOrder(status: any): boolean {
+    return HISTORY_ORDER_STATUSES.has(normalizeOrderStatus(status));
+}
+
+function isActiveOrder(status: any): boolean {
+    return !isHistoryOrder(status);
+}
+
+function getOrderStatusLabel(status: any): string {
+    const normalized = normalizeOrderStatus(status);
+    return ORDER_STATUS_LABELS[normalized] || ORDER_STATUS_LABELS.pending;
+}
+
+function getOrderStatusTone(status: any): 'green' | 'yellow' | 'blue' {
+    const normalized = normalizeOrderStatus(status);
+    if (normalized === 'ready' || normalized === 'completed' || normalized === 'delivered') return 'green';
+    if (normalized === 'pending' || normalized === 'new') return 'yellow';
+    return 'blue';
+}
+
+function isPickupReadyStatus(status: any): boolean {
+    const normalized = normalizeOrderStatus(status);
+    return normalized === 'ready' || normalized === 'delivered';
+}
+
 function getSectionFromSearch(search: string): SectionName | null {
     const value = new URLSearchParams(search).get('section');
     if (!value) return null;
@@ -86,7 +140,12 @@ export default function ClientPanel() {
     const navigate = useNavigate();
     const { user, setUser } = useAuth() as any;
     const { push } = useToast() as any;
-    const { orders, loading: loadingOrders, error: ordersError } = useOrders({ userId: user?.id });
+    const [stableUserId, setStableUserId] = useState<string | null>(() => {
+        if (typeof window === 'undefined') return null;
+        return window.localStorage.getItem('ff_last_user_id');
+    });
+    const effectiveUserId = user?.id || stableUserId || null;
+    const { orders, loading: loadingOrders, error: ordersError, fetchOrders } = useOrders({ userId: effectiveUserId });
 
     // Local state for restaurants
     const [restaurants, setRestaurants] = useState<any[]>([]);
@@ -94,9 +153,13 @@ export default function ClientPanel() {
     const [fetchError, setFetchError] = useState<string | null>(null);
 
     const [activeSection, setActiveSection] = useState<SectionName>(() => getSectionFromSearch(location.search) || 'dashboard');
+    const [ordersView, setOrdersView] = useState<'active' | 'history'>('active');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showAddCardModal, setShowAddCardModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+    const [stripeBusyOrderId, setStripeBusyOrderId] = useState<string | null>(null);
     const [profileSaving, setProfileSaving] = useState(false);
+    const stripeFinalizeRef = useRef('');
     const [profileForm, setProfileForm] = useState<ProfileFormState>({
         first_name: '',
         last_name: '',
@@ -106,6 +169,12 @@ export default function ClientPanel() {
         postal_code: '',
         city: '',
     });
+
+    useEffect(() => {
+        if (!user?.id || typeof window === 'undefined') return;
+        setStableUserId(user.id);
+        window.localStorage.setItem('ff_last_user_id', user.id);
+    }, [user?.id]);
 
     // Fetch restaurants
     useEffect(() => {
@@ -140,6 +209,14 @@ export default function ClientPanel() {
             setActiveSection(nextSection);
         }
     }, [location.search]);
+
+    useEffect(() => {
+        if (!selectedOrder?.id) return;
+        const freshOrder = orders.find((item: any) => String(item?.id) === String(selectedOrder.id));
+        if (freshOrder) {
+            setSelectedOrder(freshOrder);
+        }
+    }, [orders, selectedOrder?.id]);
 
     useEffect(() => {
         let cancelled = false;
@@ -214,7 +291,7 @@ export default function ClientPanel() {
 
     // Calculated Stats
     const stats = useMemo(() => {
-        const activeOrders = orders.filter((o: any) => ['pending', 'new', 'preparing', 'ready'].includes(o.status));
+        const activeOrders = orders.filter((o: any) => isActiveOrder(o?.status));
         const totalSpent = orders.reduce((sum: number, o: any) => sum + (Number(o.total_price) || 0), 0);
         const activeOrder = activeOrders.length > 0 ? activeOrders[0] : null;
         const currentMonthOrders = orders.filter((o: any) => new Date(o.created_at).getMonth() === new Date().getMonth());
@@ -231,6 +308,136 @@ export default function ClientPanel() {
     const navItemsWithBadge = mainNavItems.map(item =>
         item.id === 'orders' ? { ...item, badge: stats.activeCount || undefined } : item
     );
+    const isStripePaidOrder = (order: any) => {
+        const notes = String(order?.notes || '');
+        return notes.includes('[stripe_test_paid:');
+    };
+    const canStartStripePayment = (order: any) => {
+        if (!order?.id) return false;
+        if (isStripePaidOrder(order)) return false;
+        const status = normalizeOrderStatus(order?.status);
+        return !['cancelled', 'completed', 'delivered'].includes(status);
+    };
+
+    const filteredOrders = useMemo(() => {
+        return orders.filter((order: any) => (ordersView === 'active' ? isActiveOrder(order?.status) : isHistoryOrder(order?.status)));
+    }, [orders, ordersView]);
+
+    const startStripeForOrder = async (order: any) => {
+        if (!order?.id || stripeBusyOrderId) return;
+        if (!canStartStripePayment(order)) {
+            push?.('To zamowienie nie kwalifikuje sie do platnosci Stripe test.', 'info');
+            return;
+        }
+
+        try {
+            setStripeBusyOrderId(order.id);
+            const origin = window.location.origin;
+            const successUrl = `${origin}/panel/client?section=orders&stripe=success&order_id=${encodeURIComponent(order.id)}&session_id={CHECKOUT_SESSION_ID}`;
+            const cancelUrl = `${origin}/panel/client?section=orders&stripe=cancel&order_id=${encodeURIComponent(order.id)}`;
+
+            const response = await fetch(getApiUrl('/api/payments/checkout-session'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: order.id,
+                    customer_email: user?.email || null,
+                    success_url: successUrl,
+                    cancel_url: cancelUrl,
+                }),
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload?.url) {
+                throw new Error(payload?.error || 'Nie udalo sie utworzyc sesji Stripe');
+            }
+
+            window.location.assign(payload.url);
+        } catch (error: any) {
+            console.error('[STRIPE_ORDER_CHECKOUT_ERROR]', error);
+            push?.(error?.message || 'Blad platnosci Stripe test', 'error');
+        } finally {
+            setStripeBusyOrderId(null);
+        }
+    };
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const stripeState = params.get('stripe');
+        const sessionId = params.get('session_id');
+        const orderId = params.get('order_id');
+
+        if (!stripeState) return;
+        const dedupeKey = `${stripeState}:${sessionId || ''}:${orderId || ''}`;
+        if (stripeFinalizeRef.current === dedupeKey) return;
+        stripeFinalizeRef.current = dedupeKey;
+
+        const cleanStripeParams = () => {
+            const next = new URL(window.location.href);
+            next.searchParams.delete('stripe');
+            next.searchParams.delete('session_id');
+            next.searchParams.delete('order_id');
+            window.history.replaceState({}, '', `${next.pathname}${next.search}${next.hash}`);
+        };
+
+        if (stripeState === 'cancel') {
+            push?.('Platnosc Stripe test anulowana.', 'info');
+            cleanStripeParams();
+            return;
+        }
+
+        if (stripeState !== 'success' || !sessionId || !orderId) {
+            cleanStripeParams();
+            return;
+        }
+
+        const finalizeStripePayment = async () => {
+            try {
+                setStripeBusyOrderId(orderId);
+                const verifyResponse = await fetch(getApiUrl('/api/payments/verify-session'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId }),
+                });
+                const verifyPayload = await verifyResponse.json().catch(() => ({}));
+                if (!verifyResponse.ok || !verifyPayload?.paid) {
+                    throw new Error(verifyPayload?.error || 'Nie udalo sie potwierdzic platnosci Stripe');
+                }
+
+                const existingOrder = orders.find((item: any) => String(item?.id) === String(orderId));
+                const existingNotes = String(existingOrder?.notes || '');
+                const marker = `[stripe_test_paid:${sessionId}]`;
+                const mergedNotes = existingNotes.includes(marker)
+                    ? existingNotes
+                    : [existingNotes, marker].filter(Boolean).join('\n');
+                const patchPayload: Record<string, string> = { notes: mergedNotes };
+                if (user?.id) {
+                    patchPayload.user_id = user.id;
+                }
+
+                const patchResponse = await fetch(getApiUrl(`/api/orders/${orderId}`), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patchPayload),
+                });
+                const patchResult = await patchResponse.json().catch(() => ({}));
+                if (!patchResponse.ok) {
+                    throw new Error(patchResult?.error || 'Nie udalo sie oznaczyc platnosci przy zamowieniu');
+                }
+
+                await fetchOrders?.();
+                push?.('Platnosc Stripe test zakonczona pomyslnie.', 'success');
+            } catch (error: any) {
+                console.error('[STRIPE_ORDER_FINALIZE_ERROR]', error);
+                push?.(error?.message || 'Blad finalizacji platnosci Stripe test', 'error');
+            } finally {
+                setStripeBusyOrderId(null);
+                cleanStripeParams();
+            }
+        };
+
+        finalizeStripePayment();
+    }, [location.search, orders, fetchOrders, push]);
 
     return (
         <div className="client-panel">
@@ -414,10 +621,22 @@ export default function ClientPanel() {
 
                             {/* ── ORDERS CONTEXT ────────────────────────────── */}
                             {stats.activeOrder ? (
-                                <div className="active-order-card">
+                                <div
+                                    className="active-order-card"
+                                    onClick={() => setSelectedOrder(stats.activeOrder)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            setSelectedOrder(stats.activeOrder);
+                                        }
+                                    }}
+                                    style={{ cursor: 'pointer' }}
+                                >
                                     <div className="card-header">
                                         <h4>Aktywne zamówienie</h4>
-                                        <span className="status-badge green">{stats.activeOrder.status}</span>
+                                        <span className={`status-badge ${getOrderStatusTone(stats.activeOrder.status)}`}>{getOrderStatusLabel(stats.activeOrder.status)}</span>
                                     </div>
                                     <div className="order-info">
                                         <div className="cp-order-channel-icon">
@@ -448,6 +667,33 @@ export default function ClientPanel() {
                                             <span className="current">W realizacji</span>
                                             <span className="pending">Gotowe</span>
                                         </div>
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                setSelectedOrder(stats.activeOrder);
+                                            }}
+                                            className="cp-link-btn"
+                                        >
+                                            Szczegoly
+                                        </button>
+                                        {canStartStripePayment(stats.activeOrder) ? (
+                                            <button
+                                                type="button"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    startStripeForOrder(stats.activeOrder);
+                                                }}
+                                                disabled={stripeBusyOrderId === stats.activeOrder.id}
+                                                className="primary-btn"
+                                            >
+                                                {stripeBusyOrderId === stats.activeOrder.id ? 'Przekierowanie...' : 'Stripe test'}
+                                            </button>
+                                        ) : (
+                                            <span className="status-badge green">Stripe test: Opłacone</span>
+                                        )}
                                     </div>
                                 </div>
                             ) : orders.length > 0 ? (
@@ -567,7 +813,7 @@ export default function ClientPanel() {
                                     restaurants.map((r, i) => (
                                         <div key={r.id || i} className="restaurant-card">
                                             {/* Placeholder image if not present */}
-                                            <img src={r.img || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'} alt={r.name} />
+                                            <img src={r.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'} alt={r.name} />
                                             <div className="restaurant-info">
                                                 <div className="restaurant-header">
                                                     <h4>{r.name}</h4>
@@ -750,47 +996,108 @@ export default function ClientPanel() {
                                     <p>Historia i aktywne zamówienia</p>
                                 </div>
                                 <div className="filter-buttons">
-                                    <button className="filter-btn active">Aktywne</button>
-                                    <button className="filter-btn">Historia</button>
+                                    <button
+                                        className={`filter-btn ${ordersView === 'active' ? 'active' : ''}`}
+                                        onClick={() => setOrdersView('active')}
+                                        type="button"
+                                    >
+                                        Aktywne
+                                    </button>
+                                    <button
+                                        className={`filter-btn ${ordersView === 'history' ? 'active' : ''}`}
+                                        onClick={() => setOrdersView('history')}
+                                        type="button"
+                                    >
+                                        Historia
+                                    </button>
                                 </div>
                             </div>
 
                             <div className="orders-full-list">
                                 {loadingOrders ? (
                                     <p className="text-center text-gray-500 py-10">Ładowanie zamówień...</p>
-                                ) : orders.length === 0 ? (
+                                ) : filteredOrders.length === 0 ? (
                                     <div className="text-center py-12">
                                         <i className="fas fa-receipt text-4xl text-gray-600 mb-4" />
-                                        <p className="text-gray-400">Nie masz jeszcze żadnych zamówień.</p>
+                                        <p className="text-gray-400">
+                                            {ordersView === 'active'
+                                                ? 'Brak aktywnych zamówień.'
+                                                : 'Brak zamówień w historii.'}
+                                        </p>
                                     </div>
                                 ) : (
-                                    orders.map((order: any) => (
-                                        <div key={order.id} className="order-full-card">
-                                            <div className="order-full-header">
-                                                <div className="order-full-info">
-                                                    <div className={`order-icon-lg ${order.channel === 'taxi' ? 'yellow' : 'orange'}`}>
-                                                        <i className={`fas ${order.channel === 'taxi' ? 'fa-car' : 'fa-utensils'}`} />
+                                    filteredOrders.map((order: any) => {
+                                        const normalizedStatus = normalizeOrderStatus(order?.status);
+                                        const statusTone = getOrderStatusTone(normalizedStatus);
+                                        const pickupReady = isPickupReadyStatus(normalizedStatus);
+                                        return (
+                                            <div
+                                                key={order.id}
+                                                className={`order-full-card ${pickupReady ? 'order-full-card--pickup' : ''}`}
+                                                onClick={() => setSelectedOrder(order)}
+                                                role="button"
+                                                tabIndex={0}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter' || event.key === ' ') {
+                                                        event.preventDefault();
+                                                        setSelectedOrder(order);
+                                                    }
+                                                }}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <div className="order-full-header">
+                                                    <div className="order-full-info">
+                                                        <div className={`order-icon-lg ${order.channel === 'taxi' ? 'yellow' : 'orange'}`}>
+                                                            <i className={`fas ${order.channel === 'taxi' ? 'fa-car' : 'fa-utensils'}`} />
+                                                        </div>
+                                                        <div>
+                                                            <h4>{order.restaurant_name || (order.channel === 'taxi' ? 'Taxi' : 'Zamówienie')}</h4>
+                                                            <p>Zamówienie #{order.id.slice(0, 8)}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h4>{order.restaurant_name || (order.channel === 'taxi' ? 'Taxi' : 'Zamówienie')}</h4>
-                                                        <p>Zamówienie #{order.id.slice(0, 8)}</p>
+                                                    <span className={`status-badge ${statusTone}`}>
+                                                        {getOrderStatusLabel(normalizedStatus)}
+                                                    </span>
+                                                </div>
+                                                <div className="order-full-details">
+                                                    <p>
+                                                        {order.items && order.items.map((i: any) => `${Number(i?.quantity ?? i?.qty ?? 1) || 1}x ${i.name}`).join(', ')}
+                                                    </p>
+                                                    <div className="order-full-meta">
+                                                        <span>{new Date(order.created_at).toLocaleString()}</span>
+                                                        <span className="amount">{(Number(order.total_price) || 0).toFixed(2)} zl</span>
+                                                    </div>
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        <button
+                                                            type="button"
+                                                            className="cp-link-btn"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                setSelectedOrder(order);
+                                                            }}
+                                                        >
+                                                            Szczegoly
+                                                        </button>
+                                                        {canStartStripePayment(order) ? (
+                                                            <button
+                                                                type="button"
+                                                                className="primary-btn"
+                                                                disabled={stripeBusyOrderId === order.id}
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    startStripeForOrder(order);
+                                                                }}
+                                                            >
+                                                                {stripeBusyOrderId === order.id ? 'Przekierowanie...' : 'Stripe test'}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="status-badge green">Stripe test: Opłacone</span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <span className={`status-badge ${order.status === 'completed' ? 'green' : 'blue'}`}>
-                                                    {order.status}
-                                                </span>
                                             </div>
-                                            <div className="order-full-details">
-                                                <p>
-                                                    {order.items && order.items.map((i: any) => `${Number(i?.quantity ?? i?.qty ?? 1) || 1}x ${i.name}`).join(', ')}
-                                                </p>
-                                                <div className="order-full-meta">
-                                                    <span>{new Date(order.created_at).toLocaleString()}</span>
-                                                    <span className="amount">{(Number(order.total_price) || 0).toFixed(2)} zł</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </section>
@@ -1139,6 +1446,63 @@ export default function ClientPanel() {
                 ))}
             </nav>
 
+            {/* Order Details Modal */}
+            {selectedOrder && (
+                <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
+                    <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+                        <div className="modal-header">
+                            <h4>{selectedOrder.restaurant_name || 'Zamowienie'}</h4>
+                            <button onClick={() => setSelectedOrder(null)}>
+                                <i className="fas fa-times" />
+                            </button>
+                        </div>
+                        <div className="modal-form">
+                            <div className="form-group">
+                                <label>Numer</label>
+                                <input type="text" readOnly value={`#${String(selectedOrder.id || '').slice(0, 8)}`} />
+                            </div>
+                            <div className="form-group">
+                                <label>Status</label>
+                                <input type="text" readOnly value={getOrderStatusLabel(selectedOrder.status || 'pending')} />
+                            </div>
+                            <div className="form-group">
+                                <label>Pozycje</label>
+                                <div className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-300">
+                                    {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0
+                                        ? selectedOrder.items.map((item: any, index: number) => (
+                                            <div key={`${selectedOrder.id}-item-${index}`}>
+                                                {`${Number(item?.quantity ?? item?.qty ?? 1) || 1}x ${item?.name || 'pozycja'}`}
+                                            </div>
+                                        ))
+                                        : 'Brak pozycji'}
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Kwota</label>
+                                <input type="text" readOnly value={`${(Number(selectedOrder.total_price) || 0).toFixed(2)} zl`} />
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                                {canStartStripePayment(selectedOrder) ? (
+                                    <button
+                                        type="button"
+                                        className="primary-btn full"
+                                        disabled={stripeBusyOrderId === selectedOrder.id}
+                                        onClick={() => startStripeForOrder(selectedOrder)}
+                                    >
+                                        {stripeBusyOrderId === selectedOrder.id ? 'Przekierowanie...' : 'Zaplac Stripe test'}
+                                    </button>
+                                ) : (
+                                    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                                        Stripe test: Opłacone
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Add Card Modal */}
             {showAddCardModal && (
                 <div className="modal-overlay" onClick={() => setShowAddCardModal(false)}>
@@ -1182,3 +1546,5 @@ export default function ClientPanel() {
         </div>
     );
 }
+
+

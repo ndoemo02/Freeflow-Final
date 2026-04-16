@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AmberIndicator, AmberStatusNode } from "./AmberIndicator";
+import type { LiveUiSessionState } from "../lib/liveUiSessionAdapter";
 
 interface VoiceDockProps {
   amberResponse?: string;
@@ -25,6 +26,73 @@ interface VoiceDockProps {
     start: () => void;
     stop: () => void;
   };
+  liveUiState?: LiveUiSessionState;
+  liveStatusText?: string;
+  liveTranscript?: string;
+}
+
+type DockGlassVariant = "clean-premium" | "neon-soft-glow" | "closest-to-logo";
+
+const MOBILE_HERO_DOCK_VARIANT: DockGlassVariant = "neon-soft-glow";
+
+function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React.CSSProperties {
+  const base: React.CSSProperties = {
+    borderRadius: "var(--radius-pill)",
+    backdropFilter: "blur(16px) saturate(128%)",
+    WebkitBackdropFilter: "blur(16px) saturate(128%)",
+    transition: "border-color var(--anim-fast), box-shadow var(--anim-normal), background var(--anim-normal)",
+    position: "relative",
+    overflow: "visible",
+  };
+
+  const variants: Record<DockGlassVariant, React.CSSProperties> = {
+    "clean-premium": {
+      background: "linear-gradient(135deg, rgba(10,14,24,0.36) 0%, rgba(14,20,34,0.46) 100%)",
+      border: "1px solid rgba(235,242,255,0.16)",
+      boxShadow:
+        "0 14px 34px rgba(2,6,14,0.38), 0 1px 0 rgba(255,255,255,0.16) inset, 0 -1px 0 rgba(4,8,18,0.24) inset",
+    },
+    "neon-soft-glow": {
+      background: "linear-gradient(132deg, rgba(10,14,24,0.40) 0%, rgba(13,20,34,0.50) 100%)",
+      border: "1px solid rgba(228,236,255,0.17)",
+      boxShadow:
+        "0 16px 42px rgba(2,6,14,0.42), 0 0 18px rgba(82,122,255,0.14), 0 0 14px rgba(45,212,191,0.10), 0 1px 0 rgba(255,255,255,0.14) inset, 0 -1px 0 rgba(4,8,18,0.26) inset",
+    },
+    "closest-to-logo": {
+      background: "linear-gradient(138deg, rgba(10,12,22,0.42) 0%, rgba(16,20,33,0.54) 52%, rgba(12,17,28,0.50) 100%)",
+      border: "1px solid rgba(238,246,255,0.18)",
+      boxShadow:
+        "0 16px 46px rgba(1,5,14,0.46), 0 0 20px rgba(249,115,22,0.15), 0 0 18px rgba(59,130,246,0.12), 0 1px 0 rgba(255,255,255,0.15) inset",
+    },
+  };
+
+  if (!recording) {
+    return { ...base, ...variants[variant] };
+  }
+
+  return {
+    ...base,
+    background: "linear-gradient(135deg, rgba(24,10,16,0.44) 0%, rgba(28,14,24,0.56) 100%)",
+    border: "1px solid rgba(239,68,68,0.38)",
+    boxShadow:
+      "0 16px 44px rgba(10,4,8,0.52), 0 0 18px rgba(239,68,68,0.18), 0 0 12px rgba(99,102,241,0.10), 0 1px 0 rgba(255,255,255,0.10) inset",
+  };
+}
+
+function resolveLiveDockText(
+  sessionState: LiveUiSessionState | undefined,
+  statusText: string,
+  transcript: string,
+): string {
+  if (!sessionState) return "";
+  if (sessionState === "listening") return transcript || statusText || "Slucham...";
+  if (sessionState === "processing") return transcript || statusText || "Analizuje...";
+  if (sessionState === "results_ready") return transcript || statusText;
+  if (sessionState === "restaurant_selected") return transcript || statusText;
+  if (sessionState === "item_selected") return transcript || statusText;
+  if (sessionState === "cart_ready") return transcript || statusText;
+  if (sessionState === "paused") return transcript || statusText || "Wstrzymano LIVE.";
+  return transcript || statusText;
 }
 
 export default function VoiceDock({
@@ -39,11 +107,15 @@ export default function VoiceDock({
   isProcessing = false,
   isPresenting = false,
   onClearResponse,
+  liveUiState,
+  liveStatusText = "",
+  liveTranscript = "",
 }: VoiceDockProps) {
   const [inputValue, setInputValue] = useState("");
   const [mobileYOffset, setMobileYOffset] = useState(0);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
+    if (typeof window.matchMedia !== "function") return false;
     return window.matchMedia("(max-width: 768px)").matches;
   });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,12 +125,24 @@ export default function VoiceDock({
 
   // Amber status mapping
   let amberStatus: AmberStatusNode = "idle";
-  if (recording) amberStatus = "listening";
+  if (liveUiState === "listening") amberStatus = "listening";
+  else if (liveUiState === "processing") amberStatus = "thinking";
+  else if (
+    liveUiState === "results_ready"
+    || liveUiState === "restaurant_selected"
+    || liveUiState === "item_selected"
+    || liveUiState === "cart_ready"
+  ) amberStatus = "ok";
+  else if (recording) amberStatus = "listening";
   else if (isProcessing) amberStatus = "thinking";
   else if (isSpeaking || isPresenting) amberStatus = "ok";
 
-  const displayText = interimText || (recording ? "" : amberResponse);
+  const liveDockText = resolveLiveDockText(liveUiState, liveStatusText, liveTranscript);
+  const displayText = liveDockText || interimText || (recording ? "" : amberResponse);
   const showResponse = !!displayText;
+  const inputPlaceholder = liveUiState === "listening"
+    ? "Slucham..."
+    : (recording ? "Slucham..." : "Napisz lub powiedz...");
 
   // Clear response when recording starts
   useEffect(() => {
@@ -69,6 +153,7 @@ export default function VoiceDock({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (typeof window.matchMedia !== "function") return;
     const mq = window.matchMedia("(max-width: 768px)");
     const handleMedia = () => setIsMobile(mq.matches);
     handleMedia();
@@ -135,8 +220,10 @@ export default function VoiceDock({
   };
 
   const dockWrapperStyle = isMobile
-    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }
+    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }
     : undefined;
+
+  const dockGlassStyle = getDockGlassStyle(MOBILE_HERO_DOCK_VARIANT, recording);
 
   return (
     <AnimatePresence>
@@ -153,76 +240,48 @@ export default function VoiceDock({
           <div
             className="w-full pointer-events-auto"
             style={{
-              width: isMobile ? "88vw" : "100%",
-              maxWidth: isMobile ? 460 : 600,
+              width: isMobile ? "min(84vw, 440px)" : "100%",
+              maxWidth: isMobile ? 440 : 600,
             }}
           >
-            {/* Amber response bubble - above bar */}
-            <AnimatePresence>
-              {showResponse && (
-                <motion.div
-                  className="mb-2 px-1"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 4 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  <div
-                    className="relative overflow-hidden px-4 py-2.5"
-                    style={{
-                      borderRadius: "var(--radius-md)",
-                      background: "linear-gradient(155deg, rgba(6,182,212,0.10) 0%, rgba(5,8,16,0.92) 100%)",
-                      border: "1px solid rgba(6,182,212,0.18)",
-                      backdropFilter: "blur(var(--blur-md))",
-                      WebkitBackdropFilter: "blur(var(--blur-md))",
-                    }}
-                  >
-                    <div className="absolute inset-x-8 top-0 h-px"
-                      style={{ background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.55), transparent)" }}
-                    />
-                    <p
-                      className="text-[13px] leading-snug text-white/90 min-w-0 truncate"
-                      title={displayText}
-                    >
-                      {displayText}
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Voice bar */}
             <div
               ref={barRef}
               data-ui-role="voice-dock-bar"
-              className="flex items-center gap-2.5 px-3 py-2"
+              className="flex items-end gap-2.5 px-3 py-2"
               style={{
-                borderRadius: "var(--radius-pill)",
-                background: "linear-gradient(135deg, rgba(5,8,16,0.88) 0%, rgba(10,16,28,0.92) 100%)",
-                border: recording
-                  ? "1px solid rgba(239,68,68,0.45)"
-                  : "1px solid rgba(255,255,255,0.09)",
-                boxShadow: recording
-                  ? "0 0 0 1px rgba(239,68,68,0.18) inset, 0 20px 48px rgba(0,0,0,0.55), 0 0 32px rgba(239,68,68,0.12)"
-                  : "0 20px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset",
-                backdropFilter: "blur(var(--blur-lg))",
-                WebkitBackdropFilter: "blur(var(--blur-lg))",
-                transition: "border-color var(--anim-fast), box-shadow var(--anim-normal)",
-                position: "relative",
-                overflow: "visible",
+                ...dockGlassStyle,
               }}
             >
-              {/* Text input */}
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={recording ? "Słucham…" : "Napisz lub powiedz…"}
-                className="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/28 focus:outline-none caret-cyan-400"
-                style={{ letterSpacing: "0.01em" }}
-              />
+              <div className="flex-1 min-w-0 pr-1">
+                <AnimatePresence initial={false}>
+                  {showResponse && (
+                    <motion.p
+                      key="dock-transcript"
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 2 }}
+                      transition={{ duration: 0.18 }}
+                      className="mb-1 text-[11px] leading-tight text-cyan-200/85 truncate"
+                      title={displayText}
+                    >
+                      {displayText}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+                {/* Text input */}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={inputPlaceholder}
+                  className="w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 focus:outline-none caret-cyan-300"
+                  style={{ letterSpacing: "0.01em" }}
+                />
+              </div>
+
 
               {/* Send / mic button */}
               <AnimatePresence mode="wait">
@@ -244,7 +303,7 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.9 }}
                     transition={{ duration: 0.15 }}
-                    aria-label="Wyślij"
+                    aria-label="Wyslij"
                   >
                     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                       <path d="M1 7.5h13M8.5 2 14 7.5 8.5 13" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -263,7 +322,7 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.92 }}
                     transition={{ duration: 0.15 }}
-                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Włącz mikrofon"}
+                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Wlacz mikrofon"}
                     aria-pressed={recording}
                   >
                     <AmberIndicator status={amberStatus} />
@@ -284,3 +343,4 @@ export default function VoiceDock({
     </AnimatePresence>
   );
 }
+

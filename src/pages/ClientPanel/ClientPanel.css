@@ -2102,6 +2102,12 @@
     padding: 1rem;
 }
 
+.order-full-card--pickup {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.06));
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.14) inset, 0 8px 24px rgba(16, 185, 129, 0.12);
+}
+
 @media (min-width: 640px) {
     .order-full-card {
         padding: 1.25rem;

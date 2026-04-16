@@ -264,13 +264,28 @@ function getHeaders() {
     };
 }
 
+function sanitizeKdsNotes(rawNotes: unknown): string | null {
+    const notes = String(rawNotes ?? '');
+    if (!notes) return null;
+
+    const cleaned = notes
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.includes('[stripe_test_paid:'))
+        .join('\n')
+        .trim();
+
+    return cleaned.length > 0 ? cleaned : null;
+}
+
 /**
  * Fetch KDS orders from backend using Admin API
  * GET /api/admin/orders
  */
-export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
+export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboardResponse> {
     try {
-        const url = getApiUrl('api/admin/orders?limit=100');
+        const qs = restaurantId ? `&restaurant_id=${encodeURIComponent(restaurantId)}` : '';
+        const url = getApiUrl(`api/admin/orders?limit=100${qs}`);
         const response = await fetch(url, { headers: getHeaders() });
 
         if (!response.ok) {
@@ -288,6 +303,7 @@ export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
             id: o.id,
             order_number: `#${o.id.slice(0, 4)}`,
             channel: 'restaurant', // Default
+            // DB constraint in production can reject "ready", so treat "completed" as KDS-ready stage.
             status: o.status === 'pending' ? 'new' : o.status, // Map pending -> new
             items: Array.isArray(o.items) ? o.items.map((i: any, idx: number) => ({
                 id: `item-${idx}`,
@@ -300,7 +316,7 @@ export async function fetchKDSOrders(): Promise<KDSDashboardResponse> {
             total_formatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
             location: 'Stolik',
             priority: false,
-            notes: o.notes,
+            notes: sanitizeKdsNotes(o.notes),
             created_at: o.createdAt,
             updated_at: o.updatedAt,
             customer_name: o.customer?.name,
@@ -354,25 +370,35 @@ export async function startOrder(orderId: string): Promise<{ ok: boolean; order?
 }
 
 /**
- * Mark order as ready (transition: preparing -> ready)
+ * Mark order as ready (transition: preparing -> completed in DB, rendered as "GOTOWE" in KDS UI)
  * Uses generic PATCH /api/orders/:id
  */
 export async function markOrderReady(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
         const url = getApiUrl(`api/orders/${orderId}`);
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'ready' })
-        });
+        const candidateStatuses = ['completed', 'accepted'];
+        let lastError = 'Failed to mark order as ready';
 
-        const data = await response.json();
+        for (const status of candidateStatuses) {
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
 
-        if (!response.ok) {
-            return { ok: false, error: data.error || response.statusText };
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                return { ok: true };
+            }
+
+            const errorText = String(data?.error || response.statusText || 'unknown_error');
+            lastError = errorText;
+            if (!errorText.includes('orders_status_check')) {
+                break;
+            }
         }
 
-        return { ok: true };
+        return { ok: false, error: lastError };
     } catch (error) {
         console.error('[KDS API] Ready order error:', error);
         return { ok: false, error: error instanceof Error ? error.message : 'Network error' };

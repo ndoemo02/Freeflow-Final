@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
 import { startPCM16Stream } from '../lib/audioStream';
 import { AudioPlayer } from '../lib/audioPlayback';
@@ -8,14 +8,20 @@ import {
   type GeminiFunctionCall,
 } from './useGeminiFunctionRelay';
 import { useConversationStore } from '../store/useConversationStore';
+import { useLiveUiSessionStore } from '../state/liveUiSession';
+import { getApiUrl } from '../lib/config';
 
-// Fix #3: hardcoded safe default — no silent model drift
-const MODEL =
+const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
   'gemini-2.5-flash-native-audio-preview-12-2025';
+const LIVE_MODEL_OVERRIDE_KEY = 'ff_live_model_override';
+const LIVE_MODEL_CHANGED_EVENT = 'freeflow:live-model-changed';
 
 const MIC_MIME = 'audio/pcm;rate=16000';
 const RECONNECT_DELAYS_MS = [1000, 2000, 5000] as const;
+const AUTO_RECOVERY_GPS_KEY = 'ff_last_gps';
+const AUTO_RECOVERY_GPS_TTL_MS = 5 * 60 * 1000;
+const AUTO_RECOVERY_COOLDOWN_MS = 7000;
 
 // Fix #4: module-level cache for session state persistence across reconnects
 export const liveSessionCache = new Map<string, {
@@ -27,13 +33,117 @@ export const liveSessionCache = new Map<string, {
   menuItems: any[] | null;
 }>();
 
-const SYSTEM_INSTRUCTION = [
-  'Jestes Amber - glosowa asystentka do zamawiania jedzenia w aplikacji FreeFlow.',
-  'Masz dostep do danych restauracji i menu przez function calling.',
-  'Uzywaj narzedzi do odpowiedzi o restauracje, menu i zamowienia.',
-  'Nie mow, ze nie masz dostepu do danych - korzystaj z narzedzi.',
-  'Odpowiadaj po polsku, krotko i naturalnie.',
+const BASE_SYSTEM_INSTRUCTION = [
+  // TOŻSAMOŚĆ
+  'Jestes Amber — glosowy asystent zamowien FreeFlow. Mowisz po polsku naturalnie, cieplo i konkretnie. Brzmisz jak pomocna osoba, nie jak bot.',
+
+  // ZASADA NADRZEDNA
+  'ZASADA NADRZEDNA: jesli mozliwa jest akcja (wywolanie narzedzia), wykonaj ja natychmiast zamiast o niej godac. Godanie o akcji zamiast jej wykonania je bledem.',
+
+  // TRYB DISCOVERY — brak restauracji lub uzytkownik szuka
+  'TRYB_DISCOVERY: wywolaj find_nearby. Jesli wynik=1 → natychmiast show_menu. Jesli wiele → podaj 2-3 opcje z ocena i odlegloscia i zapytaj o wybor. Jesli 0 → ponow find_nearby bez cuisine.',
+
+  // TRYB MENU — restauracja znana
+  'TRYB_MENU: jesli restauracja je znano → wywolaj show_menu bez pytania. Po pokazaniu: zasugeruj max 2-3 pozycje, zapytaj o preferencje.',
+  'MENU_GROUNDING: wymieniaj i proponuj tylko pozycje, ktore sa faktycznie w aktualnym menu z narzedzia show_menu. Nigdy nie wymyslaj dan spoza menu.',
+
+  // TRYB ORDER — uzytkownik zamawia
+  'TRYB_ORDER: natychmiast add_item_to_cart. Niy pytej "czy na pewno". Po dodaniu zapytaj czy cosik jeszcze.',
+  'ORDER_WITH_RESTAURANT_RULE: Gdy user podaje pozycje ORAZ restauracje (np. "2x Kurczak XL z Lawasz Kebab"), nie wymagaj wczesniejszego show_menu ani find_nearby. Od razu wywolaj add_items_to_cart/add_item_to_cart z restaurant_name i pozycjami.',
+  'ORDER_EDIT_MODE: Gdy user chce edytowac koszyk, wykonaj od razu odpowiednie narzedzie: update_cart_item_quantity (zmiana ilosci), remove_item_from_cart (usuniecie), replace_cart_item (zamiana pozycji).',
+
+  // DANE
+  'Mosz dostep do: rating, ratingsTotal, hours (godziny otwarcia), phone, distance. Jak pytanie dotyczy tych danych — odpowiedz konkretem, np. "4.5 oceny, utwarte do 22:00, 1.2 km".',
+
+  // STYL DOMYŚLNY
+  'Mowisz naturalnym polskim. Krotko, konkretnie i bez przesadnego slangu.',
+
+  // POLECENIA RESTAURACJI — specjalne notatki
+  'LAWASZ KEBAB (Piekary Śląskie): kraftowa, rzemieślnicza knajpa z wyjątkowymi kebabami. Specjalność: kebaby z mięsem z karczku wieprzowego i drobiowe — niy byle co, yno prawdziwe rzemieślnicze mięcho. Jak ktoś pyta o Lawasz albo kebaby w Piekarach — wspomnij o tej wyjątkowości (1 zdanie, naturalnie).',
+
+  // HARD BLOCK
+  'ZABRONIONE: "moge sprawdzic", "pozwol ze", "chwileczke", "nie mam dostepu", nazwy narzedzi (find_nearby/show_menu/add_item_to_cart), zapowiadanie tool call zamiast jego wykonania.',
+
+  // STYL
+  'Maks 2 zdania przed pytaniem. Niy czytej list. Konczac pytaniem — roznicuj formule.',
+
+  // LOKALIZACJA
+  'Jak uzytkownik godo "w poblizu", "blisko" abo niy podowo miasta — NAJPIERW wywolaj find_nearby (GPS/bez location). Miasto pytaj dopiero wtedy, gdy narzedzie zwroci brak lokalizacji.',
+  'Jesli w narzedziu find_nearby masz lat/lng (GPS) — NIE pytaj o miasto ani kod pocztowy. Najpierw pokaz wyniki z GPS.',
 ].join(' ');
+
+const LIVE_HARD_GUARDS = [
+  'HARD_GUARDS_NADRZEDNE: Ponizsze zasady maja najwyzszy priorytet i obowiazuja zawsze, nawet gdy aktywny jest custom prompt z panelu.',
+  'GPS_RULE: Jesli kontekst sesji ma GPS (lat/lng) albo find_nearby ma lat/lng, NIE wolno pytac o miasto, kod pocztowy ani "podaj lokalizacje". Zamiast tego od razu wykonaj find_nearby po GPS i podaj wyniki.',
+  'NEARBY_RULE: Dla "w poblizu", "blisko", "obok", "nearby" najpierw find_nearby (GPS/bez location). Dopytanie o lokalizacje tylko gdy narzedzie zwroci brak lokalizacji.',
+  'TOOL_ARGS_RULE: Jesli find_nearby ma lat/lng (GPS), nie przekazuj parametru location. location ustawiaj tylko gdy GPS nie jest dostepny.',
+  'ORDER_SCOPE_RULE: Dla add_item_to_cart/add_items_to_cart zawsze przekazuj restaurant_name lub restaurant_id, jesli user podal restauracje. Jesli nie masz restaurant_id, przekaz restaurant_name z wypowiedzi.',
+  'ORDER_EDIT_RULE: Przy edycji koszyka zawsze przekazuj nazwe pozycji (dish/from_dish/to_dish) i quantity gdy user podal liczbe.',
+  'PERSONA_GENDER_RULE: Amber mowi o sobie w formie zenskiej: "moge", "moglam", "moglabym", "znalazlam". Nigdy nie uzywaj form: "mogl", "moglbym", "zebym mogl".',
+].join(' ');
+
+const SILESIAN_STYLE_INSTRUCTION =
+  'STYL ŚLĄSKI (to je Śląsk, niy Podhale!): godosz po śląsku — naturalnie, ciepło, swojsko. "ja" znaczy TAK (niy "ja" jako osoba). ŚLĄSKIE zwroty (1-2 na wypowiedź): "ja" (tak), "niy" (nie), "niy ma" (nie ma), "kaj" (gdzie), "coś" (coś), "wiela" (ile), "tela" (tyle), "dyć" (przecież), "ejno" (no tak), "na zicher" (na pewno), "bydzie" (będzie), "Dobry!" (dzień dobry — powitanie po śląsku), "yno" (tylko), "rajcuje" (podoba się), "sznupomy" (szukamy), "momy" (mamy), "cheba" (chyba), "srogo/srogie" (dużo/duże — np. "srogie porcje"). PRZYKŁADY: "Niy ma go w karcie." / "Kaj byście chcieli zamówić?" / "Bydzie to tela a tela złotych." / "Ejno, momy coś dobrego!" / "Na zicher polecam kebaba." / "Dobry! W czym mogna pomóc?" / "Srogo porcja, na zicher się najesz." ZAKAZ góralskich zwrotów: nie używej "jo" (góralskie ja), "hale", "wej", "oście", "se" (góralskie sobie) — to niy je Podhale.';
+
+const SYSTEM_INSTRUCTION_STANDARD = BASE_SYSTEM_INSTRUCTION;
+const SYSTEM_INSTRUCTION_SILESIAN = `${BASE_SYSTEM_INSTRUCTION} ${SILESIAN_STYLE_INSTRUCTION}`;
+
+type LiveRuntimeConfig = {
+  fetched: boolean;
+  liveModel: string;
+  speechStyle: 'standard' | 'silesian';
+  amberPrompt: string;
+  promptSource: string;
+};
+
+function normalizeSpeechStyle(value: unknown): 'standard' | 'silesian' {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+  if (normalized === 'silesian' || normalized === 'slaska' || normalized === 'slask') {
+    return 'silesian';
+  }
+  return 'standard';
+}
+
+async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
+  const localLiveModelOverride = (() => {
+    try {
+      const v = String(localStorage.getItem(LIVE_MODEL_OVERRIDE_KEY) || '').trim();
+      return v || '';
+    } catch {
+      return '';
+    }
+  })();
+  const fallback: LiveRuntimeConfig = {
+    fetched: false,
+    liveModel: localLiveModelOverride || DEFAULT_LIVE_MODEL,
+    speechStyle: 'standard',
+    amberPrompt: '',
+    promptSource: 'fallback',
+  };
+  try {
+    const res = await fetch(getApiUrl('/api/voice/live/runtime-config'));
+    if (!res.ok) return fallback;
+    const json = await res.json().catch(() => null);
+    if (!json || json.ok === false) return fallback;
+    const backendModel = String(json.live_model || '').trim();
+    const liveModel = localLiveModelOverride || backendModel || DEFAULT_LIVE_MODEL;
+    const speechStyle = normalizeSpeechStyle(json.speech_style);
+    const amberPrompt = typeof json.amber_prompt === 'string' ? json.amber_prompt.trim() : '';
+    return {
+      fetched: true,
+      liveModel,
+      speechStyle,
+      amberPrompt,
+      promptSource: String(json.prompt_source || (amberPrompt ? 'system_config:amber_prompt' : `speech_style:${speechStyle}`)),
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 export interface UseGeminiLiveSessionOptions {
   wsRef: React.MutableRefObject<WebSocket | null>;
@@ -58,6 +168,139 @@ function arrayBufferToBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
+function normalizeSpeechToken(value: unknown): string {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function readRecentGpsHint(): { lat: number; lng: number } | null {
+  try {
+    const raw = localStorage.getItem(AUTO_RECOVERY_GPS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { lat?: unknown; lng?: unknown; ts?: unknown };
+    const lat = Number(parsed?.lat);
+    const lng = Number(parsed?.lng);
+    const ts = Number(parsed?.ts);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(ts)) return null;
+    if (Date.now() - ts > AUTO_RECOVERY_GPS_TTL_MS) return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeLocationRequest(text: string): boolean {
+  const normalized = normalizeSpeechToken(text);
+  if (!normalized) return false;
+  const mentionsLocation = /\b(miasto|kod pocztowy|lokalizacj|gdzie mieszkasz|gdzie jestes)\b/.test(normalized);
+  const asksForInput = /\b(podaj|potrzebuje|musze znac|zebym mogla|zeby moc|zebym mogla zamowic)\b/.test(normalized);
+  return mentionsLocation && asksForInput;
+}
+
+function looksLikeDiscoveryUserIntent(text: string): boolean {
+  const normalized = normalizeSpeechToken(text);
+  if (!normalized) return false;
+  return /\b(w poblizu|poblizu|blisko|obok|nearby|w okolicy|zamow|zamowic|restaurac|jedzeni|kuchni|pizza|kebab|pierog|sushi|lawasz)\b/.test(normalized);
+}
+
+function buildMenuSpeechHints(items: any[]): { highlights: string[]; proteins: string[]; sizes: string[] } {
+  const safeItems = Array.isArray(items) ? items : [];
+  const seenHighlights = new Set<string>();
+  const highlights: string[] = [];
+  const proteins = new Set<string>();
+  const sizes = new Set<string>();
+
+  for (const item of safeItems) {
+    const rawName = String(item?.base_name || item?.name || '').trim();
+    if (rawName) {
+      const cleanedName = rawName
+        .replace(/\b(XXL|XL|L|M|S)\b/gi, ' ')
+        .replace(/\b(duza|duzy|mala|maly|standard|mega)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const display = cleanedName || rawName;
+      const key = normalizeSpeechToken(display);
+      if (key && !seenHighlights.has(key)) {
+        seenHighlights.add(key);
+        highlights.push(display);
+      }
+    }
+
+    const variantFromDb = String(item?.size_or_variant || '').trim();
+    const variantFromNameMatch = String(item?.name || '').match(/\b(XXL|XL|L|M|S)\b/i);
+    const variantFromName = variantFromNameMatch?.[1] || '';
+    const variant = (variantFromDb || variantFromName).trim();
+    if (variant) sizes.add(variant.toUpperCase());
+
+    const normalizedName = normalizeSpeechToken(item?.name || item?.base_name || '');
+    if (!normalizedName) continue;
+    if (/(kurczak|drobi|chicken)/.test(normalizedName)) proteins.add('drobiowe');
+    if (/(wolow|beef)/.test(normalizedName)) proteins.add('wolowe');
+    if (/(wieprz|karkow|pork)/.test(normalizedName)) proteins.add('wieprzowe');
+    if (/(falafel|wege|weget|vege|vegan)/.test(normalizedName)) proteins.add('wege');
+  }
+
+  return {
+    highlights: highlights.slice(0, 8),
+    proteins: Array.from(proteins).slice(0, 4),
+    sizes: Array.from(sizes).slice(0, 4),
+  };
+}
+
+function buildMenuCategoryIndex(items: any[]): { category: string; count: number; samples: string[] }[] {
+  const buckets = new Map<string, { count: number; samples: Set<string> }>();
+  for (const item of Array.isArray(items) ? items : []) {
+    const category = String(item?.category || 'Inne').trim() || 'Inne';
+    const name = String(item?.base_name || item?.name || '').trim();
+    if (!buckets.has(category)) {
+      buckets.set(category, { count: 0, samples: new Set<string>() });
+    }
+    const bucket = buckets.get(category)!;
+    bucket.count += 1;
+    if (name && bucket.samples.size < 3) {
+      bucket.samples.add(name);
+    }
+  }
+
+  return Array.from(buckets.entries())
+    .map(([category, data]) => ({
+      category,
+      count: data.count,
+      samples: Array.from(data.samples),
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+}
+
+function buildMenuCategoryVariants(items: any[]): { category: string; count: number; items: string[] }[] {
+  const buckets = new Map<string, string[]>();
+  for (const item of Array.isArray(items) ? items : []) {
+    const category = String(item?.category || 'Inne').trim() || 'Inne';
+    const name = String(item?.base_name || item?.name || '').trim();
+    if (!buckets.has(category)) {
+      buckets.set(category, []);
+    }
+    const list = buckets.get(category)!;
+    if (name && !list.includes(name)) {
+      list.push(name);
+    }
+  }
+
+  return Array.from(buckets.entries())
+    .map(([category, names]) => ({
+      category,
+      count: names.length,
+      items: names.slice(0, 8),
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+}
+
 function compactToolResponse(
   toolName: string,
   response: Record<string, unknown>,
@@ -70,28 +313,54 @@ function compactToolResponse(
   switch (toolName) {
     case 'find_nearby': {
       const list = (response.restaurants as any[] | undefined) ?? [];
-      compact.restaurants = list.slice(0, 8).map((x: any) => ({
+      // Keep payload lean to reduce voice generation latency after tool response.
+      compact.restaurants = list.slice(0, 5).map((x: any) => ({
         id: x.id,
         name: x.name,
-        cuisine: x.cuisine || x.category || null,
-        rating: x.rating ?? null,
+        cuisine: x.cuisine_type || x.cuisine || x.category || null,
+        rating: x.maps_rating ?? x.rating ?? null,
+        ratingsTotal: x.maps_ratings_total ?? null,
         distance: x.distance ?? null,
       }));
       break;
     }
     case 'show_menu':
     case 'select_restaurant': {
-      const items = (response.menuItems as any[] | undefined) ?? (response.menu as any[] | undefined) ?? [];
-      compact.menuItems = items.slice(0, 20).map((x: any) => ({
+      const fullMenu = Array.isArray(response.menu) ? (response.menu as any[]) : [];
+      const shortlist = Array.isArray(response.menuItems) ? (response.menuItems as any[]) : [];
+      const items = fullMenu.length > 0 ? fullMenu : shortlist;
+      const hints = buildMenuSpeechHints(items);
+      const menuItemsLimit = items.length <= 16 ? items.length : 12;
+      compact.menuItems = items.slice(0, menuItemsLimit).map((x: any) => ({
         id: x.id,
-        name: x.name,
+        name: x.base_name || x.name,
         price: x.price ?? null,
         category: x.category ?? null,
       }));
+      compact.menuTotal = items.length;
+      compact.menuCoverage = fullMenu.length > 0 ? 'full' : 'shortlist';
+      compact.menuCategoryIndex = buildMenuCategoryIndex(items).slice(0, 6);
+      compact.menuHighlights = hints.highlights.slice(0, 5);
+      compact.menuProteins = hints.proteins;
+      compact.menuSizes = hints.sizes;
+      if (hints.sizes.length >= 2) {
+        compact.followUp = `Zapytaj naturalnie o wariant, np: porcja ${hints.sizes[0]} czy ${hints.sizes[1]}?`;
+      }
+      if (hints.proteins.length > 0) {
+        compact.menuSummary = `W karcie sa rozne rodzaje, m.in. ${hints.proteins.join(', ')}.`;
+      }
       break;
     }
     case 'confirm_add_to_cart':
     case 'get_cart_state': {
+      const cart = (response.cart as any) ?? {};
+      compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
+      compact.cartTotal = cart.total ?? null;
+      break;
+    }
+    case 'update_cart_item_quantity':
+    case 'remove_item_from_cart':
+    case 'replace_cart_item': {
       const cart = (response.cart as any) ?? {};
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
@@ -123,13 +392,26 @@ export function useGeminiLiveSession({
   const desiredActiveRef = useRef(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Marks that the close was triggered intentionally (user stop / cleanup) — suppress reconnect
+  const modelSwitchRestartRef = useRef(false);
+  const latestUserTranscriptRef = useRef<string | null>(null);
+  const autoNearbyRecoveryInFlightRef = useRef(false);
+  const autoNearbyRecoveryLastTsRef = useRef(0);
+  const lastToolResponseSentAtRef = useRef<number | null>(null);
+  // Marks that the close was triggered intentionally (user stop / cleanup) â€” suppress reconnect
   const intentionalCloseRef = useRef(false);
   // Fix #4: stable ref so start() closure always sees current sessionId
   const sessionIdRef = useRef(propSessionId);
   useEffect(() => { sessionIdRef.current = propSessionId; }, [propSessionId]);
 
-  const { relay } = useGeminiFunctionRelay({ wsRef });
+  const { relay } = useGeminiFunctionRelay({
+    wsRef,
+    getLatestTranscript: () => latestUserTranscriptRef.current,
+    takeLatestTranscript: () => {
+      const value = latestUserTranscriptRef.current;
+      latestUserTranscriptRef.current = null;
+      return value;
+    },
+  });
 
   const clearReconnectTimer = useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -161,8 +443,13 @@ export function useGeminiLiveSession({
       reconnectAttemptRef.current = 0;
       clearReconnectTimer();
       setReconnectHalted(false);
+      latestUserTranscriptRef.current = null;
+      autoNearbyRecoveryInFlightRef.current = false;
+      autoNearbyRecoveryLastTsRef.current = 0;
+      lastToolResponseSentAtRef.current = null;
       cleanupRuntime(true);
       setError(null);
+      useLiveUiSessionStore.getState().setPaused();
       console.log(`[LIVE] STOP sessionId=${sessionIdRef.current ?? 'unknown'} code=user_stop`);
     } finally {
       stopInFlightRef.current = false;
@@ -173,9 +460,9 @@ export function useGeminiLiveSession({
   const start = useCallback(async () => {
     if (!enabled) return;
 
-    // Fix #2: singleton guard — check sessionRef too
+    // Fix #2: singleton guard â€” check sessionRef too
     if (sessionRef.current || activeRef.current || startInFlightRef.current) {
-      console.log('[LIVE] session already active – skip start');
+      console.log('[LIVE] session already active â€“ skip start');
       return;
     }
 
@@ -185,20 +472,29 @@ export function useGeminiLiveSession({
       return;
     }
 
-    // Fix #3: throw on missing model — no silent fallback to wrong model
-    if (!MODEL) {
-      setError('VITE_GEMINI_LIVE_MODEL not configured');
+    const runtimeConfig = await fetchLiveRuntimeConfig();
+    const activeModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
+    if (!activeModel) {
+      setError('LIVE model not configured');
       return;
     }
 
     const sid = sessionIdRef.current ?? 'unknown';
+    latestUserTranscriptRef.current = null;
+    autoNearbyRecoveryInFlightRef.current = false;
+    autoNearbyRecoveryLastTsRef.current = 0;
+    lastToolResponseSentAtRef.current = null;
     desiredActiveRef.current = true;
     setError(null);
     setReconnectHalted(false);
     startInFlightRef.current = true;
-    console.log(`[LIVE_INIT_CALLSITE] useGeminiLiveSession start requested — sessionId=${sid}`);
-    console.log(`[LIVE] START sessionId=${sid} model=${MODEL}`);
-    console.log(`[LIVE FRONT MODEL] ${MODEL}`);
+    useLiveUiSessionStore.getState().setProcessing('Lacze z sesja LIVE...');
+    console.log(`[LIVE_INIT_CALLSITE] useGeminiLiveSession start requested â€” sessionId=${sid}`);
+    console.log(
+      `[LIVE_RUNTIME_CONFIG] sessionId=${sid} model=${activeModel} speech_style=${runtimeConfig.speechStyle} prompt_source=${runtimeConfig.promptSource}`,
+    );
+    console.log(`[LIVE] START sessionId=${sid} model=${activeModel}`);
+    console.log(`[LIVE FRONT MODEL] ${activeModel}`);
 
     const scheduleReconnect = () => {
       if (!desiredActiveRef.current || stopInFlightRef.current) return;
@@ -221,6 +517,25 @@ export function useGeminiLiveSession({
         void start();
       }, delay);
     };
+
+    // Runtime prompt precedence:
+    // 1) system_config.amber_prompt (global from admin panel)
+    // 2) speech_style-derived default instruction
+    // 3) localStorage fallback only when backend config is unavailable
+    const defaultInstruction = runtimeConfig.speechStyle === 'silesian'
+      ? SYSTEM_INSTRUCTION_SILESIAN
+      : SYSTEM_INSTRUCTION_STANDARD;
+    let activeInstruction = runtimeConfig.amberPrompt || defaultInstruction;
+    if (!runtimeConfig.amberPrompt && !runtimeConfig.fetched) {
+      try {
+        const stored = localStorage.getItem('amber_live_prompt');
+        if (stored && stored.trim().length > 40) {
+          activeInstruction = stored.trim();
+          console.log(`[LIVE] Using local prompt fallback (${activeInstruction.length} chars)`);
+        }
+      } catch { /* noop */ }
+    }
+    activeInstruction = `${LIVE_HARD_GUARDS} ${activeInstruction}`.trim();
 
     try {
       cleanupRuntime(true);
@@ -249,7 +564,21 @@ export function useGeminiLiveSession({
       stopMicRef.current = stopMic;
 
       const handleMessage = (msg: LiveServerMessage) => {
+        const possibleTranscript =
+          (msg as any)?.serverContent?.inputTranscription?.text
+          || (msg as any)?.serverContent?.inputTranscription?.transcript
+          || (msg as any)?.serverContent?.inputTranscript?.text
+          || null;
+        if (typeof possibleTranscript === 'string' && possibleTranscript.trim()) {
+          const normalizedTranscript = possibleTranscript.trim();
+          latestUserTranscriptRef.current = normalizedTranscript;
+          const liveUiStore = useLiveUiSessionStore.getState();
+          liveUiStore.setTranscript('user', normalizedTranscript);
+          liveUiStore.setProcessing('Analizuje...');
+        }
+
         if (msg.toolCall?.functionCalls?.length) {
+          useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           const calls = msg.toolCall.functionCalls;
           const session = sessionRef.current;
           if (!session) return;
@@ -283,6 +612,7 @@ export function useGeminiLiveSession({
             }),
           ).then((responses) => {
             try {
+              lastToolResponseSentAtRef.current = Date.now();
               session.sendToolResponse({ functionResponses: responses });
             } catch {
               // noop
@@ -293,8 +623,51 @@ export function useGeminiLiveSession({
 
         if (msg.serverContent?.modelTurn?.parts) {
           for (const part of msg.serverContent.modelTurn.parts) {
+            const textPart = String((part as any)?.text || '').trim();
+            if (textPart) {
+              useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
+              window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
+                detail: {
+                  sessionId: sid,
+                  text: textPart,
+                },
+              }));
+
+              const userTranscript = latestUserTranscriptRef.current || '';
+              const hasRecentGps = !!readRecentGpsHint();
+              const now = Date.now();
+              const canAutoRecover =
+                hasRecentGps
+                && looksLikeLocationRequest(textPart)
+                && looksLikeDiscoveryUserIntent(userTranscript)
+                && !autoNearbyRecoveryInFlightRef.current
+                && (now - autoNearbyRecoveryLastTsRef.current) > AUTO_RECOVERY_COOLDOWN_MS;
+
+              if (canAutoRecover) {
+                autoNearbyRecoveryInFlightRef.current = true;
+                autoNearbyRecoveryLastTsRef.current = now;
+                useLiveUiSessionStore.getState().setProcessing('Sprawdzam miejsca w poblizu...');
+                console.log('[LIVE_AUTO_RECOVERY] location requested despite GPS -> forcing find_nearby');
+                void relay({
+                  id: `auto_find_nearby_${now}`,
+                  name: 'find_nearby',
+                  args: {},
+                })
+                  .catch((err) => {
+                    console.warn('[LIVE_AUTO_RECOVERY] relay failed:', err instanceof Error ? err.message : err);
+                  })
+                  .finally(() => {
+                    autoNearbyRecoveryInFlightRef.current = false;
+                  });
+              }
+            }
             const blob = (part as { inlineData?: { data?: string; mimeType?: string } }).inlineData;
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
+              if (lastToolResponseSentAtRef.current) {
+                const deltaMs = Date.now() - lastToolResponseSentAtRef.current;
+                console.log(`[LIVE_AUDIO_LATENCY] tool_response_to_first_audio_ms=${deltaMs}`);
+                lastToolResponseSentAtRef.current = null;
+              }
               player.enqueueBase64(blob.data);
             }
           }
@@ -306,10 +679,10 @@ export function useGeminiLiveSession({
       };
 
       const session = await ai.live.connect({
-        model: MODEL,
+        model: activeModel,
         config: {
           responseModalities: [Modality.AUDIO],
-          systemInstruction: SYSTEM_INSTRUCTION,
+          systemInstruction: activeInstruction,
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: { voiceName: 'Aoede' },
@@ -322,6 +695,19 @@ export function useGeminiLiveSession({
             reconnectAttemptRef.current = 0;
             clearReconnectTimer();
             setReconnectHalted(false);
+            useLiveUiSessionStore.getState().setListening('Slucham...');
+            // Report actual frontend model to backend metrics snapshot
+            const relaySocket = wsRef.current;
+            if (relaySocket && relaySocket.readyState === WebSocket.OPEN) {
+              try {
+                relaySocket.send(JSON.stringify({
+                  type: 'client_metrics',
+                  liveModel: activeModel,
+                }));
+              } catch {
+                // noop
+              }
+            }
             // Fix #4: restore cached state on reconnect
             const cached = liveSessionCache.get(sid);
             if (cached) {
@@ -331,7 +717,9 @@ export function useGeminiLiveSession({
           },
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
-            setError(e.message || 'gemini_live_error');
+            const message = e.message || 'gemini_live_error';
+            setError(message);
+            useLiveUiSessionStore.getState().setPaused(`Wstrzymano LIVE: ${message}`);
             cleanupRuntime(false);
             scheduleReconnect();
           },
@@ -352,9 +740,11 @@ export function useGeminiLiveSession({
             cleanupRuntime(false);
             // Do NOT reconnect on intentional close (user stop / cleanup / 1000 / 1001 equivalent)
             if (wasIntentional || !desiredActiveRef.current) {
-              console.log('[LIVE] RECONNECT HALTED — intentional close');
+              useLiveUiSessionStore.getState().setPaused();
+              console.log('[LIVE] RECONNECT HALTED â€” intentional close');
               return;
             }
+            useLiveUiSessionStore.getState().setProcessing('Wznawiam sesje LIVE...');
             scheduleReconnect();
           },
         },
@@ -363,15 +753,49 @@ export function useGeminiLiveSession({
       sessionRef.current = session;
       activeRef.current = true;
       setIsActive(true);
+      useLiveUiSessionStore.getState().setListening('Slucham...');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'failed_to_start';
       setError(msg);
+      useLiveUiSessionStore.getState().setPaused(`Wstrzymano LIVE: ${msg}`);
       cleanupRuntime(false);
       scheduleReconnect();
     } finally {
       startInFlightRef.current = false;
     }
   }, [enabled, relay, cleanupRuntime, clearReconnectTimer]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onLiveModelChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ model?: string; previousModel?: string; source?: string }>).detail;
+      const nextModel = String(detail?.model || '').trim();
+      const previousModel = String(detail?.previousModel || '').trim();
+      if (!nextModel || (previousModel && nextModel === previousModel)) return;
+
+      const isSessionActive = Boolean(activeRef.current || sessionRef.current || desiredActiveRef.current);
+      if (!isSessionActive) return;
+      if (modelSwitchRestartRef.current) return;
+      modelSwitchRestartRef.current = true;
+
+      console.log(
+        `[LIVE_MODEL_SWITCH] restarting active session previous=${previousModel || 'unknown'} next=${nextModel} source=${detail?.source || 'unknown'}`,
+      );
+
+      stop();
+      window.setTimeout(() => {
+        void start().finally(() => {
+          modelSwitchRestartRef.current = false;
+        });
+      }, 200);
+    };
+
+    window.addEventListener(LIVE_MODEL_CHANGED_EVENT, onLiveModelChanged as EventListener);
+    return () => {
+      window.removeEventListener(LIVE_MODEL_CHANGED_EVENT, onLiveModelChanged as EventListener);
+    };
+  }, [start, stop]);
 
   useEffect(() => {
     return () => {

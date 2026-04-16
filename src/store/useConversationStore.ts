@@ -180,7 +180,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             const hasContext = !!data.context;
             const ctx = data.context || {};
             const restaurantsFromResponse = normalizeRestaurants(data.restaurants || ctx.last_restaurants_list || null);
-            const menuFromResponse = normalizeMenuItems(data.menuItems || data.menu || ctx.last_menu || null);
+            const menuFromResponse = normalizeMenuItems(data.menu || data.menuItems || ctx.last_menu || null);
             const newHistory = [...get().conversationHistory, { role: 'assistant', content: amberReply }];
 
             let newPhase = ctx.conversationPhase;
@@ -265,7 +265,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
-                suggestedRestaurants: restaurantsFromResponse || (isIdle ? null : get().suggestedRestaurants),
+                suggestedRestaurants: (restaurantsFromResponse && restaurantsFromResponse.length > 0) ? restaurantsFromResponse : (isIdle ? null : get().suggestedRestaurants),
                 selectedRestaurantPreviewId: restaurantsFromResponse?.[0]?.id || (isIdle ? null : get().selectedRestaurantPreviewId),
                 menuItems: menuFromResponse || (isIdle ? null : get().menuItems),
                 lastIntent: data.intent || null,

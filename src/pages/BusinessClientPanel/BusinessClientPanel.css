@@ -107,6 +107,28 @@
     transform: rotate(180deg);
 }
 
+/* Manage — secondary workspace CTA, neutral weight */
+.business-panel__manage-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    color: var(--fg1);
+    text-decoration: none;
+    border-radius: 0.625rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.business-panel__manage-link:hover {
+    background: var(--glass2);
+    color: var(--fg0);
+}
+
 /* KDS — primary workspace CTA, stronger visual weight than utility buttons */
 .business-panel__kds-link {
     display: flex;

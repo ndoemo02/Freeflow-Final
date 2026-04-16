@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;background:#0c0805;overflow:hidden}
+body{display:flex;flex-direction:column;align-items:center}
+.app{width:100%;height:100%;max-width:480px;background:#0c0805;display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden}
+.logo-zone{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;padding:20px 0 8px;z-index:10;transition:opacity .4s ease,transform .4s ease}
+.logo-img{width:110px;height:110px;border-radius:50%;background:#1a1008;border:1px solid rgba(255,120,20,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-zone.small .logo-img{width:68px;height:68px}
+.logo-inner{text-align:center}
+.logo-mic{font-size:26px;display:block}
+.logo-zone.small .logo-mic{font-size:16px}
+.logo-text{font-size:19px;font-weight:800;color:#fff;letter-spacing:-1px;font-family:system-ui}
+.logo-zone.small .logo-text{font-size:13px}
+.logo-text em{color:#f97316;font-style:normal}
+.logo-icons{font-size:10px;color:rgba(0,220,180,.7);margin-top:2px;font-family:system-ui}
+.logo-zone.small .logo-icons{display:none}
+.stage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;position:relative;z-index:10;min-height:0;overflow:visible}
+.c3d{position:relative;width:100%;display:flex;align-items:center;justify-content:center;user-select:none;touch-action:pan-y}
+.cw{position:absolute;transform-origin:center;will-change:transform}
+.card{border-radius:16px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.08);will-change:transform,opacity,filter;cursor:pointer}
+.card.active{border-color:rgba(249,115,22,.4);box-shadow:0 0 32px rgba(249,115,22,.12),0 16px 48px rgba(0,0,0,.75)}
+.photo{position:absolute;inset:0;background-size:cover}
+.photo::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.93) 0%,rgba(0,0,0,.3) 55%,transparent 100%)}
+.info{position:absolute;bottom:0;left:0;right:0;padding:14px;font-family:system-ui}
+.cat{font-size:8px;letter-spacing:2px;color:rgba(255,180,40,.85);font-weight:600;margin-bottom:4px}
+.rname{font-size:16px;font-weight:700;color:#fff;line-height:1.2;margin-bottom:3px}
+.rtype{font-size:11px;color:rgba(255,255,255,.45);margin-bottom:8px}
+.meta{display:flex;align-items:center;gap:7px}
+.stars{font-size:10px;color:#f97316}
+.badge{font-size:8px;background:rgba(34,197,94,.13);color:rgba(100,220,130,.9);border:1px solid rgba(34,197,94,.22);padding:2px 7px;border-radius:20px}
+.addr{font-size:8px;color:rgba(255,255,255,.22);margin-top:5px}
+.hint{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(255,255,255,.2);white-space:nowrap;font-family:system-ui;pointer-events:none;animation:bl 3s ease-in-out infinite}
+@keyframes bl{0%,100%{opacity:.2}50%{opacity:.42}}
+.nbtn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.45);width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:30;user-select:none;font-family:system-ui}
+#btnL{left:6px}#btnR{right:6px}
+.dots{display:flex;gap:4px;justify-content:center;padding:8px 0 4px;z-index:10;flex-shrink:0}
+.dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.14);transition:.4s;cursor:pointer}
+.dot.on{background:#f97316;width:13px;border-radius:2px}
+.vbar{width:87%;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:40px;padding:9px 13px;display:flex;align-items:center;gap:9px;z-index:50;margin-bottom:20px;flex-shrink:0}
+.vdot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;animation:vp 2s ease-in-out infinite}
+@keyframes vp{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}50%{box-shadow:0 0 0 4px rgba(34,197,94,0)}}
+.vtxt{font-size:10px;color:rgba(255,255,255,.28);flex:1;font-family:system-ui}
+.vbtn{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.vbtn svg{width:13px;height:13px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+.sheet{position:absolute;inset:0;z-index:60;pointer-events:none;overflow:hidden}
+.sbg{position:absolute;inset:0;background:rgba(8,5,2,.9);opacity:0;transition:opacity .4s}
+.spanel{position:absolute;bottom:0;left:0;right:0;background:#13100a;border-top:1px solid rgba(255,255,255,.09);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform .4s cubic-bezier(.4,0,.2,1);max-height:88%;display:flex;flex-direction:column}
+.spanel.open{transform:translateY(0)}
+.sheet.vis{pointer-events:all}
+.sheet.vis .sbg{opacity:1;pointer-events:all}
+.shandle{width:30px;height:3px;background:rgba(255,255,255,.16);border-radius:2px;margin:9px auto 5px;flex-shrink:0}
+.shead{padding:0 16px 9px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0;font-size:12px;font-weight:600;color:rgba(255,255,255,.55);font-family:system-ui}
+.sscroll{overflow-y:auto;flex:1}
+.sitem{display:flex;align-items:center;gap:11px;padding:9px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.035)}
+.sitem.act{background:rgba(249,115,22,.07);border-left:2px solid rgba(249,115,22,.45)}
+.sthumb{width:42px;height:42px;border-radius:9px;flex-shrink:0}
+.sinfo{flex:1;min-width:0}
+.sname{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:system-ui}
+.stype{font-size:9px;color:rgba(255,255,255,.32);margin-top:1px;font-family:system-ui}
+.sr{text-align:right;flex-shrink:0}
+.srating{font-size:9px;color:#f97316;font-family:system-ui}
+.sopen{font-size:8px;color:rgba(100,220,120,.6);font-family:system-ui}
+.sclose{display:flex;align-items:center;justify-content:center;padding:11px;cursor:pointer;color:rgba(255,255,255,.28);font-size:10px;gap:4px;flex-shrink:0;border-top:1px solid rgba(255,255,255,.05);font-family:system-ui}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="logo-zone" id="logo">
+    <div class="logo-img">
+      <div class="logo-inner">
+        <span class="logo-mic">🎤</span>
+        <div class="logo-text"><em>Free</em>Flow</div>
+        <div class="logo-icons">🍽 🚗 🏠</div>
+      </div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="c3d" id="c3d">
+      <button class="nbtn" id="btnL">‹</button>
+      <div id="track"></div>
+      <button class="nbtn" id="btnR">›</button>
+    </div>
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="vbar">
+    <div class="vdot"></div>
+    <div class="vtxt">Powiedz: „Zamów coś z Vien-Thien"</div>
+    <div class="vbtn"><svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V4a3 3 0 0 1 3-3z"/><path d="M19 10a7 7 0 0 1-14 0M12 19v4M8 23h8"/></svg></div>
+  </div>
+  <div class="sheet" id="sheet">
+    <div class="sbg" onclick="closeList()"></div>
+    <div class="spanel" id="spanel">
+      <div class="shandle"></div>
+      <div class="shead">10 restauracji w pobliżu</div>
+      <div class="sscroll" id="sscroll"></div>
+      <div class="sclose" onclick="closeList()">▼ zamknij listę</div>
+    </div>
+  </div>
+</div>
+<script>
+var R=[
+  {n:'Restauracja Stara Kamienica',t:'Polska',a:'ul. Stara 1',r:4.5,g:'linear-gradient(135deg,#2d1205,#7a2e0a)'},
+  {n:'Rezydencja Luxury Hotel',t:'Miedzyn.',a:'ul. Luksusowa 5',r:4.8,g:'linear-gradient(135deg,#05101e,#0d2a4a)'},
+  {n:'Klaps Burgers',t:'Amerykanska',a:'ul. Skargi 15',r:4.5,g:'linear-gradient(135deg,#1e0505,#6b1010)'},
+  {n:'Vien-Thien',t:'Wietnamska',a:'ul. Diamentowa 4',r:4.5,g:'linear-gradient(135deg,#051e0a,#0d5a1a)'},
+  {n:'Bar Praha',t:'Czeska/Polska',a:'ul. Bytomska 120',r:4.5,g:'linear-gradient(135deg,#1a180a,#4a400a)'},
+  {n:'Callzone',t:'Pizzeria',a:'ul. Glowna 8',r:4.5,g:'linear-gradient(135deg,#1e0e05,#6b2a08)'},
+  {n:'Dwor Hubertus',t:'Slaska',a:'ul. Mysliwska 3',r:4.5,g:'linear-gradient(135deg,#071a07,#124a12)'},
+  {n:'Tasty King Kebab',t:'Kebab',a:'ul. Krolewska 12',r:4.3,g:'linear-gradient(135deg,#1a0505,#5a0a18)'},
+  {n:'Pizzeria Monte Carlo',t:'Wloska',a:'ul. Monte 7',r:4.6,g:'linear-gradient(135deg,#1e0a10,#6b1428)'},
+  {n:'Sushi Garden',t:'Japonska',a:'ul. Ogrodowa 2',r:4.7,g:'linear-gradient(135deg,#050f1e,#0a2a4a)'},
+];
+var N=R.length;
+var cwEls=[],cardEls=[];
+var listOpen=false;
+
+/* FIZYKA */
+var offset=0;       /* px, 0=slot0 na centrum */
+var velocity=0;
+var dragging=false;
+var rafId=null;
+var FRICTION=0.88;
+var SNAP_K=0.18;
+
+function getS(){
+  var app=document.getElementById('app');
+  var lh=document.getElementById('logo').offsetHeight;
+  var avail=app.offsetHeight-lh-36-58-32;
+  var aw=app.offsetWidth;
+  var cw=Math.max(Math.floor(aw*0.5),110);
+  var ch=Math.max(Math.min(Math.floor(avail*0.88),400),150);
+  return{w:cw,h:ch,gap:Math.floor(cw*0.8)};
+}
+
+function adaptLogo(){
+  document.getElementById('logo').classList.toggle('small',document.getElementById('app').offsetHeight<560);
+}
+
+/* =====================================================
+   KLUCZOWA ZMIANA:
+   pos = pozycja karty względem centrum ekranu (float)
+   ale rotY liczymy od SLOTU (integer offset od centrum)
+   z interpolacją tylko w zakresie [-1, 1]
+   — to eliminuje ciągłe kręcenie
+   ===================================================== */
+function renderFrame(){
+  var s=getS();
+  var gap=s.gap;
+  /* ile slotów przesunął się offset (float) */
+  var floatShift = -offset/gap;  /* +1 = o jeden slot w prawo */
+
+  for(var slot=0;slot<5;slot++){
+    var slotBase = slot-2;  /* -2,-1,0,1,2 — pozycja slotu na ekranie */
+
+    /* pozycja wizualna karty w px względem centrum */
+    var xPx = slotBase*gap + offset;
+
+    /* pozycja float do obliczenia scale/blur/opacity */
+    var posFloat = xPx/gap;  /* 0=centrum, ±1=sąsiad, ±2=daleki */
+    var absPos = Math.abs(posFloat);
+
+    /* clamp do widocznego zakresu */
+    if(absPos>2.6) continue;
+
+    /* scale, opacity, blur — od pozycji float */
+    var scale = Math.max(0.6, 1 - absPos*0.19);
+    var cardOp = Math.max(0.13, 1 - absPos*0.43);
+    var blur = Math.min(absPos*6, 16);
+    var contentOp = Math.max(0, 1 - absPos*1.8);
+
+    /* rotY — TYLKO od slotu, interpolacja ±15deg między slotami
+       clamp do [-15,15] żeby nie kręciło */
+    var rotRaw = posFloat * -15;
+    var rotY = Math.max(-15, Math.min(15, rotRaw));
+
+    /* tz — głębokość, też od pozycji float */
+    var tz = Math.max(-160, -absPos*88);
+
+    var cw = cwEls[slot];
+    var card = cardEls[slot];
+    if(!cw||!card) continue;
+
+    cw.style.cssText = 'position:absolute;transform-origin:center;will-change:transform;'
+      +'transform:translateX('+xPx.toFixed(1)+'px) scale('+scale.toFixed(3)+');'
+      +'z-index:'+Math.round(20-absPos*5)+';';
+
+    card.style.transform = 'perspective(900px) rotateY('+rotY.toFixed(2)+'deg) translateZ('+tz.toFixed(1)+'px)';
+    card.style.filter = blur>0.3 ? 'blur('+blur.toFixed(1)+'px)' : 'none';
+    card.style.opacity = cardOp.toFixed(3);
+    card.classList.toggle('active', absPos<0.12);
+    card.querySelector('.info').style.opacity = contentOp.toFixed(3);
+
+    /* który index restauracji dla tego slotu */
+    var steps = Math.round(floatShift);
+    var idx = ((slot - 2 + steps) % N + N) % N;
+    var r = R[idx];
+    card.querySelector('.rname').textContent = r.n;
+    card.querySelector('.rtype').textContent = r.t;
+    card.querySelector('.stars').textContent = '★ '+r.r;
+    card.querySelector('.addr').textContent = r.a;
+    card.querySelector('.photo').style.background = r.g;
+
+    /* onclick */
+    (function(pf, i){
+      card.onclick = function(){
+        if(Math.abs(pf)<0.15){ alert('Wybrales: '+R[i].n); }
+        else { snapToIndex(i); }
+      };
+    })(posFloat, idx);
+  }
+
+  /* dots */
+  var ci = ((Math.round(floatShift))%N+N)%N;
+  document.querySelectorAll('.dot').forEach(function(d,i){ d.classList.toggle('on',i===ci); });
+}
+
+/* =====================================================
+   PĘTLA FIZYKI
+   ===================================================== */
+function physicsLoop(){
+  if(dragging){ renderFrame(); rafId=requestAnimationFrame(physicsLoop); return; }
+
+  velocity *= FRICTION;
+
+  /* snap — przyciąganie do najbliższego slotu */
+  var s = getS();
+  var target = Math.round(offset/s.gap)*s.gap;
+  var dist = target - offset;
+  var snapF = dist * SNAP_K;
+
+  var totalV = velocity + snapF;
+  if(Math.abs(totalV)<0.12 && Math.abs(dist)<0.4){
+    offset = target;
+    velocity = 0;
+    renderFrame();
+    rafId = null;
+    return;
+  }
+
+  offset += totalV;
+  renderFrame();
+  rafId = requestAnimationFrame(physicsLoop);
+}
+
+function startLoop(){
+  if(!rafId) rafId = requestAnimationFrame(physicsLoop);
+}
+
+function snapToIndex(idx){
+  var s = getS();
+  var curSteps = Math.round(-offset/s.gap);
+  var curIdx = ((curSteps)%N+N)%N;
+  var diff = idx - curIdx;
+  if(diff>N/2) diff-=N;
+  if(diff<-N/2) diff+=N;
+  velocity = diff * s.gap * 0.3;
+  startLoop();
+}
+
+/* =====================================================
+   DRAG
+   ===================================================== */
+var sx=0,sy=0,dragX=0,dragY=0,lx=0,lt=0;
+
+function onStart(x,y){
+  dragging=true; sx=x; sy=y; lx=x; lt=Date.now();
+  velocity=0; dragX=0; dragY=0;
+  startLoop();
+}
+function onMove(x,y){
+  if(!dragging) return;
+  var now=Date.now(), dt=Math.max(1,now-lt);
+  var dx=x-lx;
+  dragX=x-sx; dragY=y-sy;
+  velocity = dx/dt*16;
+  offset += dx;
+  lx=x; lt=now;
+}
+function onEnd(){
+  if(!dragging) return;
+  dragging=false;
+  if(Math.abs(dragY)>55 && dragY<0 && Math.abs(dragY)>Math.abs(dragX)){
+    velocity=0; openList(); startLoop(); return;
+  }
+  startLoop();
+}
+
+var c3d=document.getElementById('c3d');
+c3d.addEventListener('mousedown',function(e){onStart(e.clientX,e.clientY);});
+window.addEventListener('mousemove',function(e){if(dragging)onMove(e.clientX,e.clientY);});
+window.addEventListener('mouseup',onEnd);
+c3d.addEventListener('touchstart',function(e){onStart(e.touches[0].clientX,e.touches[0].clientY);},{passive:true});
+c3d.addEventListener('touchmove',function(e){
+  if(Math.abs(dragX)>Math.abs(dragY)) e.preventDefault();
+  onMove(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:false});
+c3d.addEventListener('touchend',onEnd,{passive:true});
+
+document.getElementById('btnL').onclick=function(e){e.stopPropagation();velocity=getS().gap*0.35;startLoop();};
+document.getElementById('btnR').onclick=function(e){e.stopPropagation();velocity=-getS().gap*0.35;startLoop();};
+
+/* =====================================================
+   DOM BUILD
+   ===================================================== */
+function buildCards(){
+  var track=document.getElementById('track');
+  track.innerHTML=''; cwEls=[]; cardEls=[];
+  var s=getS();
+  document.getElementById('c3d').style.height=s.h+'px';
+  for(var i=0;i<5;i++){
+    var cw=document.createElement('div');
+    cw.className='cw';
+    var card=document.createElement('div');
+    card.className='card';
+    card.style.width=s.w+'px';
+    card.style.height=s.h+'px';
+    card.innerHTML='<div class="photo"></div><div class="info"><div class="cat">RESTAURACJA</div><div class="rname"></div><div class="rtype"></div><div class="meta"><span class="stars"></span><span class="badge">teraz</span></div><div class="addr"></div></div>';
+    cw.appendChild(card);
+    track.appendChild(cw);
+    cwEls.push(cw); cardEls.push(card);
+  }
+  var hint=document.createElement('div');
+  hint.className='hint';
+  hint.textContent='↑ przeciągnij w górę po listę';
+  cwEls[2].appendChild(hint);
+}
+
+function buildDots(){
+  var el=document.getElementById('dots');
+  el.innerHTML='';
+  R.forEach(function(_,i){
+    var d=document.createElement('div');
+    d.className='dot'+(i===0?' on':'');
+    d.onclick=function(){snapToIndex(i);};
+    el.appendChild(d);
+  });
+}
+
+/* entry — wjazd z prawej, normalna prędkość */
+function entry(){
+  var s=getS();
+  offset=s.gap*1.5;
+  velocity=-s.gap*0.25;
+  SNAP_K=0.10;
+  startLoop();
+  setTimeout(function(){SNAP_K=0.18;},900);
+}
+
+/* =====================================================
+   LISTA
+   ===================================================== */
+function buildList(){
+  var sc=document.getElementById('sscroll');
+  sc.innerHTML='';
+  var s=getS();
+  var ci=(( Math.round(-offset/s.gap))%N+N)%N;
+  R.forEach(function(r,i){
+    var item=document.createElement('div');
+    item.className='sitem'+(i===ci?' act':'');
+    item.innerHTML='<div class="sthumb" style="background:'+r.g+'"></div>'
+      +'<div class="sinfo"><div class="sname">'+r.n+'</div><div class="stype">'+r.t+' · '+r.a+'</div></div>'
+      +'<div class="sr"><div class="srating">★ '+r.r+'</div><div class="sopen">teraz</div></div>';
+    item.onclick=function(){closeList();setTimeout(function(){snapToIndex(i);},80);};
+    sc.appendChild(item);
+  });
+}
+
+function openList(){
+  if(listOpen)return; listOpen=true;
+  var logo=document.getElementById('logo');
+  logo.style.opacity='0'; logo.style.transform='translateY(-8px)';
+  document.getElementById('sheet').classList.add('vis');
+  setTimeout(function(){document.getElementById('spanel').classList.add('open');},10);
+  buildList();
+}
+function closeList(){
+  if(!listOpen)return; listOpen=false;
+  var logo=document.getElementById('logo');
+  logo.style.opacity=''; logo.style.transform='';
+  document.getElementById('spanel').classList.remove('open');
+  setTimeout(function(){document.getElementById('sheet').classList.remove('vis');},420);
+}
+
+var sp=document.getElementById('spanel'),ps=0;
+sp.addEventListener('touchstart',function(e){ps=e.touches[0].clientY;},{passive:true});
+sp.addEventListener('touchend',function(e){if(e.changedTouches[0].clientY-ps>70)closeList();},{passive:true});
+
+window.addEventListener('resize',function(){
+  var s=getS();
+  document.getElementById('c3d').style.height=s.h+'px';
+  cardEls.forEach(function(c){c.style.width=s.w+'px';c.style.height=s.h+'px';});
+  adaptLogo(); renderFrame();
+});
+
+adaptLogo(); buildCards(); buildDots(); renderFrame();
+setTimeout(entry,150);
+</script>
+</body>
+</html>

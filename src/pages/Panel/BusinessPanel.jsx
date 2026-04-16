@@ -4,13 +4,12 @@ import { useAuth } from '../../state/auth'
 import { supabase } from '../../lib/supabase'
 import { Dialog, Transition } from '@headlessui/react'
 import { getApiUrl } from '../../lib/config'
+import { ROUTES } from '../../app/routeConfig'
 
 // ─── Surface token overrides for business mode ───────────────────────────────
-// Business = functional: flat cards, structural borders (0.09–0.12), no glow,
-// --radius-sm (12px) max, semantic colors at reduced opacity (status only).
 const BP = {
-  cardBg:     'rgba(255,255,255,0.04)',        // flat — no blur on content
-  cardBorder: '1px solid rgba(255,255,255,0.09)',  // structural (vs consumer 0.06)
+  cardBg:     'rgba(255,255,255,0.04)',
+  cardBorder: '1px solid rgba(255,255,255,0.09)',
   divider:    'rgba(255,255,255,0.08)',
   textPrimary:'rgba(255,255,255,0.84)',
   textMid:    'rgba(255,255,255,0.52)',
@@ -18,7 +17,6 @@ const BP = {
 }
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
-// Reduced opacity vs consumer: status indicators, not brand accents
 const STATUS_META = {
   pending:   { label: 'Nowe',        color: 'rgba(251,191,36,0.80)',  bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.18)' },
   preparing: { label: 'W realizacji',color: 'rgba(96,165,250,0.80)',  bg: 'rgba(96,165,250,0.08)',  border: 'rgba(96,165,250,0.18)' },
@@ -178,16 +176,11 @@ export default function BusinessPanel() {
   const [orders, setOrders] = useState([])
   const [loadingOrders, setLoadingOrders] = useState(false)
 
-  const [addOpen, setAddOpen] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newPrice, setNewPrice] = useState('')
-  const [busyAdd, setBusyAdd] = useState(false)
-  const [err, setErr] = useState('')
-
   const [createOpen, setCreateOpen] = useState(false)
   const [restName, setRestName] = useState('')
   const [restCity, setRestCity] = useState('')
   const [busyCreate, setBusyCreate] = useState(false)
+  const [err, setErr] = useState('')
 
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [restaurantToDelete, setRestaurantToDelete] = useState(null)
@@ -198,7 +191,7 @@ export default function BusinessPanel() {
 
   const [menuExpanded, setMenuExpanded] = useState(false)
 
-  // Apply business-theme body class — flat surface, no radial gradients
+  // Apply business-theme body class
   useEffect(() => {
     document.body.classList.add('business-theme')
     return () => document.body.classList.remove('business-theme')
@@ -213,16 +206,16 @@ export default function BusinessPanel() {
     let alive = true
     const load = async () => {
       setLoadingRests(true)
-      const { data: restaurants, error: restaurantsError } = await supabase
+      const { data, error } = await supabase
         .from('restaurants')
         .select('id,name,created_at')
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .eq('owner_id', user.id)
+        .order('name', { ascending: true })
       if (!alive) return
-      if (restaurantsError) { setRestaurants([]) }
+      if (error) { setRestaurants([]) }
       else {
-        setRestaurants(restaurants || [])
-        if ((restaurants?.length || 0) > 0 && !restaurantId) setRestaurantId(restaurants[0].id)
+        setRestaurants(data || [])
+        if ((data?.length || 0) > 0 && !restaurantId) setRestaurantId(data[0].id)
       }
       setLoadingRests(false)
     }
@@ -243,7 +236,7 @@ export default function BusinessPanel() {
     let alive = true
     const load = async () => {
       setLoadingItems(true)
-      const { data, error } = await supabase.from('menu_items').select('id,name,price').eq('restaurant_id', restaurantId).order('name')
+      const { data, error } = await supabase.from('menu_items_v2').select('id,name,price').eq('restaurant_id', restaurantId).order('name')
       if (!alive) return
       setItems(error ? [] : (data || []))
       setLoadingItems(false)
@@ -274,32 +267,16 @@ export default function BusinessPanel() {
     return () => { alive = false; clearInterval(interval) }
   }, [restaurantId])
 
-  const addItem = async () => {
-    try {
-      setBusyAdd(true); setErr('')
-      const price = parseFloat(String(newPrice).replace(',', '.'))
-      if (!newName || isNaN(price)) throw new Error('Podaj nazwę i cenę')
-      const { error } = await supabase.from('menu_items').insert({
-        restaurant_id: restaurantId, name: newName, price,
-        description: 'Dodane przez właściciela'
-      })
-      if (error) throw error
-      setNewName(''); setNewPrice(''); setAddOpen(false)
-      const { data } = await supabase.from('menu_items').select('id,name,price').eq('restaurant_id', restaurantId).order('name')
-      setItems(data || [])
-    } catch (e) { setErr(e.message || 'Błąd dodawania') } finally { setBusyAdd(false) }
-  }
-
   const deleteRestaurant = async () => {
     if (!restaurantToDelete) return
     try {
       setBusyDelete(true); setErr('')
-      await supabase.from('menu_items').delete().eq('restaurant_id', restaurantToDelete.id)
+      await supabase.from('menu_items_v2').delete().eq('restaurant_id', restaurantToDelete.id)
       const { error } = await supabase.from('restaurants').delete().eq('id', restaurantToDelete.id)
       if (error) throw error
-      const { data: restaurantsData } = await supabase.from('restaurants').select('id,name').eq('owner_id', user.id).order('name')
-      setRestaurants(restaurantsData || [])
-      if (restaurantsData?.length > 0) setRestaurantId(restaurantsData[0].id)
+      const { data: list } = await supabase.from('restaurants').select('id,name').eq('owner_id', user.id).order('name')
+      setRestaurants(list || [])
+      if (list?.length > 0) setRestaurantId(list[0].id)
       else setRestaurantId('')
       setDeleteOpen(false); setRestaurantToDelete(null)
     } catch (e) { setErr(e.message) } finally { setBusyDelete(false) }
@@ -330,18 +307,14 @@ export default function BusinessPanel() {
     orders.filter(o => o.status === 'delivered' || o.status === 'cancelled'),
     [orders])
 
-  const selectedRestaurantName = restaurants.find(r => r.id === restaurantId)?.name || ''
-
   // ─── Layout ─────────────────────────────────────────────────────────────────
   return (
     <Fragment>
       <div
         className="min-h-screen flex flex-col"
         style={{
-          background: 'var(--op-surface)',   // #0d1020 — flat, no texture
+          background: 'var(--op-surface)',
           color: BP.textPrimary,
-          // Explicit coverage: ensures no wallpaper bleeds through if
-          // body has a transparent ancestor. isolation creates new stacking context.
           isolation: 'isolate',
         }}
       >
@@ -350,7 +323,7 @@ export default function BusinessPanel() {
           className="shrink-0 sticky top-0 z-20 flex items-center gap-3 px-4 py-3"
           style={{
             background: 'rgba(13,16,32,0.98)',
-            backdropFilter: 'blur(var(--blur-sm))',   // 8px — functional, not ambient
+            backdropFilter: 'blur(var(--blur-sm))',
             WebkitBackdropFilter: 'blur(var(--blur-sm))',
             borderBottom: `1px solid ${BP.divider}`,
           }}
@@ -433,10 +406,9 @@ export default function BusinessPanel() {
               key={label}
               className="flex items-center gap-2 px-3 py-2"
               style={{
-                borderRadius: 'var(--radius-sm)',   // 12px — business max
+                borderRadius: 'var(--radius-sm)',
                 background: BP.cardBg,
                 border: BP.cardBorder,
-                // no glow, no shadow — pure flat surface
               }}
             >
               <span className="text-[18px] font-bold tabular-nums" style={{ color: BP.textPrimary, lineHeight: 1 }}>{value}</span>
@@ -444,6 +416,69 @@ export default function BusinessPanel() {
             </div>
           ))}
         </div>
+
+        {/* ── CTA: Zarządzanie restauracją ───────────────────────────────── */}
+        {restaurantId ? (
+          <div className="px-4 pt-4">
+            <button
+              onClick={() => navigate(`${ROUTES.PANEL_MANAGE}?id=${restaurantId}`)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-opacity hover:opacity-90 active:scale-[0.99]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(249,115,22,0.10), rgba(249,115,22,0.05))',
+                border: '1px solid rgba(249,115,22,0.20)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center shrink-0"
+                  style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: 'rgba(249,115,22,0.12)',
+                    border: '1px solid rgba(249,115,22,0.22)',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.90)" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <div className="text-[13px] font-semibold" style={{ color: 'rgba(249,115,22,0.92)' }}>
+                    Zarządzaj restauracją
+                  </div>
+                  <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    Edycja danych, menu, godziny, zdjęcia
+                  </div>
+                </div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(249,115,22,0.60)" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
+        ) : !loadingRests && (
+          <div className="px-4 pt-4">
+            <button
+              onClick={() => navigate(ROUTES.PANEL_MANAGE)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-opacity hover:opacity-90"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px dashed rgba(255,255,255,0.12)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-left">
+                  <div className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.50)' }}>
+                    Nie masz jeszcze restauracji
+                  </div>
+                  <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    Kliknij aby dodać i skonfigurować swój lokal →
+                  </div>
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* ── Orders (primary) ───────────────────────────────────────────── */}
         <SectionLabel count={activeOrders.length}>Aktywne zamówienia</SectionLabel>
@@ -480,7 +515,7 @@ export default function BusinessPanel() {
 
         <Hairline />
 
-        {/* ── Menu items (secondary) ─────────────────────────────────────── */}
+        {/* ── Menu items (read-only summary) ─────────────────────────────── */}
         <div>
           <button
             className="w-full flex items-center justify-between px-4 pt-4 pb-2"
@@ -500,11 +535,14 @@ export default function BusinessPanel() {
             <div className="flex items-center gap-2">
               {restaurantId && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setAddOpen(true) }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`${ROUTES.PANEL_MANAGE}?id=${restaurantId}&tab=menu`)
+                  }}
                   className="text-[11px] px-2 py-1 rounded-md"
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.56)' }}
                 >
-                  + Dodaj
+                  Edytuj menu
                 </button>
               )}
               <svg
@@ -560,16 +598,9 @@ export default function BusinessPanel() {
 
       {/* ── Modals ──────────────────────────────────────────────────────────── */}
 
-      {/* Add menu item */}
-      <ModalShell show={addOpen} onClose={() => setAddOpen(false)} title="Dodaj pozycję">
-        {err && <div className="text-[12px] mb-3" style={{ color: 'rgba(248,113,113,0.90)' }}>{err}</div>}
-        <FieldInput label="Nazwa" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="np. Pizza Margherita" />
-        <FieldInput label="Cena (PLN)" value={newPrice} onChange={(e) => setNewPrice(e.target.value)} placeholder="12.99" />
-        <ModalFooter onCancel={() => setAddOpen(false)} onConfirm={addItem} confirmLabel="Dodaj" busy={busyAdd} />
-      </ModalShell>
-
       {/* Create restaurant */}
       <ModalShell show={createOpen} onClose={() => setCreateOpen(false)} title="Nowa restauracja">
+        {err && <div className="text-[12px] mb-3" style={{ color: 'rgba(248,113,113,0.90)' }}>{err}</div>}
         <FieldInput label="Nazwa" value={restName} onChange={(e) => setRestName(e.target.value)} placeholder="Nazwa lokalu" />
         <FieldInput label="Miasto" value={restCity} onChange={(e) => setRestCity(e.target.value)} placeholder="np. Piekary Śląskie" />
         <ModalFooter
@@ -579,16 +610,18 @@ export default function BusinessPanel() {
           onConfirm={async () => {
             if (!restName) return
             try {
-              setBusyCreate(true)
-              let data = null; let error = null
-              { const res = await supabase.from('restaurants').insert({ name: restName, city: restCity || null, owner: user?.id }).select('id,name'); data = res.data; error = res.error }
-              if (error) { const res2 = await supabase.from('restaurants').insert({ name: restName, city: restCity || null, owner_id: user?.id }).select('id,name'); data = res2.data; error = res2.error; if (error) throw error }
-              const { data: list } = await supabase.from('restaurants').select('id,name').or(`owner.eq.${user?.id},owner_id.eq.${user?.id}`).order('name')
+              setBusyCreate(true); setErr('')
+              const { data, error } = await supabase.from('restaurants')
+                .insert({ name: restName, city: restCity || null, owner_id: user?.id })
+                .select('id,name')
+              if (error) throw error
+              const { data: list } = await supabase.from('restaurants')
+                .select('id,name,created_at').eq('owner_id', user.id).order('name')
               setRestaurants(list || [])
               const createdId = data?.[0]?.id
               if (createdId) setRestaurantId(createdId)
               setCreateOpen(false); setRestName(''); setRestCity('')
-            } finally { setBusyCreate(false) }
+            } catch (e) { setErr(e.message || 'Błąd tworzenia') } finally { setBusyCreate(false) }
           }}
         />
       </ModalShell>
@@ -655,17 +688,14 @@ export default function BusinessPanel() {
 }
 
 // ─── OrderRow ─────────────────────────────────────────────────────────────────
-// Flat card — no blur, no glow. Structural border at 0.09 (functional surface rule).
-// Action strip separated by a hairline divider, not a shadow/elevation effect.
 function OrderRow({ order: o, onDetails, onAction, compact = false }) {
   return (
     <div
       style={{
-        borderRadius: 'var(--radius-sm)',    // 12px max for business surfaces
+        borderRadius: 'var(--radius-sm)',
         overflow: 'hidden',
         background: BP.cardBg,
         border: BP.cardBorder,
-        // no boxShadow glow — elevation is expressed through border contrast only
       }}
     >
       <button
@@ -687,7 +717,7 @@ function OrderRow({ order: o, onDetails, onAction, compact = false }) {
             {!compact && o.items?.length > 0 && (
               <>
                 <span>·</span>
-                <span className="truncate" style={{ color: BP.textMid }}>{o.items.map(i => `${i.quantity}× ${i.name}`).join(', ')}</span>
+                <span>{o.items.length} poz.</span>
               </>
             )}
           </div>
@@ -697,7 +727,6 @@ function OrderRow({ order: o, onDetails, onAction, compact = false }) {
         </span>
       </button>
 
-      {/* Action strip — hairline divider, not elevation */}
       {!compact && (o.status === 'pending' || o.status === 'preparing' || o.status === 'completed') && (
         <div
           className="flex gap-2 px-3 pb-2.5"

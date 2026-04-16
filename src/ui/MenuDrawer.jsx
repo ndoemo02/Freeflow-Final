@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+﻿import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUI } from "../state/ui";
 import { useAuth } from "../state/auth";
 import { useCart } from "../state/CartContext";
 import { getUserRole } from "../lib/menuBuilder";
+import { canAccessWorkspacePanels } from "../lib/accessControl";
 import { ROUTES, FEATURE_FLAGS, isRouteEnabled } from "../app/routeConfig";
 
 const Icon = ({ name, size = 15 }) => {
@@ -150,8 +151,10 @@ export default function MenuDrawer() {
   const close = useUI((s) => s.closeDrawer);
   const openAuth = useUI((s) => s.openAuth);
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const { setIsOpen: setCartOpen, itemCount } = useCart();
   const userRole = getUserRole(user);
+  const hasWorkspaceAccess = canAccessWorkspacePanels(user);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && isOpen && close();
@@ -163,8 +166,8 @@ export default function MenuDrawer() {
   const roleLabel = userRole === "admin"
     ? "Administrator"
     : userRole === "business"
-      ? "Właściciel"
-      : "Użytkownik";
+      ? "Wlasciciel"
+      : "Uzytkownik";
 
   const handleDrawerHome = () => {
     console.log("[NAV] drawer: home");
@@ -272,26 +275,31 @@ export default function MenuDrawer() {
               <GroupLabel>Aplikacja</GroupLabel>
               <NavItem iconName="home" label="Home" route={ROUTES.HOME} onClick={handleDrawerHome} />
               <NavItem iconName="cart" label="Koszyk" onClick={handleDrawerCart} badge={itemCount} />
-              <NavItem iconName="history" label="Moje zamówienia" route={ROUTES.ORDERS} onClick={handleDrawerOrders} />
+              <NavItem iconName="history" label="Moje zamowienia" route={ROUTES.ORDERS} onClick={handleDrawerOrders} />
               <NavItem iconName="profile" label="Panel Klienta" route={ROUTES.PANEL_CLIENT} onClick={handleDrawerClientPanel} />
 
-              <Hairline />
+              {hasWorkspaceAccess && (
+                <>
+                  <Hairline />
 
-              <GroupLabel>Przestrzeń pracy</GroupLabel>
-              <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.BUSINESS_READONLY} requiresAuth />
-              <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
-              <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
+                  <GroupLabel>Przestrzen pracy</GroupLabel>
+                  <OpItem iconName="business" label="Panel Wlasciciela" route={ROUTES.PANEL_BUSINESS} requiresAuth />
+                  <OpItem iconName="kds" label="Zarzadzanie restauracja" route={ROUTES.PANEL_MANAGE} requiresAuth />
+                  <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
+                  <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
 
-              {userRole === "admin" && FEATURE_FLAGS.DEV_LABS && (
-                <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />
+                  {userRole === "admin" && FEATURE_FLAGS.DEV_LABS && (
+                    <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />
+                  )}
+
+                  <Hairline />
+                </>
               )}
-
-              <Hairline />
 
               <GroupLabel>Ustawienia</GroupLabel>
               <NavItem iconName="settings" label="Ustawienia" route={ROUTES.SETTINGS} />
               {isRouteEnabled("/order-history") && (
-                <NavItem iconName="history" label="Historia zamówień" route="/order-history" />
+                <NavItem iconName="history" label="Historia zamowien" route="/order-history" />
               )}
               {isRouteEnabled("/faq") && (
                 <NavItem iconName="faq" label="FAQ" route="/faq" />
@@ -302,7 +310,7 @@ export default function MenuDrawer() {
               {user?.id ? (
                 <NavItem
                   iconName="logout"
-                  label="Wyloguj się"
+                  label="Wyloguj sie"
                   isDanger
                   onClick={() => {
                     signOut();
@@ -312,7 +320,7 @@ export default function MenuDrawer() {
               ) : (
                 <NavItem
                   iconName="login"
-                  label="Zaloguj się"
+                  label="Zaloguj sie"
                   onClick={() => openAuth()}
                 />
               )}
@@ -352,4 +360,3 @@ export default function MenuDrawer() {
     </AnimatePresence>
   );
 }
-

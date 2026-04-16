@@ -86,6 +86,12 @@ export const useOrders = (options = {}) => {
   }, [restaurantId, userId]);
 
   const fetchOrders = useCallback(async () => {
+    if (!restaurantId && !userId) {
+      setError(null);
+      setLoading(false);
+      return [];
+    }
+
     setLoading(true);
     setError(null);
 
@@ -111,7 +117,7 @@ export const useOrders = (options = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [fetchFromApi, fetchFromSupabase, onOrderUpdate, onError]);
+  }, [fetchFromApi, fetchFromSupabase, onOrderUpdate, onError, restaurantId, userId]);
 
   const createOrder = useCallback(async (orderData) => {
     setLoading(true);

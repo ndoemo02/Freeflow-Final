@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
-import { AuthProvider } from "./state/auth";
+import { AuthProvider, useAuth } from "./state/auth";
 import { useUI } from "./state/ui";
 import { ToastProvider } from "./components/Toast";
 import { CartProvider } from "./state/CartContext";
 import Cart from "./components/Cart";
 import CustomerPanel from "./pages/Panel/CustomerPanel";
 import BusinessPanel from "./pages/Panel/BusinessPanel";
+import RestaurantManager from "./pages/Panel/RestaurantManager";
 import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
 import AdminPanel from "./pages/AdminPanel";
@@ -23,6 +24,7 @@ import BottomTabBar from "./components/BottomTabBar";
 import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
+import { canAccessWorkspacePanels } from "./lib/accessControl";
 
 // Operational surfaces suppress the consumer restaurant wallpaper (RestaurantBackground).
 // Rules use startsWith so sub-routes are covered automatically.
@@ -45,6 +47,23 @@ function OrdersRouteRedirect() {
     console.log("[NAV_FIX] orders route -> /panel/client?section=orders");
   }, []);
   return <Navigate to={`${ROUTES.PANEL_CLIENT}?section=orders`} replace />;
+}
+
+function WorkspaceAccessRoute({ children }: { children: JSX.Element }) {
+  const { user } = useAuth();
+
+  if (!user?.id) {
+    return <Navigate to={ROUTES.HOME} replace />;
+  }
+
+  if (!canAccessWorkspacePanels(user)) {
+    console.warn("[WORKSPACE_ACCESS_DENIED]", {
+      email: user?.email || null,
+    });
+    return <Navigate to={ROUTES.PANEL_CLIENT} replace />;
+  }
+
+  return children;
 }
 
 function AppContent() {
@@ -72,18 +91,55 @@ function AppContent() {
   }, []);
 
   return (
-    <div className="min-h-screen text-slate-100 relative overflow-hidden">
+    <div className="min-h-screen min-h-[100dvh] text-slate-100 relative overflow-x-hidden">
       {showWallpaper && <RestaurantBackground />}
 
       <main className="relative z-10">
         <Routes>
           <Route path={ROUTES.HOME} element={<Home />} />
           <Route path={ROUTES.UI_LAB} element={<UiLab />} />
-          <Route path={ROUTES.BUSINESS_READONLY} element={<BusinessClientPanel />} />
+          <Route
+            path={ROUTES.BUSINESS_READONLY}
+            element={(
+              <WorkspaceAccessRoute>
+                <Navigate to={ROUTES.PANEL_BUSINESS} replace />
+              </WorkspaceAccessRoute>
+            )}
+          />
           <Route path={ROUTES.LEGACY_PANEL_CUSTOMER} element={<CustomerPanel />} />
-          <Route path={ROUTES.PANEL_BUSINESS} element={<BusinessPanel />} />
-          <Route path={ROUTES.PANEL_BUSINESS_KDS} element={<BusinessPanelNew />} />
-          <Route path={ROUTES.PANEL_ADMIN} element={<AdminPanel />} />
+          <Route
+            path={ROUTES.PANEL_BUSINESS}
+            element={(
+              <WorkspaceAccessRoute>
+                <BusinessClientPanel />
+              </WorkspaceAccessRoute>
+            )}
+          />
+          <Route
+            path={ROUTES.PANEL_MANAGE}
+            element={(
+              <WorkspaceAccessRoute>
+                <RestaurantManager />
+              </WorkspaceAccessRoute>
+            )}
+          />
+          <Route path={ROUTES.PANEL_RESTAURANT_MANAGER} element={<Navigate to={ROUTES.PANEL_MANAGE} replace />} />
+          <Route
+            path={ROUTES.PANEL_BUSINESS_KDS}
+            element={(
+              <WorkspaceAccessRoute>
+                <BusinessPanelNew />
+              </WorkspaceAccessRoute>
+            )}
+          />
+          <Route
+            path={ROUTES.PANEL_ADMIN}
+            element={(
+              <WorkspaceAccessRoute>
+                <AdminPanel />
+              </WorkspaceAccessRoute>
+            )}
+          />
           <Route path={ROUTES.PANEL_DRIVER} element={<DriverPanel />} />
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />

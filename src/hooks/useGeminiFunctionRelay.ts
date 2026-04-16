@@ -20,11 +20,104 @@
  */
 
 import { useCallback, useRef } from 'react';
+import { useLiveUiSessionStore } from '../state/liveUiSession';
 
 const RELAY_TIMEOUT_MS = 9000;
+const GPS_CACHE_TTL_MS = 5 * 60 * 1000;
+const GPS_PERSIST_KEY = 'ff_last_gps';
+let _relayGpsCache: { lat: number; lng: number; ts: number } | null = null;
+
+function readPersistedGps(): { lat: number; lng: number; ts: number } | null {
+    try {
+        const raw = localStorage.getItem(GPS_PERSIST_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { lat?: unknown; lng?: unknown; ts?: unknown };
+        const lat = Number(parsed?.lat);
+        const lng = Number(parsed?.lng);
+        const ts = Number(parsed?.ts);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(ts)) return null;
+        return { lat, lng, ts };
+    } catch {
+        return null;
+    }
+}
+
+function persistGps(lat: number, lng: number): void {
+    try {
+        localStorage.setItem(GPS_PERSIST_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
+    } catch {
+        // noop
+    }
+}
 
 function safeJsonParse(raw: string) {
     try { return JSON.parse(raw); } catch { return null; }
+}
+
+function normalizeLoose(value: unknown): string {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function transcriptSuggestsNearbyWithoutExplicitLocation(transcript: string | undefined, location: unknown): boolean {
+    const t = normalizeLoose(transcript || '');
+    if (!t) return false;
+    const hasNearbyCue = /\b(w poblizu|poblizu|blisko|obok|nearby)\b/.test(t);
+    if (!hasNearbyCue) return false;
+
+    const loc = normalizeLoose(location || '');
+    if (!loc) return true;
+    return !t.includes(loc);
+}
+
+async function getRelayGPSCoords(): Promise<{ lat: number; lng: number } | null> {
+    if (_relayGpsCache && Date.now() - _relayGpsCache.ts < GPS_CACHE_TTL_MS) {
+        return { lat: _relayGpsCache.lat, lng: _relayGpsCache.lng };
+    }
+    const persisted = readPersistedGps();
+    if (persisted && Date.now() - persisted.ts < GPS_CACHE_TTL_MS) {
+        _relayGpsCache = persisted;
+        return { lat: persisted.lat, lng: persisted.lng };
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
+    return new Promise((resolve) => {
+        let settled = false;
+        const timeoutMs = 3500;
+        const tid = window.setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                resolve(null);
+            }
+        }, timeoutMs);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(tid);
+                const lat = Number(pos.coords.latitude);
+                const lng = Number(pos.coords.longitude);
+                if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                    _relayGpsCache = { lat, lng, ts: Date.now() };
+                    persistGps(lat, lng);
+                    resolve({ lat, lng });
+                    return;
+                }
+                resolve(null);
+            },
+            () => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(tid);
+                resolve(null);
+            },
+            { enableHighAccuracy: false, maximumAge: 120000, timeout: timeoutMs },
+        );
+    });
 }
 
 /** Shape of a Gemini FunctionCall part */
@@ -44,6 +137,10 @@ export interface GeminiFunctionResponse {
 export interface UseGeminiFunctionRelayOptions {
     /** Ref to the live WebSocket connection managed by useLiveEvents */
     wsRef: React.MutableRefObject<WebSocket | null>;
+    /** Optional provider for latest user transcript */
+    getLatestTranscript?: () => string | null;
+    /** Optional provider that returns and clears latest transcript */
+    takeLatestTranscript?: () => string | null;
 }
 
 export interface UseGeminiFunctionRelayResult {
@@ -63,6 +160,8 @@ export interface UseGeminiFunctionRelayResult {
 
 export function useGeminiFunctionRelay({
     wsRef,
+    getLatestTranscript,
+    takeLatestTranscript,
 }: UseGeminiFunctionRelayOptions): UseGeminiFunctionRelayResult {
     const pendingRef = useRef<Map<string, {
         resolve: (value: GeminiFunctionResponse) => void;
@@ -116,6 +215,7 @@ export function useGeminiFunctionRelay({
     }, [wsRef]);
 
     const relay = useCallback((functionCall: GeminiFunctionCall): Promise<GeminiFunctionResponse> => {
+        const liveUiStore = useLiveUiSessionStore.getState();
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             // ── DIAG: WS not ready ────────────────────────────────────
@@ -142,15 +242,61 @@ export function useGeminiFunctionRelay({
             }, RELAY_TIMEOUT_MS);
 
             pendingRef.current.set(requestId, { resolve, reject, timer });
+            const latestTranscript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
+            liveUiStore.setProcessing('Analizuje...', functionCall.name);
+            if (latestTranscript) {
+                liveUiStore.setTranscript('user', latestTranscript);
+            }
+            void (async () => {
+                const enrichedArgs: Record<string, unknown> = { ...(functionCall.args || {}) };
+                if (functionCall.name === 'find_nearby') {
+                    const nearbyGpsOnly = transcriptSuggestsNearbyWithoutExplicitLocation(latestTranscript, enrichedArgs.location);
+                    if (nearbyGpsOnly && Number.isFinite(Number(enrichedArgs?.lat)) && Number.isFinite(Number(enrichedArgs?.lng))) {
+                        delete enrichedArgs.location;
+                        console.log('[LIVE_GPS_ONLY] nearby cue detected, dropping model location in favor of GPS');
+                    }
 
-            ws.send(JSON.stringify({
-                type: 'tool_call',
-                tool: functionCall.name,
-                args: functionCall.args || {},
-                request_id: requestId,
-            }));
+                    const latPresent = Number.isFinite(Number(enrichedArgs?.lat));
+                    const lngPresent = Number.isFinite(Number(enrichedArgs?.lng));
+                    if (!latPresent || !lngPresent) {
+                        const coords = await getRelayGPSCoords();
+                        if (coords) {
+                            enrichedArgs.lat = coords.lat;
+                            enrichedArgs.lng = coords.lng;
+                            try {
+                                if (ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'session_init',
+                                        lat: coords.lat,
+                                        lng: coords.lng,
+                                    }));
+                                    console.log(`[LIVE_GPS_ENRICH] find_nearby lat=${coords.lat} lng=${coords.lng}`);
+                                }
+                            } catch {
+                                // noop
+                            }
+                        }
+                    }
+                }
+
+                if (ws.readyState !== WebSocket.OPEN) {
+                    clearTimeout(timer);
+                    pendingRef.current.delete(requestId);
+                    reject(new Error('ws_not_connected'));
+                    return;
+                }
+
+                ws.send(JSON.stringify({
+                    type: 'tool_call',
+                    tool: functionCall.name,
+                    args: enrichedArgs,
+                    request_id: requestId,
+                    transcript_final: latestTranscript,
+                    user_text: latestTranscript,
+                }));
+            })();
         });
-    }, [wsRef, ensureListener]);
+    }, [wsRef, ensureListener, getLatestTranscript, takeLatestTranscript]);
 
     const relayAll = useCallback(
         (functionCalls: GeminiFunctionCall[]) => Promise.all(functionCalls.map(relay)),

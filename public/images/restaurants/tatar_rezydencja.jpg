@@ -1,0 +1,1450 @@
+<!DOCTYPE html> <html itemscope itemtype="http://schema.org/WebPage" lang="pl" class=" md-desktop no-js"> <head> <meta charset="UTF-8"> <title>Rezydencja Luxury Hotel – Luksusowy Hotel, Restauracja i Konferencje na Śląsku</title> <meta property="og:title" content="Rezydencja Luxury Hotel – Luksusowy Hotel, Restauracja i Konferencje na Śląsku" /> <meta property="og:image" content="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1200x630/uploads/Ogrod/RLH_buynekMellow_1.jpg" /> <meta property="og:site_name" content="Rezydencja Luxury Hotel (Piekary Śląskie)" /> <meta name="description" content="Odkryj Rezydencję Luxury Hotel**** – wyjątkowy butikowy hotel, który łączy komfort, piękno i elegancję. Idealne miejsce na niezapomniany wypoczynek!" /> <meta property="og:description" content="Odkryj Rezydencję Luxury Hotel**** – wyjątkowy butikowy hotel, który łączy komfort, piękno i elegancję. Idealne miejsce na niezapomniany wypoczynek!" /> <meta property="og:type" content="hotel" /> <meta property="og:url" content="https://www.rezydencjahotel.pl/" /> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta name="google" content="notranslate"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <meta name="format-detection" content="telephone=no"> <script>
+!function(e,t,n,a,c,l,m,o,d,f,h,i){c[l]&&(d=e.createElement(t),d[n]=c[l],e[a]("head")[0].appendChild(d),e.documentElement.className+=" wf-cached"),function s(){for(d=e[a](t),f="",h=0;h<d.length;h++)i=d[h][n],i.match(m)&&(f+=i);f&&(c[l]="/**/"+f),setTimeout(s,o+=o)}()}(document,"style","innerHTML","getElementsByTagName",localStorage,"tk",/^@font|^\.tk-/,100);
+</script> <link rel="stylesheet" type="text/css" href="https://fonts.profitroom.com/playfairdisplay/websites/400-600-700.css"> <link rel="stylesheet" type="text/css" href="https://fonts.profitroom.com/roboto/websites/100-300-400-500-700-900.css"> <link rel="stylesheet" type="text/css" href="/dist/css/styles.css?eab32e9615dd237a1250ee4d5843d2eac29c6662" /> <link rel="icon" href="/favicon.ico" type="image/x-icon" /> <script src="//cdnjs.cloudflare.com/ajax/libs/js-cookie/2.2.1/js.cookie.min.js"></script> <script type="application/javascript">
+(function initGTMLayer(window) {
+window.dataLayer = window.dataLayer || [];
+var jsonCookiesPolicy = Cookies.get("_CookiesPolicyAccepted");
+if (typeof jsonCookiesPolicy !== "undefined") {
+var cookiesPolicy = JSON.parse(jsonCookiesPolicy);
+window.dataLayer.push({
+'cookieConsentCategory': cookiesPolicy
+});
+window.beAcceptedCookiePolicies = cookiesPolicy;
+}
+})(window);
+</script> <!-- Start VWO Async SmartCode --> <link rel="preconnect" href="https://dev.visualwebsiteoptimizer.com" /> <script type='text/javascript' id='vwoCode'>
+window._vwo_code || (function() {
+var account_id=793948,
+version=2.1,
+settings_tolerance=2000,
+hide_element='body',
+hide_element_style = 'opacity:0 !important;filter:alpha(opacity=0) !important;background:none !important;transition:none !important;',
+/* DO NOT EDIT BELOW THIS LINE */
+f=false,w=window,d=document,v=d.querySelector('#vwoCode'),cK='_vwo_'+account_id+'_settings',cc={};try{var c=JSON.parse(localStorage.getItem('_vwo_'+account_id+'_config'));cc=c&&typeof c==='object'?c:{}}catch(e){}var stT=cc.stT==='session'?w.sessionStorage:w.localStorage;code={nonce:v&&v.nonce,use_existing_jquery:function(){return typeof use_existing_jquery!=='undefined'?use_existing_jquery:undefined},library_tolerance:function(){return typeof library_tolerance!=='undefined'?library_tolerance:undefined},settings_tolerance:function(){return cc.sT||settings_tolerance},hide_element_style:function(){return'{'+(cc.hES||hide_element_style)+'}'},hide_element:function(){if(performance.getEntriesByName('first-contentful-paint')[0]){return''}return typeof cc.hE==='string'?cc.hE:hide_element},getVersion:function(){return version},finish:function(e){if(!f){f=true;var t=d.getElementById('_vis_opt_path_hides');if(t)t.parentNode.removeChild(t);if(e)(new Image).src='https://dev.visualwebsiteoptimizer.com/ee.gif?a='+account_id+e}},finished:function(){return f},addScript:function(e){var t=d.createElement('script');t.type='text/javascript';if(e.src){t.src=e.src}else{t.text=e.text}v&&t.setAttribute('nonce',v.nonce);d.getElementsByTagName('head')[0].appendChild(t)},load:function(e,t){var n=this.getSettings(),i=d.createElement('script'),r=this;t=t||{};if(n){i.textContent=n;d.getElementsByTagName('head')[0].appendChild(i);if(!w.VWO||VWO.caE){stT.removeItem(cK);r.load(e)}}else{var o=new XMLHttpRequest;o.open('GET',e,true);o.withCredentials=!t.dSC;o.responseType=t.responseType||'text';o.onload=function(){if(t.onloadCb){return t.onloadCb(o,e)}if(o.status===200||o.status===304){_vwo_code.addScript({text:o.responseText})}else{_vwo_code.finish('&e=loading_failure:'+e)}};o.onerror=function(){if(t.onerrorCb){return t.onerrorCb(e)}_vwo_code.finish('&e=loading_failure:'+e)};o.send()}},getSettings:function(){try{var e=stT.getItem(cK);if(!e){return}e=JSON.parse(e);if(Date.now()>e.e){stT.removeItem(cK);return}return e.s}catch(e){return}},init:function(){if(d.URL.indexOf('__vwo_disable__')>-1)return;var e=this.settings_tolerance();w._vwo_settings_timer=setTimeout(function(){_vwo_code.finish();stT.removeItem(cK)},e);var t;if(this.hide_element()!=='body'){t=d.createElement('style');var n=this.hide_element(),i=n?n+this.hide_element_style():'',r=d.getElementsByTagName('head')[0];t.setAttribute('id','_vis_opt_path_hides');v&&t.setAttribute('nonce',v.nonce);t.setAttribute('type','text/css');if(t.styleSheet)t.styleSheet.cssText=i;else t.appendChild(d.createTextNode(i));r.appendChild(t)}else{t=d.getElementsByTagName('head')[0];var i=d.createElement('div');i.style.cssText='z-index: 2147483647 !important;position: fixed !important;left: 0 !important;top: 0 !important;width: 100% !important;height: 100% !important;background: white !important;display: block !important;';i.setAttribute('id','_vis_opt_path_hides');i.classList.add('_vis_hide_layer');t.parentNode.insertBefore(i,t.nextSibling)}var o=window._vis_opt_url||d.URL,s='https://dev.visualwebsiteoptimizer.com/j.php?a='+account_id+'&u='+encodeURIComponent(o)+'&vn='+version;if(w.location.search.indexOf('_vwo_xhr')!==-1){this.addScript({src:s})}else{this.load(s+'&x=true')}}};w._vwo_code=code;code.init();})();
+</script> <!-- End VWO Async SmartCode --> <meta name="facebook-domain-verification" content="525t7bxb0iria6jt9jjc8xtldh4362" /> <!-- Google Tag Manager --> <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-5TXLLM');</script> <!-- End Google Tag Manager --></head> <body id="pl" class="site-body " data-version="eab32e9615dd237a1250ee4d5843d2eac29c6662" data-env="live" data-apikey="AIzaSyCMfNxSxe3kWGBf_6sWb3GOgTDaZK0ZCys"> <svg id="svg-sprites-hld"> <defs> <symbol id="svg-profitroom-logo-dark" viewBox="0 0 251.7 60.5"> <path fill="#111a21" d="M25.3,36.4L25.3,36.4c0-6.3-3.4-9.5-10.3-9.5H0l0,33.5h7V32.3l7.6,0c2.7,0,4.1,1.4,4.2,3.9c0,0,0,2.6,0,2.9
+c0,2.8-1.4,4.2-4.2,4.2l-4.7,0l0,5.5l5.1,0c6.8,0,10.3-3.2,10.3-9.5C25.3,38.9,25.3,36.4,25.3,36.4z"/> <path fill="#111a21" d="M210.9,60.5l0-17.4c0-4.3-2-6.5-6-6.5h-7.3c-1.2,0-2.2,0.2-3,0.6c-0.8-0.4-1.8-0.6-3-0.6h-13.3l0,23.9h6
+l0-15.8c0-2.2,0-3.3,2.9-3.3h2.1c2.3,0.2,2.3,1.3,2.3,3.3l0,15.8h6h0l0-15.8c0-2.1,0-3.2,2.3-3.3h2.1c2.9,0,2.9,1.1,2.9,3.3l0,15.8
+H210.9z"/> <path fill="#111a21" d="M37.2,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C34.3,42.4,34.3,41.3,37.2,41.4z"/> <path fill="#111a21" d="M119.7,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C116.8,42.4,116.9,41.3,119.7,41.4z"/> <path fill="#111a21" d="M76.9,31.7h3.6v-4.8H74c-4,0-6,2.1-6,6.4v27.1l6,0l0-19.1h5.3v-4.8H74V35C74,32.8,74,31.7,76.9,31.7z"/> <path fill="#111a21" d="M104.2,55.7c-2.9,0-2.9-1.1-2.9-3.3v-11l0,0l5.3,0v-4.8h-5.3v-4.8h-6l0,22.3c0,4.3,2,6.4,6,6.4h5.3v-4.8
+H104.2z"/> <path fill="#111a21" d="M124.1,48.5c0-8,3.9-12,11.8-12c7.9,	0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C128,60.5,124.1,56.5,124.1,48.5z
+M135.9,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C130.1,53.4,132,55.9,135.9,55.9z"/> <path fill="#111a21" d="M150.7,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C154.6,60.5,150.7,56.5,150.7,48.5z
+M162.5,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C156.7,53.4,158.6,55.9,162.5,55.9z"/> <path fill="#111a21" d="M41.4,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C45.4,60.5,41.5,56.5,41.4,48.5z
+M53.3,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C47.5,53.4,49.4,55.9,53.3,55.9z"/> <rect x="84.7" y="36.6" fill="#111a21" width="6.1" height="23.9"/> <rect x="84.7" y="26.9" fill="#111a21" width="6.1" height="4.8"/> <polygon fill="#97daf8" points="234.5,0 234.5,0 217.4,9.8 222.2,12.5 234.5,5.4 246.8,12.5 251.7,9.8 "/> <polygon fill="#00aeef" points="228.9,15.6 230.6,18.6 222.2,23.2 222.2,12.5 217.4,9.8 217.4,28.7 219.7,30 233,22.7 233,22.7
+233,22.7 234.8,25.6 240.9,15.7 240.9,15.7 240.9,15.6 "/> <polygon fill="#134a86" points="251.7,9.8 246.8,12.5 246.8,26 234.5,33.1 234.5,38.5 251.7,28.7 251.7,28.7 "/> <polygon fill="#00aeef" points="227.6,29.1 222.6,31.7 234.5,38.5 234.5,33.1 "/> </symbol> <symbol id="svg-profitroom-logo-light" viewBox="0 0 251.7 60.5"> <path fill="#fff" d="M25.3,36.4L25.3,36.4c0-6.3-3.4-9.5-10.3-9.5H0l0,33.5h7V32.3l7.6,0c2.7,0,4.1,1.4,4.2,3.9c0,0,0,2.6,0,2.9
+c0,2.8-1.4,4.2-4.2,4.2l-4.7,0l0,5.5l5.1,0c6.8,0,10.3-3.2,10.3-9.5C25.3,38.9,25.3,36.4,25.3,36.4z"/> <path fill="#fff" d="M210.9,60.5l0-17.4c0-4.3-2-6.5-6-6.5h-7.3c-1.2,0-2.2,0.2-3,0.6c-0.8-0.4-1.8-0.6-3-0.6h-13.3l0,23.9h6
+l0-15.8c0-2.2,0-3.3,2.9-3.3h2.1c2.3,0.2,2.3,1.3,2.3,3.3l0,15.8h6h0l0-15.8c0-2.1,0-3.2,2.3-3.3h2.1c2.9,0,2.9,1.1,2.9,3.3l0,15.8
+H210.9z"/> <path fill="#fff" d="M37.2,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C34.3,42.4,34.3,41.3,37.2,41.4z"/> <path fill="#fff" d="M119.7,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C116.8,42.4,116.9,41.3,119.7,41.4z"/> <path fill="#fff" d="M76.9,31.7h3.6v-4.8H74c-4,0-6,2.1-6,6.4v27.1l6,0l0-19.1h5.3v-4.8H74V35C74,32.8,74,31.7,76.9,31.7z"/> <path fill="#fff" d="M104.2,55.7c-2.9,0-2.9-1.1-2.9-3.3v-11l0,0l5.3,0v-4.8h-5.3v-4.8h-6l0,22.3c0,4.3,2,6.4,6,6.4h5.3v-4.8
+H104.2z"/> <path fill="#fff" d="M124.1,48.5c0-8,3.9-12,11.8-12c7.9, 0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C128,60.5,124.1,56.5,124.1,48.5z
+M135.9,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C130.1,53.4,132,55.9,135.9,55.9z"/> <path fill="#fff" d="M150.7,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C154.6,60.5,150.7,56.5,150.7,48.5z
+M162.5,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C156.7,53.4,158.6,55.9,162.5,55.9z"/> <path fill="#fff" d="M41.4,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C45.4,60.5,41.5,56.5,41.4,48.5z
+M53.3,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C47.5,53.4,49.4,55.9,53.3,55.9z"/> <rect x="84.7" y="36.6" fill="#fff" width="6.1" height="23.9"/> <rect x="84.7" y="26.9" fill="#fff" width="6.1" height="4.8"/> <polygon fill="#00aeef" points="234.5,0 234.5,0 217.4,9.8 222.2,12.5 234.5,5.4 246.8,12.5 251.7,9.8 "/> <polygon fill="#00aeef" points="228.9,15.6 230.6,18.6 222.2,23.2 222.2,12.5 217.4,9.8 217.4,28.7 219.7,30 233,22.7 233,22.7
+233,22.7 234.8,25.6 240.9,15.7 240.9,15.7 240.9,15.6 "/> <polygon fill="#00aeef" points="251.7,9.8 246.8,12.5 246.8,26 234.5,33.1 234.5,38.5 251.7,28.7 251.7,28.7 "/> <polygon fill="#00aeef" points="227.6,29.1 222.6,31.7 234.5,38.5 234.5,33.1 "/> </symbol> <symbol id="svg-profitroom-logo-dark-mono" viewBox="0 0 251.7 60.5"> <path fill="#222" d="M25.3,36.4L25.3,36.4c0-6.3-3.4-9.5-10.3-9.5H0l0,33.5h7V32.3l7.6,0c2.7,0,4.1,1.4,4.2,3.9c0,0,0,2.6,0,2.9
+c0,2.8-1.4,4.2-4.2,4.2l-4.7,0l0,5.5l5.1,0c6.8,0,10.3-3.2,10.3-9.5C25.3,38.9,25.3,36.4,25.3,36.4z"/> <path fill="#222" d="M210.9,60.5l0-17.4c0-4.3-2-6.5-6-6.5h-7.3c-1.2,0-2.2,0.2-3,0.6c-0.8-0.4-1.8-0.6-3-0.6h-13.3l0,23.9h6
+l0-15.8c0-2.2,0-3.3,2.9-3.3h2.1c2.3,0.2,2.3,1.3,2.3,3.3l0,15.8h6h0l0-15.8c0-2.1,0-3.2,2.3-3.3h2.1c2.9,0,2.9,1.1,2.9,3.3l0,15.8
+H210.9z"/> <path fill="#222" d="M37.2,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C34.3,42.4,34.3,41.3,37.2,41.4z"/> <path fill="#222" d="M119.7,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C116.8,42.4,116.9,41.3,119.7,41.4z"/> <path fill="#222" d="M76.9,31.7h3.6v-4.8H74c-4,0-6,2.1-6,6.4v27.1l6,0l0-19.1h5.3v-4.8H74V35C74,32.8,74,31.7,76.9,31.7z"/> <path fill="#222" d="M104.2,55.7c-2.9,0-2.9-1.1-2.9-3.3v-11l0,0l5.3,0v-4.8h-5.3v-4.8h-6l0,22.3c0,4.3,2,6.4,6,6.4h5.3v-4.8
+H104.2z"/> <path fill="#222" d="M124.1,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C128,60.5,124.1,56.5,124.1,48.5z
+M135.9,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C130.1,53.4,132,55.9,135.9,55.9z"/> <path fill="#222" d="M150.7,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C154.6,60.5,150.7,56.5,150.7,48.5z
+M162.5,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C156.7,53.4,158.6,55.9,162.5,55.9z"/> <path fill="#222" d="M41.4,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C45.4,60.5,41.5,56.5,41.4,48.5z
+M53.3,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C47.5,53.4,49.4,55.9,53.3,55.9z"/> <rect x="84.7" y="36.6" fill="#222" width="6.1" height="23.9"/> <rect x="84.7" y="26.9" fill="#222" width="6.1" height="4.8"/> <polygon fill="#222" points="234.5,0 234.5,0 217.4,9.8 222.2,12.5 234.5,5.4 246.8,12.5 251.7,9.8 "/> <polygon fill="#222" points="228.9,15.6 230.6,18.6 222.2,23.2 222.2,12.5 217.4,9.8 217.4,28.7 219.7,30 233,22.7 233,22.7
+233,22.7 234.8,25.6 240.9,15.7 240.9,15.7 240.9,15.6 "/> <polygon fill="#222" points="251.7,9.8 246.8,12.5 246.8,26 234.5,33.1 234.5,38.5 251.7,28.7 251.7,28.7 "/> <polygon fill="#222" points="227.6,29.1 222.6,31.7 234.5,38.5 234.5,33.1 "/> </symbol> <symbol id="svg-profitroom-logo-light-mono" viewBox="0 0 251.7 60.5"> <path fill="#777" d="M25.3,36.4L25.3,36.4c0-6.3-3.4-9.5-10.3-9.5H0l0,33.5h7V32.3l7.6,0c2.7,0,4.1,1.4,4.2,3.9c0,0,0,2.6,0,2.9
+c0,2.8-1.4,4.2-4.2,4.2l-4.7,0l0,5.5l5.1,0c6.8,0,10.3-3.2,10.3-9.5C25.3,38.9,25.3,36.4,25.3,36.4z"/> <path fill="#777" d="M210.9,60.5l0-17.4c0-4.3-2-6.5-6-6.5h-7.3c-1.2,0-2.2,0.2-3,0.6c-0.8-0.4-1.8-0.6-3-0.6h-13.3l0,23.9h6
+l0-15.8c0-2.2,0-3.3,2.9-3.3h2.1c2.3,0.2,2.3,1.3,2.3,3.3l0,15.8h6h0l0-15.8c0-2.1,0-3.2,2.3-3.3h2.1c2.9,0,2.9,1.1,2.9,3.3l0,15.8
+H210.9z"/> <path fill="#777" d="M37.2,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C34.3,42.4,34.3,41.3,37.2,41.4z"/> <path fill="#777" d="M119.7,41.4l2.2,0l0-4.8h-5.1c-4,0-6,2.2-6,6.5l0,17.5h6l0-15.8C116.8,42.4,116.9,41.3,119.7,41.4z"/> <path fill="#777" d="M76.9,31.7h3.6v-4.8H74c-4,0-6,2.1-6,6.4v27.1l6,0l0-19.1h5.3v-4.8H74V35C74,32.8,74,31.7,76.9,31.7z"/> <path fill="#777" d="M104.2,55.7c-2.9,0-2.9-1.1-2.9-3.3v-11l0,0l5.3,0v-4.8h-5.3v-4.8h-6l0,22.3c0,4.3,2,6.4,6,6.4h5.3v-4.8
+H104.2z"/> <path fill="#777" d="M124.1,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C128,60.5,124.1,56.5,124.1,48.5z
+M135.9,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C130.1,53.4,132,55.9,135.9,55.9z"/> <path fill="#777" d="M150.7,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C154.6,60.5,150.7,56.5,150.7,48.5z
+M162.5,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C156.7,53.4,158.6,55.9,162.5,55.9z"/> <path fill="#777" d="M41.4,48.5c0-8,3.9-12,11.8-12c7.9,0,11.8,4,11.8,12c0,8-3.9,12-11.8,12C45.4,60.5,41.5,56.5,41.4,48.5z
+M53.3,55.9c3.9,0,5.8-2.5,5.8-7.5c0-4.9-1.9-7.3-5.8-7.3c-3.9,0-5.8,2.4-5.8,7.3C47.5,53.4,49.4,55.9,53.3,55.9z"/> <rect x="84.7" y="36.6" fill="#777" width="6.1" height="23.9"/> <rect x="84.7" y="26.9" fill="#777" width="6.1" height="4.8"/> <polygon fill="#777" points="234.5,0 234.5,0 217.4,9.8 222.2,12.5 234.5,5.4 246.8,12.5 251.7,9.8 "/> <polygon fill="#777" points="228.9,15.6 230.6,18.6 222.2,23.2 222.2,12.5 217.4,9.8 217.4,28.7 219.7,30 233,22.7 233,22.7
+233,22.7 234.8,25.6 240.9,15.7 240.9,15.7 240.9,15.6 "/> <polygon fill="#777" points="251.7,9.8 246.8,12.5 246.8,26 234.5,33.1 234.5,38.5 251.7,28.7 251.7,28.7 "/> <polygon fill="#777" points="227.6,29.1 222.6,31.7 234.5,38.5 234.5,33.1 "/> </symbol> </defs> </svg> <header class="site-top js-site-top"> <div class="top-top"> <div class="nav-lang-dropdown"> <span class="nav-lang-current">pl <span class="icon icon-arrow-normal-down"></span></span> <div class="nav-lang-list"> <ul class="nav-lang-list-inner"> <li> <a href="https://www.rezydencjahotel.pl/de"> <span>de</span> </a> </li> <li> <a href="https://www.rezydencjahotel.pl/en"> <span>en</span> </a> </li> </ul> </div> </div> <ul class="socials socials--header socials--regular"> <li class="socials__item socials__item--regular"> <a href="https://www.facebook.com/RezydencjaLuxuryHotel/" title="Facebook" class="socials__link is-facebook socials__link--regular" target="_blank" > <span class="icon icon-facebook socials__icon--facebook socials__icon"></span> </a> </li> <li class="socials__item socials__item--regular"> <a href="https://pl.tripadvisor.com/Hotel_Review-g678231-d3528965-Reviews-Rezydencja_Luxury_Hotel-Piekary_Slaskie_Silesia_Province_Southern_Poland.html" title="TripAdvisor" class="socials__link is-tripadvisor socials__link--regular" target="_blank" > <span class="icon icon-tripadvisor socials__icon--tripadvisor socials__icon"></span> </a> </li> <li class="socials__item socials__item--regular"> <a href="https://www.instagram.com/rezydencja_luxury_hotel/?hl=pl" title="Instagram" class="socials__link is-instagram socials__link--regular" target="_blank" > <span class="icon icon-instagram socials__icon--instagram socials__icon"></span> </a> </li> </ul> <div class="nav-booknow-btn-hld"> <div class="call-btn btn site-btn site-btn--accent">
+zadzwoń                                <span> <span itemprop="telephone">+48 32 450 25 88</span> </span> </div> </div> </div> <div class="nav-primary-hld "> <div class="navbar-logo-hld" data-aos-delay="90" data-aos="fade-right"> <a href="/"> <img class="nav-logo" src="/img/Logo_rezydencja_new.png" alt="Rezydencja Luxury Hotel (Piekary Śląskie) Piekary Śląskie"> </a> </div> <ul class="nav-primary hide-on-1023"> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/o-hotelu" > <span class="nav-primary__text">Hotel</span> </a> <div class="nav-primary__subnav " data-nav-id="74573"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/o-nas" ><span class="nav-subnav__text">O nas</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/pokoje" ><span class="nav-subnav__text">Pokoje</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/strefa-relaksu" ><span class="nav-subnav__text">Strefa relaksu</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/oferty" ><span class="nav-subnav__text">Oferty Specjalne</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/sesje-zdjeciowe" ><span class="nav-subnav__text">Sesje zdjęciowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/oferta-dla-fotografow" ><span class="nav-subnav__text">Oferta dla fotografów</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/historia" ><span class="nav-subnav__text">Historia</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/blog" ><span class="nav-subnav__text">Blog</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/program-lojalnosciowy" ><span class="nav-subnav__text">Program Lojalnościowy </span></a> </li> </ul> </div> </li> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/biznes" > <span class="nav-primary__text">Biznes</span> </a> <div class="nav-primary__subnav " data-nav-id="73310"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/konferencje" ><span class="nav-subnav__text">Konferencje</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/sale-konferencyjne" ><span class="nav-subnav__text">Sale konferencyjne</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/realizacje-i-partnerzy" ><span class="nav-subnav__text">Realizacje i Partnerzy</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/gale-i-bankiety" ><span class="nav-subnav__text">Gale i Bankiety</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/szkolenia" ><span class="nav-subnav__text">Szkolenia</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wigilie-firmowe" ><span class="nav-subnav__text">Wigilie Firmowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/sniadania-biznesowe" ><span class="nav-subnav__text">Śniadania biznesowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/biznes/imprezy-plenerowe" ><span class="nav-subnav__text">Imprezy plenerowe</span></a> </li> </ul> </div> </li> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/restauracja" > <span class="nav-primary__text">Restauracja</span> </a> <div class="nav-primary__subnav " data-nav-id="74580"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/restauracja/o-restauracji" ><span class="nav-subnav__text">O restauracji</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/restauracja/menu-restauracyjne" ><span class="nav-subnav__text">Menu restauracyjne</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/restauracja/romantyczna-kolacja" ><span class="nav-subnav__text">Romantyczna kolacja</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/voucher" ><span class="nav-subnav__text">Voucher - podaruj prezent</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/restauracja/ogrod" ><span class="nav-subnav__text">Ogród</span></a> </li> </ul> </div> </li> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/przyjecia" > <span class="nav-primary__text">Przyjęcia</span> </a> <div class="nav-primary__subnav " data-nav-id="74582"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/przyjecia/oferta" ><span class="nav-subnav__text">Oferta</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/przyjecia/dla-dzieci" ><span class="nav-subnav__text">Dla dzieci</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/o-hotelu/wieczor-panienski" ><span class="nav-subnav__text">Wieczór panieński </span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/przyjecia/komunie" ><span class="nav-subnav__text">Komunie</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/18-ste-urodziny" ><span class="nav-subnav__text">18-ste urodziny</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/przyjecia/baby-shower" ><span class="nav-subnav__text">Baby Shower</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/przyjecia/studniowka" ><span class="nav-subnav__text">Studniówka</span></a> </li> </ul> </div> </li> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/wesela" > <span class="nav-primary__text">Wesela</span> </a> <div class="nav-primary__subnav " data-nav-id="73311"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/oferta-weselna" ><span class="nav-subnav__text">Oferta weselna</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/menu-weselne" ><span class="nav-subnav__text">Menu weselne</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/sale-weselne" ><span class="nav-subnav__text">Sale weselne </span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/zimowe-wesele" ><span class="nav-subnav__text">Wesele zimowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/sesja-narzeczenska" ><span class="nav-subnav__text">Sesja narzeczeńska</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/slub-w-plenerze" ><span class="nav-subnav__text">Ślub w plenerze</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/mistrz-cukiernictwa" ><span class="nav-subnav__text">Mistrz Cukiernictwa</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela-miedzynarodowe" ><span class="nav-subnav__text">Wesela Międzynarodowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/wolne-tegoroczne-terminy" ><span class="nav-subnav__text">Wolne tegoroczne terminy</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/atrakcje-dodatkowe" ><span class="nav-subnav__text">Atrakcje dodatkowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/promocje" ><span class="nav-subnav__text">Promocje</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/wesela/najlepsze-realizacje" ><span class="nav-subnav__text">Realizacje i Partnerzy </span></a> </li> </ul> </div> </li> <li class="nav-primary__item  "> <a class="nav-primary__link   " href="/o-hotelu/wydarzenia" > <span class="nav-primary__text">Wydarzenia</span> </a> </li> <li class="nav-primary__item  "> <a class="nav-primary__link   " href="/galerie" > <span class="nav-primary__text">Galerie</span> </a> </li> <li class="nav-primary__item  is-parent"> <a class="nav-primary__link   " href="/kontakt" > <span class="nav-primary__text">Kontakt</span> </a> <div class="nav-primary__subnav " data-nav-id="74686"> <ul class="nav-primary__subnav-inner"> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/kontakt/dane-kontaktowe" ><span class="nav-subnav__text">Dane kontaktowe</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/kontakt/personel" ><span class="nav-subnav__text">Personel</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/klauzula-informacyjna" ><span class="nav-subnav__text">Klauzula informacyjna</span></a> </li> <li class="nav-subnav__item  "> <a class="nav-subnav__link  " href="/regulamin-hotelu" ><span class="nav-subnav__text">Regulamin hotelu</span></a> </li> </ul> </div> </li> <li class="nav-primary__item  "> <a class="nav-primary__link   " href="/rezerwuj-pokoj" > <span class="nav-primary__text"><div class="site-btn site-btn--alt js-open-upper" >Rezerwuj pokój</div></span> </a> </li> </ul> </div> </header> <section id="banners" class="l-section l-section--full banners banners--medium"> <div class="slider-video"> <div class="slider-video__inner js-slider-video "> <div
+class="slider-video__background slide bg-cover"
+style="background-image: url('https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1920x730/uploads/Ogrod/RLH_buynekMellow_1.jpg')"
+> </div> <div
+class="slider-video__background slide bg-cover"
+style="background-image: url('https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1920x730/uploads/Pokoje/Rezydencja_Luxury_Hotel_SrebrnyApartament_salon.jpg')"
+> </div> <div
+class="slider-video__background slide bg-cover"
+data-poster="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1920x730/uploads/Pokoje/pokoje_1.jpg"> </div> <div
+class="slider-video__background slide bg-cover"
+data-poster="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1920x730/uploads/Ogrod/Rezydencja_Luxury_Hotel_Ogrd_Paw05.jpg"> </div> <div class="hero hero--medium"> <div class="hero__titles"> <h1 class="hero__title"> <span class="hero__main">Strona Główna</span> </h1> <h2 class="hero__subtitle"> <span>Luksusowy Hotel butikowy na Śląsku</span> </h2> </div> </div> </div> </div> <button class="scroll-down-button js-scroll-down"> <span class="text">Przewiń dalej</span> <span class="icon icon-arrow-bold-down"></span> </button> <div class="site-panel-hld site-panel--home"> <div class="site-panel "> <span class="site-panel-title">Zarezerwuj on-line</span> <div class="dates-hld"> <div class="date-hld date-hld--arrival js-checkin-box" data-month-name-1="sty" data-month-name-2="lut" data-month-name-3="mar" data-month-name-4="kwi" data-month-name-5="maj" data-month-name-6="cze" data-month-name-7="lip" data-month-name-8="sie" data-month-name-9="wrz" data-month-name-10="paź" data-month-name-11="lis" data-month-name-12="gru"> <span class="date-hld-title data-arrival">Przyjazd</span> <span class="date-hld__day-number date-hld__day-number--checkin js-date-hld__day-number">10</span> <div class="date-hld__month-year"> <span class="date-hld__month js-date-hld__month">kwi</span> <span class="date-hld__year js-date-hld__year">'26</span> </div> <input type="hidden" class="js-input-checkin" name="checkin" value="2026-04-10"> </div> <div class="date-hld date-hld--departure js-checkout-box"> <span class="date-hld-title data-departure">Wyjazd</span> <span class="date-hld__day-number js-date-hld__day-number">11</span> <div class="date-hld__month-year"> <span class="date-hld__month js-date-hld__month">kwi</span> <span class="date-hld__year js-date-hld__year">'26</span> </div> <input type="hidden" class="js-input-checkout" name="checkout" value="2026-04-11"> </div> </div> <div class="site-panel__promocode"> <span class="promocode_hidden">Wprowadź kod i uzyskaj<span class="discount">do -20%</span></span> <input type="text" name="promocode" class="js-input-promocode" placeholder="" value=""></input> </div> <button class="site-panel__voucher site-btn" onclick="Booking.OpenVoucher(); return false;">Kup Voucher</button> <button class="site-panel__btn site-btn site-btn--alt js-open-upper" data-checkin="" data-checkout="">sprawdź dostępność</button> </div> </div> <div class="home-news-widget"> <div class="home-news-items"> <div class="home-news-title">
+Wydarzenia            </div> <a class="news-item" href="/news/biznesowe-sniadanie-dla-posrednikow-nieruchomosci-all-97438"> <div class="news-image"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/133x92/uploads/sniadaniemocy_MagdalenaLibisz4_1.jpg " alt="Biznesowe Śniadanie dla Pośred..."> </div> <div class="news-title"><p>Biznesowe Śniadanie dla Pośredników Nieruchomości<span class="icon icon-arrows"></span></p></div> </a> <a class="news-item" href="/news/degustacje-weselne-w-rezydencji-luxury-hotel-all-95112"> <div class="news-image"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/133x92/uploads/primephoto_154.JPG " alt="Degustacje Weselne w Rezydencj..."> </div> <div class="news-title"><p>Degustacje Weselne w Rezydencji Luxury Hotel****<span class="icon icon-arrows"></span></p></div> </a> <a class="news-item" href="/news/biznesowe-sniadanie-dla-posrednikow-nieruchomosci-all-96936"> <div class="news-image"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/133x92/uploads/sniadaniemocy_MagdalenaLibisz4_1.jpg " alt="Biznesowe Śniadanie dla Pośred..."> </div> <div class="news-title"><p>Biznesowe Śniadanie dla Pośredników Nieruchomości<span class="icon icon-arrows"></span></p></div> </a> </div> <div class="show-news-widget js-hover-news-widget"> <span class="icon icon-arrow-bold-up"></span><span class="label">Wydarzenia</span> </div> </div> </section> <section class="l-section l-section--content-nav is-paddington"> <div class="l-wrapp content_nav"> <a href="/wesela/oferta-weselna" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Rezydencja_Luxury_Hotel_Wesele_SalaBalowa.jpg" alt="Wesela"> </div> <h3 class="title">Wesela</h3> <div class="desc"> <p>Wyjątkowe wesele w Sali Balowej Rezydencji Luxury Hotel****.
+Kr&oacute;lewska przestrzeń, art d&eacute;co, ogr&oacute;d i kuchnia autorska &ndash; dla par, kt&oacute;re chcą eleganckiego, dopracowanego przyjęcia od ceremonii po ostatni taniec.
+</p> </div> <span class="button">zobacz więcej</span> </a> <a href="/biznes/konferencje" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Sale/RezydencjaLuxuryHotel_SalaKrytsztaowa_D_05.jpg" alt="Konferencje"> </div> <h3 class="title">Konferencje</h3> <div class="desc"> <p>Konferencje i bankiety od kameralnych spotkań po eventy do ok. 300 os&oacute;b.
+Butikowy hotel blisko S1, Sala Balowa i sale szkoleniowe, autorskie menu oraz pełne wsparcie zespołu &ndash; od agendy po ostatni serwis.
+</p> </div> <span class="button">zobacz więcej</span> </a> <a href="https://www.rezydencjahotel.pl/babski-comber" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Babski_Comber/babski-comber-2026-min.jpg" alt="Babski Comber "> </div> <h3 class="title">Babski Comber </h3> <div class="desc"> <p>Huczna, kobieca impreza w Sali Balowej Rezydencji – dwa wieczory z królewskim serwisem, dopracowaną scenografią i muzyką, która nie pozwala zejść z parkietu. Babski Comber w wersji premium, tylko u nas.
+</p> </div> <span class="button">zobacz więcej</span> </a> <a href="/przyjecia/oferta" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Przyjecia_2019_Urodziny_Antka_Mai_Zosi/RezydencjaLuxuryHotel_Serwiskelnerski_12.jpg" alt="Imprezy okolicznościowe"> </div> <h3 class="title">Imprezy okolicznościowe</h3> <div class="desc"> <p>Kameralne chrzciny, komunie, jubileusze i gale rodzinne.>br>
+Eleganckie wnętrza, ogród i serwis na najwyższym poziomie sprawiają, że każda uroczystość w Rezydencji ma charakter małego, prywatnego święta.
+</p> </div> <span class="button">zobacz więcej</span> </a> <a href="https://www.rezydencjahotel.pl/restauracja/o-restauracji" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Ogrod/RLH_buynekMellow_17.jpg" alt="Restauracja z ogrodem"> </div> <h3 class="title">Restauracja z ogrodem</h3> <div class="desc"> <p>Restauracja Rezydencja &ndash; perła wśr&oacute;d śląskich restauracji z wyjściem do ogrodu.
+Sala w stylu art d&eacute;co, autorska kuchnia i taras z widokiem na zieleń tworzą idealne tło dla kolacji, bankiet&oacute;w i spotkań biznesowych.
+</p> </div> <span class="button">zobacz więcej</span> </a> <a href="https://www.rezydencjahotel.pl/przyjecia/dla-dzieci" class="content-nav__item js-doubletap"> <div class="img js-img-liquid"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Przyjecia_2019_Urodziny_Antka_Mai_Zosi/RezydencjaLuxuryHotel_UrodzonyAntkaZusiMai_19.jpg" alt="Przyjęcia dla dzieci"> </div> <h3 class="title">Przyjęcia dla dzieci</h3> <div class="desc"> <p>Eleganckie, ale rodzinne przyjęcia dla dzieci – chrzty, urodziny, komunie.
+Łączymy dopracowaną oprawę, menu dla najmłodszych i ogród, w którym dzieci mogą swobodnie się bawić, a dorośli spokojnie świętować.
+</p> </div> <span class="button">zobacz więcej</span> </a>
+li
+</div> </section> <section class="l-section l-section--offer-slider is-paddington"> <div class="l-wrapper"> <h2 class="t-section-title">Oferty specjalne</h2> <div class="item-slider item-slider--offers-slider js-item-slider"> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=225664"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/WWicMXGqj2Om0WBO.jpg" alt="EVENT NA ŚLĄSKU &ndash; NOCLEG W REZYDENCJI" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">EVENT NA ŚLĄSKU – NOCLEG W REZYDENCJI</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">579</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">BB – Śniadanie w cenie</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/stay-and-fly"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/201511231343310.Rezydencja_Luxury_Hotel_Samolot.jpg" alt="STAY AND FLY" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">STAY AND FLY</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">573</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">BB – Śniadanie w cenie</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=53701"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/yUckdJ3XP2SoNiF9.jpg" alt="Rodzina w podr&oacute;ży" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">Rodzina w podróży</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">739</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">HB – Śniadanie i obiadokolacja</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=144147"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/7DuLIVFBhsjZvOul.jpeg" alt="Romantyczny Pobyt dla Dwojga" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">Romantyczny Pobyt dla Dwojga</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">789</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">HB – Śniadanie i obiadokolacja</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=77766"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/5bhGK8sSPd2MAGfb.jpg" alt="RYTUAŁ KR&Oacute;LOWEJ RELAKSU" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">RYTUAŁ KRÓLOWEJ RELAKSU</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">673</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">HB – Śniadanie i obiadokolacja</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/pakiet-biznesmena"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/201604251542590.on_niebieki.jpg" alt="PAKIET BIZNESMENA" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">PAKIET BIZNESMENA</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">649</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">BB – Śniadanie w cenie</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/dluzszy-pobyt-nizsza-cena"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/HDFRRwfF9detG9rU.jpg" alt="Dłuższy pobyt, niższa cena" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">Dłuższy pobyt, niższa cena</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">358</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">min. 2  noce</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">BB – Śniadanie w cenie</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=254294"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/4JIrJZt2PHpi9Umw.jpg" alt="Biznes Junior Suite" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">Biznes Junior Suite</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">906</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">HB – Śniadanie i obiadokolacja</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/szczegoly-pakietu?OfferID=249346"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/HAgYVJH2yvGbDAMs.jpg" alt="STAY PASS" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">STAY PASS</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">385</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">Pełne wyżywienie</span> </li> </ul> </div> </a> <a class="booklet booklet--offer-slider" href="/oferty/kuszaco-niska-cena"> <div class="booklet__img-hld"> <div class="booklet__img js-img-lazyliquid"> <img class="js-img-lazy" src="/img/blank.gif" data-src="https://r.profitroom.com/rezydencjahotel/images/offers/thumbs/340x200/sFYsQaQsxiTkzD6a.jpg" alt="Kusząco Niska Cena" /> </div> </div> <div class="booklet__text-hld"> <div class="booklet__title-hld"> <h3 class="booklet__title t-item-title">Kusząco Niska Cena</h3> </div> <div class="booklet__price-hld"> <span class="from">od</span> <span class="price"> <span class="PriceValue"><span class="CurrencyPrefix"></span><span class="CurrencyValue">305</span><span class="CurrencySeparator"></span><span class="CurrencyDecimals"></span><span class="CurrencySuffix">zł</span></span></span> <span class="rate">/noc</span> </div> <ul class="booklet__special-info"> <li> <span class="icon icon-clock"></span> <span class="label">dowolna dł. pobytu</span> </li> <li> <span class="icon icon-meal"></span> <span class="label">Bez wyżywienia</span> </li> </ul> </div> </a> </div> </div> </section> <section class="l-section l-section--two-photos is-paddington"> <div class="l-wrapper"> <div class="l-wrapper--left"> <div class="t-section-titles"> <h2 class="t-section-title">O hotelu</h2> </div> <div class="t-content"> <p>Rezydencja Luxury Hotel**** to butikowy, czterogwiazdkowy hotel na Śląsku – miejsce niepowtarzalne, łączące komfort, piękno i dobry smak.</p> <p>To idealna przestrzeń do organizacji spotkań biznesowych na najwyższym szczeblu, konferencji, bankietów oraz prywatnych przyjęć.</p> <p>Jako jeden z nielicznych hoteli w Polsce Rezydencja uzyskała ocenę 9,6/10 za czystość – na podstawie opinii Gości na portalu booking.com</p> </div> <div class="c-content-btn-hld"> <a href="/o-hotelu" target="_self"  > <span class="site-btn site-btn--bordered more" data-scroll-to="" data-scroll-px="-150px">Szczegóły</span> </a> </div> </div> <div class="l-wrapper--right"> <div class="c-images-hld"> <div class="c-img-hld c-img-hld--narrow js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/325x410/uploads/hotel_1.jpg" alt="O hotelu"> </div> <div class="c-img-hld c-img-hld--wide js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/600x410/uploads/Ogrod/galeria_1.jpg" alt="O hotelu"> </div> </div> <div class="bookingcom-hld"> <img src="/img/booking.svg" class="booking" alt="booking.com"> <span class="mark">9.6</span> <span class="on">/10</span> </div> </div> </div> </section> <section class="l-section l-section--content-with-gallery is-paddington"> <div class="l-wrapper"> <div class="l-wrapper--left"> <div class="c-images-hld js-single-gallery-slider"> <div class="c-img-hld js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/600x410/uploads/pokoje_1.jpg" alt="Butikowe pokoje"> </div> <div class="c-img-hld js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/600x410/uploads/Pokoje/Rezydencja_Luxury_Hotel_SrebrnyApartament_salon.jpg" alt="Butikowe pokoje"> </div> <div class="c-img-hld js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/600x410/uploads/Pokoje/Rezydencja_Luxury_Hotel_Junior_Suite_krem.jpg" alt="Butikowe pokoje"> </div> <div class="c-img-hld js-img-liquid"> <img class="js-img-lazy" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/600x410/uploads/Pokoje/Rezydencja_Luxury_Hotel_Pokj_Niebieski_04.jpg" alt="Butikowe pokoje"> </div> </div> </div> <div class="l-wrapper--right"> <div class="t-section-content"> <div class="t-section-titles"> <h2 class="t-section-title">Butikowe pokoje</h2> </div> <div class="t-content"> <p>Przygotowaliśmy dla Państwa 68 komfortowo urządzonych pokoi, w tym 2 eleganckie apartamenty.</p> <p>Wszystkie pokoje to starannie zaaranżowane wnętrza, harmonijnie łączące stylowe meble, szlachetne tkaniny, blask kryształowych żyrandoli i nowoczesne wyposażenie.</p> <p>To przestrzeń, w kt&oacute;rej goście konferencji, wesel i pobyt&oacute;w prywatnych mogą odpocząć w ciszy, zachowując standard butikowego hotelu premium.</p> </div> <div class="c-content-btn-hld"> <a href="/pokoje" target="_self"  > <span class="site-btn site-btn--bordered more" data-scroll-to="" data-scroll-px="-150px">Szczegóły</span> </a> </div> </div> </div> </div> </section> <section class="l-section l-section--slider-testimonials is-paddington"> <div class="l-wrapper"> <h2 class="t-section-title t-section-title--smaller">Opinie klientów</h2> <div class="a-slider-testimonials js-slider-testimonials"> <div class="a-slider-testimonials__item"> <span class="t-content">Jeden z najładniejszych hoteli w jakich byłam, czysto, cicho. Bardzo ładny pok&oacute;j z widokiem na wspaniały ogr&oacute;d. Chętnie skorzystam ponownie.
+</span> <span class="author">
+Aneta,                                                                            Booking.com                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Genialna kuchnia. Mogłoby się wydawać, że przykładowo w temacie hamburgera nic nie może już zaskoczyć, a tu totalne objawienie. Hotel sprawia, że po ciężkim dniu rano budzisz się wypoczęty.
+</span> <span class="author">
+Grzegorz,                                                                            Booking.com                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">W całym hotelu pięknie pachnie. Otoczenie bajkowe mimo bliskości trasy. Okna wygłuszone. Jedzenie w restauracji przepyszne. Do śniadania można wypić nawet szampana.
+</span> <span class="author">
+Agnieszka,                                                                            Booking.com                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Hotel z unikalnym charakterem. Komfortowe pokoje z bardzo wygodnymi ł&oacute;żkami. Świetne intymne spa z dostepnymi szlafrokami i wodą mineralną, można sie spokojnie zrelaksować.
+</span> <span class="author">
+Kosmowski.H,                                                                            Booking.com                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Przemiła atmosfera wystr&oacute;j wnętrz sprawił, że poczułam się wyjątkowo kobieco. Idealne miejsce na spędzenie miło czasu i wyciszenie się. Na pewno wr&oacute;cę by znaleźć się w innym ...</span> <span class="author">
+Gosia,                                                                            Booking.com                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Sala Balowa to klasa sama w sobie, a ogr&oacute;d przecudny. Wszyscy nasi goście weselni oczarowani miejscem i obsługą, kt&oacute;ra była perfekcyjna i czuwała nad całą uroczystością.&nbsp;
+</span> <span class="author">
+Agnieszka,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Dziękujemy za przepyszne jedzenie, niebiańskie słodkości Pana Ryszarda, uśmiech i zaangażowanie całej obsługi nie tylko podczas przyjęcia, ale i następnego&nbsp;dnia, życzliwe podejście nie ...</span> <span class="author">
+Olga & Bartłomiej,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Klasa, styl i elegancja to słowa, kt&oacute;re idealnie oddają klimat naszego wesela, wyczarowanego w Rezydencji. Jako Panna Młoda, kt&oacute;ra jest perfekcjonistką, byłam zadowolona z każdego detalu.
+</span> <span class="author">
+Katarzyna,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Najcudowniejszy dzień mojego życia - wesele. W tym miejscu nie mogło się nie udać! Jedzenie najlepsze na świecie, obsługa nienaganna. Pan Tomasz Antolak - najlepszy doradca na świecie.
+</span> <span class="author">
+Paulina,                                                                            Booking                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Dzięki fantastycznej obsłudze, szczeg&oacute;lne podziękowania dla Pani Eweliny za w pełni profesjonalną organizację, urodzinki mojej małej c&oacute;rki spędziliśmy w wyśmienitej atmosferze! ...</span> <span class="author">
+Kasia,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Z całego serca polecam ❤️ piękniejszych zaślubin w ogrodzie i wesela nie jestem w stanie sobie wyobrazić. Wszystko na ekstremalnie wysokim poziomie. Dziękujemy, jeszcze wr&oacute;cimy ❤️
+...</span> <span class="author">
+Ewelina ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Świetny Sylwester profesjonalnie zorganizowana impreza, naprawdę gorąco polecam wszystkim ten kameralny obiekt, polecam genialną kuchnię. Wr&oacute;cimy za rok.
+</span> <span class="author">
+Sebastian i Edyta,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Piękne miejsce na romantyczną kolacje, wesele, uroczystość rodziną. Jedne z najlepszych na G&oacute;rnym Śląsku. Jedzenie bardzo dobre, pięknie podane, miła obsługa.
+</span> <span class="author">
+Gosia,                                                                            Tripadvisor                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Przypadkiem trafiłem do tej restauracji i zaskoczenie przemiłe. Przepyszny krem z selera z białą czekoladą, pyszna rolada śląska z modra kapustą. Oj dawno takich dobrych potraw nie jadłem. Polecam!
+...</span> <span class="author">
+Nikodem,                                                                            Tripadvisor                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Restauracje Rezydencja polecam wszystkim, kt&oacute;rzy cenią sobie smak i elegancje. Jedno z najlepszych miejsc na kulinarnej mapie Śląska. Jedzenie warte jest swojej ceny.
+</span> <span class="author">
+Mr Lubon,                                                                            Tripadvisor                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Najlepsza restauracja w jakiej do tej pory byłam! Przepyszne jedzenie, wspaniała obsługa. Pozdrawiam Pana Piotra - świetnego kelnera, kt&oacute;ry swoją pracę wykonuje na 100%!
+</span> <span class="author">
+Pani Beata,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Bardzo się cieszymy, że to właśnie u Państwa mogliśmy ugościć naszą rodzinę i przyjaci&oacute;ł, a uśmiech i zachwyt naszej c&oacute;rki był dla nas potwierdzeniem doskonałego wyboru miejsca ...</span> <span class="author">
+Agnieszka G.,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">
+Z czystym sumieniem mogę polecić to miejsce wszystkim, kt&oacute;rzy szukają wyjątkowego miejsca na przyjęcie Komunijne. Rezydencja spełniła nasze oczekiwania, tort szwardzwaldzki Mistrza - ...</span> <span class="author">
+Aga Giri ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">W ubiegłą niedziele miałam przyjemność organizować przyjęcie komunijne c&oacute;rki - wszystko wypadło doskonale. Przyjęcie zorganizowane na najwyższym poziomie i z największą starannością.</span> <span class="author">
+Katarzyna Niesyn ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">10/10 Baby Shower kt&oacute;re zostało zorganizowane bezzwłocznie, jak tylko można było w tym trudnym czasie! bezcenna pomoc Pani Eweliny - nic nie stanowiło problemu /nawet dodatkowe rzeczy wymyślone ...</span> <span class="author">
+Sonia Chmiel,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Organizacja Komunii Świętej była znakomita. Najwieksze uznanie dla kelnera Andrzeja, kt&oacute;ry swoją empaita i pomysłowością uratował samopoczucie gwiazdy tego dnia.
+</span> <span class="author">
+Joanna Markiewiczrok,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Uroczystość komunijna pięknie przygotowana, obsługa wzorowa, jedzenie bardzo smaczne, a tort przygotowany zgodnie z życzeniem piękny i r&oacute;wnie smaczny. Szczerze polecam!
+</span> <span class="author">
+Joanna Mizgała,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Bardzo polecam do organizowania imprezy studni&oacute;wkowej! Piękna sala robiąca niezapomniany klimat oraz obsługa kt&oacute;ra zawsze pomagała niezależnie od godziny! Profesjonalizm, dostępność ...</span> <span class="author">
+Daniel Matys ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Bardzo elegancki wystr&oacute;j, szybka obsługa i przepyszne jedzenie - to wszystko sprawiło, że nasza studni&oacute;wka była niezapomnianym przeżyciem!
+</span> <span class="author">
+Karolina Konieczna,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Idealne miejsce na studni&oacute;wkę, przepiękny wystr&oacute;j, wyśmienite jedzenie oraz bardzo miła obsługa to wszystko sprawiło ze wiecz&oacute;r był niezapomniany!&nbsp;
+</span> <span class="author">
+Natalia Markiewicz ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Najlepsze miejsce do organizacji studni&oacute;wki, bardzo dobre jedzenie i piękny wystr&oacute;j. Kelnerzy z klasą i kulturą.&nbsp;
+</span> <span class="author">
+Weronika Kowolik ,                                                                            Facebook                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Postanowiłem zorganizować nasze zaręczyny w Restauracji Rezydencji i był to bardzo dobry wyb&oacute;r. Jedzenie jak zawsze przepyszne (byliśmy tutaj już niejednokrotnie i zawsze bardzo nam smakuje).</span> <span class="author">
+Adrian,                                                                            Zaręczyny                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Dziękuje&nbsp; za zorganizowanie romantycznej kolacji z okazji rocznicy ślubu wszystko idealnie zrobione: piękna sala kryształowa oraz jedzenie pyszne.
+Na pewno jeszcze nieraz odwiedzimy I będę ...</span> <span class="author">
+Monika,                                                                            Rocznica                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Wyb&oacute;r tego miejsca na kolację walentynkową to strzał w 10! Żona zachwycona wystrojem, kuchnią oraz muzyką na żywo. Jestem mile zaskoczony istnieniem takiego miejsca na śląsku. Pomimo tego ...</span> <span class="author">
+Krzysztof i Weronika,                                                                            Walentynki                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Wyśmienita kuchnia, profesjonalna obsługa, piękne wnętrza i obłędny wystr&oacute;j to wszystko sprawia, że jest to miejsce idealne na romantyczną randkę.&nbsp; Na pewno będziemy tu wracać! Kto ...</span> <span class="author">
+Daga,                                                                            Randka                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Bardzo miła obsługa. Smaczne jedzenie. Ładny ogr&oacute;d. Ciekawy plac zabaw dla dzieci
+&nbsp;
+</span> <span class="author">
+Adam,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Wspaniałe miejsce. Piękny ogr&oacute;d. Wykwintna restauracja
+&nbsp;
+</span> <span class="author">
+Sylwia,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Ładny ogr&oacute;d, ciekawy wystr&oacute;j wnętrz, znakomite śniadania. Polecam.
+</span> <span class="author">
+Arleta,                                                                            Google                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Zimowa sceneria i eleganckie wnętrza Rezydencji stworzyły magiczną atmosferę. Każdy detal był perfekcyjnie dopracowany dzięki wspaniałej obsłudze.
+</span> <span class="author">
+Angela & David,                                                                            styczeń, 2024                                            </span> </div> <div class="a-slider-testimonials__item"> <span class="t-content">Nasze zimowe wesele w Rezydencji Luxury Hotel było jak z bajki! Profesjonalna obsługa i przepyszne jedzenie sprawiły, że ten dzień był niezapomniany.
+</span> <span class="author">
+Monika & Piotr,                                                                            Grudzień, 2023                                            </span> </div> </div> </div> </section> <section class="l-section l-section--slider-gallery is-paddington"> <div class="l-wrapper"> <div class="a-slider-gallery js-slider-gallery js-lightgallery-holder"> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/Konferencje/Rezydencja_Luxury_Hotel_Garden_Party.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/Konferencje/Rezydencja_Luxury_Hotel_Garden_Party.jpg" alt="Galeria" /> </a> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/Dzieci/RezydencjaLuxuryHotel_ChrzcinyFranka01.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/Dzieci/RezydencjaLuxuryHotel_ChrzcinyFranka01.jpg" alt="Galeria" /> </a> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/Ogrod/Rezydencja-Luxury-Hotel-Ogrod_05.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/Ogrod/Rezydencja-Luxury-Hotel-Ogrod_05.jpg" alt="Galeria" /> </a> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/galeria_1.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/galeria_1.jpg" alt="Galeria" /> </a> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/Konferencje/Rezydencja_Luxury_Hotel_Garden_Party_09.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/Konferencje/Rezydencja_Luxury_Hotel_Garden_Party_09.jpg" alt="Galeria" /> </a> <a href="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/0x900/uploads/Ogrod/Rezydencja-Luxury-Hotel-Ogrod_mini_01.jpg" class="slider-gallery__item js-content-slide js-img-liquid js-lightgallery-img" data-gallery-group="all"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/200x150/uploads/Ogrod/Rezydencja-Luxury-Hotel-Ogrod_mini_01.jpg" alt="Galeria" /> </a> </div> </div> </section> <section class="l-section l-section--localization is-paddington"> <div class="t-section-titles"> <h2 class="t-section-title">Lokalizacja</h2> <h3 class="t-section-subtitle">Rezydencja Luxury Hotel ****</h3> </div> <div class="localization-info-bar"> <div class="col col--left t-content"> <p><a href="mailto:recepcja@rezydencjahotel.pl">E-mail: recepcja@rezydencjahotel.pl </a></p> </div> <div class="col col--center t-content"> <p>Tel.: <a href="tel:+48324502588" title="">+48 32 450 25 88</a></p> </div> <div class="col col--right t-content"> <p>Adres: Ul. Stara 1, 41-940 Piekary Śląskie</p> </div> </div> <div class="map-hld"> <div id="map-canvas" data-geo-lat="50.361384" data-geo-lng="18.936858"></div> <div class="search-directions-hld js-map-directions-hld"> <form class="search-directions js-map-directions-form" action="#"> <input type="text" class="search-directions__input js-map-directions-input" placeholder="Wpisz np. Poznań"> <button type="submit" class="search-directions__submit site-btn">Wyznacz trasę</button> </form> <button class="search-directions__show-directions site-btn js-map-directions-show">Pokaż wskazówki</button> </div> <div class="search-directions-route-hld js-map-directions-route-hld"> <span class="search-directions-route-close js-map-directions-hide"> <span class="icon icon-close"></span> </span> <div id="js-map-directions-route" class="search-directions-route"></div> </div> <div class="map-zoom"> <div class="map-zoom__button map-zoom__button--in js-map-zoom-change" data-zoom-change="in"><span class="icon icon-plus"></span></div> <div class="map-zoom__button map-zoom__button--out js-map-zoom-change" data-zoom-change="out"><span class="icon icon-minus"></span></div> </div> </div> </section> <footer class="site-footer"> <div class="site-footer__above"> <div class="l-wrapper"> <div class="awards-hld js-slider-awards"> <a href="https://pl.tripadvisor.com/TravelersChoice-Hotels" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Warstwa1181.jpg" alt="Customer Choice"> <span class="award-name">Customer Choice</span> </a> <a href="#" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Warstwa-1182.jpg" alt="tripadvisor choice"> <span class="award-name">tripadvisor choice</span> </a> <a href="http://www.newsweek.pl/styl-zycia/101-miejsc-magdy-gessler-wychodzi-przewodnik-popularnej-restauratorki,artykuly,343245,1.html" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Warstwa-1183.jpg" alt="Najwyższa jakość"> <span class="award-name">Najwyższa jakość</span> </a> <a href="http://www.hotelroku.com/308/h,81,c,1/kategorie/hotele_biznesowe/rezydencja_luxury_hotel.html" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Prostokt1149kopia.jpg" alt="Hotel Roku 2015"> <span class="award-name">Hotel Roku 2015</span> </a> <a href="#" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Prostokt1149.jpg" alt="Hotel Roku 2015"> <span class="award-name">Hotel Roku 2015</span> </a> <a href="http://poland100bestrestaurants.pl/artykul/NAJLEPSZA+RESTAURACJA+W+POLSCE+2015+-+STREFA+WARSZAWA-398" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/Warstwa1187.jpg" alt="Grand Award 3 Widelce Plus w Poland 100 Best Restaurants 2016"> <span class="award-name">Grand Award 3 Widelce Plus w Poland 100 Best Restaurants 2016</span> </a> <a href="https://bajkapanakleksa.pl/wsparli-nas/" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/bajka-pana-kleksa.png" alt="Bajka Pana Kleksa"> <span class="award-name">Bajka Pana Kleksa</span> </a> <a href="https://opera-slaska.pl/" class="award-item" rel="nofollow"> <img src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/Nagrody/logooperaslaska.jpg" alt="wspieramy Operę Śląską"> <span class="award-name">wspieramy Operę Śląską</span> </a> </div> </div> </div> <div class="site-footer--eu-hld"> <div class="eu-logo"></div> <div class="EU-2"> <p><a href="https://www.rezydencjahotel.pl/projekty/dofinansowanie-kpo" title=""><img data-size-type="" data-source="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/KPO_barwyRP_NextGenerationEU_poziom_zestawienie_podstawowe_RGB_1.png" src="https://u.profitroom.com/2017.rezydencjahotel.pl/uploads/thumbs/0x350/KPO_barwyRP_NextGenerationEU_poziom_zestawienie_podstawowe_RGB_1.png" /></a></p> <p>&nbsp;</p> </div> </div> <div class="site-footer__top"> <div class="l-wrapper l-wrapper--full"> <div class="site-footer__row site-footer__row--to-top"> <div class="site-footer__col site-footer__col--left"> <address class="footer-address" itemscope itemtype="http://schema.org/Hotel"> <span class="t-footer-title" itemprop="name">Rezydencja Luxury Hotel</span> <span class="footer-address__line"> <span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"> <span itemprop="streetAddress">ul. Stara 1</span><br> <span itemprop="postalCode">41-940</span> <span itemprop="addressLocality">Piekary Śląskie</span> </span> </span> <span class="footer-address__line"> <a class="no-hover" href="tel:+48324502588"> <span itemprop="telephone">Tel. +48 32 450 25 88</span> </a><br> <a href="mailto:recepcja@rezydencjahotel.pl" title="recepcja@rezydencjahotel.pl"> <span itemprop="email">e-mail: recepcja@rezydencjahotel.pl</span> </a> </span> <img itemprop="image" class="u-sr-only u-sr-only-img" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1200x630/uploads/Ogrod/RLH_buynekMellow_1.jpg" width="1200" height="630" alt="Rezydencja Luxury Hotel" /> <span class="u-sr-only" itemprop="geo" itemscope itemtype="http://schema.org/GeoCoordinates"> <meta itemprop="latitude" content="50.361384" /> <meta itemprop="longitude" content="18.936858" /> </span> <span itemprop="priceRange" class="u-sr-only" content="373.00 PLN"></span> </address> </div> <div class="site-footer__col site-footer__col--center"> <a href="/" class="footer-logo"> <img src="/img/sygnet_footer.png" width="90"> </a> </div> <div class="site-footer__col site-footer__col--right"> <div class="footer__ezine-hld"> <span class="footer-ezine__title t-footer-title">Newsletter</span> <div class="footer-ezine__form-hld js-override-form" data-button-html="<span class='icon icon-mail'></span>"> <form  action="https://www.rezydencjahotel.pl/pl/forms/submit/Ezine/ajax" method="POST" id="form-1409-fixed" class="ajax form-horizontal Ezine"><fieldset><legend></legend><input type="hidden" name="csrf_token" value="qFKNoUrig947r5W2BGtbPzNZ13qGehD1p4LNeUw3"><div class="form-msg"><div class="alert alert-success form-success" style="display: none;"><ul></ul></div> <div class="alert alert-danger form-error" style="display: none;"><ul></ul></div></div><input name="hidden" id="hidden_1" type="hidden" value=""><script>document.getElementById('hidden_1').value='x2026-04-05'.substr(1);</script><div  class="Email form-group required-control"><div class="col-md-6"><input  type="email" name="Email" id="Ezine-Email" value="" required="required" class=" email  form-control required-control" placeholder="Adres email" /><p class="help-block"></p></div></div><input  type="hidden" name="IsEzine" id="Ezine-IsEzine" value="1" /><div class="form-group buttons"><button type="submit" class="btn btn-primary">Wyślij</button></div></fieldset></form><script type="text/javascript">
+var swal_locale = 'pl';
+var swal_messages = {
+success: 'Wiadomość wysłana',
+error: 'Błąd',
+confirm: 'Potwierdź',
+cancel: 'Anuluj',
+policy_title: 'Potwierdź wysłanie formularza',
+additionally_agree: 'Możesz dodatkowo wyrazić zgodę na:',
+contact_form_info: 'Poprzez kliknięcie przycisku "Potwierdź" przekazujesz nam swoje dane w celu realizacji zapytania (art. 6 ust. 1 lit. f RODO).',
+newsletter_form_info: 'Poprzez kliknięcie przycisku "Potwierdź" wyrażasz zgodę na przetwarzanie Twoich danych osobowych w celu wysyłki ofert oraz informacji o aktualnych wydarzeniach i promocjach na podany adres e-mail.',
+phone_accept: 'kontakt w celach marketingowych na podany numer telefonu',
+phone_accept_tooltip: 'Wyrażam zgodę na przetwarzanie mojego numeru telefonu w celu otrzymywania wiadomości marketingowych. Zostałem/łam poinformowany/na, iż tak wyrażoną zgodę mogę wycofać w dowolnym momencie, a jej wycofanie jest równie łatwe jak jej wyrażenie.',
+policy_admin: 'Administratorem jest:<br />S.C. BEATA ZDEBEL, ARKADIUSZ ZDEBEL, DACJUSZ ZDEBEL, Piekary Śląskie 41-940, ul. Stara 1',
+newsletter_accept: 'otrzymywanie ofert oraz informacji o aktualnych wydarzeniach  i promocjach na podany adres e-mail,',
+newsletter_accept_tooltip: 'Wyrażam zgodę na przetwarzanie mojego adresu e-mail w celu otrzymywania wiadomości marketingowych. Zostałem/łam poinformowany/na, iż tak wyrażoną zgodę mogę wycofać w dowolnym momencie a jej wycofanie jest równie łatwe jak jej wyrażenie.',
+required_fields: 'zaznacz wszystkie wymagane pola',
+more: 'więcej',
+privacy_policy: 'Polityka prywatności',
+privacy_policy_link: 'https://www.rezydencjahotel.pl/pl/privacy',
+}
+</script> </div> </div> <div class="site-footer__social-hld"> <span class="social-intro">Znajdź nas na:</span> <ul class="socials socials--footer socials--regular"> <li class="socials__item socials__item--regular"> <a href="https://www.facebook.com/RezydencjaLuxuryHotel/" title="Facebook" class="socials__link is-facebook socials__link--regular" target="_blank" > <span class="icon icon-facebook socials__icon--facebook socials__icon"></span> </a> </li> <li class="socials__item socials__item--regular"> <a href="https://pl.tripadvisor.com/Hotel_Review-g678231-d3528965-Reviews-Rezydencja_Luxury_Hotel-Piekary_Slaskie_Silesia_Province_Southern_Poland.html" title="TripAdvisor" class="socials__link is-tripadvisor socials__link--regular" target="_blank" > <span class="icon icon-tripadvisor socials__icon--tripadvisor socials__icon"></span> </a> </li> <li class="socials__item socials__item--regular"> <a href="https://www.instagram.com/rezydencja_luxury_hotel/?hl=pl" title="Instagram" class="socials__link is-instagram socials__link--regular" target="_blank" > <span class="icon icon-instagram socials__icon--instagram socials__icon"></span> </a> </li> </ul> </div> </div> </div> </div> </div> <div class="site-footer__bottom"> <div class="l-wrapper l-wrapper--full"> <div class="site-footer__row"> <div class="site-footer__col site-footer__col--left"> <span class="site-footer__copyright footer-address__line" itemscope itemtype="http://schema.org/Hotel"> <span>2026 &copy; Copyright</span> <span> <span itemprop="name">Rezydencja Luxury Hotel</span> <span itemprop="address" itemscope itemtype="http://schema.org/PostalAddress"> <span itemprop="addressLocality">Piekary Śląskie</span> </span> </span> <span itemprop="telephone" class="u-sr-only">+48 32 450 25 88</span> <img itemprop="image" class="u-sr-only" src="https://u.profitroom.com/2017.rezydencjahotel.pl/thumb/1200x630/uploads/Ogrod/RLH_buynekMellow_1.jpg" width="1200" height="630" alt="Rezydencja Luxury Hotel" /> <span itemprop="priceRange" class="u-sr-only" content="373.00 PLN"></span> </span> </div> <div class="site-footer__col site-footer__col--center"> <span class="go-to-top icon icon-arrow-normal-up js-go-to-top"></span> </div> <div class="site-footer__col site-footer__col--right"> <div class="created-hld"> <span class="created-hld__text">Wykonanie:</span> <a class="created-hld__link" href="//profitroom.pl" target="_blank"> <span>PROFITROOM</span> <svg class="profitroom-logo-mono"> <use xlink:href="#svg-profitroom-logo-light-mono"></use> </svg> <svg class="profitroom-logo"> <use xlink:href="#svg-profitroom-logo-light"></use> </svg> </a> </div> </div> </div> </div> </div> </footer> <div class="mobile-nav js-mobile-side-nav"> <button class="mobile-nav__close js-mobile-btn"> <span class="close-icon"></span> </button> <nav class="mobile-nav__inner"> <ul class="mobile-nav__ul"> <li class="mobile-nav__li is-active no-subnav"> <a
+href="/"
+class="mobile-nav__link "
+title="Strona Gł&oacute;wna"                 > <span>Strona Główna</span> </a> </li> <li class="mobile-nav__li  "> <a
+href="/o-hotelu"
+class="mobile-nav__link "
+title="Hotel"                 > <span>Hotel</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/o-hotelu/o-nas" title="O nas" ><span>O nas</span></a> </li> <li> <a class=" " href="/o-hotelu/pokoje" title="Pokoje" ><span>Pokoje</span></a> </li> <li> <a class=" " href="/o-hotelu/strefa-relaksu" title="Strefa relaksu" ><span>Strefa relaksu</span></a> </li> <li> <a class=" " href="/oferty" title="Oferty Specjalne" ><span>Oferty Specjalne</span></a> </li> <li> <a class=" " href="/sesje-zdjeciowe" title="Sesje zdjęciowe" ><span>Sesje zdjęciowe</span></a> </li> <li> <a class=" " href="/oferta-dla-fotografow" title="Oferta dla fotograf&oacute;w" ><span>Oferta dla fotografów</span></a> </li> <li> <a class=" " href="/o-hotelu/historia" title="Historia" ><span>Historia</span></a> </li> <li> <a class=" " href="/o-hotelu/blog" title="Blog" ><span>Blog</span></a> </li> <li> <a class=" " href="/o-hotelu/program-lojalnosciowy" title="Program Lojalnościowy " ><span>Program Lojalnościowy </span></a> </li> </ul> </li> <li class="mobile-nav__li  "> <a
+href="/biznes"
+class="mobile-nav__link "
+title="Biznes"                 > <span>Biznes</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/biznes/konferencje" title="Konferencje" ><span>Konferencje</span></a> </li> <li> <a class=" " href="/biznes/sale-konferencyjne" title="Sale konferencyjne" ><span>Sale konferencyjne</span></a> </li> <li> <a class=" " href="/biznes/realizacje-i-partnerzy" title="Realizacje i Partnerzy" ><span>Realizacje i Partnerzy</span></a> </li> <li> <a class=" " href="/biznes/gale-i-bankiety" title="Gale i Bankiety" ><span>Gale i Bankiety</span></a> </li> <li> <a class=" " href="/biznes/szkolenia" title="Szkolenia" ><span>Szkolenia</span></a> </li> <li> <a class=" " href="/wigilie-firmowe" title="Wigilie Firmowe" ><span>Wigilie Firmowe</span></a> </li> <li> <a class=" " href="/biznes/sniadania-biznesowe" title="Śniadania biznesowe" ><span>Śniadania biznesowe</span></a> </li> <li> <a class=" " href="/biznes/imprezy-plenerowe" title="Imprezy plenerowe" ><span>Imprezy plenerowe</span></a> </li> </ul> </li> <li class="mobile-nav__li  "> <a
+href="/restauracja"
+class="mobile-nav__link "
+title="Restauracja"                 > <span>Restauracja</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/restauracja/o-restauracji" title="O restauracji" ><span>O restauracji</span></a> </li> <li> <a class=" " href="/restauracja/menu-restauracyjne" title="Menu restauracyjne" ><span>Menu restauracyjne</span></a> </li> <li> <a class=" " href="/restauracja/romantyczna-kolacja" title="Romantyczna kolacja" ><span>Romantyczna kolacja</span></a> </li> <li> <a class=" " href="/voucher" title="Voucher - podaruj prezent" ><span>Voucher - podaruj prezent</span></a> </li> <li> <a class=" " href="/restauracja/ogrod" title="Ogr&oacute;d" ><span>Ogród</span></a> </li> </ul> </li> <li class="mobile-nav__li  "> <a
+href="/przyjecia"
+class="mobile-nav__link "
+title="Przyjęcia"                 > <span>Przyjęcia</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/przyjecia/oferta" title="Oferta" ><span>Oferta</span></a> </li> <li> <a class=" " href="/przyjecia/dla-dzieci" title="Dla dzieci" ><span>Dla dzieci</span></a> </li> <li> <a class=" " href="/o-hotelu/wieczor-panienski" title="Wiecz&oacute;r panieński " ><span>Wieczór panieński </span></a> </li> <li> <a class=" " href="/przyjecia/komunie" title="Komunie" ><span>Komunie</span></a> </li> <li> <a class=" " href="/18-ste-urodziny" title="18-ste urodziny" ><span>18-ste urodziny</span></a> </li> <li> <a class=" " href="/przyjecia/baby-shower" title="Baby Shower" ><span>Baby Shower</span></a> </li> <li> <a class=" " href="/przyjecia/studniowka" title="Studni&oacute;wka" ><span>Studniówka</span></a> </li> </ul> </li> <li class="mobile-nav__li  "> <a
+href="/wesela"
+class="mobile-nav__link "
+title="Wesela"                 > <span>Wesela</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/wesela/oferta-weselna" title="Oferta weselna" ><span>Oferta weselna</span></a> </li> <li> <a class=" " href="/wesela/menu-weselne" title="Menu weselne" ><span>Menu weselne</span></a> </li> <li> <a class=" " href="/wesela/sale-weselne" title="Sale weselne " ><span>Sale weselne </span></a> </li> <li> <a class=" " href="/wesela/zimowe-wesele" title="Wesele zimowe" ><span>Wesele zimowe</span></a> </li> <li> <a class=" " href="/sesja-narzeczenska" title="Sesja narzeczeńska" ><span>Sesja narzeczeńska</span></a> </li> <li> <a class=" " href="/wesela/slub-w-plenerze" title="Ślub w plenerze" ><span>Ślub w plenerze</span></a> </li> <li> <a class=" " href="/wesela/mistrz-cukiernictwa" title="Mistrz Cukiernictwa" ><span>Mistrz Cukiernictwa</span></a> </li> <li> <a class=" " href="/wesela-miedzynarodowe" title="Wesela Międzynarodowe" ><span>Wesela Międzynarodowe</span></a> </li> <li> <a class=" " href="/wesela/wolne-tegoroczne-terminy" title="Wolne tegoroczne terminy" ><span>Wolne tegoroczne terminy</span></a> </li> <li> <a class=" " href="/wesela/atrakcje-dodatkowe" title="Atrakcje dodatkowe" ><span>Atrakcje dodatkowe</span></a> </li> <li> <a class=" " href="/wesela/promocje" title="Promocje" ><span>Promocje</span></a> </li> <li> <a class=" " href="/wesela/najlepsze-realizacje" title="Realizacje i Partnerzy " ><span>Realizacje i Partnerzy </span></a> </li> </ul> </li> <li class="mobile-nav__li  no-subnav"> <a
+href="/o-hotelu/wydarzenia"
+class="mobile-nav__link "
+title="Wydarzenia"                 > <span>Wydarzenia</span> </a> </li> <li class="mobile-nav__li  no-subnav"> <a
+href="/galerie"
+class="mobile-nav__link "
+title="Galerie"                 > <span>Galerie</span> </a> </li> <li class="mobile-nav__li  "> <a
+href="/kontakt"
+class="mobile-nav__link "
+title="Kontakt"                 > <span>Kontakt</span> </a> <span class="icon icon-arrow-bold-down js-show-mobile-subnav"></span> <ul> <li> <a class=" " href="/kontakt/dane-kontaktowe" title="Dane kontaktowe" ><span>Dane kontaktowe</span></a> </li> <li> <a class=" " href="/kontakt/personel" title="Personel" ><span>Personel</span></a> </li> <li> <a class=" " href="/klauzula-informacyjna" title="Klauzula informacyjna" ><span>Klauzula informacyjna</span></a> </li> <li> <a class=" " href="/regulamin-hotelu" title="Regulamin hotelu" ><span>Regulamin hotelu</span></a> </li> </ul> </li> <li class="mobile-nav__li  no-subnav"> <a
+href="/rezerwuj-pokoj"
+class="mobile-nav__link "
+title="&lt;div class=&quot;site-btn site-btn--alt js-open-upper&quot; &gt;Rezerwuj pok&oacute;j&lt;/div&gt;"                 > <span><div class="site-btn site-btn--alt js-open-upper" >Rezerwuj pokój</div></span> </a> </li> </ul> <ul class="mobile-nav-lang"> <li> <span>pl</span> </li> <li> <a href="https://www.rezydencjahotel.pl/de">de</a> </li> <li> <a href="https://www.rezydencjahotel.pl/en">en</a> </li> </ul> </nav> </div> <div class="mobile-spacer"></div> <nav class="mobile-fixed-nav"> <div class="mobile-fixed-nav__inner"> <a href="tel:+48324502588" title="zadzwoń" class="mobile-fixed-nav__item mobile-fixed-nav__item--1-4 mobile-fixed-nav__item--call"> <span class="icon icon-phone"></span> <span class="label">zadzwoń</span> </a> <a href="//maps.google.com/?q=50.361384,18.936858" title="mapa" class="mobile-fixed-nav__item mobile-fixed-nav__item--1-4 mobile-fixed-nav__item--location" target="_blank"> <span class="icon icon-location"></span> <span class="label">mapa</span> </a> <button onclick="Booking.Open();" class="mobile-fixed-nav__item mobile-fixed-nav__item--1-4 mobile-fixed-nav__item--book"> <span class="icon icon-bell"></span> <span class="label">rezerwuj</span> </button> <button class="mobile-fixed-nav__item mobile-fixed-nav__item--1-4 mobile-fixed-nav__item--menu js-mobile-btn"> <span class="close-icon close-icon--mobile-bottom"></span> <span class="menu-icon menu-icon--mobile-bottom"> <span></span> <span></span> <span></span> </span> <span class="label" data-hover="zamknij" data-normal="menu">menu</span> </button> </div> </nav> <div class="mobile-shadow-background js-mobile-shadow-background"></div> <div class="site-modal" id="site-modal"> <div class="site-modal__bg js-modal-hide"></div> <div class="site-modal__box site-modal__box--ezine js-modal" data-modal-name="ezine"> <button class="site-modal__close js-modal-hide"> <span class="icon icon-close"></span> </button> <span class="site-modal__title">Newsletter</span> <div class="site-modal__form-text"> <p>Zapisz się na nasz newsletter.</p> </div> </div> </div> <script>
+var locale = 'pl';
+var locale_messages = {
+'sweet_success': "Sukces",
+'sweet_error': "Błąd",
+'error': "Wystąpił błąd w trakcie przetwarzania formularza.",
+'error_timeout': "Przekroczono limit czasu przetwarzania."
+};
+var mapRes = {
+route_placeholder: 'Wpisz np. Poznań',
+route_find: 'cms.route_find',
+route_error: 'Nie znaleziono trasy.',
+popup_origin: 'cms.popup_origin',
+popup_destination: 'cms.popup_destination',
+popup_time: 'cms.popup_time',
+popup_distance: 'cms.popup_distance',
+popup_toggleDirections: 'cms.popup_toggle_directions',
+popup_google: 'cms.popup_google'
+};
+</script> <script src="/dist/js/app.js?eab32e9615dd237a1250ee4d5843d2eac29c6662"></script> <script async src="https://www.rezydencjahotel.pl/pl/assets/get/forms.min.js"></script> <script defer type="text/javascript" id="ubs" src="//open.upperbooking.com/js/Booking.min.js?locale=pl&amp;site=rezydencjahotel&amp;v=98680707315e99ccd3908270e0f913d9" ></script> <script>
+$(function() {
+setTimeout(function() {
+head.load(
+"/bower_components/langstart/dist/lang-start2.css",
+"/bower_components/langstart/dist/lang-start2.js",
+function() {
+Lang.init({
+siteLang: 'pl',
+baseLang: 'en',
+langs: [{"key":"pl","url":"https:\/\/www.rezydencjahotel.pl","name":"Polish"},{"key":"de","url":"https:\/\/www.rezydencjahotel.pl\/de","name":"German"},{"key":"en","url":"https:\/\/www.rezydencjahotel.pl\/en","name":"English"}]                      });
+}
+);
+}, 4500);
+});
+</script> <script type="text/javascript">
+var cookiesTrackManager = (function initCookiesPolicy(window) {
+var linkToCookiesTracking = 'https://www.rezydencjahotel.pl/pl/get-tracking-scripts/130291',
+currentAcceptedCategories = [];
+function appendToBody(html)
+{
+if(!html) return;
+var body = document.querySelector('body'),
+range = document.createRange();
+range.setStart(body, 0);
+body.appendChild(
+range.createContextualFragment(html)
+)
+}
+function onResponse(req)
+{
+if(req.scripts) {
+appendToBody(req.scripts);
+}
+}
+function loadCookiesPolicy()
+{
+var req = new XMLHttpRequest();
+req.onreadystatechange = function() {
+if (req.readyState === 4) {
+onResponse(JSON.parse(req.response));
+}
+};
+var acceptedCategories = JSON.parse(JSON.stringify(currentAcceptedCategories));
+var indexNecessary = acceptedCategories.indexOf('necessary');
+if(indexNecessary !== -1) {
+acceptedCategories.splice(indexNecessary, 1);
+}
+req.open('GET', linkToCookiesTracking + '?consents=' + acceptedCategories.join(','), true);
+req.send(null);
+}
+function _initCookiesPolicy()
+{
+window.addEventListener('success-save-cookies', function (e) {
+if(e.detail && e.detail.acceptedCategories) {
+currentAcceptedCategories = e.detail.acceptedCategories;
+}
+loadCookiesPolicy();
+});
+}
+setTimeout(function() {
+_initCookiesPolicy();
+},0);
+})(window);
+</script> <!-- CSS for Cookie Banner and Modal/Iframe --> <style>
+#cookieWarningNew {
+z-index: 9999999999;
+position: fixed;
+bottom: 0 !important;
+right: 0 !important;
+left: 0 !important;
+top: 0 !important;
+width: 100% !important;
+height: 100% !important;
+opacity: 1 !important;
+background: rgba(0, 0, 0, .5) !important;
+color: #141416 !important;
+text-shadow: none;
+line-height: 20px;
+padding: 0 !important;
+display: none;
+}
+#cookieWarningNew p {
+margin: 0 !important;
+color: #141416 !important;
+}
+#cookieWarningNew.preview {
+display: block;
+}
+#cookieWarningNew .cookieContent {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+margin: 0 auto;
+padding: 25px 40px 35px !important;
+font-size: 0;
+width: 670px;
+background-color: #fff;
+color: #141416 !important;
+box-sizing: border-box;
+}
+#cookieWarningNew .cookieContent .cookieButton {
+display: flex;
+justify-content: end;
+align-items: center;
+width: 100%;
+}
+#cookieWarningNew .cookieContent .cookieButton:hover {
+background: 0 !important;
+text-decoration: none !important;
+}
+#cookieWarningNew .cookieContent .cookieButton .cookieBtn {
+cursor: pointer !important;
+}
+#cookieWarningNew .cookieContent .cookieButton .cookieBtn .content { 
+width: 100% !important;
+padding: 0 !important;
+margin: 0 !important;
+border: 0 !important;
+} 
+#cookieWarningNew .cookieContent .cookieContentItem.description {
+width: 100% !important;
+font-size: 13px;
+line-height: 1.7;
+text-align: left;
+}
+#cookieWarningNew .cookieContent .cookieContentItem.description p {
+line-height: 1.7 !important;
+margin-top: 13px !important;
+margin-bottom: 13px !important;
+}
+#cookieWarningNew .cookieContent .cookieContentItem.actions {
+margin-top: 30px;
+}
+#cookieWarningNew .cookieContent .cookiePrivacy {
+text-decoration: underline;
+color: inherit;
+}
+#cookieWarningNew .cookieContent .cookieButton .cookieBtn {
+display: inline-flex;
+}
+.cookieBtn:first-child {
+margin-right: 30px;
+}
+.cookieBtn:nth-child(2) {
+margin-right: 20px;
+}
+.cookieBtn--underline {
+position: relative;
+background: transparent;
+border: 0;
+padding: 0 0 7px 0;
+overflow: hidden;
+color: #141416 !important;
+}
+.cookieBtn--underline:hover::after {
+transform: translatex(0);
+}
+button.cookieBtn--underline:hover {
+background: transparent !important;
+}
+.cookieBtn--underline::before {
+content: '';
+position: absolute;
+right: 0;
+bottom: 0;
+left: 0;
+z-index: -1;
+background: #938767;
+height: 1px;
+opacity: 0.8;
+}
+.cookieBtn--underline::after {
+content: '';
+position: absolute;
+right: 0;
+bottom: 0;
+left: 0;
+z-index: 1;
+background: #938767;
+height: 1px;
+transform: translatex(-100%);
+transition: transform 0.3s;
+}
+.cookieBtn--underline .content {
+font-size: 13px;
+font-weight: 600;
+color: #141416 !important;
+}
+.cookieBtn--outline {
+background: transparent;
+padding: 15px 35px;
+border: 1px solid #938767;
+border-radius: 2px;
+color: #141416 !important;
+transition: all 0.3s;
+}
+.cookieBtn--outline:hover {
+background-color: #938767;
+color: #fff !important;
+}
+.cookieBtn--outline .content {
+font-size: 13px;
+font-weight: 600;
+}
+.cookieBtn--normal {
+position: relative;
+background: transparent;
+background: #938767;
+padding: 15px 35px;
+border: 1px solid #938767;
+border-radius: 2px;
+color: #fff !important;
+transition: all 0.3s;
+}
+.cookieBtn--normal .content {
+font-size: 13px;
+font-weight: 600;
+}
+.cookieBtn--normal::before {
+content: '';
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+}
+.cookieBtn--normal::after {
+content: '';
+position: absolute;
+top: 0;
+right: 0;
+bottom: 0;
+left: 0;
+background: #fff;
+opacity: 0;
+transition: opacity 0.3s;
+}
+.cookieBtn--normal .content {
+position: relative;
+z-index: 1;
+color: #fff !important;
+}
+.cookieBtn--normal:hover::after {
+opacity: 0.2;
+}
+#cookieWarningNew .manageCookieSettings,
+#cookieWarningNew .cookiePolicies {
+display: inline-block;
+background-color: transparent;
+color: #141416;
+font-weight: 400;
+text-decoration: underline;
+cursor: pointer;
+}
+@media (max-width: 767px) {
+#cookieWarningNew .cookieContent {
+width: 90%;
+}
+}
+@media (max-width: 550px) {
+#cookieWarningNew .cookieContent .cookieButton {
+flex-direction: column;
+justify-content: center;
+}
+.cookieBtn {
+margin-bottom: 10px !important;
+margin-right: 0 !important;
+}
+}
+@media (max-width: 480px) {
+#cookieWarningNew .cookieContent {
+padding: 15px 15px 15px !important;
+}
+#cookieWarningNew .cookieContent .cookieContentItem.actions {
+margin-top: 10px;
+}
+.cookieBtn--outline {
+padding: 8px 35px;
+}
+.cookieBtn--normal {
+padding: 8px 35px;
+}
+}
+@media (max-width: 395px) {
+#cookieWarningNew .cookieContent .cookieContentItem.description {
+font-size: 13px;
+line-height: 1.4;
+}
+#cookieWarningNew .cookieContent .cookieContentItem.description p {
+margin-top: 3px !important;
+margin-bottom: 10px !important;
+}
+#cookieWarningNew .cookieContent {
+width: 97%;
+}
+#cookieWarningNew .cookieContent {
+padding: 7px 8px 0 !important;
+}
+.cookieBtn--outline {
+padding: 5px 35px;
+}
+.cookieBtn--normal {
+padding: 5px 35px;
+}
+}
+@media (max-width: 550px) and (max-height: 650px) {
+#cookieWarningNew .cookieContent {
+overflow-y: scroll;
+height: 95%;
+}
+}
+#cookie-privacy-iframe {
+z-index: 99999999999;
+position: fixed;
+top: 20px;
+bottom: 20px;
+left: 5%;
+right: 5%;
+overflow: auto;
+display: none;
+box-shadow: 0 0 0 5px rgba(0, 0, 0, .5);
+background-color: rgba(0, 0, 0, .5);
+}
+#cookie-privacy-iframe .cookie-privacy-iframe-inner {
+width: 100%;
+height: 100%;
+position: relative;
+}
+#cookie-privacy-iframe iframe {
+border: 0;
+background-color: #fff;
+width: 100%;
+height: 100%;
+overflow: auto;
+}
+.custom-close-popup {
+position: absolute;
+opacity: 0.8;
+cursor: pointer;
+width: 39px;
+height: 39px;
+background: #000;
+color: #FFF;
+text-align: center;
+right: 0;
+top: 0;
+}
+.custom-close-popup:hover {
+opacity: 1;
+}
+.custom-close-popup:after,
+.custom-close-popup:before {
+content: '';
+position: absolute;
+top: 6px;
+right: 18px;
+width: 3px;
+height: 26px;
+border-radius: 2px;
+background-color: #fff;
+}
+.custom-close-popup:before {
+transform: rotate(45deg);
+}
+.custom-close-popup:after {
+transform: rotate(-45deg);
+}
+</style> <!-- CSS for Cookie Modal with settings --> <style>
+body.active-cookies-modal {
+overflow: hidden;
+padding-right: 15px;
+}
+body.site-body.active-cookies-modal #cookieWarningNew {
+right: 15px;
+width: auto !important;
+}
+body.site-body.active-cookies-modal .site-top {
+right: 15px;
+width: auto;
+}
+.cookies-modal, .cookies-modal *, .cookies-modal *:before, .cookies-modal *:after {
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+}
+.cookies-modal {
+will-change: visibility, opacity;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+overflow-y: auto;
+overflow-x: hidden;
+z-index: 20000000;
+visibility: hidden;
+opacity: 0;
+transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+background-color: rgba(0, 0, 0, 0.4);
+}
+.cookies-modal__table {
+width: 100%;
+height: 100%;
+display: table;
+table-layout: fixed;
+}
+.cookies-modal__cell {
+display: table-cell;
+vertical-align: middle;
+width: 100%;
+}
+.cookies-modal--active {
+visibility: visible;
+opacity: 1;
+}
+.cookies-modal__dialog {
+max-width: 835px;
+padding: 1.2rem;
+margin: 0 auto;
+}
+.cookies-modal__content {
+will-change: transform, opacity;
+position: relative;
+padding: 40px 50px 30px;
+background: #fff;
+background-clip: padding-box;
+box-shadow: 0 12px 15px 0 rgba(0, 0, 0, 0.4);
+opacity: 0;
+}
+.cookies-modal__content--active {
+opacity: 1;
+}
+.cookies-modal__header {
+font-size: 18px;
+padding: 10px 0 20px;
+color: #000;
+font-weight: 900;
+}
+.cookies-modal__section {
+padding: 10px 0;
+display: flex;
+align-items: flex-start;
+}
+.cookies-modal__checkbox {
+padding: 0 15px 0 0;
+}
+.cookies-modal__checkbox label {
+position: relative;
+display: block;
+font-size: 12px;
+line-height: 18px;
+font-weight: 400;
+}
+.cookies-modal__checkbox label input {
+position: absolute;
+overflow: hidden;
+width: 0;
+height: 0;
+opacity: 0;
+}
+.cookies-modal__checkbox label span {
+/*pointer-events: none;*/
+font-size: 14px;
+font-weight: 400;
+line-height: 1.4285714286em;
+display: block;
+position: relative;
+min-height: 20px;
+padding: 0 0 0 20px;
+cursor: pointer;
+}
+.cookies-modal__checkbox label span:before,
+.cookies-modal__checkbox label span:after {
+content: '';
+position: absolute;
+left: 0;
+top: 0;
+height: 20px;
+width: 20px;
+border-color: #bdbdbd;
+}
+.cookies-modal__checkbox label span:before {
+background-color: #fff;
+border: 2px rgba(0, 0, 0, 0.5) solid;
+border-radius: 2px;
+transition: background .3s ease;
+}
+.cookies-modal__checkbox label span:after {
+position: absolute;
+top: 5px;
+display: flex;
+content: '';
+background: #000;
+width: 14px;
+height: 7px;
+left: 4px;
+border-bottom: solid 2px #ffffff;
+border-left: solid 2px #ffffff;
+background: none;
+transform: rotate(-45deg) scale(0);
+transition: transform .1s ease, opacity .1s ease;
+transform-origin: center center;
+z-index: 1;
+}
+.cookies-modal__checkbox label input:checked ~ span:before {
+border-color: #6c7a30;
+background: #6c7a30;
+}
+.cookies-modal__checkbox label input:disabled ~ span:before {
+border-color: #bdbdbd !important;
+background: #bdbdbd !important;
+}
+.cookies-modal__checkbox label input:checked ~ span:after {
+opacity: 1;
+transform: rotate(-45deg) scale(.8);
+}
+.cookies-modal__text {
+font-size: 14px;
+line-height: 1.79;
+color: #000;
+}
+.cookies-modal__text strong {
+line-height: 20px;
+display: block;
+}
+.cookies-modal__text p {
+margin: 10px 0;
+font-weight: 300;
+}
+.cookies-modal__close {
+position: absolute;
+opacity: 0.8;
+cursor: pointer;
+width: 39px;
+height: 39px;
+background: #000;
+color: #FFF;
+text-align: center;
+right: 0;
+top: 0;
+}
+.cookies-modal__close:hover {
+opacity: 1;
+}
+.cookies-modal__close:after,
+.cookies-modal__close:before {
+content: '';
+position: absolute;
+top: 11px;
+right: 18px;
+width: 2px;
+height: 18px;
+border-radius: 2px;
+background-color: #fff;
+}
+.cookies-modal__close:before {
+transform: rotate(45deg);
+}
+.cookies-modal__close:after {
+transform: rotate(-45deg);
+}
+.cookies-modal__submit {
+/*float: right;*/
+}
+.cookies-modal__section--action {
+justify-content: flex-end;
+padding-bottom: 0;
+}
+.cookies-modal__notification {
+margin-right: 22px;
+display: none;
+}
+.cookies-modal__notification-text {
+font-size: 13px;
+line-height: 36px;
+background-color: #e1e1e1;
+border-radius: 2px;
+opacity: 0.7;
+color: #141416;
+margin-top: 5px;
+padding: 0 20px;
+position: relative;
+}
+.cookies-modal__notification-text::after {
+top: 10px;
+position: absolute;
+right: -6px;
+width: 0;
+height: 0;
+content: '';
+border-style: solid;
+border-width: 8px 0 8px 6px;
+border-color: transparent transparent transparent #e1e1e1;
+}
+.cookies-modal__notification-text--success {
+background-color: #6c7a30;
+color: #fff;
+}
+.cookies-modal__notification-text--success::after {
+border-color: transparent transparent transparent #6c7a30;
+}
+.cookies-modal__submit button {
+height: 46px;
+padding: 0 20px;
+border-radius: 2px;
+background-color: #6c7a30;
+display: inline-block;
+font-size: 16px;
+border: 0;
+color: #fff;
+cursor: pointer;
+-webkit-filter: brightness(100%);
+-webkit-transition: all 0.3s ease;
+-moz-transition: all 0.3s ease;
+-o-transition: all 0.3s ease;
+-ms-transition: all 0.3s ease;
+transition: all 0.3s ease;
+}
+.cookies-modal__submit button:hover {
+-webkit-filter: brightness(90%);
+}
+@media (max-width: 960px) {
+.cookies-modal__section--action {
+justify-content: center;
+}
+.cookies-modal__content {
+padding: 40px 20px 20px;
+}
+body.active-cookies-modal {
+padding-right: 0;
+}
+body.site-body.active-cookies-modal #cookieWarningNew {
+right: 0;
+}
+body.site-body.active-cookies-modal .site-top {
+right: 0;
+}
+.cookies-modal__submit,
+.cookies-modal__submit button {
+width: 100%;
+}
+}
+</style> <style>
+#cookieWarningNew .cookieContent .cookieButton button {
+border-color: #426986 !important;
+}
+#cookieWarningNew .cookieContent {
+border-color: #426986 !important;
+}
+#cookieWarningNew .cookieBtn--underline::before {
+background: #426986;
+}
+#cookieWarningNew .cookieBtn--underline::after {
+background: #426986;
+}
+#cookieWarningNew .cookieBtn--outline {
+border-color: #426986;
+}
+#cookieWarningNew .cookieBtn--outline:hover {
+background-color: #426986;
+}
+#cookieWarningNew .cookieBtn--normal {
+border-color: #426986;
+}
+#cookieWarningNew .cookieBtn--normal::before {
+background: #426986;
+}
+.cookies-modal__notification-text--success {
+background-color: #426986;
+}
+.cookies-modal__notification-text--success::after {
+border-color: transparent transparent transparent #426986;
+}
+.cookies-modal__submit button {
+background-color: #426986;
+}
+.cookies-modal__checkbox label input:checked ~ span:before {
+border-color: #426986;
+background: #426986;
+}
+</style> <div id="cookieWarningNew"> <div class="cookieContent"> <div class="cookieContentItem description"> <p>
+Aby świadczyć usługi na najwyższym poziomie, Serwis wykorzystuje pliki cookies zapisywane w pamięci przeglądarki. Szczegółowe informacje na temat celu ich używania, w tym przetwarzania danych dotyczących aktywności użytkownika oraz personalizacji reklam, oraz możliwość zmian ustawień plików cookies, znajdują się w <a class="cookiePolicies" href="https://www.rezydencjahotel.pl/pl/privacy" target="_blank">Polityce prywatności</a>.<br>Klikając ZAAKCEPTUJ WSZYSTKIE, wyrażasz zgodę na korzystanie z technologii takich jak cookies i na przetwarzanie przez S.C. BEATA ZDEBEL, ARKADIUSZ ZDEBEL, DACJUSZ ZDEBEL, ul. Stara 1, 41-940, Piekary Śląskie , Twoich danych osobowych zbieranych w Internecie, takich jak adresy IP i identyfikatory plików cookie, w celach analitycznych i marketingowych (w tym do zautomatyzowanego dopasowania reklam do Twoich zainteresowań, mierzenia ich skuteczności oraz przetwarzania danych użytkownika dla celów analitycznych). Zmiany ustawień plików cookies oraz szczegółowe preferencje dotyczące zgód możesz dokonać w <a class="cookiePolicies" onclick="openCookieModal();">ustawieniach</a>.            </p> </div> <div class="cookieContentItem actions"> <span class="cookieButton"> <button class="cookieBtn cookieBtn--underline" onclick="openCookieModal();return false;"> <span class="content">Ustawienia cookies</span> </button> <button class="cookieBtn cookieBtn--outline" onclick="acceptOnlyRequiredCookies();return false;"> <span class="content">Odrzuć</span> </button> <button class="cookieBtn cookieBtn--normal" onclick="_acceptCookiesPolicy();return false;"> <span class="content">Zaakceptuj wszystkie</span> </button> </span> </div> </div> </div> <div id="cookie-privacy-iframe"> <div class="cookie-privacy-iframe-inner"> <span class="custom-close-popup"></span> <iframe src=""></iframe> </div> </div> <script type="text/javascript">
+// GTAG DEFAULT
+// Define dataLayer and the gtag function.
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('consent', 'default', {
+'security_storage': 'granted',
+'functionality_storage': 'granted',
+'ad_storage': 'denied',
+'ad_user_data': 'denied',
+'ad_personalization': 'denied',
+'analytics_storage': 'denied',
+'personalization_storage': 'denied',
+'wait_for_update': 2500
+});
+//GTAG FUNCTION
+function gtagConsent(consents) {
+let marketing = (consents.includes('marketing')) ? 'granted' : 'denied';
+let analytics = (consents.includes('analytics')) ? 'granted' : 'denied';
+gtag('consent', 'update', {
+'ad_user_data': marketing,
+'ad_personalization': marketing,
+'ad_storage': marketing,
+'personalization_storage': marketing,
+'analytics_storage': analytics
+});
+}
+function getCookie(cname) {
+var name = cname + "=";
+var ca = document.cookie.split(';');
+for(var i=0; i<ca.length; i++) {
+var c = ca[i].trim();
+if (c.indexOf(name) == 0) return c.substring(name.length,c.length);
+}
+return "";
+}
+function _acceptCookiesPolicy(acceptedCategories) {
+if (typeof acceptedCategories === 'undefined') {
+acceptedCategories = ["necessary", "marketing", "analytics"];
+}
+var options = {};
+if (acceptedCategories.length > 1) {
+options['expires'] = 365;
+}
+Cookies.set('_CookiesPolicyAccepted', JSON.stringify(acceptedCategories), options);
+/** Send Info to GTM */
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+'event': 'cookieConsent',
+'cookieConsentCategory': acceptedCategories
+});
+window.beAcceptedCookiePolicies = acceptedCategories;
+//GTAG GRANT OR DENY ALL
+gtagConsent(acceptedCategories);
+if (isLocalStorage()) {
+localStorage.setItem('cookiesManager', JSON.stringify({
+acceptedCategories: acceptedCategories
+}));
+}
+window.dispatchEvent(new CustomEvent('success-save-cookies', {'detail': {'acceptedCategories': acceptedCategories}}));
+}
+function _checkCookiesPolicy() {
+var cookiesPolicy = Cookies.get("_CookiesPolicyAccepted");
+if (typeof cookiesPolicy !== "undefined") {
+if(!window.beAcceptedCookiePolicies) {
+try{
+cookiesPolicy = JSON.parse(cookiesPolicy);
+window.beAcceptedCookiePolicies = cookiesPolicy;
+}
+catch (e) {}
+}
+//GTAG CHECK IF COOKIES EXISTS AND UPDATE CONSENT
+gtagConsent(cookiesPolicy);
+} else {
+showCookieDiv();
+var cookiePrivacyIframe = document.getElementById('cookie-privacy-iframe');
+if(cookiePrivacyIframe) {
+var iframe = document.querySelector('#cookie-privacy-iframe iframe');
+if (iframe) {
+document.getElementsByClassName('cookiePolicies')[0].addEventListener('click', function (e) {
+e.preventDefault();
+iframe.src = this.href;
+cookiePrivacyIframe.style.display = 'block';
+});
+}
+document.querySelector('#cookie-privacy-iframe .custom-close-popup').addEventListener('click', function (e) {
+e.preventDefault();
+cookiePrivacyIframe.style.display = 'none';
+});
+}
+var receiveCookieSettings = false;
+if (isLocalStorage()) {
+window.addEventListener('storage', function (e) {
+if (e.key !== 'cookiesManager' || receiveCookieSettings) {
+return;
+}
+if (e.storageArea.hasOwnProperty('cookiesManager')) {
+receiveCookieSettings = true;
+var dataCookies = JSON.parse(e.storageArea.cookiesManager);
+_acceptCookiesPolicy(dataCookies.acceptedCategories);
+if (cookiePrivacyIframe) {
+cookiePrivacyIframe.style.display = 'none';
+}
+}
+});
+}
+window.addEventListener('success-save-cookies', function () {
+document.getElementById('cookieWarningNew').style.display = 'none';
+});
+}
+}
+function showCookieDiv() {
+var cookieDiv = document.getElementById('cookieWarningNew'),
+delayResize = null;
+if (cookieDiv) {
+if(window.innerWidth <= 960) {
+cookieDiv.style.display = 'flex';
+}
+else {
+cookieDiv.style.display = 'block';
+}
+}
+window.addEventListener('resize', function(event){
+if(delayResize) {
+clearTimeout(delayResize);
+}
+delayResize = setTimeout(function () {
+if(window.innerWidth <= 960 && cookieDiv.style.display === 'block') {
+cookieDiv.style.display = 'flex';
+}
+else if(window.innerWidth > 960 && cookieDiv.style.display === 'flex') {
+cookieDiv.style.display = 'block';
+}
+}, 500);
+});
+}
+function isLocalStorage() {
+try {
+localStorage.setItem('test', '1');
+localStorage.removeItem('test');
+return true;
+} catch (e) {
+return false;
+}
+}
+_checkCookiesPolicy()
+</script> <style>
+body.active-cookies-modal {
+overflow: hidden;
+padding-right: 15px;
+}
+body.site-body.active-cookies-modal #cookieWarning {
+right: 15px;
+width: auto !important;
+}
+body.site-body.active-cookies-modal .site-top {
+right: 15px;
+width: auto;
+}
+.cookies-modal, .cookies-modal *, .cookies-modal *:before, .cookies-modal *:after {
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+}
+.cookies-modal {
+will-change: visibility, opacity;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+overflow-y: auto;
+overflow-x: hidden;
+z-index: 2000000000000;
+visibility: hidden;
+opacity: 0;
+transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+background-color: rgba(0, 0, 0, 0.4);
+}
+.cookies-modal__table {
+width: 100%;
+height: 100%;
+display: table;
+table-layout: fixed;
+}
+.cookies-modal__cell {
+display: table-cell;
+vertical-align: middle;
+width: 100%;
+}
+.cookies-modal--active {
+visibility: visible;
+opacity: 1;
+}
+.cookies-modal__dialog {
+max-width: 835px;
+padding: 1.2rem;
+margin: 0 auto;
+}
+.cookies-modal__content {
+will-change: transform, opacity;
+position: relative;
+padding: 40px 50px 30px;
+background: #fff;
+background-clip: padding-box;
+box-shadow: 0 12px 15px 0 rgba(0, 0, 0, 0.4);
+opacity: 0;
+}
+.cookies-modal__content--active {
+opacity: 1;
+}
+.cookies-modal__header {
+font-size: 18px;
+padding: 10px 0 20px;
+color: #000;
+font-weight: 900;
+}
+.cookies-modal__section {
+padding: 10px 0;
+display: flex;
+align-items: flex-start;
+}
+.cookies-modal__checkbox {
+padding: 0 15px 0 0;
+}
+.cookies-modal__checkbox label {
+position: relative;
+display: block;
+font-size: 12px;
+line-height: 18px;
+font-weight: 400;
+}
+.cookies-modal__checkbox label input {
+position: absolute;
+overflow: hidden;
+width: 0;
+height: 0;
+opacity: 0;
+}
+.cookies-modal__checkbox label span {
+/*pointer-events: none;*/
+font-size: 14px;
+font-weight: 400;
+line-height: 1.4285714286em;
+display: block;
+position: relative;
+min-height: 20px;
+padding: 0 0 0 20px;
+cursor: pointer;
+}
+.cookies-modal__checkbox label span:before,
+.cookies-modal__checkbox label span:after {
+content: '';
+position: absolute;
+left: 0;
+top: 0;
+height: 20px;
+width: 20px;
+border-color: #bdbdbd;
+}
+.cookies-modal__checkbox label span:before {
+background-color: #fff;
+border: 2px rgba(0, 0, 0, 0.5) solid;
+border-radius: 2px;
+transition: background .3s ease;
+}
+.cookies-modal__checkbox label span:after {
+position: absolute;
+top: 5px;
+display: flex;
+content: '';
+background: #000;
+width: 14px;
+height: 7px;
+left: 4px;
+border-bottom: solid 2px #ffffff;
+border-left: solid 2px #ffffff;
+background: none;
+transform: rotate(-45deg) scale(0);
+transition: transform .1s ease, opacity .1s ease;
+transform-origin: center center;
+z-index: 1;
+}
+.cookies-modal__checkbox label input:checked ~ span:before {
+border-color: #6c7a30;
+background: #6c7a30;
+}
+.cookies-modal__checkbox label input:disabled ~ span:before {
+border-color: #bdbdbd !important;
+background: #bdbdbd !important;
+}
+.cookies-modal__checkbox label input:checked ~ span:after {
+opacity: 1;
+transform: rotate(-45deg) scale(.8);
+}
+.cookies-modal__text {
+font-size: 14px;
+line-height: 1.79;
+color: #000;
+}
+.cookies-modal__text strong {
+line-height: 20px;
+display: block;
+}
+.cookies-modal__text p {
+margin: 10px 0;
+font-weight: 300;
+}
+.cookies-modal__close {
+position: absolute;
+opacity: 0.8;
+cursor: pointer;
+width: 39px;
+height: 39px;
+background: #000;
+color: #FFF;
+text-align: center;
+right: 0;
+top: 0;
+}
+.cookies-modal__close:hover {
+opacity: 1;
+}
+.cookies-modal__close:after,
+.cookies-modal__close:before {
+content: '';
+position: absolute;
+top: 11px;
+right: 18px;
+width: 2px;
+height: 18px;
+border-radius: 2px;
+background-color: #fff;
+}
+.cookies-modal__close:before {
+transform: rotate(45deg);
+}
+.cookies-modal__close:after {
+transform: rotate(-45deg);
+}
+.cookies-modal__submit {
+/*float: right;*/
+}
+.cookies-modal__section--action {
+justify-content: flex-end;
+padding-bottom: 0;
+}
+.cookies-modal__notification {
+margin-right: 22px;
+display: none;
+}
+.cookies-modal__notification-text {
+font-size: 13px;
+line-height: 36px;
+background-color: #e1e1e1;
+border-radius: 2px;
+opacity: 0.6;
+color: #666666;
+margin-top: 5px;
+padding: 0 20px;
+position: relative;
+}
+.cookies-modal__notification-text::after {
+top: 10px;
+position: absolute;
+right: -6px;
+width: 0;
+height: 0;
+content: '';
+border-style: solid;
+border-width: 8px 0 8px 6px;
+border-color: transparent transparent transparent #e1e1e1;
+}
+.cookies-modal__notification-text--success {
+background-color: #6c7a30;
+color: #fff;
+}
+.cookies-modal__notification-text--success::after {
+border-color: transparent transparent transparent #6c7a30;
+}
+.cookies-modal__submit button {
+height: 46px;
+padding: 0 20px;
+border-radius: 2px;
+background-color: #6c7a30;
+display: inline-block;
+font-size: 16px;
+border: 0;
+color: #fff;
+cursor: pointer;
+-webkit-filter: brightness(100%);
+-webkit-transition: all 0.3s ease;
+-moz-transition: all 0.3s ease;
+-o-transition: all 0.3s ease;
+-ms-transition: all 0.3s ease;
+transition: all 0.3s ease;
+}
+.cookies-modal__submit button:hover {
+-webkit-filter: brightness(90%);
+}
+@media (max-width: 960px) {
+.cookies-modal__section--action {
+justify-content: center;
+}
+.cookies-modal__content {
+padding: 40px 20px 20px;
+}
+body.active-cookies-modal {
+padding-right: 0;
+}
+body.site-body.active-cookies-modal #cookieWarningNew {
+right: 0;
+}
+body.site-body.active-cookies-modal .site-top {
+right: 0;
+}
+.cookies-modal__submit,
+.cookies-modal__submit button {
+width: 100%;
+}
+}
+@media (max-width: 767px) {
+.cookies-modal__header {
+font-size: 14px;
+padding: 10px 0 10px;
+}
+.cookies-modal__text {
+font-size: 12px;
+}
+.cookies-modal__notification-text {
+font-size: 11px;
+padding: 0 10px;
+}
+.cookies-modal__submit button {
+font-size: 14px;
+}
+.cookies-modal__content {
+padding: 34px 13px 13px;
+}
+.cookies-modal__section {
+padding: 5px 0;
+}
+}
+</style> <style>
+.cookies-modal__submit button {
+background-color: #426986;
+}
+.cookies-modal__checkbox label input:checked ~ span:before {
+border-color: #426986;
+background: #426986;
+}
+</style> <div id="cookies-modal" class="cookies-modal"> <div class="cookies-modal__table"> <div class="cookies-modal__cell"> <div class="cookies-modal__dialog"> <div class="cookies-modal__content"> <form action="" id="cookies-privacy-settings"> <div class="cookies-modal__header">
+Zarządzaj ustawieniami dotyczącymi prywatności                        </div> <div class="cookies-modal__section"> <div class="cookies-modal__checkbox"> <label for="necessary-cookies"> <input type="checkbox" value="necessary" checked name="necessary-cookies" disabled
+id="necessary-cookies"> <span></span> </label> </div> <div class="cookies-modal__text"> <strong>Niezbędne pliki cookies</strong> <p>Pliki cookies niezbędne do działania usług dostępnych na stronie internetowej, umożliwiające przeglądanie ofert lub dokonywanie rezerwacji, wspierające mechanizmy bezpieczeństwa, m.in.: uwierzytelnianie użytkowników i wykrywanie nadużyć. Te pliki są wymagane do prawidłowego funkcjonowania strony internetowej. Nie wymagają Twojej zgody.</p> </div> </div> <div class="cookies-modal__section"> <div class="cookies-modal__checkbox"> <label for="analytics-cookies"> <input type="checkbox" value="analytics"
+name="analytics-cookies"
+id="analytics-cookies"> <span></span> </label> </div> <div class="cookies-modal__text"> <strong>Analityczne pliki cookies</strong> <p>Pliki cookies umożliwiające zbieranie informacji o sposobie korzystania przez użytkownika ze strony internetowej w celu optymalizacji jej funkcjonowania oraz dostosowania do oczekiwań użytkownika. Wyrażając zgodę na te pliki cookies, zgadzasz się na przetwarzanie danych dotyczących Twojej aktywności na stronie w celach analitycznych.</p> </div> </div> <div class="cookies-modal__section"> <div class="cookies-modal__checkbox"> <label for="marketing-cookies"> <input type="checkbox" value="marketing"
+name="marketing-cookies"
+id="marketing-cookies"> <span></span> </label> </div> <div class="cookies-modal__text"> <strong>Marketingowe pliki cookies</strong> <p>Pliki cookies umożliwiające wyświetlanie użytkownikowi treści marketingowych dostosowanych do jego preferencji oraz kierowanie do niego powiadomień o ofertach marketingowych odpowiadających jego zainteresowaniom, obejmujących informacje dotyczące aktywności użytkownika, produktów i usług administratora strony i podmiotów trzecich. Zgoda na te pliki cookies oznacza, że Twoje dane mogą być używane do personalizacji reklam oraz analizy skuteczności naszych kampanii reklamowych.</p> </div> </div> <div class="cookies-modal__section cookies-modal__section--action"> <div class="cookies-modal__notification"> <div class="cookies-modal__notification-text"> <span>Twoje preferencje nie zostały jeszcze zapisane</span> </div> </div> <div class="cookies-modal__submit"> <button type="submit">Zapisz i zamknij</button> </div> </div> </form> <a href class="cookies-modal__close js-cookies-modal__close"></a> </div> </div> </div> </div> </div> <script type="text/javascript">
+(function() {
+var cookieForm = null;
+window.openCookieModal = function () {
+document.querySelector('.cookies-modal').classList.add('cookies-modal--active');
+document.querySelector('.cookies-modal__content').classList.add('cookies-modal__content--active');
+document.querySelector('body').classList.add('active-cookies-modal');
+};
+window.acceptOnlyRequiredCookies = function () {
+_acceptCookiesPolicy(["necessary"]);
+};
+function closeCookieModal() {
+document.querySelector('.cookies-modal').classList.remove('cookies-modal--active');
+document.querySelector('.cookies-modal__content').classList.remove('cookies-modal__content--active');
+document.querySelector('body').classList.remove('active-cookies-modal');
+}
+function _saveCookiesPolicy(acceptedCategories) {
+var options = {};
+/** If check all categories, remember this for 1 year */
+if (acceptedCategories.length === cookieForm.querySelectorAll('input[type="checkbox"]').length) {
+options['expires'] = 365;
+}
+Cookies.set('_CookiesPolicyAccepted', JSON.stringify(acceptedCategories), options);
+/** Send Info to GTM */
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+'event': 'cookieConsent',
+'cookieConsentCategory': acceptedCategories
+});
+window.beAcceptedCookiePolicies = acceptedCategories;
+//GTAG UPDATE CONSENT
+gtagConsent(acceptedCategories);
+}
+function eventHandlers() {
+cookieForm.addEventListener('submit', function (e) {
+e.preventDefault();
+var inputs = this.querySelectorAll('input[type="checkbox"]:checked'),
+chooses = [];
+inputs.forEach(function (ele) {
+chooses = chooses.concat(ele.value.split(','));
+});
+_saveCookiesPolicy(chooses);
+if (isLocalStorage()) {
+localStorage.setItem('cookiesManager', JSON.stringify({
+acceptedCategories: chooses
+}));
+}
+window.dispatchEvent(new CustomEvent('success-save-cookies', {'detail': {'acceptedCategories': chooses}}));
+cookieForm.querySelector('.cookies-modal__notification').style.display = 'none';
+closeCookieModal();
+});
+document.querySelector('#cookies-modal .js-cookies-modal__close').addEventListener('click', function (e) {
+e.preventDefault();
+closeCookieModal();
+})
+}
+function isLocalStorage() {
+try {
+localStorage.setItem('test', '1');
+localStorage.removeItem('test');
+return true;
+} catch (e) {
+return false;
+}
+}
+function init() {
+cookieForm = document.getElementById('cookies-privacy-settings');
+var inputs = cookieForm.querySelectorAll('input[type="checkbox"]:not(:disabled)'),
+jsonCookiesPolicy = Cookies.get("_CookiesPolicyAccepted");
+if (typeof jsonCookiesPolicy !== "undefined") {
+var cookiesPolicy = JSON.parse(jsonCookiesPolicy);
+inputs.forEach(function (ele) {
+var values = ele.value.split(',');
+ele.checked = cookiesPolicy.some(function (element) {
+return values.indexOf(element) > -1
+});
+});
+} else {
+inputs.forEach(function (ele) {
+if (!ele.checked && ele.hasAttribute('data-default-checked')) {
+ele.checked = true;
+}
+});
+cookieForm.querySelector('.cookies-modal__notification').style.display = 'block';
+}
+eventHandlers();
+}
+window.addEventListener('load', function () {
+init();
+});
+})();
+</script> </body> </html>
+
+<!-- built on 2026-04-10 16:45:09 -->

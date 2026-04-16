@@ -1,29 +1,29 @@
-import { render, screen } from "@testing-library/react";
-import VoiceDock from "./VoiceDock";
+import { render, screen } from '@testing-library/react';
+import VoiceDock from './VoiceDock';
 
-describe("VoiceDock", () => {
-  it("renders dock with placeholder", () => {
+describe('VoiceDock', () => {
+  it('renders dock with placeholder', () => {
     render(
       <VoiceDock
         recording={false}
         onMicClick={() => {}}
         onTextSubmit={() => {}}
-        visible={true}
-      />
+        visible
+      />,
     );
 
     expect(screen.getByPlaceholderText(/napisz lub powiedz/i)).toBeInTheDocument();
   });
 
-  it("shows listening placeholder when recording", () => {
+  it('shows listening placeholder when recording', () => {
     render(
       <VoiceDock
-        recording={true}
+        recording
         onMicClick={() => {}}
-        visible={true}
-      />
+        visible
+      />,
     );
 
-    expect(screen.getByPlaceholderText(/słucham/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/slucham/i)).toBeInTheDocument();
   });
 });

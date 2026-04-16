@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +14,33 @@ import { getApiUrl } from '../../lib/config';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
+const LIVE_MODEL_OVERRIDE_KEY = 'ff_live_model_override';
+const LIVE_MODEL_CHANGED_EVENT = 'freeflow:live-model-changed';
+
+function readLiveModelOverride() {
+  try {
+    const value = String(localStorage.getItem(LIVE_MODEL_OVERRIDE_KEY) || '').trim();
+    return value || null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLiveModelOverride(value) {
+  try {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+      localStorage.removeItem(LIVE_MODEL_OVERRIDE_KEY);
+      return;
+    }
+    localStorage.setItem(LIVE_MODEL_OVERRIDE_KEY, normalized);
+  } catch {
+    // noop
+  }
+}
+
 export default function AmberControlDeck({ adminToken }) {
+  const initialLiveModel = readLiveModelOverride() || 'gemini-2.5-flash-native-audio-preview-12-2025';
   const [config, setConfig] = useState({
     tts_engine: 'vertex',
     tts_voice: 'pl-PL-Wavenet-D',
@@ -22,6 +48,7 @@ export default function AmberControlDeck({ adminToken }) {
     tts_pitch: 0,
     tts_rate: 1.0,
     model: 'gpt-5',
+    live_model: initialLiveModel,
     streaming: true,
     cache_enabled: true,
     speech_style: 'standard',
@@ -52,10 +79,18 @@ export default function AmberControlDeck({ adminToken }) {
   const [aliasSaving, setAliasSaving] = useState(false);
 
   // Preset logic
+  const BASE_CONTRACT = 'Jestes Amber - glosowy asystent zamowien w aplikacji FreeFlow. Mowisz po polsku, naturalnie i konkretnie. Brzmisz jak pomocna osoba, nie jak bot. Gdy mozesz uzyc narzedzia - uzyj go natychmiast. Nigdy nie mow "moge sprawdzic", "pozwol ze" - po prostu wywolaj narzedzie i podaj wynik. Jesli find_nearby zwrocilo dokladnie 1 restauracje - od razu wywolaj show_menu. Jesli 0 wynikow dla kuchni - wywolaj find_nearby bez cuisine. W wynikach masz: rating, hours, phone, distance - uzywaj ich wprost. Mow krotko - max 2 zdania przed pytaniem. Nie wymieniaj wszystkich dan z menu. Nie mow: nazw narzedzi, "Niestety nie mam dostepu", "Jako asystent AI". Gdy uzytkownik mowi "w poblizu" - wywolaj find_nearby BEZ parametru location.';
+  const DEFAULT_PRESETS = [
+    BASE_CONTRACT,
+    BASE_CONTRACT + ' STYL SLASKI (to je Slask, niy Podhale!): Godosz po slasku - naturalnie, cieplo, swojsko. "ja" znaczy TAK (niy "ja" jako osoba). Slaskie zwroty (1-2 na wypowiedz): "ja" (tak), "niy" (nie), "niy ma" (nie ma), "kaj" (gdzie), "cos" (cos), "wiela" (ile), "tela" (tyle), "dyc" (przeciez), "ejno" (no tak), "na zicher" (na pewno), "bydzie" (bedzie), "Dobry!" (dzien dobry - slaskie powitanie), "yno" (tylko), "rajcuje" (podoba sie), "sznupomy" (szukamy), "momy" (mamy), "cheba" (chyba), "srogo/srogie" (duzo/duze). Przyklady: "Niy ma go w karcie." / "Kaj byscie chcieli zamowic?" / "Ejno, momy cos dobrego!" / "Na zicher polecam kebaba." / "Dobry! W czym mogna pomoc?" / "Srogo porcja, na zicher sie najesz." ZAKAZ goralskich zwrotow: nie uzywej "jo", "hale", "wej", "oscie", "se" - to niy je Podhale. LAWASZ KEBAB: kraftowa rzemieslnicza knajpa - kebaby z miesem z karczku i drobiowe, niy byle co. Wspomnij o tym naturalnie jak ktos pyta o Lawasz.',
+    BASE_CONTRACT + ' STYL: Mow formalnie, per Pan/Pani. Elegancki ton restauracyjny. Bez slangu.',
+  ];
   const [presets, setPresets] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('amber_prompt_presets') || '[null, null, null]');
-    } catch { return [null, null, null]; }
+      const stored = JSON.parse(localStorage.getItem('amber_prompt_presets') || '[null, null, null]');
+      // Inicjalizuj domyslne presety jesli sloty puste
+      return stored.map((p, i) => p || DEFAULT_PRESETS[i] || null);
+    } catch { return DEFAULT_PRESETS; }
   });
 
   const savePreset = (idx) => {
@@ -85,6 +120,7 @@ export default function AmberControlDeck({ adminToken }) {
       const liveMetricsJson = await liveMetricsRes.json().catch(() => ({ ok: false }));
       if (cfgJson && cfgJson.ok !== false) {
         const cfg = cfgJson.config || {};
+        const liveModelOverride = readLiveModelOverride();
         setConfig(prev => ({
           ...prev,
           tts_engine: cfg.tts_engine?.engine || prev.tts_engine,
@@ -93,6 +129,7 @@ export default function AmberControlDeck({ adminToken }) {
           tts_pitch: typeof cfg.tts_pitch === 'number' ? cfg.tts_pitch : prev.tts_pitch,
           tts_rate: typeof cfg.tts_rate === 'number' ? cfg.tts_rate : prev.tts_rate,
           model: cfg.model?.name || prev.model,
+          live_model: liveModelOverride || cfg.live_model || prev.live_model,
           streaming: cfg.streaming?.enabled ?? prev.streaming,
           cache_enabled: cfg.cache_enabled ?? prev.cache_enabled,
           speech_style: cfg.speech_style || prev.speech_style,
@@ -127,6 +164,22 @@ export default function AmberControlDeck({ adminToken }) {
   };
 
   const saveConfig = async (key, value) => {
+    if (key === 'live_model') {
+      const previousModel = readLiveModelOverride() || String(config.live_model || '').trim();
+      const nextModel = String(value || '').trim();
+      writeLiveModelOverride(nextModel);
+      setConfig(prev => ({ ...prev, live_model: nextModel || prev.live_model }));
+      if (nextModel && nextModel !== previousModel && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(LIVE_MODEL_CHANGED_EVENT, {
+          detail: {
+            previousModel,
+            model: nextModel,
+            source: 'AmberControlDeck',
+          },
+        }));
+      }
+    }
+
     try {
       let payloadValue = value;
       let apiKey = key;
@@ -154,6 +207,7 @@ export default function AmberControlDeck({ adminToken }) {
       const json = await res.json();
       if (json && json.ok !== false && json.config) {
         const cfg = json.config;
+        const liveModelOverride = readLiveModelOverride();
         setConfig(prev => ({
           ...prev,
           tts_engine: cfg.tts_engine?.engine || prev.tts_engine,
@@ -162,6 +216,7 @@ export default function AmberControlDeck({ adminToken }) {
           tts_pitch: typeof cfg.tts_pitch === 'number' ? cfg.tts_pitch : prev.tts_pitch,
           tts_rate: typeof cfg.tts_rate === 'number' ? cfg.tts_rate : prev.tts_rate,
           model: cfg.model?.name || prev.model,
+          live_model: liveModelOverride || cfg.live_model || prev.live_model,
           streaming: cfg.streaming?.enabled ?? prev.streaming,
           cache_enabled: cfg.cache_enabled ?? prev.cache_enabled,
           speech_style: cfg.speech_style || prev.speech_style,
@@ -181,7 +236,13 @@ export default function AmberControlDeck({ adminToken }) {
     try {
       const res = await fetch(getApiUrl('/api/admin/prompt'), { headers });
       const json = await res.json();
-      setPrompt(json.prompt || json.content || '');
+      const backendPrompt = String(json.prompt || json.content || '');
+      setPrompt(backendPrompt);
+      if (backendPrompt.trim().length > 40) {
+        localStorage.setItem('amber_live_prompt', backendPrompt.trim());
+      } else {
+        localStorage.removeItem('amber_live_prompt');
+      }
     } catch { setPrompt(''); }
   };
 
@@ -192,6 +253,12 @@ export default function AmberControlDeck({ adminToken }) {
         headers,
         body: JSON.stringify({ prompt }),
       });
+      // Zapisz aktywny prompt do localStorage - useGeminiLiveSession czyta przy starcie sesji
+      if (prompt.trim().length > 40) {
+        localStorage.setItem('amber_live_prompt', prompt.trim());
+      } else {
+        localStorage.removeItem('amber_live_prompt');
+      }
     } catch (e) {
       alert('Prompt save failed: ' + e.message);
     }
@@ -215,7 +282,7 @@ export default function AmberControlDeck({ adminToken }) {
         body: JSON.stringify({ prompt: stylizationPrompt }),
       });
     } catch (e) {
-      alert('Zapis nie powiódł się: ' + e.message);
+      alert('Zapis nie powiodl sie: ' + e.message);
     } finally {
       setStylizationSaving(false);
     }
@@ -245,7 +312,7 @@ export default function AmberControlDeck({ adminToken }) {
   };
   const rollingOptions = { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } };
 
-  if (loading) return <div className="text-center text-[var(--muted)] animate-pulse">Ładowanie panelu…</div>;
+  if (loading) return <div className="text-center text-[var(--muted)] animate-pulse">Ladowanie panelu...</div>;
 
   const aliasEntries = Object.entries(aliases || {});
 
@@ -289,14 +356,14 @@ export default function AmberControlDeck({ adminToken }) {
 
   return (
     <div className="space-y-6">
-      {/* Problemy z intencjami (fallback/niska pewność) */}
+      {/* Problemy z intencjami (fallback/niska pewnosc) */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
           <div className="text-[var(--fg0)] font-semibold flex items-center gap-2">
             <span className="flex size-6 rounded-full bg-red-400/20 text-red-400 items-center justify-center text-xs">!</span>
             Problemy do przejrzenia
           </div>
-          <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5 transition-colors">Odśwież</button>
+          <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5 transition-colors">Odswiez</button>
         </div>
         <div className="overflow-y-auto max-h-60 tiny-scroll">
           <table className="w-full text-left text-sm">
@@ -305,7 +372,7 @@ export default function AmberControlDeck({ adminToken }) {
                 <th className="py-2">Intent</th>
                 <th className="py-2">Conf.</th>
                 <th className="py-2">Fallback</th>
-                <th className="py-2">Odpowiedź</th>
+                <th className="py-2">Odpowiedz</th>
               </tr>
             </thead>
             <tbody className="text-[12px] text-[var(--fg0)]">
@@ -319,7 +386,7 @@ export default function AmberControlDeck({ adminToken }) {
               ))}
               {(logs || []).filter(l => (l?.fallback === true) || ((l?.confidence ?? 1) < 0.6)).length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-4 text-center text-[var(--muted)] italic">Wszystko wygląda dobrze. Brak problematycznych intencji.</td>
+                  <td colSpan={4} className="py-4 text-center text-[var(--muted)] italic">Wszystko wyglada dobrze. Brak problematycznych intencji.</td>
                 </tr>
               )}
             </tbody>
@@ -331,7 +398,7 @@ export default function AmberControlDeck({ adminToken }) {
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
-            <span className="text-xl">⚙️</span> Ustawienia Systemu
+            Ustawienia Systemu
           </div>
           <div className="text-sm text-[var(--muted)] font-mono px-2 py-1 rounded bg-black/20 border border-[var(--border)]">Env: {config.env || '-'}</div>
         </div>
@@ -350,7 +417,7 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="gemini-live">Gemini Live (eksperymentalnie)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Głos TTS</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Glos TTS</label>
             <select
               className={SelectClass}
               value={config.tts_voice}
@@ -369,20 +436,40 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="erinome">Gemini: Erinome (Female)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Styl językowy</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Styl jezykowy</label>
             <select
               className={SelectClass}
               value={config.speech_style}
               onChange={(e) => saveConfig('speech_style', e.target.value)}
             >
               <option value="standard">Standardowy polski</option>
-              <option value="silesian">Śląska gwara (gōdka)</option>
+              <option value="silesian">Slaska gwara (godka)</option>
             </select>
+
+            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Model LIVE</label>
+            <select
+              className={SelectClass}
+              value={config.live_model}
+              onChange={(e) => saveConfig('live_model', e.target.value)}
+            >
+              <option value="gemini-3.1-flash-live-preview">Gemini 3.1 Flash Live Preview</option>
+              <option value="gemini-2.5-flash-live-preview">Gemini 2.5 Flash Live Preview</option>
+              <option value="gemini-2.5-flash-native-audio-preview-12-2025">Gemini 2.5 Native Audio Preview (12-2025)</option>
+            </select>
+            <input
+              className={`${InputClass} mt-2`}
+              value={config.live_model}
+              onChange={(e) => saveConfig('live_model', e.target.value)}
+              placeholder="Wpisz niestandardowy model Live"
+            />
+            <div className="text-[10px] text-[var(--muted)]">
+              Zmiana dziala dla nowych sesji LIVE (zatrzymaj/uruchom LIVE ponownie).
+            </div>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2 bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-3">
-              <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Ton głosu (TTS)</label>
+              <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Ton glosu (TTS)</label>
               <select
                 className={SelectClass}
                 value={config.tts_tone}
@@ -393,7 +480,7 @@ export default function AmberControlDeck({ adminToken }) {
                 <option value="neutralny">Neutralny</option>
               </select>
 
-              <label className="block text-xs text-[var(--muted)] mt-3">Pitch (–10 … 10)</label>
+              <label className="block text-xs text-[var(--muted)] mt-3">Pitch (-10 ... 10)</label>
               <input
                 type="number"
                 min={-10}
@@ -403,7 +490,7 @@ export default function AmberControlDeck({ adminToken }) {
                 value={config.tts_pitch}
                 onChange={(e) => saveConfig('tts_pitch', e.target.value)}
               />
-              <label className="block text-xs text-[var(--muted)] mt-3">Tempo mówienia (0.5 … 2.0)</label>
+              <label className="block text-xs text-[var(--muted)] mt-3">Tempo mowienia (0.5 ... 2.0)</label>
               <input
                 type="number"
                 min={0.5}
@@ -418,7 +505,7 @@ export default function AmberControlDeck({ adminToken }) {
             <div className="flex flex-col gap-2">
               <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
                 <span className="flex items-center gap-2">
-                  <span>Włącz TTS</span>
+                  <span>Wlacz TTS</span>
                   {config.tts_enabled && <span className="flex size-2 bg-green-500 rounded-full animate-pulse"></span>}
                 </span>
                 <input type="checkbox" checked={!!config.tts_enabled} onChange={(e) => saveConfig('tts_enabled', e.target.checked)} className="accent-[var(--neon)]" />
@@ -436,7 +523,7 @@ export default function AmberControlDeck({ adminToken }) {
 
           <div className="mt-4 pt-4 border-t border-[var(--border)] md:col-span-2">
             <div className="text-[var(--fg0)] font-semibold mb-3 flex items-center gap-2">
-              <span className="text-lg">➕</span> Dodaj alias restauracji
+              Dodaj alias restauracji
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
@@ -447,7 +534,7 @@ export default function AmberControlDeck({ adminToken }) {
               />
               <input
                 className={InputClass}
-                placeholder="Pełna nazwa (np. Rezydencja Luxury Hotel)"
+                placeholder="Pelna nazwa (np. Rezydencja Luxury Hotel)"
                 value={aliasForm.canonical}
                 onChange={(e) => setAliasForm(prev => ({ ...prev, canonical: e.target.value }))}
               />
@@ -456,11 +543,11 @@ export default function AmberControlDeck({ adminToken }) {
                 disabled={aliasSaving}
                 className="px-3 py-2 rounded-lg bg-[var(--neon)] text-white hover:brightness-110 disabled:opacity-50 font-medium transition-all shadow-[0_0_15px_rgba(91,124,255,0.3)]"
               >
-                {aliasSaving ? 'Zapisywanie…' : 'Zapisz alias'}
+                {aliasSaving ? 'Zapisywanie...' : 'Zapisz alias'}
               </button>
             </div>
             <div className="mt-4 text-sm space-y-1 max-h-32 overflow-y-auto tiny-scroll bg-[rgba(0,0,0,0.2)] rounded-lg p-2 border border-[var(--border)]">
-              {aliasEntries.length === 0 && <div className="text-[var(--muted)] text-center p-2">Brak zdefiniowanych aliasów</div>}
+              {aliasEntries.length === 0 && <div className="text-[var(--muted)] text-center p-2">Brak zdefiniowanych aliasow</div>}
               {aliasEntries.map(([alias, canonical]) => (
                 <div key={alias} className="flex justify-between gap-3 border-b border-[var(--border)] last:border-0 pb-1 mb-1">
                   <span className="text-[var(--fg0)] font-medium">{alias}</span>
@@ -477,10 +564,10 @@ export default function AmberControlDeck({ adminToken }) {
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-4">
           <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
-            <span className="text-xl">📊</span> Live Usage (Estimate)
+            Live Usage (Estimate)
           </div>
           <div className="text-xs text-[var(--muted)]">
-            Model: <span className="font-mono text-[var(--fg0)]">{liveMetrics.liveModel || '-'}</span>
+            Model aktywny: <span className="font-mono text-[var(--fg0)]">{liveMetrics.liveModel || '-'}</span>{' '}| ustawiony: <span className="font-mono text-[var(--fg0)]">{config.live_model || '-'}</span>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -525,7 +612,7 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Live log + Rolling */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={CardClass}>
-          <div className="text-[var(--fg0)] font-semibold mb-3">📡 Ostatnie interakcje Amber</div>
+          <div className="text-[var(--fg0)] font-semibold mb-3">Ostatnie interakcje Amber</div>
           <div className="overflow-y-auto max-h-80 tiny-scroll">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-[var(--glass-strong)] backdrop-blur-sm z-10">
@@ -533,7 +620,7 @@ export default function AmberControlDeck({ adminToken }) {
                   <th className="py-2 pl-2">Intent</th>
                   <th className="py-2">Confidence</th>
                   <th className="py-2">Czas</th>
-                  <th className="py-2 pr-2">Odpowiedź</th>
+                  <th className="py-2 pr-2">Odpowiedz</th>
                 </tr>
               </thead>
               <tbody className="text-[12px]">
@@ -555,8 +642,8 @@ export default function AmberControlDeck({ adminToken }) {
         </div>
         <div className={CardClass}>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[var(--fg0)] font-semibold">📈 Wydajność (ostatnie 20)</div>
-            <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5">Odśwież</button>
+            <div className="text-[var(--fg0)] font-semibold">Wydajnosc (ostatnie 20)</div>
+            <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5">Odswiez</button>
           </div>
           <div className="h-48 relative min-h-0">
             <Line data={rollingData} options={rollingOptions} />
@@ -567,8 +654,8 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Prompt editor */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold">🪄 Prompt Amber (legacy override)</div>
-          <button onClick={savePrompt} className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)]">💾 Zapisz prompt</button>
+          <div className="text-[var(--fg0)] font-semibold">Prompt Amber (legacy override)</div>
+          <button onClick={savePrompt} className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)]">Zapisz prompt</button>
         </div>
 
         {/* Presets UI */}
@@ -588,14 +675,14 @@ export default function AmberControlDeck({ adminToken }) {
                   className="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed rounded border border-[var(--border)] text-[var(--fg0)] transition-colors"
                   title="Wczytaj ten preset"
                 >
-                  ⚡
+                  Wczytaj
                 </button>
                 <button
                   onClick={() => savePreset(i)}
                   className="px-2 py-1 text-xs border border-[var(--border)] text-[var(--muted)] hover:border-[var(--neon)] hover:text-[var(--neon)] rounded transition-all"
                   title="Zapisz obecny prompt jako ten preset"
                 >
-                  💾
+                  Zapisz
                 </button>
               </div>
             </div>
@@ -613,34 +700,36 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Stylization Prompt editor (NEW) */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold">✨ Prompt stylizacji odpowiedzi</div>
+          <div className="text-[var(--fg0)] font-semibold">Prompt stylizacji odpowiedzi</div>
           <div className="flex items-center gap-2">
             {stylizationPrompt.length > 0 && stylizationPrompt.length < 20 && (
-              <span className="text-[var(--bad)] text-xs">Min. 20 znaków</span>
+              <span className="text-[var(--bad)] text-xs">Min. 20 znakow</span>
             )}
             <button
               onClick={saveStylizationPrompt}
               disabled={stylizationSaving || stylizationPrompt.length < 20}
               className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {stylizationSaving ? '⏳ Zapisuję...' : '💾 Zapisz prompt'}
+              {stylizationSaving ? 'Zapisywanie...' : 'Zapisz prompt'}
             </button>
           </div>
         </div>
         <div className="text-[11px] text-[var(--muted)] mb-2 leading-relaxed">
-          Ten prompt jest używany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
+          Ten prompt jest uzywany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
           <strong> NIE</strong> stylizuje: find_nearby, menu, confirm_order, ani list numerowanych.
         </div>
         <textarea
           value={stylizationPrompt}
           onChange={(e) => setStylizationPrompt(e.target.value)}
           className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none font-mono"
-          placeholder="Jesteś Amber – asystentką FreeFlow. Przekształć tekst w krótką, naturalną wypowiedź..."
+          placeholder="Jestes Amber - asystentka FreeFlow. Przeksztalc tekst w krotka, naturalna wypowiedz..."
         />
         <div className="text-right text-[10px] text-[var(--muted)] mt-1">
-          {stylizationPrompt.length} znaków
+          {stylizationPrompt.length} znakow
         </div>
       </div>
     </div>
   );
 }
+
+

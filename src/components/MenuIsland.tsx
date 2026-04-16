@@ -8,6 +8,10 @@ function normalizeText(value: string = '') {
     return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeId(value: unknown): string {
+    return String(value ?? '');
+}
+
 function pickRecommendedMenuId(items: any[], response: any) {
     if (!items?.length) return null;
     const replyText = normalizeText(response?.reply || response?.text || response?.tts?.text || '');
@@ -16,11 +20,11 @@ function pickRecommendedMenuId(items: any[], response: any) {
     for (const item of items) {
         const itemName = normalizeText(item.name || item.base_name || '');
         if (!itemName) continue;
-        if (explicitDish && explicitDish.includes(itemName)) return item.id || item.menuItemId || item.menu_item_id;
-        if (replyText.includes(itemName)) return item.id || item.menuItemId || item.menu_item_id;
+        if (explicitDish && explicitDish.includes(itemName)) return normalizeId(item.id || item.menuItemId || item.menu_item_id);
+        if (replyText.includes(itemName)) return normalizeId(item.id || item.menuItemId || item.menu_item_id);
     }
 
-    return items[0]?.id || items[0]?.menuItemId || items[0]?.menu_item_id || null;
+    return normalizeId(items[0]?.id || items[0]?.menuItemId || items[0]?.menu_item_id || null);
 }
 
 export default function MenuIsland() {
@@ -28,7 +32,17 @@ export default function MenuIsland() {
     const uiMode = useConversationStore(s => s.uiMode);
     const menuItems = useConversationStore(s => s.menuItems);
     const currentRestaurant = useConversationStore(s => s.currentRestaurant);
+    const suggestedRestaurants = useConversationStore(s => s.suggestedRestaurants);
     const lastFullResponse = useConversationStore(s => s.lastFullResponse);
+
+    // Enrich currentRestaurant with full data (photo_gallery etc.) from suggestedRestaurants
+    const enrichedRestaurant = useMemo(() => {
+        if (!currentRestaurant) return null;
+        const full = Array.isArray(suggestedRestaurants)
+            ? suggestedRestaurants.find((r: any) => r?.id === currentRestaurant.id)
+            : null;
+        return full || currentRestaurant;
+    }, [currentRestaurant, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
@@ -58,7 +72,7 @@ export default function MenuIsland() {
 
             if (!matched) return;
 
-            const nextId = matched.id || matched.menuItemId || matched.menu_item_id || null;
+            const nextId = normalizeId(matched.id || matched.menuItemId || matched.menu_item_id || null);
             if (nextId) {
                 setHighlightedId(nextId);
             }
@@ -77,17 +91,17 @@ export default function MenuIsland() {
         }
 
         const hasCurrentSelection = highlightedId
-            ? menuItems.some((item) => (item.id || item.menuItemId || item.menu_item_id) === highlightedId)
+            ? menuItems.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === normalizeId(highlightedId))
             : false;
 
         if (hasCurrentSelection) return;
 
-        if (recommendedId && menuItems.some((item) => (item.id || item.menuItemId || item.menu_item_id) === recommendedId)) {
-            setHighlightedId(recommendedId);
+        if (recommendedId && menuItems.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === normalizeId(recommendedId))) {
+            setHighlightedId(normalizeId(recommendedId));
             return;
         }
 
-        setHighlightedId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null);
+        setHighlightedId(normalizeId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null));
     }, [menuItems, recommendedId, highlightedId]);
 
     if (!isVisible || !menuItems || menuItems.length === 0) return null;
@@ -100,8 +114,10 @@ export default function MenuIsland() {
             highlightedId={highlightedId}
             setHighlightedId={setHighlightedId}
             recommendedId={recommendedId}
-            title={currentRestaurant?.name ? `Menu: ${currentRestaurant.name}` : 'Menu restauracji'}
-            subtitle={currentRestaurant?.city || currentRestaurant?.address || 'Pozycje aktualnie widoczne dla tej restauracji'}
+            title={enrichedRestaurant?.name ? `Menu: ${enrichedRestaurant.name}` : 'Menu restauracji'}
+            subtitle={enrichedRestaurant?.city || enrichedRestaurant?.address || 'Pozycje aktualnie widoczne dla tej restauracji'}
+            restaurantDistance={enrichedRestaurant?.distance ?? null}
+            restaurant={enrichedRestaurant}
             onSelect={(item) => {
                 window.dispatchEvent(new CustomEvent('freeflow:orderItem', {
                     detail: { item, restaurant: currentRestaurant }
