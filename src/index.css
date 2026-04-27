@@ -3,9 +3,13 @@
 @tailwind utilities;
 
 html,
-body,
+body {
+  min-height: 100%;
+  width: 100%;
+}
+
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

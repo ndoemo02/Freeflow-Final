@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-04-15T14:13:07.753503+00:00",
+  "root": "C:\\Firerfox Portable\\Freeflow brain\\frontend\\src",
+  "output_dir": "C:\\Firerfox Portable\\Freeflow brain\\frontend\\graphify-out",
+  "processed_code_files": 233,
+  "nodes": 701,
+  "edges": 872,
+  "communities": 87,
+  "mode": "ast_only_no_tests"
+}

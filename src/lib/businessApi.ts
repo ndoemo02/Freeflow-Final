@@ -173,7 +173,7 @@ function getHeaders() {
  * Fetch all dashboard data in one call
  * Uses /api/admin/orders to aggregate data
  */
-export async function fetchBusinessDashboard(): Promise<BusinessDashboardData> {
+export async function fetchBusinessDashboard(restaurantId?: string): Promise<BusinessDashboardData> {
     if (USE_MOCK) {
         await new Promise(resolve => setTimeout(resolve, 300));
         return {
@@ -186,7 +186,8 @@ export async function fetchBusinessDashboard(): Promise<BusinessDashboardData> {
 
     try {
         // Fetch all orders (limit 500 to catch today's volume)
-        const url = getApiUrl('api/admin/orders?limit=500');
+        const qs = restaurantId ? `&restaurant_id=${encodeURIComponent(restaurantId)}` : '';
+        const url = getApiUrl(`api/admin/orders?limit=500${qs}`);
         const response = await fetch(url, { headers: getHeaders() });
 
         if (!response.ok) {

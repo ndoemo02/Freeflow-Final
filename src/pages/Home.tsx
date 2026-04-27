@@ -24,10 +24,11 @@ import VoiceDock from "../components/VoiceDock";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
-import { StateIsland, ExpectedContextPrompts, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
+import { StateIsland, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
 import MenuIsland from "../components/MenuIsland";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
+import { useLiveUiSessionStore } from "../state/liveUiSession";
 import ErrorFallback from "../components/ErrorFallback";
 import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
@@ -40,6 +41,7 @@ export default function Home() {
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
   const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
+  const clearHomeContext = useConversationStore(state => state.clearHomeContext);
   const uiMode = useConversationStore(state => state.uiMode);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
@@ -58,6 +60,11 @@ export default function Home() {
     sessionId,
   });
   const lastProcessedResponseRef = useRef<any>(null);
+  const liveUiState = useLiveUiSessionStore((state) => state.sessionState);
+  const liveUiStatusText = useLiveUiSessionStore((state) => state.statusText);
+  const liveUserTranscript = useLiveUiSessionStore((state) => state.lastUserTranscript);
+  const liveAssistantTranscript = useLiveUiSessionStore((state) => state.lastAssistantTranscript);
+  const liveDockTranscript = liveAssistantTranscript || liveUserTranscript || '';
 
   // --- UI View State (tiles vs voicebar) ---
   const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
@@ -72,8 +79,42 @@ export default function Home() {
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
   const setVoiceActive = useUI((s) => s.setVoiceActive);
+  const clearPresentation = useUI((s) => s.clearPresentation);
   const { setIsOpen, itemCount } = useCart() as any;
   const cartItemsCount = Number(itemCount || 0);
+
+  // Home should always render a clean screen without stale menu/restaurant context.
+  useEffect(() => {
+    clearHomeContext();
+    clearPresentation();
+    setHints({ panel: 'none' });
+  }, [clearHomeContext, clearPresentation, setHints]);
+
+  // Lock global page scroll on Home to prevent empty background scrolling on mobile.
+  // Scrollable areas (menu/list sheets) keep their own internal overflow containers.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverscrollY = html.style.overscrollBehaviorY;
+    const prevBodyOverscrollY = body.style.overscrollBehaviorY;
+
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    html.style.overscrollBehaviorY = 'none';
+    body.style.overscrollBehaviorY = 'none';
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      html.style.overscrollBehaviorY = prevHtmlOverscrollY;
+      body.style.overscrollBehaviorY = prevBodyOverscrollY;
+    };
+  }, []);
 
   // --- Effect: Handle Brain Response ---
   // When lastFullResponse updates, we derive UI hints and trigger TTS
@@ -157,6 +198,14 @@ export default function Home() {
     stop(); // Stop TTS before sending
     await sendMessage(sanitized);
   }, [liveSessionActive, sendMessage, stop]);
+
+  const handleLiveToggle = useCallback(() => {
+    if (liveSessionActive) {
+      stopLiveSession();
+      return;
+    }
+    void startLiveSession();
+  }, [liveSessionActive, startLiveSession, stopLiveSession]);
 
   // Handle voice transcript finalization
   useEffect(() => {
@@ -278,7 +327,7 @@ export default function Home() {
 
   // --- Render ---
   return (
-    <div className="home-page freeflow relative min-h-screen overflow-hidden text-slate-100">
+    <div className="home-page freeflow relative h-[100dvh] min-h-[100dvh] overflow-x-hidden overflow-y-hidden overscroll-y-none text-slate-100">
 
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
@@ -289,9 +338,9 @@ export default function Home() {
             <StateIsland />
             {liveModeEnabled && (
               <button
-                onClick={liveSessionActive ? stopLiveSession : startLiveSession}
+                onClick={handleLiveToggle}
                 data-live={liveSessionActive}
-                aria-label={liveSessionActive ? 'Wyłącz tryb Live' : 'Włącz tryb Live'}
+                aria-label={liveSessionActive ? 'Wstrzymaj tryb Live' : 'Wlacz lub wznow tryb Live'}
                 aria-pressed={liveSessionActive}
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
                   liveSessionActive
@@ -299,7 +348,7 @@ export default function Home() {
                     : 'text-white/50 bg-white/10 hover:bg-white/20'
                 }`}
               >
-                {liveSessionActive ? '● LIVE ON' : '○ LIVE'}
+                {liveSessionActive ? '● LIVE ON' : (liveUiState === 'paused' ? '◌ LIVE PAUSE' : '○ LIVE')}
               </button>
             )}
           </div>
@@ -325,7 +374,7 @@ export default function Home() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen min-h-[100dvh] p-4 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">
 
         {/* Brain UI Router - Renders "Configurable Islands" */}
         <div className="w-full mb-8">
@@ -399,7 +448,6 @@ export default function Home() {
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
         <div className="fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
-          <ExpectedContextPrompts />
           <VoiceDock
             recording={isListening}
             isProcessing={isThinking}
@@ -414,6 +462,9 @@ export default function Home() {
             }}
             visible={true}
             isPresenting={uiHints.panel !== 'none'}
+            liveUiState={liveUiState}
+            liveStatusText={liveUiStatusText}
+            liveTranscript={liveDockTranscript}
             liveSession={{
               isActive: liveSessionActive,
               start: startLiveSession,

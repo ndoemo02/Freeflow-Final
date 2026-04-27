@@ -1,32 +1,34 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import PanelHeader from '../components/PanelHeader';
+import { getApiUrl } from '../lib/config';
 
-// Polish voices data
 const polishVoices = [
   { name: 'pl-PL-Chirp3-HD-Aoede', gender: 'Kobieta', technology: 'Premium (Chirp3-HD)' },
   { name: 'pl-PL-Chirp3-HD-Despina', gender: 'Kobieta', technology: 'Premium (Chirp3-HD)' },
   { name: 'pl-PL-Wavenet-A', gender: 'Kobieta', technology: 'WaveNet' },
-  { name: 'pl-PL-Wavenet-B', gender: 'Mężczyzna', technology: 'WaveNet' },
-  { name: 'pl-PL-Wavenet-C', gender: 'Mężczyzna', technology: 'WaveNet' },
+  { name: 'pl-PL-Wavenet-B', gender: 'Mezczyzna', technology: 'WaveNet' },
+  { name: 'pl-PL-Wavenet-C', gender: 'Mezczyzna', technology: 'WaveNet' },
   { name: 'pl-PL-Wavenet-D', gender: 'Kobieta', technology: 'WaveNet' },
   { name: 'pl-PL-Wavenet-E', gender: 'Kobieta', technology: 'WaveNet' },
   { name: 'pl-PL-Standard-A', gender: 'Kobieta', technology: 'Standard' },
-  { name: 'pl-PL-Standard-B', gender: 'Mężczyzna', technology: 'Standard' },
-  { name: 'pl-PL-Standard-C', gender: 'Mężczyzna', technology: 'Standard' },
+  { name: 'pl-PL-Standard-B', gender: 'Mezczyzna', technology: 'Standard' },
+  { name: 'pl-PL-Standard-C', gender: 'Mezczyzna', technology: 'Standard' },
   { name: 'pl-PL-Standard-D', gender: 'Kobieta', technology: 'Standard' },
   { name: 'pl-PL-Standard-E', gender: 'Kobieta', technology: 'Standard' },
 ];
 
 export default function Settings() {
-  const [text, setText] = useState("Cześć! Tutaj możesz przetestować, jak brzmią różne polskie głosy wygenerowane przez sztuczną inteligencję.");
+  const [text, setText] = useState(
+    'Czesc! Tutaj mozesz przetestowac, jak brzmia rozne polskie glosy wygenerowane przez sztuczna inteligencje.',
+  );
   const [selectedVoice, setSelectedVoice] = useState(polishVoices[0].name);
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
   const handlePlay = async () => {
     if (!text.trim()) {
-      setStatusMessage("Proszę wpisać tekst.");
+      setStatusMessage('Prosze wpisac tekst.');
       setTimeout(() => setStatusMessage(''), 3000);
       return;
     }
@@ -35,40 +37,35 @@ export default function Settings() {
     setStatusMessage('');
 
     try {
-      // Sprawdź czy mamy klucz Google API
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-      
-      if (!apiKey || apiKey === 'your_google_api_key_here') {
-        // Fallback do Web Speech API
-        console.log('🎵 Using Web Speech API fallback...');
+      console.log('[Settings] Trying backend /api/tts');
+      await playWithBackendTTS(text, selectedVoice);
+    } catch (backendError) {
+      console.warn('[Settings] Backend TTS failed, fallback Web Speech:', backendError);
+      try {
         await playWithWebSpeechAPI(text, selectedVoice);
-      } else {
-        // Użyj Google TTS API
-        console.log('🎵 Using Google TTS API...');
-        await playWithGoogleTTS(text, selectedVoice);
+      } catch (fallbackError) {
+        console.error('TTS failed:', fallbackError);
+        setStatusMessage(
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : 'Wystapil blad. Sprobuj ponownie.',
+        );
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("❌ Błąd podczas generowania mowy:", error);
-      setStatusMessage(error instanceof Error ? error.message : "Wystąpił błąd. Spróbuj ponownie.");
-      setIsLoading(false);
     }
   };
 
-  const playWithWebSpeechAPI = async (text: string, voiceName: string) => {
+  const playWithWebSpeechAPI = async (inputText: string, voiceName: string) => {
     return new Promise<void>((resolve, reject) => {
       if (!('speechSynthesis' in window)) {
-        reject(new Error('Web Speech API nie jest obsługiwane w tej przeglądarce.'));
+        reject(new Error('Web Speech API nie jest obslugiwane w tej przegladarce.'));
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Pobierz wszystkie dostępne głosy
+      const utterance = new SpeechSynthesisUtterance(inputText);
       const voices = speechSynthesis.getVoices();
-      console.log('🎵 Available voices:', voices.map(v => ({ name: v.name, lang: v.lang, gender: v.name.includes('Female') || v.name.includes('Kobieta') ? 'Female' : 'Male' })));
 
-      // Mapuj głosy Google na dostępne głosy przeglądarki z różnymi parametrami
-      const voiceConfigs: { [key: string]: { lang: string, rate: number, pitch: number, volume: number, gender?: string } } = {
+      const voiceConfigs: { [key: string]: { lang: string; rate: number; pitch: number; volume: number; gender?: string } } = {
         'pl-PL-Standard-A': { lang: 'pl-PL', rate: 1.0, pitch: 1.2, volume: 1.0, gender: 'Female' },
         'pl-PL-Standard-B': { lang: 'pl-PL', rate: 0.9, pitch: 0.8, volume: 1.0, gender: 'Male' },
         'pl-PL-Wavenet-A': { lang: 'pl-PL', rate: 1.1, pitch: 1.3, volume: 0.9, gender: 'Female' },
@@ -81,220 +78,94 @@ export default function Settings() {
       };
 
       const config = voiceConfigs[voiceName] || { lang: 'pl-PL', rate: 1.0, pitch: 1.0, volume: 1.0 };
-      
-      // Ustaw parametry głosu
       utterance.lang = config.lang;
       utterance.rate = config.rate;
       utterance.pitch = config.pitch;
       utterance.volume = config.volume;
 
-      // Znajdź najlepszy głos
-      let selectedVoice = voices.find(voice => voice.lang.startsWith('pl'));
-      
-      // Jeśli nie ma polskiego głosu, użyj angielskiego z polskim akcentem
-      if (!selectedVoice) {
-        selectedVoice = voices.find(voice => voice.lang.startsWith('en'));
-        if (selectedVoice) {
-          console.log('🎵 No Polish voice found, using English voice with Polish text');
-        }
+      let selected = voices.find((voice) => voice.lang.startsWith('pl'));
+      if (!selected) {
+        selected = voices.find((voice) => voice.lang.startsWith('en'));
       }
 
-      // Spróbuj znaleźć głos o określonej płci
-      if (config.gender && selectedVoice) {
-        const genderVoice = voices.find(voice => 
-          voice.lang.startsWith('pl') && 
-          (voice.name.toLowerCase().includes(config.gender!.toLowerCase()) ||
-           voice.name.toLowerCase().includes('kobieta') ||
-           voice.name.toLowerCase().includes('female'))
+      if (config.gender && selected) {
+        const byGender = voices.find(
+          (voice) =>
+            voice.lang.startsWith('pl') &&
+            (voice.name.toLowerCase().includes(config.gender!.toLowerCase()) ||
+              voice.name.toLowerCase().includes('kobieta') ||
+              voice.name.toLowerCase().includes('female')),
         );
-        if (genderVoice) {
-          selectedVoice = genderVoice;
-        }
+        if (byGender) selected = byGender;
       }
-      
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-        console.log('🎵 Using voice:', selectedVoice.name, selectedVoice.lang, 'Rate:', config.rate, 'Pitch:', config.pitch);
-      } else {
-        console.log('🎵 No suitable voice found, using default');
+
+      if (selected) {
+        utterance.voice = selected;
       }
 
       utterance.onend = () => {
-        console.log('🎵 Web Speech API playback ended');
         setIsLoading(false);
         resolve();
       };
 
-      utterance.onerror = (event) => {
-        console.error('🎵 Web Speech API error:', event);
+      utterance.onerror = () => {
         setIsLoading(false);
-        reject(new Error('Błąd odtwarzania głosu'));
+        reject(new Error('Blad odtwarzania glosu'));
       };
 
       speechSynthesis.speak(utterance);
-      console.log('🎵 Web Speech API playback started with config:', config);
     });
   };
 
-  const playWithGoogleTTS = async (text: string, voiceName: string) => {
-    console.log('🎵 Starting Google TTS generation...');
-    const audioData = await generateTts(text, voiceName);
-    const mimeType = audioData.mimeType;
-
-    console.log('🎵 Audio data received:', {
-      hasAudioData: !!audioData.audioData,
-      mimeType: mimeType,
-      audioDataLength: audioData.audioData?.length
-    });
-
-    if (audioData.audioData && mimeType && mimeType.startsWith("audio/")) {
-      const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-      if (!sampleRateMatch) {
-        throw new Error("Nie można odczytać częstotliwości próbkowania z typu MIME.");
-      }
-      const sampleRate = parseInt(sampleRateMatch[1], 10);
-      console.log('🎵 Sample rate:', sampleRate);
-      
-      const pcmData = base64ToArrayBuffer(audioData.audioData);
-      const pcm16 = new Int16Array(pcmData);
-      const wavBlob = pcmToWav(pcm16, sampleRate);
-      const audioUrl = URL.createObjectURL(wavBlob);
-      
-      console.log('🎵 Audio URL created:', audioUrl);
-      
-      const audio = new Audio(audioUrl);
-      audio.onended = () => {
-        console.log('🎵 Google TTS playback ended');
-        setIsLoading(false);
-      };
-      audio.onerror = (e) => {
-        console.error('🎵 Google TTS playback error:', e);
-        setIsLoading(false);
-      };
-      
-      await audio.play();
-      console.log('🎵 Google TTS playback started');
-    } else {
-      throw new Error("Otrzymano nieprawidłowe dane audio z API.");
-    }
-  };
-
-  const generateTts = async (text: string, voiceName: string) => {
-    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || "";
-    
-    console.log('🔑 API Key:', apiKey ? 'Ustawiony' : 'BRAK');
-    console.log('📝 Text:', text);
-    console.log('🎤 Voice:', voiceName);
-    
-    if (!apiKey || apiKey === 'your_google_api_key_here') {
-      throw new Error('Brak klucza Google API. Dodaj VITE_GOOGLE_API_KEY do pliku .env');
-    }
-    
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
-
-    const payload = {
-      contents: [{
-        parts: [{ text: text }]
-      }],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: voiceName }
-          }
-        }
-      },
-      model: "gemini-2.5-flash-preview-tts"
-    };
-
-    console.log('📤 Request payload:', payload);
-
-    const response = await fetch(apiUrl, {
+  const playWithBackendTTS = async (inputText: string, voiceName: string) => {
+    const response = await fetch(getApiUrl('/api/tts'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ text: inputText, voice: voiceName }),
     });
 
-    console.log('📥 Response status:', response.status);
-
     if (!response.ok) {
-      const errorBody = await response.json();
-      console.error('❌ API Error:', errorBody);
-      throw new Error(`Błąd API: ${response.status} - ${errorBody.error?.message || 'Nieznany błąd'}`);
+      let details = `Blad API: ${response.status}`;
+      try {
+        const json = await response.json();
+        if (json?.error) details = `${details} - ${String(json.error)}`;
+      } catch {
+        // noop
+      }
+      throw new Error(details);
     }
 
-    const result = await response.json();
-    console.log('✅ API Response:', result);
-    
-    const part = result?.candidates?.[0]?.content?.parts?.[0];
+    const blob = await response.blob();
+    if (!blob || blob.size === 0) {
+      throw new Error('Backend TTS zwrocil pusty payload.');
+    }
 
-    return {
-      audioData: part?.inlineData?.data,
-      mimeType: part?.inlineData?.mimeType,
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => {
+      setIsLoading(false);
+      URL.revokeObjectURL(audioUrl);
     };
-  };
 
-  const base64ToArrayBuffer = (base64: string) => {
-    const binaryString = window.atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  };
+    audio.onerror = () => {
+      setIsLoading(false);
+      URL.revokeObjectURL(audioUrl);
+    };
 
-  const pcmToWav = (pcmData: Int16Array, sampleRate: number) => {
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-    const blockAlign = numChannels * (bitsPerSample / 8);
-    const dataSize = pcmData.length * (bitsPerSample / 8);
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-
-    // RIFF header
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    writeString(view, 8, 'WAVE');
-    // FMT sub-chunk
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, byteRate, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitsPerSample, true);
-    // DATA sub-chunk
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataSize, true);
-
-    // Write PCM data
-    for (let i = 0; i < pcmData.length; i++) {
-      view.setInt16(44 + i * 2, pcmData[i], true);
-    }
-
-    return new Blob([view], { type: 'audio/wav' });
-  };
-
-  const writeString = (view: DataView, offset: number, string: string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
+    await audio.play();
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A]">
       <div className="px-4 py-8">
         <div className="max-w-6xl mx-auto">
-          <PanelHeader 
-            title="⚙️ Ustawienia" 
-            subtitle="Konfiguracja aplikacji i tester głosów AI"
+          <PanelHeader
+            title="Ustawienia"
+            subtitle="Konfiguracja aplikacji i tester glosow AI"
           />
 
-          {/* Voice Tester Section */}
-          <motion.div 
+          <motion.div
             className="bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-700 mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -302,7 +173,7 @@ export default function Settings() {
           >
             <div className="flex flex-col md:flex-row items-center justify-between mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 md:mb-0">
-                Tester Polskich Głosów AI
+                Tester Polskich Glosow AI
               </h1>
               <div className="flex items-center space-x-2 text-blue-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
@@ -312,40 +183,37 @@ export default function Settings() {
                   <path d="M12 12v6"></path>
                 </svg>
                 <span className="font-semibold">
-                  {import.meta.env.VITE_GOOGLE_API_KEY && import.meta.env.VITE_GOOGLE_API_KEY !== 'your_google_api_key_here' 
-                    ? 'Powered by Google TTS' 
-                    : 'Web Speech API (różne parametry)'}
+                  Powered by Backend TTS (Vertex) + Web Speech fallback
                 </span>
               </div>
             </div>
 
-            {/* Main tool section */}
             <div className="space-y-6">
               <div>
                 <label htmlFor="text-input" className="block text-sm font-medium text-gray-300 mb-2">
                   Wpisz tekst do przeczytania:
                 </label>
-                <textarea 
-                  id="text-input" 
-                  rows={5} 
+                <textarea
+                  id="text-input"
+                  rows={5}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-white placeholder-gray-400" 
-                  placeholder="Cześć! Tutaj możesz przetestować, jak brzmię."
+                  className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-white placeholder-gray-400"
+                  placeholder="Czesc! Tutaj mozesz przetestowac, jak brzmiem."
                 />
               </div>
 
               <div>
                 <label htmlFor="voice-select" className="block text-sm font-medium text-gray-300 mb-2">
-                  Wybierz głos:
+                  Wybierz glos:
                 </label>
-                <select 
-                  id="voice-select" 
+                <select
+                  id="voice-select"
                   value={selectedVoice}
                   onChange={(e) => setSelectedVoice(e.target.value)}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-white"
                 >
-                  {polishVoices.map(voice => (
+                  {polishVoices.map((voice) => (
                     <option key={voice.name} value={voice.name}>
                       {voice.name} ({voice.gender}, {voice.technology})
                     </option>
@@ -354,7 +222,7 @@ export default function Settings() {
               </div>
 
               <div className="text-center pt-2">
-                <button 
+                <button
                   onClick={handlePlay}
                   disabled={isLoading}
                   className="mx-auto flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-110 disabled:bg-gray-400 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed"
@@ -371,25 +239,22 @@ export default function Settings() {
                   )}
                 </button>
               </div>
-              <div className="text-center text-sm text-red-400 h-5">
-                {statusMessage}
-              </div>
+              <div className="text-center text-sm text-red-400 h-5">{statusMessage}</div>
             </div>
           </motion.div>
 
-          {/* Voices table */}
-          <motion.div 
+          <motion.div
             className="bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-8 border border-gray-700"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Dostępne głosy (język polski)</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Dostepne glosy (jezyk polski)</h2>
             <div className="mb-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
               <p className="text-blue-200 text-sm">
-                <strong>💡 Wskazówka:</strong> Każdy głos ma inne parametry (tempo, wysokość, głośność), 
-                więc będą brzmieć inaczej nawet w trybie Web Speech API. 
-                Dla najlepszej jakości dodaj klucz Google API do pliku .env
+                <strong>Wskazowka:</strong> Kazdy glos ma inne parametry (tempo, wysokosc, glosnosc),
+                wiec beda brzmiec inaczej nawet w trybie Web Speech API.
+                Domyslnie audio generuje backend (Vertex), a Web Speech jest fallbackiem awaryjnym.
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -400,7 +265,7 @@ export default function Settings() {
                       Nazwa API
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Płeć
+                      Plec
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Technologia
@@ -408,17 +273,11 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody className="bg-gray-800 divide-y divide-gray-600">
-                  {polishVoices.map((voice, index) => (
+                  {polishVoices.map((voice) => (
                     <tr key={voice.name} className="hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                        {voice.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {voice.gender}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {voice.technology}
-                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{voice.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{voice.gender}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{voice.technology}</td>
                     </tr>
                   ))}
                 </tbody>

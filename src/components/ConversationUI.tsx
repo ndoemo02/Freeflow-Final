@@ -1,17 +1,25 @@
-import React, { useEffect, useMemo } from 'react';
+﻿import React, { useEffect, useMemo } from 'react';
 import { useConversationUIState } from '../hooks/useConversationUIState';
 import { useConversationStore } from '../store/useConversationStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import ContextualIsland from './ContextualIsland';
+import CinematicRestaurantCarousel from './CinematicRestaurantCarousel';
+import FreeFlowWordmark, { FreeFlowWordmarkVariant } from './FreeFlowWordmark';
+
+// Available variants: 'clean-premium' | 'neon-soft-glow' | 'closest-to-logo'
+const MENU_WORDMARK_VARIANT: FreeFlowWordmarkVariant = 'closest-to-logo';
 
 function normalizeText(value: string = '') {
     return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function normalizeId(value: unknown): string {
+    return String(value ?? '');
+}
+
 function pickRecommendedRestaurantId(items: any[], response: any, currentRestaurant: any) {
     if (!items?.length) return null;
-    const activeRestaurantId = currentRestaurant?.id;
-    if (activeRestaurantId && items.some((item: any) => item.id === activeRestaurantId)) {
+    const activeRestaurantId = normalizeId(currentRestaurant?.id);
+    if (activeRestaurantId && items.some((item: any) => normalizeId(item.id) === activeRestaurantId)) {
         return activeRestaurantId;
     }
 
@@ -19,18 +27,19 @@ function pickRecommendedRestaurantId(items: any[], response: any, currentRestaur
     for (const item of items) {
         const name = normalizeText(item.display_name || item.name || '');
         if (name && replyText.includes(name)) {
-            return item.id;
+            return normalizeId(item.id);
         }
     }
 
-    return items[0]?.id || null;
+    return items[0]?.id != null ? normalizeId(items[0].id) : null;
 }
 
 export function StateIsland() {
     const { isIdle, isOrdering, isConfirmingOrder, isChoosingRestaurant, isClarifyingOrder, isRestaurantSelected } = useConversationUIState();
 
-    let label = 'Wybierz rejon';
+    let label: React.ReactNode = 'Wybierz rejon';
     let color = 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    let useWordmark = false;
 
     if (isClarifyingOrder) {
         label = 'Precyzowanie...';
@@ -42,10 +51,11 @@ export function StateIsland() {
         label = 'Tworzenie zamowienia';
         color = 'bg-orange-500/20 text-orange-300 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
     } else if (isRestaurantSelected) {
-        label = 'Menu restauracji';
+        useWordmark = true;
+        label = <FreeFlowWordmark variant={MENU_WORDMARK_VARIANT} />;
         color = 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
     } else if (isChoosingRestaurant) {
-        label = 'Wybór restauracji';
+        label = 'Wybor restauracji';
         color = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
     } else if (isIdle) {
         label = 'Odkrywanie';
@@ -56,7 +66,7 @@ export function StateIsland() {
         <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className={`px-4 py-1.5 rounded-full border text-xs font-semibold tracking-wide backdrop-blur-md transition-colors duration-300 ${color}`}
+            className={`px-4 py-1.5 rounded-full border backdrop-blur-md transition-colors duration-300 ${useWordmark ? 'text-[11px] font-medium tracking-normal' : 'text-xs font-semibold tracking-wide'} ${color}`}
         >
             {label}
         </motion.div>
@@ -133,34 +143,29 @@ export function SuggestedRestaurantsCarousel() {
         if (!suggestedRestaurants?.length) return;
 
         const hasCurrentSelection = selectedRestaurantPreviewId
-            ? suggestedRestaurants.some((item) => item.id === selectedRestaurantPreviewId)
+            ? suggestedRestaurants.some((item) => normalizeId(item.id) === normalizeId(selectedRestaurantPreviewId))
             : false;
 
         if (hasCurrentSelection) return;
 
-        if (recommendedId && suggestedRestaurants.some((item) => item.id === recommendedId)) {
+        if (recommendedId && suggestedRestaurants.some((item) => normalizeId(item.id) === normalizeId(recommendedId))) {
             setSelectedRestaurantPreviewId(recommendedId);
             return;
         }
 
-        setSelectedRestaurantPreviewId(suggestedRestaurants[0].id);
+        setSelectedRestaurantPreviewId(normalizeId(suggestedRestaurants[0].id));
     }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
 
-    console.debug('[UI_STATE] SuggestedRestaurantsCarousel render — listVisible: true, resultsCount:', suggestedRestaurants.length, 'focusedRestaurant:', selectedRestaurantPreviewId, 'recommended:', recommendedId, 'currentRestaurant:', currentRestaurant?.name ?? null);
-
     return (
-        <ContextualIsland
+        <CinematicRestaurantCarousel
             items={suggestedRestaurants}
-            type="restaurant"
-            position="left"
-            highlightedId={selectedRestaurantPreviewId}
-            setHighlightedId={(id) => setSelectedRestaurantPreviewId(id as string)}
+            selectedId={selectedRestaurantPreviewId}
             recommendedId={recommendedId}
-            title="Restauracje w zasiegu"
-            subtitle="Lista aktualnych propozycji i wynikow wyszukiwania"
+            onPreviewChange={(item) => setSelectedRestaurantPreviewId(normalizeId(item.id))}
             onSelect={(item) => {
+                setSelectedRestaurantPreviewId(normalizeId(item.id));
                 window.dispatchEvent(new CustomEvent('freeflow:selectRestaurant', { detail: item }));
             }}
         />
@@ -195,4 +200,5 @@ export function ExpectedContextPrompts() {
         </AnimatePresence>
     );
 }
+
 

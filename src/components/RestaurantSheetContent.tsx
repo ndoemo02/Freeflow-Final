@@ -3,6 +3,7 @@ import SheetScrollable from './sheet/SheetScrollable';
 import { useBottomSheetContext } from './sheet/BottomSheetContainer';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
+import RestaurantAvatar from './RestaurantAvatar';
 
 const CARD_HEIGHT = 96;
 
@@ -53,23 +54,6 @@ function getMetaLine(item: any) {
     return parts.filter(Boolean).join(' / ') || 'Dostepna teraz';
 }
 
-function RestaurantAvatar({ item, size = 44 }: { item: any; size?: number }) {
-    const initial = (item?.name || 'R')[0].toUpperCase();
-    if (item?.image_url) {
-        return <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />;
-    }
-    if (item?.image) {
-        return <img src={item.image} alt={item.name} className="h-full w-full object-cover" />;
-    }
-    return (
-        <div
-            className="flex h-full w-full items-center justify-center text-sm font-bold text-white/90"
-            style={{ background: 'linear-gradient(135deg, rgba(249,115,22,0.35) 0%, rgba(6,10,22,0.85) 100%)' }}
-        >
-            {initial}
-        </div>
-    );
-}
 
 function FloatingRestaurantFocusCard({
     item,
@@ -132,7 +116,6 @@ function FloatingRestaurantFocusCard({
                 )}
 
                 <div className="flex h-full items-center gap-3">
-                    {/* avatar */}
                     <div
                         className="shrink-0 overflow-hidden"
                         style={{
@@ -145,7 +128,6 @@ function FloatingRestaurantFocusCard({
                         <RestaurantAvatar item={item} />
                     </div>
 
-                    {/* content */}
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                             <div className={`truncate text-[14px] font-semibold leading-tight ${isFocused ? 'text-white' : 'text-white/78'}`}>
@@ -170,7 +152,10 @@ function FloatingRestaurantFocusCard({
                                     {item?.cuisine_type || 'Restauracja'}
                                 </div>
                                 <div className="mt-1 flex items-center gap-2 text-[10px]">
-                                    <span className="font-semibold text-amber-300">★ {item?.rating || '4.5'}</span>
+                                    <div className="flex items-center gap-0.5">
+                                        <span className="font-semibold text-amber-300">★ {Number(item?.rating || 4.5).toFixed(1)}</span>
+                                        {item?.ratings_total > 0 && <span className="text-white/40">({item.ratings_total})</span>}
+                                    </div>
                                     <span className="text-white/18">·</span>
                                     <span className="text-white/65">{item?.delivery_time || (isRecommended ? 'Polecane' : 'W pobliżu')}</span>
                                     {item?.city && (
@@ -270,7 +255,10 @@ function FloatingRestaurantListCard({
                         </div>
 
                         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-white/50">
-                            <span className="font-semibold text-amber-300/90">★ {item?.rating || '4.5'}</span>
+                            <div className="flex items-center gap-0.5">
+                                <span className="font-semibold text-amber-300/90">★ {Number(item?.rating || 4.5).toFixed(1)}</span>
+                                {item?.ratings_total > 0 && <span className="text-white/30 text-[9px]">({item.ratings_total})</span>}
+                            </div>
                             <span className="text-white/15">·</span>
                             <span>{isRecommended ? 'Polecane' : 'W pobliżu'}</span>
                             {item?.delivery_time && (
@@ -578,12 +566,3 @@ export default function RestaurantSheetContent({
         </div>
     );
 }
-
-
-
-
-
-
-
-
-

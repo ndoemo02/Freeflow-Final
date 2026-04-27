@@ -16,6 +16,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ROUTES } from '../../app/routeConfig';
+import { OwnerRestaurantSelector } from '../../components/OwnerRestaurantSelector';
+import { useOwnerRestaurant } from '../../hooks/useOwnerRestaurant';
 import {
     fetchBusinessDashboard,
     BusinessDashboardData,
@@ -42,6 +45,7 @@ const REFRESH_INTERVAL = 30000; // 30 seconds
 
 export default function BusinessClientPanel() {
     const navigate = useNavigate();
+    const { selectedId } = useOwnerRestaurant();
 
     // Data state
     const [data, setData] = useState<BusinessDashboardData | null>(null);
@@ -53,7 +57,7 @@ export default function BusinessClientPanel() {
     const loadData = useCallback(async () => {
         try {
             setError(null);
-            const dashboardData = await fetchBusinessDashboard();
+            const dashboardData = await fetchBusinessDashboard(selectedId || undefined);
             setData(dashboardData);
             setLastRefresh(new Date());
         } catch (err) {
@@ -62,7 +66,7 @@ export default function BusinessClientPanel() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [selectedId]);
 
     // Initial load and refresh interval
     useEffect(() => {
@@ -108,7 +112,10 @@ export default function BusinessClientPanel() {
             {/* Header */}
             <header className="business-panel__header">
                 <div className="business-panel__header-left">
-                    <h1 className="business-panel__title">Panel Biznesowy</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <h1 className="business-panel__title">Panel Biznesowy</h1>
+                        <OwnerRestaurantSelector variant="bp" />
+                    </div>
                     <p className="business-panel__subtitle">
                         Ostatnia aktualizacja: {lastRefresh.toLocaleTimeString('pl-PL')}
                     </p>
@@ -136,8 +143,13 @@ export default function BusinessClientPanel() {
                         </svg>
                     </button>
 
-                    {/* 3 — KDS: primary workspace destination */}
-                    <Link to="/panel/business-kds" className="business-panel__kds-link">
+                    {/* 3 — Manage: restaurant data + menu CRUD */}
+                    <Link to={ROUTES.PANEL_MANAGE} className="business-panel__manage-link">
+                        Zarządzanie
+                    </Link>
+
+                    {/* 4 — KDS: primary workspace destination */}
+                    <Link to={ROUTES.PANEL_BUSINESS_KDS} className="business-panel__kds-link">
                         Kitchen Display
                     </Link>
                 </div>

@@ -3,11 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ROUTES } from '../app/routeConfig'
 import { useUI } from '../state/ui'
+import { useConversationStore } from '../store/useConversationStore'
 
 const HIDDEN_ON: string[] = [
   ROUTES.PANEL_CLIENT,
   ROUTES.PANEL_BUSINESS_KDS,
   ROUTES.PANEL_BUSINESS,
+  ROUTES.PANEL_MANAGE,
+  ROUTES.PANEL_RESTAURANT_MANAGER,
   ROUTES.PANEL_ADMIN,
   ROUTES.PANEL_DRIVER,
   ROUTES.BUSINESS_READONLY,
@@ -75,6 +78,8 @@ export default function BottomTabBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const voiceActive = useUI((s) => s.voiceActive)
+  const clearPresentation = useUI((s) => s.clearPresentation)
+  const clearHomeContext = useConversationStore((s) => s.clearHomeContext)
   const [islandExpanded, setIslandExpanded] = useState(false)
 
   useEffect(() => {
@@ -151,7 +156,13 @@ export default function BottomTabBar() {
             <motion.button
               key={tab.id}
               whileTap={{ scale: 0.88 }}
-              onClick={() => navigate(to)}
+              onClick={() => {
+                if (tab.id === 'home') {
+                  clearHomeContext()
+                  clearPresentation()
+                }
+                navigate(to)
+              }}
               className="flex flex-col items-center justify-center gap-0.5 transition-colors"
               style={{
                 minWidth: 44,

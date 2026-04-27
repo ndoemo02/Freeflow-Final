@@ -442,12 +442,12 @@ export default function Cart() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
                       <button
                         type="button"
                         onClick={handleClearCart}
                         disabled={isSubmitting}
-                        className="flex-1 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                        className="flex-1 min-w-[180px] rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
                       >
                         <i className="fas fa-trash-alt mr-2" />
                         Wyczysc koszyk
@@ -466,7 +466,7 @@ export default function Cart() {
                           }
                           handleSubmit({ preventDefault: () => { } });
                         }}
-                        className="flex-1 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-3 font-semibold hover:shadow-[0_0_30px_rgba(0,234,255,0.5)] transition-all disabled:opacity-50"
+                        className="flex-1 min-w-[200px] rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-3 font-semibold hover:shadow-[0_0_30px_rgba(0,234,255,0.5)] transition-all disabled:opacity-50"
                       >
                         {isSubmitting ? 'Skladanie...' : 'Zloz zamowienie'}
                       </button>

@@ -55,8 +55,23 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: { type: O, properties: {} },
   },
   {
+    name: 'compare_restaurants',
+    description: 'Compare menu items across up to 3 restaurants in the same city. Read-only.',
+    parameters: {
+      type: O,
+      properties: {
+        query: { type: S },
+        category: { type: S },
+        city: { type: S },
+        metric: { type: S },
+        max_restaurants: { type: N },
+        max_items_per_restaurant: { type: N },
+      },
+    },
+  },
+  {
     name: 'add_item_to_cart',
-    description: 'Add one item to cart by dish name and quantity.',
+    description: 'Add one item to cart by dish name and quantity. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
     parameters: {
       type: O,
       properties: {
@@ -70,7 +85,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'add_items_to_cart',
-    description: 'Add multiple items to cart in one transaction.',
+    description: 'Add multiple items to cart in one transaction. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
     parameters: {
       type: O,
       properties: {
@@ -89,6 +104,45 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         restaurant_name: { type: S },
       },
       required: ['items'],
+    },
+  },
+  {
+    name: 'update_cart_item_quantity',
+    description: 'Change quantity for an existing cart item by dish name.',
+    parameters: {
+      type: O,
+      properties: {
+        dish: { type: S },
+        quantity: { type: N },
+      },
+      required: ['dish', 'quantity'],
+    },
+  },
+  {
+    name: 'remove_item_from_cart',
+    description: 'Remove item from cart by dish name. Optional quantity removes only part of amount.',
+    parameters: {
+      type: O,
+      properties: {
+        dish: { type: S },
+        quantity: { type: N },
+      },
+      required: ['dish'],
+    },
+  },
+  {
+    name: 'replace_cart_item',
+    description: 'Replace one cart item with another dish in the same restaurant scope.',
+    parameters: {
+      type: O,
+      properties: {
+        from_dish: { type: S },
+        to_dish: { type: S },
+        quantity: { type: N },
+        restaurant_id: { type: S },
+        restaurant_name: { type: S },
+      },
+      required: ['from_dish', 'to_dish'],
     },
   },
   {

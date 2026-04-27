@@ -26,6 +26,7 @@ const DEFAULT_POLL_INTERVAL = 5000; // 5 seconds
 export interface UseKDSPollingOptions {
     pollInterval?: number;
     enabled?: boolean;
+    restaurantId?: string;
 }
 
 export interface UseKDSPollingReturn {
@@ -52,7 +53,7 @@ export interface UseKDSPollingReturn {
 }
 
 export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPollingReturn {
-    const { pollInterval = DEFAULT_POLL_INTERVAL, enabled = true } = options;
+    const { pollInterval = DEFAULT_POLL_INTERVAL, enabled = true, restaurantId } = options;
 
     // State
     const [orders, setOrders] = useState<KDSOrder[]>([]);
@@ -83,7 +84,7 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
 
         try {
             setError(null);
-            const response: KDSDashboardResponse = await fetchKDSOrders();
+            const response: KDSDashboardResponse = await fetchKDSOrders(restaurantId);
 
             if (response.ok) {
                 setOrders(response.orders);
@@ -105,7 +106,7 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [restaurantId]);
 
     /**
      * Manual refresh

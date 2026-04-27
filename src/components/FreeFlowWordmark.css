@@ -1,0 +1,94 @@
+.ff-wordmark {
+  --ff-amber: #f59e0b;
+  --ff-cyan: #22d3ee;
+  --ff-ice: #e8f5ff;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ff-wordmark__free,
+.ff-wordmark__flow {
+  display: inline-block;
+}
+
+/* 1) clean premium */
+.ff-wordmark--clean-premium {
+  font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.015em;
+  font-weight: 600;
+}
+
+.ff-wordmark--clean-premium .ff-wordmark__free {
+  color: var(--ff-ice);
+  opacity: 0.94;
+}
+
+.ff-wordmark--clean-premium .ff-wordmark__flow {
+  color: #ffc061;
+  opacity: 0.95;
+}
+
+/* 2) neon soft glow */
+.ff-wordmark--neon-soft-glow {
+  font-family: 'Orbitron', 'Space Grotesk', sans-serif;
+  font-size: 0.87rem;
+  letter-spacing: 0.01em;
+  font-weight: 700;
+  text-shadow:
+    0 0 6px rgba(34, 211, 238, 0.16),
+    0 0 12px rgba(245, 158, 11, 0.16);
+}
+
+.ff-wordmark--neon-soft-glow .ff-wordmark__free,
+.ff-wordmark--neon-soft-glow .ff-wordmark__flow {
+  background: linear-gradient(105deg, #e8f5ff 8%, #7de8ff 46%, #ffba54 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 3) closest-to-logo */
+.ff-wordmark--closest-to-logo {
+  position: relative;
+  font-family: 'Space Grotesk', 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.005em;
+  transform: skewX(-8deg);
+  text-shadow:
+    0 0 7px rgba(252, 146, 17, 0.2),
+    0 0 10px rgba(3, 227, 236, 0.14);
+}
+
+.ff-wordmark--closest-to-logo .ff-wordmark__free {
+  background: linear-gradient(96deg, #fef5e8 0%, #ffd18a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ff-wordmark--closest-to-logo .ff-wordmark__flow {
+  background: linear-gradient(100deg, #ff9e37 2%, #ff7d1f 48%, #57eaff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ff-wordmark--closest-to-logo::after {
+  content: '';
+  position: absolute;
+  left: 0.08em;
+  right: 0.05em;
+  bottom: -0.18em;
+  height: 1px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, rgba(255, 157, 34, 0.75), rgba(59, 220, 255, 0.55));
+  opacity: 0.76;
+}
+

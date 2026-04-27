@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useKDSPolling } from '../hooks/useKDSPolling';
+import { OwnerRestaurantSelector } from '../components/OwnerRestaurantSelector';
+import { useOwnerRestaurant } from '../hooks/useOwnerRestaurant';
 import { KDSOrder } from '../lib/kdsApi';
 import '../components/panels/KitchenDisplay.css'; // Dodany CSS prototypu
 
@@ -39,10 +41,9 @@ function OrderCard({
     // Map the status locally for KDS rendering logic
     const mappedStatus = (order.status === 'pending' || order.status === 'new') ? 'new'
         : order.status === 'preparing' ? 'preparing'
-            : order.status === 'ready' ? 'ready'
+            : (order.status === 'ready' || order.status === 'completed') ? 'ready'
                 : 'completed';
 
-    const allDone = order.items.every(i => i.done);
     const displayItems = activeStation === 'all' || activeStation === 'wydawka'
         ? order.items
         : order.items.filter(i => i.station === activeStation);
@@ -117,16 +118,30 @@ function OrderCard({
 
             <button
                 onClick={() => {
-                    if (isNew) handleStartOrder(order.id);
-                    else if (allDone) handleCompleteOrder(order.id);
-                    else handleBumpOrder(order.id);
+                    if (mappedStatus === 'new') {
+                        handleStartOrder(order.id);
+                        return;
+                    }
+                    if (mappedStatus === 'preparing') {
+                        handleBumpOrder(order.id);
+                        return;
+                    }
+                    if (mappedStatus === 'ready') {
+                        handleCompleteOrder(order.id);
+                    }
                 }}
                 className={`kds-button w-full py-2.5 px-3 rounded-lg text-white font-bold text-xs transition-all duration-300 shadow-lg active:scale-95
                     ${isNew ? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700' :
-                        allDone ? 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700' :
+                        mappedStatus === 'ready' ? 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700' :
                             'bg-gradient-to-r from-blue-500 to-sky-600 hover:from-blue-600 hover:to-sky-700'}`}
             >
-                {isNew ? 'PRZYJMIJ' : allDone ? 'WYŚLIJ / ZAKOŃCZ' : 'CZEKAJ / ZWOLNIJ (BUMP)'}
+                {mappedStatus === 'new'
+                    ? 'PRZYJMIJ'
+                    : mappedStatus === 'preparing'
+                        ? 'PRZYGOTOWANE'
+                        : mappedStatus === 'ready'
+                            ? 'WYŚLIJ / ZAKOŃCZ'
+                            : 'ZAKOŃCZONE'}
             </button>
         </div>
     );
@@ -163,6 +178,7 @@ function StatusColumn({
 
 export default function BusinessPanelNew() {
     const navigate = useNavigate();
+    const { selectedId } = useOwnerRestaurant();
     const [activeStation, setActiveStation] = useState<StationFilter>('all');
     const [isMobile, setIsMobile] = useState(false);
     const [activeColumn, setActiveColumn] = useState(0);
@@ -179,7 +195,7 @@ export default function BusinessPanelNew() {
         completeOrder,
         bumpOrder,
         recallLastOrder,
-    } = useKDSPolling({ pollInterval: 5000 });
+    } = useKDSPolling({ pollInterval: 5000, restaurantId: selectedId || undefined });
 
     useEffect(() => {
         const checkMobile = () => {
@@ -245,7 +261,7 @@ export default function BusinessPanelNew() {
             },
             {
                 title: 'GOTOWE',
-                orders: filteredOrders.filter(o => o.status === 'ready'),
+                orders: filteredOrders.filter(o => o.status === 'ready' || o.status === 'completed'),
                 color: 'from-green-500 to-green-600'
             },
             {
@@ -290,6 +306,9 @@ export default function BusinessPanelNew() {
                         </div>
 
                         <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                            {/* Restaurant selector */}
+                            <OwnerRestaurantSelector variant="dark" />
+
                             {/* Return — always first, labeled */}
                             <button
                                 onClick={() => navigate('/')}

@@ -189,6 +189,86 @@ export function CartProvider({ children }) {
 
   const total = cart.reduce((sum, item) => sum + ((item.price ?? item.price_pln ?? 0) * (item.quantity ?? item.qty ?? 1)), 0);
 
+  const isValidUUID = (id) => {
+    if (!id || typeof id !== 'string') return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
+  const resolveRestaurantId = async () => {
+    let finalRestaurantId = restaurant?.id;
+    const needsLookup = !finalRestaurantId || finalRestaurantId === 'unknown-sync' || !isValidUUID(finalRestaurantId);
+
+    if (!needsLookup) return finalRestaurantId;
+
+    const searchName = (restaurant?.name || '').trim();
+    console.log(`[CART_RESTAURANT_RESOLVE] resolving by name="${searchName}"`);
+
+    if (!searchName) {
+      throw new Error('Brak nazwy restauracji w koszyku. Proszę dodać produkty ponownie.');
+    }
+
+    let { data: restData, error: restErr } = await supabase
+      .from('restaurants')
+      .select('id, name')
+      .ilike('name', searchName)
+      .limit(1)
+      .maybeSingle();
+
+    if (!restData?.id) {
+      const partialResult = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .ilike('name', `%${searchName}%`)
+        .limit(1)
+        .maybeSingle();
+      restData = partialResult.data;
+      restErr = partialResult.error;
+    }
+
+    if (!restData?.id) {
+      const aliasResult = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .ilike('aliases', `%${searchName}%`)
+        .limit(1)
+        .maybeSingle();
+      if (aliasResult.data?.id) {
+        restData = aliasResult.data;
+      }
+    }
+
+    if (!restData?.id) {
+      console.error('[CART_RESTAURANT_RESOLVE] failed', restErr);
+      throw new Error(`Nie można znaleźć restauracji "${searchName}" w bazie. Spróbuj wybrać restaurację ponownie.`);
+    }
+
+    finalRestaurantId = restData.id;
+    setRestaurant((prev) => ({ ...prev, id: finalRestaurantId, name: restData.name }));
+    console.log(`[CART_RESTAURANT_RESOLVE] success id=${finalRestaurantId} name="${restData.name}"`);
+    return finalRestaurantId;
+  };
+
+  const buildOrderData = (deliveryInfo, restaurantId, status = 'pending') => ({
+    user_id: user?.id || null,
+    restaurant_id: restaurantId,
+    restaurant_name: restaurant?.name || 'Unknown Restaurant',
+    items: cart.map((item) => ({
+      menu_item_id: item.id,
+      name: item.name,
+      unit_price_cents: Math.round(Number(item.price || 0) * 100),
+      qty: Number(item.quantity || 1),
+    })),
+    total_price: total,
+    total_cents: Math.round(total * 100),
+    status,
+    customer_name: deliveryInfo.name || user?.user_metadata?.first_name || user?.email || 'Guest',
+    customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
+    delivery_address: deliveryInfo.address || user?.user_metadata?.address || '',
+    notes: deliveryInfo.notes || '',
+    created_at: new Date().toISOString(),
+  });
+
   const submitOrder = async (deliveryInfo) => {
     console.log('🛒 submitOrder called with user:', user);
 
@@ -210,91 +290,10 @@ export function CartProvider({ children }) {
     setIsSubmitting(true);
 
     try {
-      const isValidUUID = (id) => {
-        if (!id || typeof id !== 'string') return false;
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(id);
-      };
-
-      let finalRestaurantId = restaurant.id;
-
-      const needsLookup = !finalRestaurantId ||
-        finalRestaurantId === 'unknown-sync' ||
-        !isValidUUID(finalRestaurantId);
-
-      if (needsLookup) {
-        const searchName = (restaurant.name || '').trim();
-        console.log(`🔤 Restaurant ID invalid or missing (got: "${finalRestaurantId}"). Resolving by name: "${searchName}"...`);
-
-        if (!searchName) {
-          throw new Error('Brak nazwy restauracji w koszyku. Proszę dodać produkty ponownie.');
-        }
-
-        let { data: restData, error: restErr } = await supabase
-          .from('restaurants')
-          .select('id, name')
-          .ilike('name', searchName)
-          .limit(1)
-          .maybeSingle();
-
-        if (!restData?.id) {
-          console.log(`🔤 No exact match, trying partial match for: "${searchName}"`);
-          const partialResult = await supabase
-            .from('restaurants')
-            .select('id, name')
-            .ilike('name', `%${searchName}%`)
-            .limit(1)
-            .maybeSingle();
-          restData = partialResult.data;
-          restErr = partialResult.error;
-        }
-
-        if (!restData?.id) {
-          console.log(`🔤 No partial match, trying aliases for: "${searchName}"`);
-          const aliasResult = await supabase
-            .from('restaurants')
-            .select('id, name')
-            .ilike('aliases', `%${searchName}%`)
-            .limit(1)
-            .maybeSingle();
-          if (aliasResult.data?.id) {
-            restData = aliasResult.data;
-          }
-        }
-
-        if (restData?.id) {
-          finalRestaurantId = restData.id;
-          setRestaurant(prev => ({ ...prev, id: finalRestaurantId, name: restData.name }));
-          console.log(`✅ Resolved restaurant "${searchName}" → ID: ${finalRestaurantId}, DB Name: "${restData.name}"`);
-        } else {
-          console.error('❌ Could not resolve restaurant ID. Searched for:', searchName, 'Error:', restErr);
-          throw new Error(`Nie można znaleźć restauracji "${searchName}" w bazie. Spróbuj wybrać restaurację ponownie.`);
-        }
-      }
-
-      const orderData = {
-        user_id: user?.id || null,
-        restaurant_id: finalRestaurantId,
-        restaurant_name: restaurant.name,
-        items: cart.map(item => ({
-          menu_item_id: item.id,
-          name: item.name,
-          unit_price_cents: Math.round(item.price * 100),
-          qty: item.quantity
-        })),
-        total_price: total,
-        total_cents: Math.round(total * 100),
-        status: 'pending',
-        customer_name: deliveryInfo.name || user?.user_metadata?.first_name || user?.email || 'Gość',
-        customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
-        delivery_address: deliveryInfo.address || user?.user_metadata?.address || '',
-        notes: deliveryInfo.notes || '',
-        created_at: new Date().toISOString()
-      };
-
+      const finalRestaurantId = await resolveRestaurantId();
+      const orderData = buildOrderData(deliveryInfo, finalRestaurantId);
       const apiUrl = getApiUrl('/api/orders');
       console.log('🛒 Submitting order to:', apiUrl);
-      console.log('🛒 Order data:', JSON.stringify(orderData, null, 2));
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -302,11 +301,8 @@ export function CartProvider({ children }) {
         body: JSON.stringify(orderData),
       });
 
-      console.log('🛒 Response status:', response.status, response.statusText);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('🛒 Error response body:', errorText);
         let errorData;
         try {
           errorData = JSON.parse(errorText);
@@ -317,7 +313,6 @@ export function CartProvider({ children }) {
       }
 
       const data = await response.json();
-      console.log('🛒 Order created successfully:', data);
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
       resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true });
       return data;
@@ -353,3 +348,5 @@ export function CartProvider({ children }) {
     </CartContext.Provider>
   );
 }
+
+

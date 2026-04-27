@@ -65,6 +65,7 @@ export default function ConversationViewer({ adminToken }) {
     const [conversations, setConversations] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [timeline, setTimeline] = useState([]);
+    const [turns, setTurns] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showTimeline, setShowTimeline] = useState(true);
 
@@ -109,7 +110,10 @@ export default function ConversationViewer({ adminToken }) {
         })
             .then(r => r.json())
             .then(json => {
-                if (json.ok) setTimeline(json.data.timeline || []);
+                if (json.ok) {
+                    setTimeline(json.data.timeline || []);
+                    setTurns(json.data.turns || []);
+                }
                 setLoading(false);
             })
             .catch(e => setLoading(false));
@@ -139,6 +143,7 @@ export default function ConversationViewer({ adminToken }) {
                 setConversations([]);
                 setSelectedId(null);
                 setTimeline([]);
+                setTurns([]);
             } else {
                 alert('Błąd: ' + json.error);
             }
@@ -159,6 +164,16 @@ export default function ConversationViewer({ adminToken }) {
         if (selectedConv?.calculated_stage) return selectedConv.calculated_stage;
 
         // 2. Fallback: spróbuj wyliczyć z timeline (jeśli mamy go wczytanego)
+        if (turns && turns.length > 0) {
+            let max = 0;
+            const mapping = { 'find_nearby': 1, 'show_city_results': 1, 'show_menu': 2, 'create_order': 3, 'confirm_order': 4 };
+            turns.forEach((turn) => {
+                const s = mapping[turn?.action?.workflowStep];
+                if (s && s > max) max = s;
+            });
+            if (max > 0) return max;
+        }
+
         if (timeline && timeline.length > 0) {
             let max = 0;
             const mapping = { 'find_nearby': 1, 'show_city_results': 1, 'show_menu': 2, 'create_order': 3, 'confirm_order': 4 };
@@ -177,7 +192,7 @@ export default function ConversationViewer({ adminToken }) {
         }
 
         return 0;
-    }, [selectedId, selectedConv, timeline]);
+    }, [selectedId, selectedConv, timeline, turns]);
 
     const deleteConversation = async (e, id) => {
         e.stopPropagation();
@@ -202,9 +217,10 @@ export default function ConversationViewer({ adminToken }) {
     };
 
     const exportConversation = () => {
-        if (!selectedConv || !timeline) return;
+        if (!selectedConv || (!timeline && !turns)) return;
         const data = {
             conversation: selectedConv,
+            turns: turns,
             timeline: timeline
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -349,7 +365,67 @@ export default function ConversationViewer({ adminToken }) {
 
                         {loading && <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20 backdrop-blur-sm"><div className="text-[var(--neon)] animate-pulse font-bold">Ładowanie zdarzeń...</div></div>}
 
-                        {selectedId && timeline.map((evt, i) => (
+                        {selectedId && turns.length > 0 && turns.map((turn, i) => {
+                            const sourceLabel = turn.source === 'live' ? 'live' : 'deterministic';
+                            const entitiesResolved = Array.isArray(turn?.understanding?.entitiesResolved)
+                                ? turn.understanding.entitiesResolved.map((item) => `${item.key}: ${item.value ?? '-'}`).join(', ')
+                                : '';
+                            const toolsSummary = Array.isArray(turn?.tools)
+                                ? turn.tools.map((tool) => `${tool.name}${tool.ok === false ? ' (error)' : tool.ok === true ? ' (ok)' : ''}`).join(', ')
+                                : '';
+                            const cartDelta = turn?.stateChange?.cartDelta;
+
+                            return (
+                                <div key={turn.turnId || i} className="flex gap-4 relative group">
+                                    <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--border)] group-last:hidden opacity-30"></div>
+                                    <div className={`relative z-10 w-5 h-5 rounded-full border-2 border-[#121214] flex-shrink-0 mt-0.5 shadow-lg ${turn.status === 'error' ? 'bg-red-500' : turn.source === 'live' ? 'bg-cyan-500' : 'bg-purple-500'}`}></div>
+
+                                    <div className="pb-6 flex-1 min-w-0">
+                                        <div className="text-xs text-[var(--muted)] mb-2 flex items-center gap-2">
+                                            <span className="uppercase tracking-wider font-bold text-[var(--fg0)]">turn #{turn.turnIndex || i + 1}</span>
+                                            <span className="opacity-30">•</span>
+                                            <span className={`uppercase tracking-wider font-bold ${sourceLabel === 'live' ? 'text-cyan-400' : 'text-purple-400'}`}>{sourceLabel}</span>
+                                            <span className="opacity-30">•</span>
+                                            <span className="font-mono opacity-50">{new Date(turn.startedAt).toLocaleTimeString() + '.' + String(new Date(turn.startedAt).getMilliseconds()).padStart(3, '0')}</span>
+                                        </div>
+
+                                        <div className="glass-strong p-3 rounded-lg text-xs border border-[var(--border)] overflow-x-auto shadow-inner bg-black/20 space-y-2">
+                                            {turn?.userInput?.text && (
+                                                <div className="text-blue-300">Użytkownik: <span className="text-[var(--fg0)]">"{turn.userInput.text}"</span></div>
+                                            )}
+                                            {turn?.understanding?.intent && (
+                                                <div className="text-purple-300">Intencja: <span className="text-[var(--fg0)]">{turn.understanding.intent}</span></div>
+                                            )}
+                                            {entitiesResolved && (
+                                                <div className="text-[var(--muted)]">Encje: <span className="text-[var(--fg1)]">{entitiesResolved}</span></div>
+                                            )}
+                                            {turn?.action?.summary && (
+                                                <div className="text-[var(--fg1)]">Akcja: <span className="text-[var(--fg0)]">{turn.action.summary}</span></div>
+                                            )}
+                                            {toolsSummary && (
+                                                <div className="text-cyan-300">Narzędzia: <span className="text-[var(--fg0)]">{toolsSummary}</span></div>
+                                            )}
+                                            {turn?.assistant?.text && (
+                                                <div className="text-green-300">Asystent: <span className="text-[var(--fg0)]">"{turn.assistant.text}"</span></div>
+                                            )}
+                                            {cartDelta && (
+                                                <div className="text-amber-300">
+                                                    Koszyk: <span className="text-[var(--fg0)]">{cartDelta.itemsDelta > 0 ? '+' : ''}{cartDelta.itemsDelta} szt.</span>
+                                                    <span className="text-[var(--muted)]"> / </span>
+                                                    <span className="text-[var(--fg0)]">{cartDelta.totalDelta > 0 ? '+' : ''}{cartDelta.totalDelta} zł</span>
+                                                </div>
+                                            )}
+                                            <details className="pt-1 border-t border-[var(--border)]/60">
+                                                <summary className="cursor-pointer text-[10px] text-[var(--muted)] hover:text-[var(--fg0)]">Raw telemetry (expand)</summary>
+                                                <pre className="whitespace-pre-wrap text-[var(--muted)] mt-2">{JSON.stringify(turn.raw?.payloadsExpandable || [], null, 2)}</pre>
+                                            </details>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {selectedId && turns.length === 0 && timeline.map((evt, i) => (
                             <div key={i} className="flex gap-4 relative group">
                                 {/* Vertical Line */}
                                 <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--border)] group-last:hidden opacity-30"></div>
@@ -390,7 +466,7 @@ export default function ConversationViewer({ adminToken }) {
                                 </div>
                             </div>
                         ))}
-                        {selectedId && timeline.length === 0 && !loading && (
+                        {selectedId && turns.length === 0 && timeline.length === 0 && !loading && (
                             <div className="text-center text-[var(--muted)] mt-10">Brak zarejestrowanych zdarzeń w tej sesji.</div>
                         )}
                     </div>
