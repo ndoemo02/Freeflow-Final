@@ -1,5 +1,14 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react';
-import { GoogleGenAI, Modality, type Session, type LiveServerMessage } from '@google/genai';
+import {
+  ActivityHandling,
+  EndSensitivity,
+  GoogleGenAI,
+  Modality,
+  StartSensitivity,
+  TurnCoverage,
+  type Session,
+  type LiveServerMessage,
+} from '@google/genai';
 import { startPCM16Stream } from '../lib/audioStream';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
@@ -20,8 +29,19 @@ const LIVE_MODEL_CHANGED_EVENT = 'freeflow:live-model-changed';
 const MIC_MIME = 'audio/pcm;rate=16000';
 const RECONNECT_DELAYS_MS = [1000, 2000, 5000] as const;
 const AUTO_RECOVERY_GPS_KEY = 'ff_last_gps';
-const AUTO_RECOVERY_GPS_TTL_MS = 5 * 60 * 1000;
+const AUTO_RECOVERY_GPS_TTL_MS = 30 * 60 * 1000;
 const AUTO_RECOVERY_COOLDOWN_MS = 7000;
+const LIVE_STALL_WARNING_MS = 9000;
+const LIVE_VAD_CONFIG = {
+  activityHandling: ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
+  turnCoverage: TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
+  automaticActivityDetection: {
+    startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+    endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
+    prefixPaddingMs: 120,
+    silenceDurationMs: 500,
+  },
+} as const;
 
 // Fix #4: module-level cache for session state persistence across reconnects
 export const liveSessionCache = new Map<string, {
@@ -46,9 +66,12 @@ const BASE_SYSTEM_INSTRUCTION = [
   // TRYB MENU — restauracja znana
   'TRYB_MENU: jesli restauracja je znano → wywolaj show_menu bez pytania. Po pokazaniu: zasugeruj max 2-3 pozycje, zapytaj o preferencje.',
   'MENU_GROUNDING: wymieniaj i proponuj tylko pozycje, ktore sa faktycznie w aktualnym menu z narzedzia show_menu. Nigdy nie wymyslaj dan spoza menu.',
+  'MULTI_RESTAURANT_COMPARE_RULE: Gdy user prosi o porownanie pozycji miedzy restauracjami (np. "pierogi w kilku restauracjach", "po 2 dania z 3 restauracji", "najtansze napoje"), NAJPIERW wywolaj compare_restaurants. Ustaw query/category/metric zgodnie z prosba usera. Nie zastępuj tego find_nearby jesli prosba dotyczy porownania menu.',
+  'MULTI_MENU_COUNT_RULE: Jesli user poda liczbe pozycji na restauracje (np. "po 2 dania"), ustaw max_restaurants i max_items_per_restaurant zgodnie z prosba (limit bezpieczenstwa max 3).',
 
   // TRYB ORDER — uzytkownik zamawia
   'TRYB_ORDER: natychmiast add_item_to_cart. Niy pytej "czy na pewno". Po dodaniu zapytaj czy cosik jeszcze.',
+  'TOOL_RESULT_TRUTH_RULE: Po add_item_to_cart/add_items_to_cart NIGDY nie mow "dodane", jesli response.intent=clarify_order albo actionStatus=not_added_clarify albo cartChanged=false. Wtedy jasno powiedz, ze pozycja NIE zostala jeszcze dodana i popros o doprecyzowanie.',
   'ORDER_WITH_RESTAURANT_RULE: Gdy user podaje pozycje ORAZ restauracje (np. "2x Kurczak XL z Lawasz Kebab"), nie wymagaj wczesniejszego show_menu ani find_nearby. Od razu wywolaj add_items_to_cart/add_item_to_cart z restaurant_name i pozycjami.',
   'ORDER_EDIT_MODE: Gdy user chce edytowac koszyk, wykonaj od razu odpowiednie narzedzie: update_cart_item_quantity (zmiana ilosci), remove_item_from_cart (usuniecie), replace_cart_item (zamiana pozycji).',
 
@@ -65,11 +88,8 @@ const BASE_SYSTEM_INSTRUCTION = [
   'ZABRONIONE: "moge sprawdzic", "pozwol ze", "chwileczke", "nie mam dostepu", nazwy narzedzi (find_nearby/show_menu/add_item_to_cart), zapowiadanie tool call zamiast jego wykonania.',
 
   // STYL
-  'Maks 2 zdania przed pytaniem. Niy czytej list. Konczac pytaniem — roznicuj formule.',
+  'Maks 2 zdania przed pytaniem. Niy czytej list, CHYBA ZE user wprost prosi o liste/porownanie/ranking — wtedy lista jest dozwolona i preferowana. Konczac pytaniem — roznicuj formule.',
 
-  // LOKALIZACJA
-  'Jak uzytkownik godo "w poblizu", "blisko" abo niy podowo miasta — NAJPIERW wywolaj find_nearby (GPS/bez location). Miasto pytaj dopiero wtedy, gdy narzedzie zwroci brak lokalizacji.',
-  'Jesli w narzedziu find_nearby masz lat/lng (GPS) — NIE pytaj o miasto ani kod pocztowy. Najpierw pokaz wyniki z GPS.',
 ].join(' ');
 
 const LIVE_HARD_GUARDS = [
@@ -77,6 +97,7 @@ const LIVE_HARD_GUARDS = [
   'GPS_RULE: Jesli kontekst sesji ma GPS (lat/lng) albo find_nearby ma lat/lng, NIE wolno pytac o miasto, kod pocztowy ani "podaj lokalizacje". Zamiast tego od razu wykonaj find_nearby po GPS i podaj wyniki.',
   'NEARBY_RULE: Dla "w poblizu", "blisko", "obok", "nearby" najpierw find_nearby (GPS/bez location). Dopytanie o lokalizacje tylko gdy narzedzie zwroci brak lokalizacji.',
   'TOOL_ARGS_RULE: Jesli find_nearby ma lat/lng (GPS), nie przekazuj parametru location. location ustawiaj tylko gdy GPS nie jest dostepny.',
+  'COMPARE_TOOL_RULE: Dla pytan porownawczych o kilka restauracji preferuj compare_restaurants. find_nearby uzywaj do discovery, a show_menu do pojedynczej restauracji.',
   'ORDER_SCOPE_RULE: Dla add_item_to_cart/add_items_to_cart zawsze przekazuj restaurant_name lub restaurant_id, jesli user podal restauracje. Jesli nie masz restaurant_id, przekaz restaurant_name z wypowiedzi.',
   'ORDER_EDIT_RULE: Przy edycji koszyka zawsze przekazuj nazwe pozycji (dish/from_dish/to_dish) i quantity gdy user podal liczbe.',
   'PERSONA_GENDER_RULE: Amber mowi o sobie w formie zenskiej: "moge", "moglam", "moglabym", "znalazlam". Nigdy nie uzywaj form: "mogl", "moglbym", "zebym mogl".',
@@ -305,10 +326,23 @@ function compactToolResponse(
   toolName: string,
   response: Record<string, unknown>,
 ): Record<string, unknown> {
+  const responseIntent = String(response.intent || '').trim();
+  const liveToolMeta = ((response.meta as Record<string, unknown> | undefined)?.liveTool || {}) as Record<string, unknown>;
+  const cartBefore = (liveToolMeta.cartBefore || {}) as Record<string, unknown>;
+  const cartAfter = (liveToolMeta.cartAfter || {}) as Record<string, unknown>;
+  const cartBeforeCount = Number(cartBefore.items);
+  const cartAfterCount = Number(cartAfter.items);
+  const cartBeforeTotal = Number(cartBefore.total);
+  const cartAfterTotal = Number(cartAfter.total);
+  const cartChangedByMeta =
+    (Number.isFinite(cartBeforeCount) && Number.isFinite(cartAfterCount) && cartBeforeCount !== cartAfterCount)
+    || (Number.isFinite(cartBeforeTotal) && Number.isFinite(cartAfterTotal) && cartBeforeTotal !== cartAfterTotal);
+
   const compact: Record<string, unknown> = {
     reply: (response.reply || response.text || '') as string,
     ok: response.ok !== false,
   };
+  if (responseIntent) compact.intent = responseIntent;
 
   switch (toolName) {
     case 'find_nearby': {
@@ -360,10 +394,24 @@ function compactToolResponse(
     }
     case 'update_cart_item_quantity':
     case 'remove_item_from_cart':
-    case 'replace_cart_item': {
+    case 'replace_cart_item':
+    case 'add_item_to_cart':
+    case 'add_items_to_cart': {
       const cart = (response.cart as any) ?? {};
+      const mutationObserved = cartChangedByMeta || Boolean(liveToolMeta.cartChanged);
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
+      compact.cartChanged = mutationObserved;
+
+      const clarifyNotAdded =
+        responseIntent === 'clarify_order'
+        || liveToolMeta.clarifyNotAdded === true
+        || (!mutationObserved && (toolName === 'add_item_to_cart' || toolName === 'add_items_to_cart'));
+
+      compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
+      if (clarifyNotAdded) {
+        compact.mustClarify = true;
+      }
       break;
     }
     default:
@@ -397,6 +445,7 @@ export function useGeminiLiveSession({
   const autoNearbyRecoveryInFlightRef = useRef(false);
   const autoNearbyRecoveryLastTsRef = useRef(0);
   const lastToolResponseSentAtRef = useRef<number | null>(null);
+  const stallWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Marks that the close was triggered intentionally (user stop / cleanup) â€” suppress reconnect
   const intentionalCloseRef = useRef(false);
   // Fix #4: stable ref so start() closure always sees current sessionId
@@ -420,7 +469,24 @@ export function useGeminiLiveSession({
     }
   }, []);
 
+  const clearStallWatchdog = useCallback(() => {
+    if (stallWatchdogRef.current) {
+      clearTimeout(stallWatchdogRef.current);
+      stallWatchdogRef.current = null;
+    }
+  }, []);
+
+  const armStallWatchdog = useCallback((reason: string) => {
+    clearStallWatchdog();
+    stallWatchdogRef.current = setTimeout(() => {
+      if (!activeRef.current) return;
+      useLiveUiSessionStore.getState().setProcessing('Nadal przetwarzam, chwila...');
+      console.warn(`[LIVE_STALL] no model/tool response >${LIVE_STALL_WARNING_MS}ms reason=${reason}`);
+    }, LIVE_STALL_WARNING_MS);
+  }, [clearStallWatchdog]);
+
   const cleanupRuntime = useCallback((closeSession: boolean) => {
+    clearStallWatchdog();
     stopMicRef.current?.();
     stopMicRef.current = null;
 
@@ -432,7 +498,7 @@ export function useGeminiLiveSession({
     playerRef.current.stop();
     activeRef.current = false;
     setIsActive(false);
-  }, []);
+  }, [clearStallWatchdog]);
 
   const stop = useCallback(() => {
     if (stopInFlightRef.current) return;
@@ -447,6 +513,7 @@ export function useGeminiLiveSession({
       autoNearbyRecoveryInFlightRef.current = false;
       autoNearbyRecoveryLastTsRef.current = 0;
       lastToolResponseSentAtRef.current = null;
+      clearStallWatchdog();
       cleanupRuntime(true);
       setError(null);
       useLiveUiSessionStore.getState().setPaused();
@@ -455,7 +522,7 @@ export function useGeminiLiveSession({
       stopInFlightRef.current = false;
       startInFlightRef.current = false;
     }
-  }, [cleanupRuntime, clearReconnectTimer]);
+  }, [cleanupRuntime, clearReconnectTimer, clearStallWatchdog]);
 
   const start = useCallback(async () => {
     if (!enabled) return;
@@ -575,10 +642,12 @@ export function useGeminiLiveSession({
           const liveUiStore = useLiveUiSessionStore.getState();
           liveUiStore.setTranscript('user', normalizedTranscript);
           liveUiStore.setProcessing('Analizuje...');
+          armStallWatchdog('transcript_final');
         }
 
         if (msg.toolCall?.functionCalls?.length) {
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
+          armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
           const session = sessionRef.current;
           if (!session) return;
@@ -614,6 +683,7 @@ export function useGeminiLiveSession({
             try {
               lastToolResponseSentAtRef.current = Date.now();
               session.sendToolResponse({ functionResponses: responses });
+              armStallWatchdog('tool_response_sent');
             } catch {
               // noop
             }
@@ -625,6 +695,7 @@ export function useGeminiLiveSession({
           for (const part of msg.serverContent.modelTurn.parts) {
             const textPart = String((part as any)?.text || '').trim();
             if (textPart) {
+              clearStallWatchdog();
               useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
               window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
                 detail: {
@@ -663,6 +734,7 @@ export function useGeminiLiveSession({
             }
             const blob = (part as { inlineData?: { data?: string; mimeType?: string } }).inlineData;
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
+              clearStallWatchdog();
               if (lastToolResponseSentAtRef.current) {
                 const deltaMs = Date.now() - lastToolResponseSentAtRef.current;
                 console.log(`[LIVE_AUDIO_LATENCY] tool_response_to_first_audio_ms=${deltaMs}`);
@@ -674,6 +746,7 @@ export function useGeminiLiveSession({
         }
 
         if (msg.serverContent?.interrupted) {
+          clearStallWatchdog();
           player.stop();
         }
       };
@@ -683,6 +756,7 @@ export function useGeminiLiveSession({
         config: {
           responseModalities: [Modality.AUDIO],
           systemInstruction: activeInstruction,
+          realtimeInputConfig: LIVE_VAD_CONFIG,
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: { voiceName: 'Aoede' },
@@ -694,6 +768,7 @@ export function useGeminiLiveSession({
           onopen: () => {
             reconnectAttemptRef.current = 0;
             clearReconnectTimer();
+            clearStallWatchdog();
             setReconnectHalted(false);
             useLiveUiSessionStore.getState().setListening('Slucham...');
             // Report actual frontend model to backend metrics snapshot
@@ -763,7 +838,7 @@ export function useGeminiLiveSession({
     } finally {
       startInFlightRef.current = false;
     }
-  }, [enabled, relay, cleanupRuntime, clearReconnectTimer]);
+  }, [enabled, relay, cleanupRuntime, clearReconnectTimer, clearStallWatchdog, armStallWatchdog]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

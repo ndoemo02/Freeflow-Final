@@ -1,5 +1,27 @@
 import { repairMojibakeText } from './textSanitizer';
 
+function parsePhotoGallery(value: unknown): string[] {
+    if (Array.isArray(value)) {
+        return value.map((entry) => String(entry || '').trim()).filter(Boolean);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return [];
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    return parsed.map((entry) => String(entry || '').trim()).filter(Boolean);
+                }
+            } catch {
+                // fall through to delimiter split
+            }
+        }
+        return trimmed.split(/[;,]/).map((entry) => entry.trim()).filter(Boolean);
+    }
+    return [];
+}
+
 export const normalizeMenuItems = (items: any[] | null | undefined): any[] | null => {
     if (!Array.isArray(items)) return null;
     return items.filter(Boolean).map((item, index) => ({
@@ -38,7 +60,8 @@ export const normalizeRestaurants = (items: any[] | null | undefined): any[] | n
             opening_hours: item.opening_hours || null,
             maps_url: item.maps_url || null,
             image_url: item.image_url || null,
-            photo_gallery: Array.isArray(item.photo_gallery) ? item.photo_gallery : [],
+            img: item.img || item.image_url || null,
+            photo_gallery: parsePhotoGallery(item.photo_gallery),
         };
     });
 };

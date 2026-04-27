@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useUI } from "../state/ui";
 import { useAuth } from "../state/auth";
 import { useCart } from "../state/CartContext";
+import { useConversationStore } from "../store/useConversationStore";
 import { getUserRole } from "../lib/menuBuilder";
 import { canAccessWorkspacePanels } from "../lib/accessControl";
 import { ROUTES, FEATURE_FLAGS, isRouteEnabled } from "../app/routeConfig";
@@ -153,8 +154,10 @@ export default function MenuDrawer() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { setIsOpen: setCartOpen, itemCount } = useCart();
+  const clearHomeContext = useConversationStore((s) => s.clearHomeContext);
   const userRole = getUserRole(user);
   const hasWorkspaceAccess = canAccessWorkspacePanels(user);
+  const clearPresentation = useUI((s) => s.clearPresentation);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && isOpen && close();
@@ -171,6 +174,9 @@ export default function MenuDrawer() {
 
   const handleDrawerHome = () => {
     console.log("[NAV] drawer: home");
+    clearHomeContext();
+    clearPresentation();
+    setCartOpen(false);
   };
 
   const handleDrawerCart = () => {

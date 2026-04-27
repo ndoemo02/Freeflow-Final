@@ -20,7 +20,7 @@ interface ContextualIslandProps {
 }
 
 const getItemId = (item: any, index = 0) =>
-    String(item?.id || item?.menuItemId || item?.menu_item_id || `${index}-${item?.name || 'item'}`);
+    `${index}__${String(item?.id || item?.menuItemId || item?.menu_item_id || item?.name || 'item')}`;
 
 function getResultsLabel(count: number) {
     if (count === 1) return '1 miejsce';
@@ -110,24 +110,33 @@ export default function ContextualIsland({
     }
 
     return (
-        <BottomSheetContainer {...sheetProps}>
-            {({ snap, setSnap }) => (
-                <MenuFlowView
-                    normalizedItems={normalizedItems}
-                    highlightedId={highlightedId}
-                    setHighlightedId={setHighlightedId}
-                    recommendedId={recommendedId}
-                    headerTitle={headerTitle}
-                    resultSummary={resultSummary}
-                    currentIndex={currentIndex}
-                    onSelect={onSelect}
-                    goTo={goTo}
-                    snap={snap}
-                    setSnap={setSnap}
-                    restaurantDistance={restaurantDistance}
-                    restaurant={restaurant}
+        <>
+            {onClose && (
+                <div
+                    className="fixed inset-0 z-[9]"
+                    aria-hidden="true"
+                    onClick={onClose}
                 />
             )}
-        </BottomSheetContainer>
+            <BottomSheetContainer {...sheetProps}>
+                {({ snap, setSnap }) => (
+                    <MenuFlowView
+                        normalizedItems={normalizedItems}
+                        highlightedId={highlightedId}
+                        setHighlightedId={setHighlightedId}
+                        recommendedId={recommendedId}
+                        headerTitle={headerTitle}
+                        resultSummary={resultSummary}
+                        currentIndex={currentIndex}
+                        onSelect={onSelect}
+                        goTo={goTo}
+                        snap={snap}
+                        setSnap={setSnap}
+                        restaurantDistance={restaurantDistance}
+                        restaurant={restaurant}
+                    />
+                )}
+            </BottomSheetContainer>
+        </>
     );
 }

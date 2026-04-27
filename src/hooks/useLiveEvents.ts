@@ -7,7 +7,8 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
-const GPS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const GPS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const GPS_STALE_FALLBACK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const GPS_PERSIST_KEY = 'ff_last_gps';
 
 function readPersistedGps(): { lat: number; lng: number; ts: number } | null {
@@ -34,20 +35,40 @@ function persistGps(lat: number, lng: number): void {
 }
 
 async function getGPSCoords(): Promise<{ lat: number; lng: number } | null> {
+    const now = Date.now();
     // Return cache immediately if fresh — eliminates race condition on reconnect
-    if (_gpsCache && Date.now() - _gpsCache.ts < GPS_CACHE_TTL_MS) {
+    if (_gpsCache && now - _gpsCache.ts < GPS_CACHE_TTL_MS) {
         return { lat: _gpsCache.lat, lng: _gpsCache.lng };
     }
     const persisted = readPersistedGps();
-    if (persisted && Date.now() - persisted.ts < GPS_CACHE_TTL_MS) {
+    const persistedAge = persisted ? (now - persisted.ts) : Number.POSITIVE_INFINITY;
+    const hasPersistedFresh = persistedAge < GPS_CACHE_TTL_MS;
+    const hasPersistedStaleFallback = persistedAge < GPS_STALE_FALLBACK_MAX_AGE_MS;
+
+    if (persisted && hasPersistedFresh) {
         _gpsCache = persisted;
         return { lat: persisted.lat, lng: persisted.lng };
     }
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        if (persisted && hasPersistedStaleFallback) {
+            _gpsCache = persisted;
+            return { lat: persisted.lat, lng: persisted.lng };
+        }
+        return null;
+    }
     return new Promise((resolve) => {
         let settled = false;
         const timeoutMs = 8000;
-        const tid = window.setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, timeoutMs);
+        const tid = window.setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            if (persisted && hasPersistedStaleFallback) {
+                _gpsCache = persisted;
+                resolve({ lat: persisted.lat, lng: persisted.lng });
+                return;
+            }
+            resolve(null);
+        }, timeoutMs);
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 if (settled) return;
@@ -63,7 +84,17 @@ async function getGPSCoords(): Promise<{ lat: number; lng: number } | null> {
                     resolve(null);
                 }
             },
-            () => { if (!settled) { settled = true; window.clearTimeout(tid); resolve(null); } },
+            () => {
+                if (settled) return;
+                settled = true;
+                window.clearTimeout(tid);
+                if (persisted && hasPersistedStaleFallback) {
+                    _gpsCache = persisted;
+                    resolve({ lat: persisted.lat, lng: persisted.lng });
+                    return;
+                }
+                resolve(null);
+            },
             { enableHighAccuracy: false, maximumAge: 120000, timeout: timeoutMs },
         );
     });
@@ -124,6 +155,64 @@ function normalizeLooseText(value: any): string {
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function parseGalleryCandidates(value: unknown): string[] {
+    if (Array.isArray(value)) return value.map((entry) => String(entry || '').trim()).filter(Boolean);
+    if (typeof value !== 'string') return [];
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+                return parsed.map((entry) => String(entry || '').trim()).filter(Boolean);
+            }
+        } catch {
+            // ignore and use fallback split
+        }
+    }
+    return trimmed.split(/[;,]/).map((entry) => entry.trim()).filter(Boolean);
+}
+
+function hasVisualAsset(item: any): boolean {
+    if (!item || typeof item !== 'object') return false;
+    const direct = [item.img, item.image_url, item.image, item.photo_url]
+        .map((value) => String(value || '').trim())
+        .filter(Boolean);
+    if (direct.length > 0) return true;
+    return parseGalleryCandidates(item.photo_gallery).length > 0;
+}
+
+function enrichRestaurantWithList(restaurant: any, list: any[]): any {
+    if (!restaurant || !Array.isArray(list) || list.length === 0) return restaurant;
+
+    const restaurantId = String(restaurant?.id ?? '').trim();
+    const restaurantName = normalizeLooseText(restaurant?.display_name || restaurant?.name || '');
+
+    const byId = restaurantId
+        ? list.find((candidate) => String(candidate?.id ?? '').trim() === restaurantId)
+        : null;
+
+    const byName = byId || list.find((candidate) => {
+        const candidateName = normalizeLooseText(candidate?.display_name || candidate?.name || '');
+        if (!candidateName || !restaurantName) return false;
+        return candidateName === restaurantName || candidateName.includes(restaurantName) || restaurantName.includes(candidateName);
+    });
+
+    const matched = byName || null;
+    if (!matched) return restaurant;
+
+    const merged = { ...matched, ...restaurant };
+    if (!hasVisualAsset(merged) && hasVisualAsset(matched)) {
+        merged.img = matched.img || matched.image_url || merged.img || null;
+        merged.image_url = matched.image_url || merged.img || merged.image_url || null;
+        if (!Array.isArray(merged.photo_gallery) || merged.photo_gallery.length === 0) {
+            merged.photo_gallery = parseGalleryCandidates(matched.photo_gallery);
+        }
+    }
+
+    return merged;
 }
 
 function findRestaurantIdByReference(restaurants: any[], reference: any): string | null {
@@ -446,6 +535,13 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     console.log(`[LIVE] RECONNECT HALTED - intentional/policy close (${e.code})`);
                     return;
                 }
+                if (e.code === 4003) {
+                    useLiveUiSessionStore.getState().setPaused(
+                        'LIVE zablokowany przez polityke origin. Sprawdz LIVE_ALLOWED_ORIGINS lub LIVE_STRICT_ORIGIN.',
+                    );
+                    console.warn('[LIVE] RECONNECT HALTED - origin_not_allowed (4003)');
+                    return;
+                }
                 scheduleReconnect();
             };
 
@@ -534,6 +630,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     || response.currentRestaurant
                     || response.restaurant
                     || state.currentRestaurant;
+                const restaurantCandidateList = (restaurants && restaurants.length > 0)
+                    ? restaurants
+                    : (Array.isArray(state.suggestedRestaurants) ? state.suggestedRestaurants : []);
+                const nextCurrentRestaurantEnriched = enrichRestaurantWithList(nextCurrentRestaurant, restaurantCandidateList);
 
                 const hasMenuItems = Array.isArray(menuItems) && menuItems.length > 0;
                 const menuSurfaceIntent = nextIntent === 'show_menu'
@@ -541,7 +641,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     || nextIntent === 'show_restaurant_menu'
                     || nextIntent === 'view_menu';
                 const menuSurfaceTool = liveToolName === 'show_menu' || liveToolName === 'select_restaurant';
-                if (hasMenuItems && (menuSurfaceIntent || menuSurfaceTool || nextCurrentRestaurant)) {
+                if (hasMenuItems && (menuSurfaceIntent || menuSurfaceTool || nextCurrentRestaurantEnriched)) {
                     nextUiMode = 'restaurant';
                 }
 
@@ -549,14 +649,14 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 if (liveToolName === 'show_menu' || nextIntent === 'show_menu' || nextIntent === 'menu_request') {
                     console.log('[LIVE_MENU] tool=show_menu');
                     console.log(`[LIVE_MENU] menuItemsCount=${menuItems?.length ?? 0}`);
-                    console.log(`[LIVE_MENU] currentRestaurant=${nextCurrentRestaurant?.name || 'null'}`);
+                    console.log(`[LIVE_MENU] currentRestaurant=${nextCurrentRestaurantEnriched?.name || 'null'}`);
                     console.log(`[LIVE_MENU] uiMode=${nextUiMode}`);
                     console.log(`[LIVE_MENU] renderVisible=${liveMenuRenderVisible}`);
                 }
                 if (menuSurfaceTool || menuSurfaceIntent || hasMenuItems) {
                     console.log('[MENU_UI] show_menu received');
                     console.log(`[MENU_UI] uiMode=${nextUiMode}`);
-                    console.log(`[MENU_UI] currentRestaurant=${nextCurrentRestaurant?.name || 'null'}`);
+                    console.log(`[MENU_UI] currentRestaurant=${nextCurrentRestaurantEnriched?.name || 'null'}`);
                     console.log(`[MENU_UI] menuItemsCount=${menuItems?.length ?? 0}`);
                 }
                 if (isLiveCartTool) {
@@ -581,11 +681,11 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     isIdle,
                     restaurants,
                     response,
-                    nextCurrentRestaurant,
+                    nextCurrentRestaurant: nextCurrentRestaurantEnriched,
                     previousSelectedRestaurantPreviewId,
                 });
-                const currentRestaurantId = nextCurrentRestaurant?.id != null
-                    ? String(nextCurrentRestaurant.id)
+                const currentRestaurantId = nextCurrentRestaurantEnriched?.id != null
+                    ? String(nextCurrentRestaurantEnriched.id)
                     : null;
                 const hasRestaurants = Array.isArray(restaurants) && restaurants.length > 0;
                 const isMenuFocusLocked = nextUiMode === 'restaurant'
@@ -627,7 +727,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     conversationHistory: history,
                     uiMode: nextUiMode,
                     conversationPhase: newPhase,
-                    currentRestaurant: nextCurrentRestaurant,
+                    currentRestaurant: nextCurrentRestaurantEnriched,
                     pendingOrder: response.context?.pendingOrder || null,
                     cart: response.meta?.cart || response.cart || state.cart,
                     expectedContext: isIdle ? null : (response.context?.expectedContext || state.expectedContext),
@@ -692,20 +792,5 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
     // on every CartProvider re-render (unstable function refs from CartContext).
     }, [wsUrl, sessionId, clearReconnectTimer, clearFocusSyncTimers, scheduleFocusSequence]);
 
-    const sendToolCall = useCallback((tool: string, args: Record<string, any> = {}) => {
-        const socket = socketRef.current;
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-            return false;
-        }
-
-        socket.send(JSON.stringify({
-            type: 'tool_call',
-            request_id: `live_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            tool,
-            args,
-        }));
-        return true;
-    }, []);
-
-    return { liveConnected: connected, sendToolCall, socketRef };
+    return { liveConnected: connected, socketRef };
 }

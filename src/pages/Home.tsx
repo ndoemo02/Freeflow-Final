@@ -41,6 +41,7 @@ export default function Home() {
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
   const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
+  const clearHomeContext = useConversationStore(state => state.clearHomeContext);
   const uiMode = useConversationStore(state => state.uiMode);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
@@ -78,8 +79,16 @@ export default function Home() {
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
   const setVoiceActive = useUI((s) => s.setVoiceActive);
+  const clearPresentation = useUI((s) => s.clearPresentation);
   const { setIsOpen, itemCount } = useCart() as any;
   const cartItemsCount = Number(itemCount || 0);
+
+  // Home should always render a clean screen without stale menu/restaurant context.
+  useEffect(() => {
+    clearHomeContext();
+    clearPresentation();
+    setHints({ panel: 'none' });
+  }, [clearHomeContext, clearPresentation, setHints]);
 
   // Lock global page scroll on Home to prevent empty background scrolling on mobile.
   // Scrollable areas (menu/list sheets) keep their own internal overflow containers.

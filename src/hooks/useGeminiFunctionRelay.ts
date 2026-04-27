@@ -22,8 +22,9 @@
 import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 
-const RELAY_TIMEOUT_MS = 9000;
-const GPS_CACHE_TTL_MS = 5 * 60 * 1000;
+const RELAY_TIMEOUT_MS = 15000;
+const GPS_CACHE_TTL_MS = 2 * 60 * 1000;
+const GPS_STALE_FALLBACK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const GPS_PERSIST_KEY = 'ff_last_gps';
 let _relayGpsCache: { lat: number; lng: number; ts: number } | null = null;
 
@@ -76,23 +77,38 @@ function transcriptSuggestsNearbyWithoutExplicitLocation(transcript: string | un
 }
 
 async function getRelayGPSCoords(): Promise<{ lat: number; lng: number } | null> {
-    if (_relayGpsCache && Date.now() - _relayGpsCache.ts < GPS_CACHE_TTL_MS) {
+    const now = Date.now();
+    if (_relayGpsCache && now - _relayGpsCache.ts < GPS_CACHE_TTL_MS) {
         return { lat: _relayGpsCache.lat, lng: _relayGpsCache.lng };
     }
     const persisted = readPersistedGps();
-    if (persisted && Date.now() - persisted.ts < GPS_CACHE_TTL_MS) {
+    const persistedAge = persisted ? (now - persisted.ts) : Number.POSITIVE_INFINITY;
+    const hasPersistedFresh = persistedAge < GPS_CACHE_TTL_MS;
+    const hasPersistedStaleFallback = persistedAge < GPS_STALE_FALLBACK_MAX_AGE_MS;
+
+    if (persisted && hasPersistedFresh) {
         _relayGpsCache = persisted;
         return { lat: persisted.lat, lng: persisted.lng };
     }
-    if (typeof navigator === 'undefined' || !navigator.geolocation) return null;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        if (persisted && hasPersistedStaleFallback) {
+            _relayGpsCache = persisted;
+            return { lat: persisted.lat, lng: persisted.lng };
+        }
+        return null;
+    }
     return new Promise((resolve) => {
         let settled = false;
         const timeoutMs = 3500;
         const tid = window.setTimeout(() => {
-            if (!settled) {
-                settled = true;
-                resolve(null);
+            if (settled) return;
+            settled = true;
+            if (persisted && hasPersistedStaleFallback) {
+                _relayGpsCache = persisted;
+                resolve({ lat: persisted.lat, lng: persisted.lng });
+                return;
             }
+            resolve(null);
         }, timeoutMs);
         navigator.geolocation.getCurrentPosition(
             (pos) => {
@@ -113,6 +129,11 @@ async function getRelayGPSCoords(): Promise<{ lat: number; lng: number } | null>
                 if (settled) return;
                 settled = true;
                 window.clearTimeout(tid);
+                if (persisted && hasPersistedStaleFallback) {
+                    _relayGpsCache = persisted;
+                    resolve({ lat: persisted.lat, lng: persisted.lng });
+                    return;
+                }
                 resolve(null);
             },
             { enableHighAccuracy: false, maximumAge: 120000, timeout: timeoutMs },
@@ -263,18 +284,7 @@ export function useGeminiFunctionRelay({
                         if (coords) {
                             enrichedArgs.lat = coords.lat;
                             enrichedArgs.lng = coords.lng;
-                            try {
-                                if (ws.readyState === WebSocket.OPEN) {
-                                    ws.send(JSON.stringify({
-                                        type: 'session_init',
-                                        lat: coords.lat,
-                                        lng: coords.lng,
-                                    }));
-                                    console.log(`[LIVE_GPS_ENRICH] find_nearby lat=${coords.lat} lng=${coords.lng}`);
-                                }
-                            } catch {
-                                // noop
-                            }
+                            console.log(`[LIVE_GPS_ENRICH] find_nearby lat=${coords.lat} lng=${coords.lng}`);
                         }
                     }
                 }
@@ -292,7 +302,6 @@ export function useGeminiFunctionRelay({
                     args: enrichedArgs,
                     request_id: requestId,
                     transcript_final: latestTranscript,
-                    user_text: latestTranscript,
                 }));
             })();
         });

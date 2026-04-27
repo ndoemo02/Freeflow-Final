@@ -43,6 +43,46 @@ const formatDistance = (distKm: number | null | undefined) => {
         : `${distKm.toFixed(1)} km`;
 };
 
+const formatOpeningHours = (raw: any): string | null => {
+    if (!raw) return null;
+
+    if (typeof raw === 'string') {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        return trimmed;
+    }
+
+    if (Array.isArray(raw)) {
+        const first = raw.map((entry) => String(entry || '').trim()).find(Boolean);
+        return first || null;
+    }
+
+    if (typeof raw === 'object') {
+        const direct = [
+            raw.today,
+            raw.current_day,
+            raw.currentDay,
+            raw.display,
+            raw.hours,
+            raw.text,
+        ]
+            .map((entry) => String(entry || '').trim())
+            .find(Boolean);
+        if (direct) return direct;
+
+        if (raw.open_now === true || raw.openNow === true) {
+            const closeAt = String(raw.close_at || raw.closeAt || '').trim();
+            return closeAt ? `otwarte do ${closeAt}` : 'otwarte';
+        }
+
+        if (raw.open_now === false || raw.openNow === false) {
+            return 'zamknięte';
+        }
+    }
+
+    return null;
+};
+
 /* deterministic gradient from category string */
 const CATEGORY_GRADIENTS: Record<string, string> = {};
 function getCategoryGradient(category: string): string {
@@ -84,7 +124,7 @@ function buildSections(items: any[]): Section[] {
 function getBadges(item: any): string[] {
     const badges: string[] = [];
     if (item?.is_vege) badges.push('🌿 Vege');
-    if (item?.spicy) badges.push('🌶️ Ostre');
+    if (item?.spicy) badges.push('Pikantne');
     if (Array.isArray(item?.dietary_flags)) {
         for (const f of item.dietary_flags) {
             if (f === 'gluten_free') badges.push('🚫🌾 Bez glutenu');
@@ -94,6 +134,28 @@ function getBadges(item: any): string[] {
         }
     }
     return badges;
+}
+
+function getLocalFallbackImage(category: string, name: string): string | null {
+    const text = (`${category} ${name}`).toLowerCase();
+    if (text.includes('burger')) return '/images/assets/gen/burger.png';
+    if (text.includes('pizza')) return '/images/assets/gen/pizza.png';
+    if (text.includes('bowl')) return '/images/assets/gen/bowl.png';
+    if (text.includes('schabow')) return '/images/assets/gen/schabowy.png';
+    if (text.includes('rollo') || text.includes('kebab') || text.includes('wrap')) return '/images/assets/gen/rollo.png';
+    if (text.includes('makaron') || text.includes('pasta') || text.includes('spaghetti')) return '/images/assets/gen/pasta.png';
+    if (text.includes('sałatk') || text.includes('salatk')) return '/images/assets/gen/salad.png';
+    if (text.includes('pomidorow') || text.includes('krem z pomidor')) return '/images/assets/gen/zupa_pomidorowa.png';
+    if (text.includes('deser') || text.includes('lod') || text.includes('ciast') || text.includes('tiramisu')) return '/images/assets/gen/dessert.png';
+    if (text.includes('kaw') || text.includes('coffee') || text.includes('latte') || text.includes('espresso')) return '/images/assets/gen/kawa.png';
+    if (text.includes('sushi') || text.includes('maki') || text.includes('nigiri')) return '/images/assets/gen/sushi.png';
+    if (text.includes('ryba') || text.includes('łoso') || text.includes('loso') || text.includes('pstrąg')) return '/images/assets/gen/ryba.png';
+    if (text.includes('naleśnik') || text.includes('nalesnik') || text.includes('plack') || text.includes('pancake')) return '/images/assets/gen/nalesniki.png';
+    if (text.includes('pierog') || text.includes('pielmien')) return '/images/assets/gen/pierogi.png';
+    if (text.includes('śniadanie') || text.includes('sniadanie') || text.includes('jaj') || text.includes('omlet') || text.includes('tost')) return '/images/assets/gen/sniadanie.png';
+    if (text.includes('stek') || text.includes('steak') || text.includes('wołow')) return '/images/assets/gen/stek.png';
+    if (text.includes('napój') || text.includes('napoj') || text.includes('col') || text.includes('wod') || text.includes('herbata') || text.includes('sok')) return '/images/assets/gen/napoj.png';
+    return null;
 }
 
 /* ───────── component ───────── */
@@ -173,53 +235,52 @@ export default function MenuFlowView({
 
     /* ── topmost-visible focus picker ──
      *
-     * Focus panel jest fixed nad listą. Focus = pierwszy item w DOM order
-     * którego dolna krawędź jest poniżej górnej krawędzi scroll viewportu.
-     * Bez scroll-snap, bez scroll-correction — czysty read-only scroll.
+     * Uses SheetScrollable's onScroll prop (React event) instead of native
+     * addEventListener — guarantees the handler fires on every scroll.
+     * The scroll container ref is captured from event.currentTarget.
      * ── */
+    const scrollElRef = useRef<HTMLElement | null>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const commitFocus = useCallback(() => {
+        const scrollEl = scrollElRef.current;
+        if (!scrollEl) return;
+        if (Date.now() - manualFocusAt.current < 300) return;
+
+        const containerTop = scrollEl.getBoundingClientRect().top;
+        let effectiveTop = containerTop + 4;
+        sectionRefs.current.forEach((headerEl) => {
+            const hr = headerEl.getBoundingClientRect();
+            if (Math.abs(hr.top - containerTop) < 1 && hr.bottom > effectiveTop) {
+                effectiveTop = hr.bottom;
+            }
+        });
+        for (const [uid, el] of itemRefs.current) {
+            const r = el.getBoundingClientRect();
+            if (r.bottom > effectiveTop) {
+                setFocusedId((prev) => (prev === uid ? prev : uid));
+                return;
+            }
+        }
+    }, []);
+
+    const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+        scrollElRef.current = event.currentTarget;
+        if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(commitFocus, 60);
+    }, [commitFocus]);
+
+    /* initial focus + cleanup */
     useEffect(() => {
         const innerDiv = scrollContainerRef.current;
-        if (!innerDiv) return;
-        const scrollEl = innerDiv.closest('.list-scroll') as HTMLElement | null;
-        if (!scrollEl) return;
-
-        let debounceId: ReturnType<typeof setTimeout> | null = null;
-
-        const commitFocus = () => {
-            if (Date.now() - manualFocusAt.current < 300) return;
-            const containerTop = scrollEl.getBoundingClientRect().top;
-            // Sticky section header occludes ~34px at top. Find the currently pinned
-            // header (rect.top pinned at containerTop) and use its bottom as threshold.
-            let effectiveTop = containerTop + 4;
-            sectionRefs.current.forEach((headerEl) => {
-                const hr = headerEl.getBoundingClientRect();
-                // A sticky header is "pinned" when its top sits at containerTop.
-                if (Math.abs(hr.top - containerTop) < 1 && hr.bottom > effectiveTop) {
-                    effectiveTop = hr.bottom;
-                }
-            });
-            for (const [uid, el] of itemRefs.current) {
-                const r = el.getBoundingClientRect();
-                if (r.bottom > effectiveTop) {
-                    setFocusedId((prev) => (prev === uid ? prev : uid));
-                    return;
-                }
-            }
-        };
-
-        const onScroll = () => {
-            if (debounceId !== null) clearTimeout(debounceId);
-            debounceId = setTimeout(commitFocus, 60);
-        };
-
-        scrollEl.addEventListener('scroll', onScroll, { passive: true });
-        commitFocus();
-
+        if (innerDiv?.parentElement) {
+            scrollElRef.current = innerDiv.parentElement as HTMLElement;
+            commitFocus();
+        }
         return () => {
-            scrollEl.removeEventListener('scroll', onScroll);
-            if (debounceId !== null) clearTimeout(debounceId);
+            if (debounceRef.current !== null) clearTimeout(debounceRef.current);
         };
-    }, [normalizedItems]);
+    }, [normalizedItems, commitFocus]);
 
     /* ── voice-driven focus: highlight bez konfliktu ze scrollem ── */
     useEffect(() => {
@@ -227,13 +288,21 @@ export default function MenuFlowView({
         // Blokujemy AI-recommendation przez 1000ms od wejścia w menu —
         // AI może wspomnieć produkt w opisie restauracji, to nie powinno przeskakiwać focusu.
         if (Date.now() - menuEnteredAt.current < 1000) return;
+        // highlightedId may come from MenuIsland using raw item.id (no index prefix),
+        // while _uiId now has "index__" prefix. Try exact match first, then suffix match.
+        let matchedUiId = highlightedId;
+        const exact = normalizedItems.find((i: any) => i._uiId === highlightedId);
+        if (!exact) {
+            const suffix = normalizedItems.find((i: any) => i._uiId.endsWith(`__${highlightedId}`));
+            if (suffix) matchedUiId = suffix._uiId;
+        }
         manualFocusAt.current = Date.now();
-        setFocusedId((prev) => (prev === highlightedId ? prev : highlightedId));
-        const el = itemRefs.current.get(highlightedId);
+        setFocusedId((prev) => (prev === matchedUiId ? prev : matchedUiId));
+        const el = itemRefs.current.get(matchedUiId);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-    }, [highlightedId]);
+    }, [highlightedId, normalizedItems]);
 
     /* ── sticky header intersection for active chip ── */
     useEffect(() => {
@@ -281,6 +350,12 @@ export default function MenuFlowView({
         const bannerGradient = getCategoryGradient(focusedItem.category || 'Inne');
         let imageSrc: string | null =
             focusedItem.image_url || focusedItem.photo_url || focusedItem.img || null;
+            
+        // Use smart fallback if no direct image is available
+        if (!imageSrc) {
+            imageSrc = getLocalFallbackImage(focusedItem.category || '', focusedItem.name || '');
+        }
+            
         if (!imageSrc && restaurant?.photo_gallery?.length) {
             const hash = String(focusedItem.name || '')
                 .split('')
@@ -294,39 +369,33 @@ export default function MenuFlowView({
     const distanceLabel = formatDistance(restaurantDistance);
 
     /* ── subtitle builder ── */
-    const subtitleParts: string[] = [];
-    if (resultSummary) subtitleParts.push(resultSummary);
-    if (distanceLabel) subtitleParts.push(distanceLabel);
-    const finalSubtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : null;
+    const cityLabel = String(restaurant?.city || '').trim() || null;
+    const openingHoursLabel = formatOpeningHours(restaurant?.opening_hours);
+    const finalSubtitle = cityLabel || resultSummary || null;
+    const rightMetaParts = [openingHoursLabel, distanceLabel].filter(Boolean);
+    const rightMeta = rightMetaParts.length > 0 ? rightMetaParts.join(' · ') : null;
 
     return (
         /* ── ALWAYS EXPANDED: sectioned list ── */
         <div className="flex h-full min-h-0 flex-1 flex-col text-white">
             {/* header */}
-            <div className="px-4 pt-3 pb-2 shrink-0">
+            <div className="px-4 pt-2 pb-2 shrink-0">
                 <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-cyan-200/78 leading-none mb-1.5">{headerTitle}</div>
-                        <div className="text-[15px] font-bold text-white/95 leading-tight truncate">
+                        <div className="text-[26px] sm:text-[30px] font-extrabold text-white leading-[1.02] truncate tracking-tight drop-shadow-[0_1px_10px_rgba(255,255,255,0.14)]">
                             {restaurant?.name || 'Karta dań'}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2 text-[12px] text-white/62">
+                            {finalSubtitle && <div className="truncate">{finalSubtitle}</div>}
+                            {rightMeta && finalSubtitle && <span className="text-white/22">•</span>}
+                            {rightMeta && <div className="truncate text-white/50">{rightMeta}</div>}
                         </div>
                     </div>
                     {restaurant && (
-                        <div className="flex shrink-0 items-center justify-center overflow-hidden h-9 w-9 bg-white/5 rounded-lg border border-white/10">
-                            <RestaurantAvatar item={restaurant} size={36} />
+                        <div className="flex shrink-0 items-center justify-center overflow-hidden h-10 w-10 bg-white/5 rounded-xl border border-white/10">
+                            <RestaurantAvatar item={restaurant} size={40} />
                         </div>
                     )}
-                </div>
-                
-                <div className="mt-2 flex items-center gap-2 text-[11px]">
-                    {restaurant?.rating && (
-                        <div className="flex items-center gap-0.5 text-amber-300 font-semibold">
-                            ★ {Number(restaurant.rating).toFixed(1)}
-                            {restaurant.ratings_total > 0 && <span className="text-white/30 font-normal ml-0.5">({restaurant.ratings_total})</span>}
-                        </div>
-                    )}
-                    {(restaurant?.rating && finalSubtitle) && <span className="text-white/15">·</span>}
-                    {finalSubtitle && <div className="text-white/50">{finalSubtitle}</div>}
                 </div>
             </div>
 
@@ -349,9 +418,13 @@ export default function MenuFlowView({
             {/* fixed focus panel — expanded view of currently focused item */}
             {focusedItem && focusedDisplay && (
                 <div className="mf-focus-panel">
-                    <div
+                    <motion.div
                         className="mf-card__banner"
                         style={{ background: focusedDisplay.bannerGradient }}
+                        key={focusedId}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.25, ease: 'easeOut' }}
                     >
                         {focusedDisplay.imageSrc && (
                             <img
@@ -367,26 +440,31 @@ export default function MenuFlowView({
                         {focusedDisplay.price && (
                             <span className="mf-card__price-pill">{focusedDisplay.price}</span>
                         )}
-                    </div>
-                    <div className="mf-card__body">
+                    </motion.div>
+                    <motion.div
+                        className="mf-card__body"
+                        key={`body-${focusedId}`}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.22, ease: 'easeOut', delay: 0.04 }}
+                    >
                         <div className="mf-card__name">{focusedItem?.name || 'Pozycja menu'}</div>
                         {(focusedItem?.description || focusedItem?.ingredients) && (
                             <div className="mf-card__desc">
                                 {focusedItem.description || focusedItem.ingredients}
                             </div>
                         )}
-                        {focusedDisplay.badges.length > 0 && (
-                            <div className="menu-flow-badges">
-                                {focusedDisplay.badges.map((badge: string) => (
-                                    <span key={badge} className="menu-flow-badge">{badge}</span>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    </motion.div>
                     <div className="mf-card__footer">
+                        {/* badges: left side — diet flags */}
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            {focusedDisplay.badges.map((badge: string) => (
+                                <span key={badge} className="menu-flow-badge">{badge}</span>
+                            ))}
+                        </div>
                         <button
                             type="button"
-                            className="mf-card__add-btn"
+                            className="mf-card__add-btn shrink-0"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setHighlightedId(focusedItem._uiId);
@@ -403,78 +481,93 @@ export default function MenuFlowView({
             <SheetScrollable
                 className="list-scroll tiny-scroll min-h-0 flex-1 px-3"
                 style={{ paddingBottom: expandedSafeBottom }}
+                onScroll={handleListScroll}
                 onTouchStart={gestures.handleSwipeStart}
                 onTouchEnd={gestures.handleSwipeEnd}
             >
-                        <div ref={scrollContainerRef}>
-                            {sections.map((section) => (
-                                <div key={section.key}>
-                                    {/* sticky section header */}
-                                    <div
-                                        ref={(el) => { if (el) sectionRefs.current.set(section.key, el); }}
-                                        data-section={section.key}
-                                        className="menu-flow-sticky-header"
+                <div ref={scrollContainerRef}>
+                    {sections.map((section) => (
+                        <div key={section.key}>
+                            {/* sticky section header */}
+                            <div
+                                ref={(el) => { if (el) sectionRefs.current.set(section.key, el); }}
+                                data-section={section.key}
+                                className="menu-flow-sticky-header"
+                            >
+                                <span className="menu-flow-sticky-header__label">{section.label}</span>
+                                <span className="menu-flow-sticky-header__count">{section.items.length}</span>
+                            </div>
+
+                            {/* items — compact rows only; focus panel renders expanded view above */}
+                            {section.items.map((item, itemIndex) => {
+                                const isFocused = item._uiId === focusedId;
+                                const isRecommended = item._uiId === recommendedId;
+                                const price = formatPrice(item);
+                                const bannerGradient = getCategoryGradient(item.category || section.key);
+
+                                const handleClick = (event: React.MouseEvent) => {
+                                    event.stopPropagation();
+                                    manualFocusAt.current = Date.now();
+                                    setFocusedId(item._uiId);
+                                    const el = itemRefs.current.get(item._uiId);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                };
+
+                                const rowClasses = [
+                                    'mf-row w-full text-left',
+                                    isFocused ? 'mf-row--is-focused' : '',
+                                    isRecommended ? 'mf-row--recommended' : '',
+                                ].filter(Boolean).join(' ');
+
+                                return (
+                                    <motion.button
+                                        type="button"
+                                        key={item._uiId}
+                                        ref={(el) => { if (el) itemRefs.current.set(item._uiId, el as unknown as HTMLDivElement); }}
+                                        data-uid={item._uiId}
+                                        animate={{ opacity: 1 }}
+                                        initial={{ opacity: 0 }}
+                                        transition={{ duration: 0.15, delay: Math.min(itemIndex * 0.01, 0.06) }}
+                                        onClick={handleClick}
+                                        className={rowClasses}
                                     >
-                                        <span className="menu-flow-sticky-header__label">{section.label}</span>
-                                        <span className="menu-flow-sticky-header__count">{section.items.length}</span>
-                                    </div>
-
-                                    {/* items — compact rows only; focus panel renders expanded view above */}
-                                    {section.items.map((item, itemIndex) => {
-                                        const isFocused = item._uiId === focusedId;
-                                        const isRecommended = item._uiId === recommendedId;
-                                        const price = formatPrice(item);
-                                        const bannerGradient = getCategoryGradient(item.category || section.key);
-
-                                        const handleClick = (event: React.MouseEvent) => {
-                                            event.stopPropagation();
-                                            manualFocusAt.current = Date.now();
-                                            setFocusedId(item._uiId);
-                                            const el = itemRefs.current.get(item._uiId);
-                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        };
-
-                                        const rowClasses = [
-                                            'mf-row w-full text-left',
-                                            isFocused ? 'mf-row--is-focused' : '',
-                                            isRecommended ? 'mf-row--recommended' : '',
-                                        ].filter(Boolean).join(' ');
-
-                                        return (
-                                            <motion.button
-                                                type="button"
-                                                key={item._uiId}
-                                                ref={(el) => { if (el) itemRefs.current.set(item._uiId, el as unknown as HTMLDivElement); }}
-                                                data-uid={item._uiId}
-                                                animate={{ opacity: 1 }}
-                                                initial={{ opacity: 0 }}
-                                                transition={{ duration: 0.15, delay: Math.min(itemIndex * 0.01, 0.06) }}
-                                                onClick={handleClick}
-                                                className={rowClasses}
-                                            >
-                                                <div
-                                                    className="mf-row__thumb"
-                                                    style={{ background: bannerGradient }}
-                                                />
-                                                <div className="mf-row__info">
-                                                    <div className="mf-row__name">{item?.name || 'Pozycja menu'}</div>
-                                                    <div className="mf-row__meta">
-                                                        {item?.description
-                                                            ? item.description.slice(0, 55) + (item.description.length > 55 ? '…' : '')
-                                                            : item?.ingredients || ''}
-                                                    </div>
-                                                </div>
-                                                {price && (
-                                                    <div className="mf-row__right">
-                                                        <div className="mf-row__price">{price}</div>
-                                                    </div>
-                                                )}
-                                            </motion.button>
-                                        );
-                                    })}
-                                </div>
-                            ))}
+                                        <div
+                                            className="mf-row__thumb"
+                                            style={{ background: bannerGradient }}
+                                        >
+                                            {(() => {
+                                                const thumbSrc = item.image_url || item.photo_url || item.img
+                                                    || getLocalFallbackImage(item.category || '', item.name || '');
+                                                return thumbSrc ? (
+                                                    <img
+                                                        src={thumbSrc}
+                                                        alt=""
+                                                        className="mf-row__thumb-img"
+                                                        loading="lazy"
+                                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                    />
+                                                ) : null;
+                                            })()}
+                                        </div>
+                                        <div className="mf-row__info">
+                                            <div className="mf-row__name">{item?.name || 'Pozycja menu'}</div>
+                                            <div className="mf-row__meta">
+                                                {item?.description
+                                                    ? item.description.slice(0, 55) + (item.description.length > 55 ? '…' : '')
+                                                    : item?.ingredients || ''}
+                                            </div>
+                                        </div>
+                                        {price && (
+                                            <div className="mf-row__right">
+                                                <div className="mf-row__price">{price}</div>
+                                            </div>
+                                        )}
+                                    </motion.button>
+                                );
+                            })}
                         </div>
+                    ))}
+                </div>
             </SheetScrollable>
         </div>
     );

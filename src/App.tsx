@@ -25,6 +25,7 @@ import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 import { canAccessWorkspacePanels } from "./lib/accessControl";
+import B3PApp from "./pages/B3P";
 
 // Operational surfaces suppress the consumer restaurant wallpaper (RestaurantBackground).
 // Rules use startsWith so sub-routes are covered automatically.
@@ -37,10 +38,11 @@ import { canAccessWorkspacePanels } from "./lib/accessControl";
 // NOT suppressed (keep wallpaper):
 //   /               → Home (consumer)
 //   /ui-lab         → dev only, consumer-style
+//   /b3p            → B3P custom map
 //
 // Note: /panel/client (ClientPanel) has its own CSS background-image and does not
 // rely on RestaurantBackground, so suppressing it there is harmless.
-const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings'];
+const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings', '/b3p'];
 
 function OrdersRouteRedirect() {
   useEffect(() => {
@@ -144,6 +146,7 @@ function AppContent() {
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
           <Route path={ROUTES.ORDERS} element={<OrdersRouteRedirect />} />
+          <Route path={ROUTES.B3P} element={<B3PApp />} />
           <Route path={ROUTES.PROFILE} element={<Navigate to={`${ROUTES.PANEL_CLIENT}?section=profile`} replace />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />

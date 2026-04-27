@@ -55,6 +55,21 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: { type: O, properties: {} },
   },
   {
+    name: 'compare_restaurants',
+    description: 'Compare menu items across up to 3 restaurants in the same city. Read-only.',
+    parameters: {
+      type: O,
+      properties: {
+        query: { type: S },
+        category: { type: S },
+        city: { type: S },
+        metric: { type: S },
+        max_restaurants: { type: N },
+        max_items_per_restaurant: { type: N },
+      },
+    },
+  },
+  {
     name: 'add_item_to_cart',
     description: 'Add one item to cart by dish name and quantity. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
     parameters: {

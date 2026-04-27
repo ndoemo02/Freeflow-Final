@@ -28,6 +28,8 @@ interface ConversationState {
     setSessionId: (id: string) => void;
     sendMessage: (text: string) => Promise<void>;
     resetSession: () => void;
+    closeMenuContext: () => void;
+    clearHomeContext: () => void;
     setSelectedRestaurantPreviewId: (id: string | null) => void;
     handleOrderSuccess: () => void;
 }
@@ -116,6 +118,42 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             lastIntent: null,
             lastSource: null
         });
+    },
+
+    closeMenuContext: () => {
+        set((state) => ({
+            ...state,
+            uiMode: 'list',
+            conversationPhase: 'idle',
+            currentRestaurant: null,
+            menuItems: null,
+            expectedContext: null,
+            selectedRestaurantPreviewId: null,
+            lastFullResponse: null,
+            lastResponse: '',
+        }));
+    },
+
+    clearHomeContext: () => {
+        set((state) => ({
+            ...state,
+            uiMode: 'list',
+            conversationPhase: 'idle',
+            currentRestaurant: null,
+            pendingOrder: null,
+            expectedContext: null,
+            conversationClosed: false,
+            closedReason: null,
+            orderFinalized: false,
+            lastContext: null,
+            lastFullResponse: null,
+            lastResponse: '',
+            suggestedRestaurants: null,
+            selectedRestaurantPreviewId: null,
+            menuItems: null,
+            lastIntent: null,
+            lastSource: null,
+        }));
     },
 
     sendMessage: async (text: string) => {

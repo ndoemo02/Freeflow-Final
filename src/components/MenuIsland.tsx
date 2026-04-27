@@ -1,15 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
-function normalizeText(value: string = '') {
-    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
 function normalizeId(value: unknown): string {
     return String(value ?? '');
+}
+
+function normalizeText(value: string = '') {
+    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 function pickRecommendedMenuId(items: any[], response: any) {
@@ -38,15 +38,26 @@ export default function MenuIsland() {
     // Enrich currentRestaurant with full data (photo_gallery etc.) from suggestedRestaurants
     const enrichedRestaurant = useMemo(() => {
         if (!currentRestaurant) return null;
+        const currentId = normalizeId(currentRestaurant?.id);
+        const currentName = normalizeText(currentRestaurant?.name || '');
         const full = Array.isArray(suggestedRestaurants)
-            ? suggestedRestaurants.find((r: any) => r?.id === currentRestaurant.id)
+            ? suggestedRestaurants.find((r: any) => {
+                const candidateId = normalizeId(r?.id);
+                if (candidateId && currentId && candidateId === currentId) return true;
+                const candidateName = normalizeText(r?.display_name || r?.name || '');
+                return !!(candidateName && currentName && candidateName === currentName);
+            })
             : null;
         return full || currentRestaurant;
     }, [currentRestaurant, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const menuBackStatePushedRef = useRef(false);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
     const recommendedId = useMemo(() => pickRecommendedMenuId(menuItems || [], lastFullResponse), [menuItems, lastFullResponse]);
+    const closeMenuContext = useCallback(() => {
+        useConversationStore.getState().closeMenuContext();
+    }, []);
 
     useEffect(() => {
         const renderVisible = isVisible && !!menuItems?.length;
@@ -104,6 +115,56 @@ export default function MenuIsland() {
         setHighlightedId(normalizeId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null));
     }, [menuItems, recommendedId, highlightedId]);
 
+    useEffect(() => {
+        if (!isVisible) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault();
+            closeMenuContext();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }, [isVisible, closeMenuContext]);
+
+    useEffect(() => {
+        if (!isVisible) return;
+
+        const currentState = (window.history.state && typeof window.history.state === 'object')
+            ? window.history.state
+            : {};
+
+        if (!currentState.ffMenuOpen) {
+            window.history.pushState({ ...currentState, ffMenuOpen: true }, '');
+            menuBackStatePushedRef.current = true;
+        } else {
+            menuBackStatePushedRef.current = false;
+        }
+
+        const onPopState = () => {
+            closeMenuContext();
+        };
+
+        window.addEventListener('popstate', onPopState);
+
+        return () => {
+            window.removeEventListener('popstate', onPopState);
+
+            if (menuBackStatePushedRef.current) {
+                const liveState = (window.history.state && typeof window.history.state === 'object')
+                    ? window.history.state
+                    : {};
+                if (liveState.ffMenuOpen) {
+                    const { ffMenuOpen: _ffMenuOpen, ...restState } = liveState as Record<string, unknown>;
+                    window.history.replaceState(restState, '');
+                }
+            }
+
+            menuBackStatePushedRef.current = false;
+        };
+    }, [isVisible, closeMenuContext]);
+
     if (!isVisible || !menuItems || menuItems.length === 0) return null;
 
     return (
@@ -118,6 +179,7 @@ export default function MenuIsland() {
             subtitle={enrichedRestaurant?.city || enrichedRestaurant?.address || 'Pozycje aktualnie widoczne dla tej restauracji'}
             restaurantDistance={enrichedRestaurant?.distance ?? null}
             restaurant={enrichedRestaurant}
+            onClose={closeMenuContext}
             onSelect={(item) => {
                 window.dispatchEvent(new CustomEvent('freeflow:orderItem', {
                     detail: { item, restaurant: currentRestaurant }
