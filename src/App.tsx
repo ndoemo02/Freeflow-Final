@@ -25,7 +25,6 @@ import { ttsManager } from "./tts/ttsManager";
 import { useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 import { canAccessWorkspacePanels } from "./lib/accessControl";
-import B3PApp from "./pages/B3P";
 
 // Operational surfaces suppress the consumer restaurant wallpaper (RestaurantBackground).
 // Rules use startsWith so sub-routes are covered automatically.
@@ -146,7 +145,7 @@ function AppContent() {
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
           <Route path={ROUTES.ORDERS} element={<OrdersRouteRedirect />} />
-          <Route path={ROUTES.B3P} element={<B3PApp />} />
+          <Route path={ROUTES.B3P} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.PROFILE} element={<Navigate to={`${ROUTES.PANEL_CLIENT}?section=profile`} replace />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />
