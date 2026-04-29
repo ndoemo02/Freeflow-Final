@@ -34,17 +34,24 @@ function isAbsoluteNetworkUrl(value: string): boolean {
 function normalizeLoopbackUrlForClient(value: string): string {
   if (!value || typeof window === 'undefined' || !isAbsoluteNetworkUrl(value)) return value;
   const currentHost = window.location.hostname;
+  const isCurrentLoopback = isLoopbackHost(currentHost);
   const isCurrentLan = isPrivateIpv4Host(currentHost);
   const isCurrentTunnel = isTunnelHost(currentHost);
-  if (!isCurrentLan && !isCurrentTunnel) return value;
+  if (!isCurrentLoopback && !isCurrentLan && !isCurrentTunnel) return value;
   try {
     const parsed = new URL(value);
     const targetIsLocal = isLoopbackHost(parsed.hostname) || isPrivateIpv4Host(parsed.hostname);
     if (!targetIsLocal) return value;
-    parsed.hostname = currentHost;
-    if (isCurrentTunnel) {
-      // Tunnel hosts terminate on their default ports (443/80), keep URL without :3000.
-      parsed.port = '';
+    if (isCurrentLoopback) {
+      // On localhost, rewrite any private/LAN target to localhost so
+      // direct connections work (e.g. 192.168.x.x → localhost).
+      parsed.hostname = 'localhost';
+    } else {
+      parsed.hostname = currentHost;
+      if (isCurrentTunnel) {
+        // Tunnel hosts terminate on their default ports (443/80), keep URL without :3000.
+        parsed.port = '';
+      }
     }
     if (window.location.protocol === 'https:') {
       if (parsed.protocol === 'http:') parsed.protocol = 'https:';

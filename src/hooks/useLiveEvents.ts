@@ -518,10 +518,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 reconnectAttemptRef.current = 0;
                 clearReconnectTimer();
                 console.log('LIVE EVENTS WS OPEN - backend tool relay ready');
-                // Send GPS bootstrap as early as possible to avoid first-turn
-                // fallback prompts ("podaj miasto") before live_ready arrives.
+                // GPS init triggered by live_ready handler (poniżej) —
+                // unikamy podwójnego wysłania session_init z onopen + live_ready.
                 gpsInitRetryCount = 0;
-                sendSessionInitWithRetry(socket);
             };
 
             socket.onclose = (e) => {

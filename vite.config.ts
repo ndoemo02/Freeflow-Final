@@ -24,6 +24,7 @@ export default defineConfig({
   },
   preview: {
     port: 4173, // 🔮 opcjonalnie, do build preview
+    allowedHosts: true, // 🔓 Zapobiega błędowi 403 Forbidden przez ngrok
   },
   test: {
     globals: true,
