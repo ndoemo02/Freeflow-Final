@@ -21,6 +21,7 @@ import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceDock from "../components/VoiceDock";
+import IntentChips from "../components/IntentChips";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
@@ -448,6 +449,7 @@ export default function Home() {
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
         <div className="fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+          <IntentChips />
           <VoiceDock
             recording={isListening}
             isProcessing={isThinking}
