@@ -22,7 +22,7 @@ import { getApiUrl } from '../lib/config';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
-  'gemini-2.5-flash-native-audio-preview-12-2025';
+  'gemini-2.5-flash-live-001';
 const LIVE_MODEL_OVERRIDE_KEY = 'ff_live_model_override';
 const LIVE_MODEL_CHANGED_EVENT = 'freeflow:live-model-changed';
 
