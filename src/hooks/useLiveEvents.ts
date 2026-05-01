@@ -430,6 +430,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
         shouldReconnectRef.current = true;
         let disposed = false;
+        let sessionInitSent = false;
         const effectSessionId = sessionId;
         let gpsInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
         let gpsInitRetryCount = 0;
@@ -443,12 +444,13 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
         };
 
         const sendSessionInitWithRetry = (socket: WebSocket) => {
-            if (disposed) return;
+            if (disposed || sessionInitSent) return;
             clearGpsInitRetry();
 
             void getGPSCoords().then((coords) => {
-                if (disposed || socket.readyState !== WebSocket.OPEN) return;
+                if (disposed || sessionInitSent || socket.readyState !== WebSocket.OPEN) return;
                 if (coords) {
+                    sessionInitSent = true;
                     socket.send(JSON.stringify({
                         type: 'session_init',
                         lat: coords.lat,
@@ -505,6 +507,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect skipped â€” socket already ${existing.readyState === WebSocket.OPEN ? 'OPEN' : 'CONNECTING'}`);
                 return;
             }
+
+            // Reset session_init guard on reconnect, aby GPS został wysłany ponownie
+            if (reason === 'reconnect') sessionInitSent = false;
 
             const nonce = ++connectNonceRef.current;
             console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);

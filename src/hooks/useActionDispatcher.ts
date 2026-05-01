@@ -156,6 +156,10 @@ export function useActionDispatcher() {
                     }
                     console.log(`${fnTag} EVENT_ORDER_COMPLETED dispatched:`, evt.payload);
                 }
+                if (evt.type === 'parser_chips') {
+                    window.dispatchEvent(new CustomEvent('freeflow:parserChips', { detail: evt }));
+                    console.log(`${fnTag} parser_chips dispatched:`, evt.chips?.length, 'chips, confidence:', evt.confidence);
+                }
             }
         }
         // ──────────────────────────────────────────────────────────────
