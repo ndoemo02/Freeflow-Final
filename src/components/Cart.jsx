@@ -8,6 +8,23 @@ import { useConversationStore } from '../store/useConversationStore';
 import { ROUTES } from '../app/routeConfig';
 import { normalizeMenuItems } from '../lib/normalizeData';
 
+function cartItemBadges(rawItem) {
+    const badges = [];
+    if (rawItem?.is_vege) badges.push('🌿 Vege');
+    if (rawItem?.spicy) badges.push('Pikantne');
+    const tags = Array.isArray(rawItem?.item_tags) ? rawItem.item_tags : [];
+    for (const tag of tags) {
+        const t = String(tag || '').trim().toLowerCase();
+        if ((t === 'vege' || t === 'wege') && !badges.some((b) => b.includes('Vege'))) badges.push('🌿 Vege');
+        else if (t === 'spicy' && !badges.some((b) => b === 'Pikantne')) badges.push('Pikantne');
+        else if (t === 'gluten_free' && !badges.some((b) => b.includes('glutenu'))) badges.push('🚫🌾');
+        else if (t === 'vegan' && !badges.some((b) => b.includes('Vegan'))) badges.push('🌱');
+        else if (t === 'lactose_free' && !badges.some((b) => b.includes('laktozy'))) badges.push('🥛✕');
+        else if (t === 'halal' && !badges.some((b) => b.includes('Halal'))) badges.push('☪️');
+    }
+    return badges;
+}
+
 export default function Cart() {
   const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen, syncCart } = useCart();
 
@@ -315,6 +332,7 @@ export default function Cart() {
                             price: Number(rawItem?.price ?? rawItem?.price_pln ?? 0),
                             quantity: Number(rawItem?.quantity ?? rawItem?.qty ?? 1)
                           };
+                          const badges = cartItemBadges(rawItem);
                           return (
                             <motion.div
                               key={item.id}
@@ -326,7 +344,14 @@ export default function Cart() {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
-                                  <h3 className="text-white font-semibold">{item.name}</h3>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="text-white font-semibold">{item.name}</h3>
+                                    {badges.map((badge, bi) => (
+                                      <span key={bi} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/70 leading-none">
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
                                   <p className="text-sm text-slate-400">{Number(item.price).toFixed(2)} PLN</p>
                                 </div>
 

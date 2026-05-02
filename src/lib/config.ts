@@ -106,17 +106,30 @@ function toWsBase(value: string): string | null {
 export function resolveLiveWsBase(): { base: string | null; source: string } {
   const fromLiveWsEnv = toWsBase(CONFIG.LIVE_WS_URL);
   if (fromLiveWsEnv) {
+    // Blacklist: Railway URLs nie działają po migracji na Vercel
+    if (/railway\.app/i.test(fromLiveWsEnv)) {
+      console.warn('[config] ⛔ Railway WS URL odrzucony — używam HTTP fallback (Vercel)');
+      return { base: null, source: 'blocked:railway' };
+    }
     return { base: fromLiveWsEnv, source: 'env:VITE_LIVE_WS_URL' };
   }
 
   const fromLiveHttpEnv = toWsBase(CONFIG.LIVE_HTTP_URL);
   if (fromLiveHttpEnv) {
+    if (/railway\.app/i.test(fromLiveHttpEnv)) {
+      console.warn('[config] ⛔ Railway HTTP URL odrzucony — używam HTTP fallback (Vercel)');
+      return { base: null, source: 'blocked:railway' };
+    }
     return { base: fromLiveHttpEnv, source: 'env:VITE_LIVE_HTTP_URL' };
   }
 
   const backendEnv = normalizeLoopbackUrlForClient(String(import.meta.env.VITE_BACKEND_URL || '').trim());
   const fromBackendEnv = toWsBase(backendEnv);
   if (fromBackendEnv) {
+    if (/railway\.app/i.test(fromBackendEnv)) {
+      console.warn('[config] ⛔ Railway backend URL odrzucony — używam HTTP fallback (Vercel)');
+      return { base: null, source: 'blocked:railway' };
+    }
     return { base: fromBackendEnv, source: 'env:VITE_BACKEND_URL' };
   }
 

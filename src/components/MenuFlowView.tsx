@@ -123,14 +123,37 @@ function buildSections(items: any[]): Section[] {
 
 function getBadges(item: any): string[] {
     const badges: string[] = [];
+    // Top-level boolean flags
     if (item?.is_vege) badges.push('🌿 Vege');
     if (item?.spicy) badges.push('Pikantne');
+    // item_tags array: freeform tags from DB (e.g. "VEGE", "spicy", "gluten_free")
+    const rawTags = Array.isArray(item?.item_tags) ? item.item_tags : [];
+    for (const tag of rawTags) {
+        const t = String(tag || '').trim().toLowerCase();
+        if (!t) continue;
+        if (t === 'vege' || t === 'wege' || t === 'wegetariańskie') {
+            if (!badges.some((b) => b.toLowerCase().includes('vege'))) badges.push('🌿 Vege');
+        } else if (t === 'spicy' || t === 'ostre' || t === 'pikantne') {
+            if (!badges.some((b) => b.toLowerCase().includes('pikantne'))) badges.push('Pikantne');
+        } else if (t === 'gluten_free' || t === 'bezglutenowe') {
+            if (!badges.some((b) => b.toLowerCase().includes('glutenu'))) badges.push('🚫🌾 Bez glutenu');
+        } else if (t === 'vegan' || t === 'wegańskie') {
+            if (!badges.some((b) => b.toLowerCase().includes('vegan'))) badges.push('🌱 Vegan');
+        } else if (t === 'lactose_free' || t === 'bez laktozy') {
+            if (!badges.some((b) => b.toLowerCase().includes('laktozy'))) badges.push('🥛✕ Bez laktozy');
+        } else if (t === 'halal') {
+            if (!badges.some((b) => b.toLowerCase().includes('halal'))) badges.push('☪️ Halal');
+        }
+    }
+    // dietary_flags array: structured dietary metadata
     if (Array.isArray(item?.dietary_flags)) {
         for (const f of item.dietary_flags) {
-            if (f === 'gluten_free') badges.push('🚫🌾 Bez glutenu');
-            if (f === 'vegan') badges.push('🌱 Vegan');
-            if (f === 'lactose_free') badges.push('🥛✕ Bez laktozy');
-            if (f === 'halal') badges.push('☪️ Halal');
+            const t = String(f || '').trim().toLowerCase();
+            if (!t) continue;
+            if (t === 'gluten_free') badges.push('🚫🌾 Bez glutenu');
+            else if (t === 'vegan') badges.push('🌱 Vegan');
+            else if (t === 'lactose_free') badges.push('🥛✕ Bez laktozy');
+            else if (t === 'halal') badges.push('☪️ Halal');
         }
     }
     return badges;
