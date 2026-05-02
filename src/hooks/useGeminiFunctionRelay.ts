@@ -173,16 +173,23 @@ async function relayViaHttp(
     sessionId: string | undefined,
     transcript: string | undefined,
 ): Promise<GeminiFunctionResponse> {
+    const effectiveSessionId = String(sessionId ?? '').trim();
+    if (!effectiveSessionId) {
+        const err = new Error('relay_http_missing_session_id');
+        console.error(`[LiveDiag] ❌ relay HTTP ABORT: no sessionId for ${functionCall.name} — cannot call tool-call without session`);
+        throw err;
+    }
+
     const url = getApiUrl('/api/voice/live/tool-call');
     const body: Record<string, unknown> = {
-        session_id: sessionId ?? '',
+        session_id: effectiveSessionId,
         tool: functionCall.name,
         args: functionCall.args || {},
         request_id: functionCall.id || `httprelay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     };
     if (transcript) body.transcript = transcript;
 
-    console.log(`[LiveDiag] 🌐 relay HTTP POST: ${functionCall.name} → ${url}`);
+    console.log(`[LiveDiag] 🌐 relay HTTP POST: ${functionCall.name} → ${url}  sessionId=${effectiveSessionId.slice(0, 8)}...`);
     const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,13 +197,15 @@ async function relayViaHttp(
     });
 
     if (!res.ok) {
-        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        console.error(`[LiveDiag] ❌ relay HTTP error: ${errBody.error || res.status}`);
-        throw new Error(errBody.error || `HTTP ${res.status}`);
+        let errBody: { error?: string; message?: string; reason?: string } = {};
+        try { errBody = await res.json(); } catch { /* noop */ }
+        const detail = errBody.error || errBody.message || errBody.reason || `HTTP ${res.status}`;
+        console.error(`[LiveDiag] ❌ relay HTTP ${res.status}: ${detail}  (tool=${functionCall.name} sessionId=${effectiveSessionId.slice(0, 8)}...)`);
+        throw new Error(detail);
     }
 
     const data = await res.json();
-    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${data.ok}`);
+    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${data.ok}  intent=${data.intent || '-'}`);
     return { name: functionCall.name, response: data };
 }
 

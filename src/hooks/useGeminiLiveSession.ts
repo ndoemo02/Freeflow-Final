@@ -19,6 +19,7 @@ import {
 import { useConversationStore } from '../store/useConversationStore';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
+import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -421,6 +422,102 @@ function compactToolResponse(
   return compact;
 }
 
+function applyToolResultToStore(
+    toolName: string,
+    response: Record<string, unknown>,
+): void {
+    const state = useConversationStore.getState();
+    const restaurants = normalizeRestaurants(
+        (response.restaurants as any[] | undefined) || (response.context as any)?.last_restaurants_list || null,
+    );
+    const menuItems = normalizeMenuItems(
+        (response.menu as any[] | undefined)
+        || (response.menuItems as any[] | undefined)
+        || (response.context as any)?.menuItems
+        || (response.context as any)?.menu_items
+        || (response.context as any)?.last_menu
+        || (response.context as any)?.lastMenu
+        || null,
+    );
+
+    const reply = String(response.reply || response.text || '');
+    const nextIntent = String(response.intent || state.lastIntent || '');
+    const nextPhase = String((response.context as any)?.conversationPhase || response.phase || state.conversationPhase || '');
+
+    let nextUiMode = state.uiMode;
+    if (nextIntent === 'find_nearby') {
+        nextUiMode = 'list';
+    } else if (
+        nextIntent === 'select_restaurant'
+        || nextIntent === 'show_menu'
+        || nextIntent === 'menu_request'
+        || nextIntent === 'show_restaurant_menu'
+        || nextIntent === 'view_menu'
+        || toolName === 'show_menu'
+    ) {
+        nextUiMode = 'restaurant';
+    } else if (nextIntent === 'open_checkout') {
+        nextUiMode = 'checkout';
+    }
+
+    const nextCurrentRestaurant =
+        (response.context as any)?.currentRestaurant
+        || (response.context as any)?.current_restaurant
+        || response.currentRestaurant
+        || response.restaurant
+        || state.currentRestaurant;
+
+    const hasMenuItems = Array.isArray(menuItems) && menuItems.length > 0;
+    const isMenuSurfaceIntent =
+        nextIntent === 'show_menu'
+        || nextIntent === 'menu_request'
+        || nextIntent === 'show_restaurant_menu'
+        || nextIntent === 'view_menu';
+    const isMenuSurfaceTool = toolName === 'show_menu' || toolName === 'select_restaurant';
+    if (hasMenuItems && (isMenuSurfaceIntent || isMenuSurfaceTool || nextCurrentRestaurant)) {
+        nextUiMode = 'restaurant';
+    }
+
+    const restaurantCandidateList = (restaurants && restaurants.length > 0)
+        ? restaurants
+        : (Array.isArray(state.suggestedRestaurants) ? state.suggestedRestaurants : []);
+
+    // Enrich currentRestaurant with full data from suggested list
+    let enrichedRestaurant = nextCurrentRestaurant || null;
+    if (enrichedRestaurant && restaurantCandidateList.length > 0) {
+        const restaurantId = String(enrichedRestaurant.id ?? '').trim();
+        const restaurantName = String(enrichedRestaurant.display_name || enrichedRestaurant.name || '')
+            .toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
+        const matched = (restaurantId
+            ? restaurantCandidateList.find((c: any) => String(c?.id ?? '').trim() === restaurantId)
+            : undefined)
+            || restaurantCandidateList.find((c: any) => {
+                const cn = String(c?.display_name || c?.name || '')
+                    .toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').trim();
+                return cn && restaurantName && (cn === restaurantName || cn.includes(restaurantName) || restaurantName.includes(cn));
+            });
+        if (matched) enrichedRestaurant = { ...matched, ...enrichedRestaurant };
+    }
+
+    console.log(`[LIVE_HTTP_BRIDGE] ${toolName} → store: uiMode=${nextUiMode} intent=${nextIntent} restaurants=${restaurants?.length ?? 0} menuItems=${menuItems?.length ?? 0} cart=${!!(response.meta as any)?.cart || !!response.cart}`);
+
+    useConversationStore.setState({
+        isThinking: false,
+        error: null,
+        lastResponse: reply,
+        lastFullResponse: response,
+        uiMode: nextUiMode,
+        conversationPhase: nextPhase || state.conversationPhase,
+        currentRestaurant: enrichedRestaurant,
+        pendingOrder: (response.context as any)?.pendingOrder || null,
+        cart: (response.meta as any)?.cart || response.cart || state.cart,
+        lastIntent: nextIntent || state.lastIntent,
+        lastSource: ((response.meta as any)?.source as string) || 'live_http_relay',
+        suggestedRestaurants: (restaurants && restaurants.length > 0) ? restaurants : state.suggestedRestaurants,
+        menuItems: menuItems || state.menuItems,
+    });
+}
+
 export function useGeminiLiveSession({
   wsRef,
   enabled = true,
@@ -662,6 +759,14 @@ export function useGeminiLiveSession({
               };
               try {
                 const result = await relay(geminiCall);
+                // HTTP fallback bridge: when WS is not connected, sync structured
+                // response to useConversationStore so the UI renders menus, cart, etc.
+                if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+                  applyToolResultToStore(
+                    result.name,
+                    (result.response ?? {}) as Record<string, unknown>,
+                  );
+                }
                 return {
                   id: fc.id ?? '',
                   name: result.name,
