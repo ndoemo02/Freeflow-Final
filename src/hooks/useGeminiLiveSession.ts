@@ -460,6 +460,7 @@ export function useGeminiLiveSession({
       latestUserTranscriptRef.current = null;
       return value;
     },
+    getSessionId: () => sessionIdRef.current,
   });
 
   const clearReconnectTimer = useCallback(() => {
@@ -798,7 +799,7 @@ export function useGeminiLiveSession({
             cleanupRuntime(false);
             scheduleReconnect();
           },
-          onclose: () => {
+          onclose: (event?: { code?: number; reason?: string }) => {
             // Save state snapshot before cleanup
             const s = useConversationStore.getState();
             liveSessionCache.set(sid, {
@@ -811,7 +812,9 @@ export function useGeminiLiveSession({
             });
             const wasIntentional = intentionalCloseRef.current;
             intentionalCloseRef.current = false;
-            console.log(`[LIVE] STOP sessionId=${sid} intentional=${wasIntentional}`);
+            const code = event?.code ?? 'unknown';
+            const reason = event?.reason || 'none';
+            console.log(`[LIVE] STOP sessionId=${sid} code=${code} reason=${reason} intentional=${wasIntentional}`);
             cleanupRuntime(false);
             // Do NOT reconnect on intentional close (user stop / cleanup / 1000 / 1001 equivalent)
             if (wasIntentional || !desiredActiveRef.current) {

@@ -21,6 +21,7 @@
 
 import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
+import { getApiUrl } from '../lib/config';
 
 const RELAY_TIMEOUT_MS = 15000;
 const GPS_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -162,11 +163,47 @@ export interface UseGeminiFunctionRelayOptions {
     getLatestTranscript?: () => string | null;
     /** Optional provider that returns and clears latest transcript */
     takeLatestTranscript?: () => string | null;
+    /** Session ID — required for HTTP fallback when WS is unavailable (Vercel mode) */
+    getSessionId?: () => string | undefined;
+}
+
+// HTTP fallback: POST /api/voice/live/tool-call (Vercel serverless)
+async function relayViaHttp(
+    functionCall: GeminiFunctionCall,
+    sessionId: string | undefined,
+    transcript: string | undefined,
+): Promise<GeminiFunctionResponse> {
+    const url = getApiUrl('/api/voice/live/tool-call');
+    const body: Record<string, unknown> = {
+        session_id: sessionId ?? '',
+        tool: functionCall.name,
+        args: functionCall.args || {},
+        request_id: functionCall.id || `httprelay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    };
+    if (transcript) body.transcript = transcript;
+
+    console.log(`[LiveDiag] 🌐 relay HTTP POST: ${functionCall.name} → ${url}`);
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        console.error(`[LiveDiag] ❌ relay HTTP error: ${errBody.error || res.status}`);
+        throw new Error(errBody.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${data.ok}`);
+    return { name: functionCall.name, response: data };
 }
 
 export interface UseGeminiFunctionRelayResult {
     /**
-     * Relay a single Gemini FunctionCall to ToolRouter via WS.
+     * Relay a single Gemini FunctionCall to ToolRouter.
+     * Uses WS when connected, falls back to HTTP POST /api/voice/live/tool-call (Vercel).
      * Resolves with the FunctionResponse payload for Gemini.
      * Rejects on timeout or tool_error.
      */
@@ -183,6 +220,7 @@ export function useGeminiFunctionRelay({
     wsRef,
     getLatestTranscript,
     takeLatestTranscript,
+    getSessionId,
 }: UseGeminiFunctionRelayOptions): UseGeminiFunctionRelayResult {
     const pendingRef = useRef<Map<string, {
         resolve: (value: GeminiFunctionResponse) => void;
@@ -239,10 +277,11 @@ export function useGeminiFunctionRelay({
         const liveUiStore = useLiveUiSessionStore.getState();
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            // ── DIAG: WS not ready ────────────────────────────────────
-            console.error(`[LiveDiag] ❌ relay: WS not connected (readyState=${ws?.readyState ?? 'null'}) for tool=${functionCall.name}`);
-            // ──────────────────────────────────────────────────────────
-            return Promise.reject(new Error('ws_not_connected'));
+            // HTTP fallback — Vercel serverless nie wspiera WebSocket
+            const sid = getSessionId?.();
+            const transcript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
+            console.log(`[LiveDiag] 🔄 WS unavailable, using HTTP fallback for ${functionCall.name} sessionId=${sid ?? '?'}`);
+            return relayViaHttp(functionCall, sid, transcript);
         }
 
         ensureListener();
