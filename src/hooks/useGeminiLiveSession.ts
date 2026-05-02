@@ -426,6 +426,8 @@ function applyToolResultToStore(
     toolName: string,
     response: Record<string, unknown>,
 ): void {
+    console.log(`[LIVE_HTTP_BRIDGE] applyToolResultToStore tool=${toolName}`);
+    console.dir(response);
     const state = useConversationStore.getState();
     const restaurants = normalizeRestaurants(
         (response.restaurants as any[] | undefined) || (response.context as any)?.last_restaurants_list || null,

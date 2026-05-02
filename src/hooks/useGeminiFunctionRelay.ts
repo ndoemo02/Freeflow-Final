@@ -205,8 +205,14 @@ async function relayViaHttp(
     }
 
     const data = await res.json();
-    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${data.ok}  intent=${data.intent || '-'}`);
-    return { name: functionCall.name, response: data };
+    // ToolRouter wraps: { ok, tool, request_id, response: inner, trace }
+    // WS Gateway sends msg.response = inner — unwrap here so HTTP & WS paths
+    // both receive the same inner response shape (with menu, restaurants, etc.)
+    const inner = (data?.response && typeof data.response === 'object' && !Array.isArray(data.response))
+        ? data.response
+        : data;
+    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${inner.ok}  intent=${inner.intent || '-'}  hasMenu=${!!inner.menu}  hasMenuItems=${!!inner.menuItems}  hasRestaurants=${!!inner.restaurants}`);
+    return { name: functionCall.name, response: inner };
 }
 
 export interface UseGeminiFunctionRelayResult {
