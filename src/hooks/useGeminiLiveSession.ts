@@ -20,6 +20,7 @@ import { useConversationStore } from '../store/useConversationStore';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
+import { activeSessionMap } from '../state/ActiveSessionMap';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -44,8 +45,10 @@ const LIVE_VAD_CONFIG = {
   },
 } as const;
 
-// Fix #4: module-level cache for session state persistence across reconnects
-export const liveSessionCache = new Map<string, {
+// Fix #5: ActiveSessionMap jako fundament spójności.
+// liveSessionCache pozostaje jako backward-compat wrapper delegujący do activeSessionMap.
+// Obie struktury są trzymane w sync: każdy .set() na liveSessionCache aktualizuje też activeSessionMap.
+const _liveSessionMap = new Map<string, {
   cart: any;
   currentRestaurant: any;
   uiMode?: 'list' | 'restaurant' | 'checkout';
@@ -53,6 +56,24 @@ export const liveSessionCache = new Map<string, {
   suggestedRestaurants: any[] | null;
   menuItems: any[] | null;
 }>();
+
+export const liveSessionCache = {
+  get(sid: string) { return _liveSessionMap.get(sid); },
+  set(sid: string, data: any) {
+    _liveSessionMap.set(sid, data);
+    // Mirror to ActiveSessionMap
+    activeSessionMap.set(sid, {
+      cartItems: data.cart?.items || data.cart || [],
+      restaurantId: data.currentRestaurant?.id || null,
+      restaurantName: data.currentRestaurant?.name || null,
+      uiMode: data.uiMode as any,
+      conversationPhase: data.conversationPhase || 'idle',
+      menuItems: data.menuItems || [],
+    });
+  },
+  has(sid: string) { return _liveSessionMap.has(sid); },
+  delete(sid: string) { _liveSessionMap.delete(sid); activeSessionMap.delete(sid); },
+} as const;
 
 const BASE_SYSTEM_INSTRUCTION = [
   // TOŻSAMOŚĆ
@@ -501,7 +522,13 @@ function applyToolResultToStore(
         if (matched) enrichedRestaurant = { ...matched, ...enrichedRestaurant };
     }
 
-    console.log(`[LIVE_HTTP_BRIDGE] ${toolName} → store: uiMode=${nextUiMode} intent=${nextIntent} restaurants=${restaurants?.length ?? 0} menuItems=${menuItems?.length ?? 0} cart=${!!(response.meta as any)?.cart || !!response.cart}`);
+    // Fix #5: Backend cart jest "Prawdą Absolutną". Full override — bez fallbacku do state.cart
+    // który mógłby być niezsynchronizowany po przejściach menu↔checkout.
+    const backendCart = (response.meta as any)?.cart || response.cart;
+    const backendCartHash = (response.meta as any)?.cartHash || (response as any).cartHash || '';
+    const cartForStore = backendCart || state.cart; // fallback tylko gdy backend nie wysłał wcale
+
+    console.log(`[LIVE_HTTP_BRIDGE] ${toolName} → store: uiMode=${nextUiMode} intent=${nextIntent} restaurants=${restaurants?.length ?? 0} menuItems=${menuItems?.length ?? 0} cart=${!!backendCart} cartHash=${backendCartHash} cartItems=${backendCart?.items?.length ?? '?'}`);
 
     const hasFreshMenu = menuItems && menuItems.length > 0;
     const hasFreshRestaurants = restaurants && restaurants.length > 0;
@@ -515,7 +542,7 @@ function applyToolResultToStore(
         conversationPhase: nextPhase || state.conversationPhase,
         currentRestaurant: enrichedRestaurant,
         pendingOrder: (response.context as any)?.pendingOrder || null,
-        cart: (response.meta as any)?.cart || response.cart || state.cart,
+        cart: cartForStore,
         lastIntent: nextIntent || state.lastIntent,
         lastSource: ((response.meta as any)?.source as string) || 'live_http_relay',
         suggestedRestaurants: hasFreshRestaurants ? restaurants : state.suggestedRestaurants,
@@ -523,6 +550,24 @@ function applyToolResultToStore(
         // Empty [] from normalizeMenuItems would be truthy and wipe the store.
         menuItems: hasFreshMenu ? menuItems : state.menuItems,
     });
+
+    // Mirror do ActiveSessionMap — Level 2 Memory
+    if (backendCart) {
+        activeSessionMap.updateFromResponse(
+            String(state.sessionId || ''),
+            response,
+            nextUiMode,
+            nextPhase || state.conversationPhase,
+        );
+        if (backendCartHash) {
+            const hashOk = activeSessionMap.verifyCartHash(String(state.sessionId || ''), backendCartHash);
+            if (!hashOk) {
+                console.warn(`[LIVE_CART_HASH] ❌ MISMATCH — frontend hash=${activeSessionMap.getCartHash(String(state.sessionId || ''))} backend hash=${backendCartHash} — FORCE OVERRIDE applied`);
+            } else {
+                console.log(`[LIVE_CART_HASH] ✅ OK frontend=backend=${backendCartHash}`);
+            }
+        }
+    }
 }
 
 export function useGeminiLiveSession({
@@ -586,6 +631,11 @@ export function useGeminiLiveSession({
       if (sid) {
         const cached = liveSessionCache.get(sid);
         if (cached?.currentRestaurant?.id) return String(cached.currentRestaurant.id);
+      }
+      // Fix #5: Deep fallback — ActiveSessionMap (Level 2 Memory)
+      if (sid) {
+        const deep = activeSessionMap.get(sid);
+        if (deep?.restaurantId) return String(deep.restaurantId);
       }
       return undefined;
     },

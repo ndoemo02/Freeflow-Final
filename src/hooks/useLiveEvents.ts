@@ -4,6 +4,7 @@ import { useConversationStore } from '../store/useConversationStore';
 import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
 import { liveSessionCache } from './useGeminiLiveSession';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
+import { activeSessionMap } from '../state/ActiveSessionMap';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
@@ -723,6 +724,12 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     ? extractMentionOrderedRestaurantIds(restaurants || [], response)
                     : [];
 
+                // Fix #5: Backend cart jest "Prawdą Absolutną" — full override, bez fallbacku
+                // do state.cart. Po przejściach menu↔checkout state.cart może być niezsynchronizowany.
+                const backendCart = response.meta?.cart || response.cart;
+                const backendCartHash = response.meta?.cartHash || response.cartHash || '';
+                const cartForStore = backendCart || state.cart;
+
                 const nextStoreState = {
                     isThinking: false,
                     error: null,
@@ -733,7 +740,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     conversationPhase: newPhase,
                     currentRestaurant: nextCurrentRestaurantEnriched,
                     pendingOrder: response.context?.pendingOrder || null,
-                    cart: response.meta?.cart || response.cart || state.cart,
+                    cart: cartForStore,
                     expectedContext: isIdle ? null : (response.context?.expectedContext || state.expectedContext),
                     lastIntent: response.intent || state.lastIntent,
                     lastSource: response.meta?.source || 'live_tool',
@@ -747,6 +754,24 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     console.log(`[LIVE_CART] checkoutVisible=${String(nextUiMode === 'checkout')}`);
                 }
                 useConversationStore.setState(nextStoreState);
+
+                // Mirror do ActiveSessionMap — Level 2 Memory
+                if (backendCart) {
+                    activeSessionMap.updateFromResponse(
+                        String(effectSessionId || state.sessionId || ''),
+                        response,
+                        nextUiMode,
+                        newPhase,
+                    );
+                    if (backendCartHash) {
+                        const hashOk = activeSessionMap.verifyCartHash(String(effectSessionId || state.sessionId || ''), backendCartHash);
+                        if (!hashOk) {
+                            console.warn(`[LIVE_CART_HASH] ❌ WS MISMATCH — frontend=${activeSessionMap.getCartHash(String(effectSessionId || state.sessionId || ''))} backend=${backendCartHash} — FORCE OVERRIDE applied`);
+                        } else {
+                            console.log(`[LIVE_CART_HASH] ✅ WS OK frontend=backend=${backendCartHash}`);
+                        }
+                    }
+                }
 
                 if (shouldAnimateFocusSequence) {
                     const fallbackSequence = (restaurants || [])
