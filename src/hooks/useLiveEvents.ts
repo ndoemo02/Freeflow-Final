@@ -589,7 +589,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 const state = useConversationStore.getState();
                 const history = [...state.conversationHistory, { role: 'assistant', content: reply }];
                 const liveToolName = String(parsed.tool || parsed.name || '');
-                const isLiveCartTool = liveToolName === 'add_item_to_cart' || liveToolName === 'open_checkout';
+                const isLiveCartTool = liveToolName === 'add_item_to_cart' || liveToolName === 'add_items_to_cart' || liveToolName === 'open_checkout';
                 liveUiStore.applyToolResult(liveToolName || null, response);
                 if (reply) {
                     liveUiStore.setTranscript('assistant', reply);
@@ -739,7 +739,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     lastSource: response.meta?.source || 'live_tool',
                     suggestedRestaurants: (restaurants && restaurants.length > 0) ? restaurants : (isIdle ? null : state.suggestedRestaurants),
                     selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
-                    menuItems: menuItems || (isIdle ? null : state.menuItems),
+                    menuItems: (menuItems && menuItems.length > 0) ? menuItems : (isIdle ? null : state.menuItems),
                 };
                 if (isLiveCartTool) {
                     console.log(`[LIVE_CART] storeCartItems=${JSON.stringify(summarizeCartItems(nextStoreState.cart))}`);

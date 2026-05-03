@@ -581,6 +581,12 @@ export function useGeminiLiveSession({
       if (Array.isArray(state.suggestedRestaurants) && state.suggestedRestaurants.length > 0) {
         return String(state.suggestedRestaurants[0]?.id ?? '') || undefined;
       }
+      // Recovery from live session cache — survives manual UI resets
+      const sid = sessionIdRef.current;
+      if (sid) {
+        const cached = liveSessionCache.get(sid);
+        if (cached?.currentRestaurant?.id) return String(cached.currentRestaurant.id);
+      }
       return undefined;
     },
   });
