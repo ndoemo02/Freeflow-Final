@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../state/CartContext';
 
 export default function CartBadge() {
   const [open, setOpen] = useState(false);
   const { cart: cartItems, total: totalPrice, restaurant, updateQuantity: ctxUpdateQuantity, clearCart, setIsOpen } = useCart();
-
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
@@ -14,6 +13,17 @@ export default function CartBadge() {
   }, []);
 
   const totalQty = cartItems.reduce((s, i) => s + Number(i.quantity || i.qty || 1), 0);
+
+  // Bump animation on item add — increments key when totalQty goes up,
+  // forcing react to remount the badge span with a scale-in animation.
+  const prevQtyRef = useRef(totalQty);
+  const [bumpKey, setBumpKey] = useState(0);
+  useEffect(() => {
+    if (totalQty > prevQtyRef.current) {
+      setBumpKey(k => k + 1);
+    }
+    prevQtyRef.current = totalQty;
+  }, [totalQty]);
 
   // Delegate quantity changes to CartContext
   const handleQuantityChange = (itemId, change) => {
@@ -36,9 +46,15 @@ export default function CartBadge() {
           <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.16 14.26l.03.01 10.59-.01c.83 0 1.55-.5 1.85-1.22l2.95-6.88A1 1 0 0 0 21.66 4H6.21L5.27 2H2v2h2l3.6 7.59-1.35 2.45C5.52 15.37 6.48 17 8 17h12v-2H8.42c-.14 0-.25-.11-.25-.25 0-.04.01-.08.03-.11l.96-1.74z" />
         </svg>
         {totalQty > 0 && (
-          <span className="absolute -top-2 -right-2 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-semibold animate-pulse">
+          <motion.span
+            key={bumpKey}
+            initial={{ scale: 0.3, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+            className="absolute -top-2 -right-2 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-semibold"
+          >
             {totalQty}
-          </span>
+          </motion.span>
         )}
       </button>
 

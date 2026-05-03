@@ -152,9 +152,12 @@ export default function Cart() {
 
   const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
 
+  // Fix #4.2: Sync store cart → local CartContext whenever store has items and local is empty.
+  // Removed checkoutVisible guard so Amber's voice-added items appear in cart icon immediately
+  // in any uiMode (list, restaurant, checkout). cart.length > 0 still guards against
+  // overwriting local cart state when user has manually added items.
   React.useEffect(() => {
-    const checkoutVisible = phase === 'checkout' || uiMode === 'checkout';
-    if (!checkoutVisible || cart.length > 0 || typeof syncCart !== 'function') return;
+    if (cart.length > 0 || typeof syncCart !== 'function') return;
 
     const backendItems = Array.isArray(storeCart?.items)
       ? storeCart.items
@@ -176,7 +179,7 @@ export default function Cart() {
       || null;
 
     syncCart(backendItems, restaurantData);
-  }, [phase, uiMode, cart.length, storeCart, pendingOrder, activeRestaurant, syncCart]);
+  }, [cart.length, storeCart, pendingOrder, activeRestaurant, syncCart]);
 
   React.useEffect(() => {
     if (phase !== 'checkout' && uiMode !== 'checkout') return;

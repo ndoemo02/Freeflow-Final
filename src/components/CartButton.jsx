@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCart } from '../state/CartContext';
 
 export default function CartButton() {
   const { itemCount, setIsOpen } = useCart();
+
+  const prevCountRef = useRef(itemCount);
+  const [bumpKey, setBumpKey] = useState(0);
+  useEffect(() => {
+    if (itemCount > prevCountRef.current) {
+      setBumpKey(k => k + 1);
+    }
+    prevCountRef.current = itemCount;
+  }, [itemCount]);
 
   return (
     <motion.button
@@ -17,8 +26,10 @@ export default function CartButton() {
         <span className="font-semibold">Koszyk</span>
         {itemCount > 0 && (
           <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            key={bumpKey}
+            initial={{ scale: 0.3, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
             className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg"
           >
             {itemCount}

@@ -84,6 +84,16 @@ export default function Home() {
   const { setIsOpen, itemCount } = useCart() as any;
   const cartItemsCount = Number(itemCount || 0);
 
+  // Bump animation on voice cart add
+  const prevCartRef = useRef(cartItemsCount);
+  const [cartBumpKey, setCartBumpKey] = useState(0);
+  useEffect(() => {
+    if (cartItemsCount > prevCartRef.current) {
+      setCartBumpKey(k => k + 1);
+    }
+    prevCartRef.current = cartItemsCount;
+  }, [cartItemsCount]);
+
   // Home should always render a clean screen without stale menu/restaurant context.
   useEffect(() => {
     clearHomeContext();
@@ -355,14 +365,17 @@ export default function Home() {
           </div>
         </div>
         <div className="flex gap-4 pointer-events-auto">
-          {cartItemsCount > 0 && uiMode !== 'checkout' && (
+          {cartItemsCount > 0 && (
             <button
               onClick={() => setIsOpen(true)}
               className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
               aria-label={`Otwórz koszyk (${cartItemsCount})`}
             >
               <i className="fas fa-shopping-cart text-white" />
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-[10px] leading-[18px] font-bold text-white text-center">
+              <span
+                key={cartBumpKey}
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-[10px] leading-[18px] font-bold text-white text-center"
+              >
                 {cartItemsCount}
               </span>
             </button>
