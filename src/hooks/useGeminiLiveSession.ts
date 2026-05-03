@@ -503,6 +503,9 @@ function applyToolResultToStore(
 
     console.log(`[LIVE_HTTP_BRIDGE] ${toolName} → store: uiMode=${nextUiMode} intent=${nextIntent} restaurants=${restaurants?.length ?? 0} menuItems=${menuItems?.length ?? 0} cart=${!!(response.meta as any)?.cart || !!response.cart}`);
 
+    const hasFreshMenu = menuItems && menuItems.length > 0;
+    const hasFreshRestaurants = restaurants && restaurants.length > 0;
+
     useConversationStore.setState({
         isThinking: false,
         error: null,
@@ -515,8 +518,10 @@ function applyToolResultToStore(
         cart: (response.meta as any)?.cart || response.cart || state.cart,
         lastIntent: nextIntent || state.lastIntent,
         lastSource: ((response.meta as any)?.source as string) || 'live_http_relay',
-        suggestedRestaurants: (restaurants && restaurants.length > 0) ? restaurants : state.suggestedRestaurants,
-        menuItems: menuItems || state.menuItems,
+        suggestedRestaurants: hasFreshRestaurants ? restaurants : state.suggestedRestaurants,
+        // Only overwrite menuItems when response actually contains them.
+        // Empty [] from normalizeMenuItems would be truthy and wipe the store.
+        menuItems: hasFreshMenu ? menuItems : state.menuItems,
     });
 }
 
@@ -560,6 +565,24 @@ export function useGeminiLiveSession({
       return value;
     },
     getSessionId: () => sessionIdRef.current,
+    // Recover restaurant ID even after manual cart clear.
+    // Priority: currentRestaurant → lastFullResponse context → response restaurant → suggestedRestaurants
+    getCurrentRestaurantId: () => {
+      const state = useConversationStore.getState();
+      if (state.currentRestaurant?.id) return String(state.currentRestaurant.id);
+      // Recovery from last full response (persists across tool calls)
+      const lfr = state.lastFullResponse as Record<string, any> | null;
+      const ctxRestaurantId = lfr?.context?.currentRestaurant?.id
+        || lfr?.context?.current_restaurant?.id
+        || lfr?.restaurant?.id
+        || lfr?.meta?.restaurant?.id;
+      if (ctxRestaurantId) return String(ctxRestaurantId);
+      // Recovery from suggestedRestaurants when menu is visible
+      if (Array.isArray(state.suggestedRestaurants) && state.suggestedRestaurants.length > 0) {
+        return String(state.suggestedRestaurants[0]?.id ?? '') || undefined;
+      }
+      return undefined;
+    },
   });
 
   const clearReconnectTimer = useCallback(() => {

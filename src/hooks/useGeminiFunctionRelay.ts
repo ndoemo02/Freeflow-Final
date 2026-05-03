@@ -165,6 +165,8 @@ export interface UseGeminiFunctionRelayOptions {
     takeLatestTranscript?: () => string | null;
     /** Session ID — required for HTTP fallback when WS is unavailable (Vercel mode) */
     getSessionId?: () => string | undefined;
+    /** Current restaurant ID from store — enriches add_item_to_cart args so backend never loses scope */
+    getCurrentRestaurantId?: () => string | undefined;
 }
 
 // HTTP fallback: POST /api/voice/live/tool-call (Vercel serverless)
@@ -172,6 +174,7 @@ async function relayViaHttp(
     functionCall: GeminiFunctionCall,
     sessionId: string | undefined,
     transcript: string | undefined,
+    currentRestaurantId: string | undefined,
 ): Promise<GeminiFunctionResponse> {
     const effectiveSessionId = String(sessionId ?? '').trim();
     if (!effectiveSessionId) {
@@ -181,10 +184,43 @@ async function relayViaHttp(
     }
 
     const url = getApiUrl('/api/voice/live/tool-call');
+    const enrichedArgs: Record<string, unknown> = { ...(functionCall.args || {}) };
+
+    // ── GPS enrichment for find_nearby (mirrors WS path relay function) ──
+    if (functionCall.name === 'find_nearby') {
+        const nearbyGpsOnly = transcriptSuggestsNearbyWithoutExplicitLocation(transcript, enrichedArgs.location);
+        if (nearbyGpsOnly && Number.isFinite(Number(enrichedArgs.lat)) && Number.isFinite(Number(enrichedArgs.lng))) {
+            delete enrichedArgs.location;
+            console.log('[LIVE_GPS_ONLY] HTTP: nearby cue detected, dropping model location in favor of GPS');
+        }
+
+        const latPresent = Number.isFinite(Number(enrichedArgs.lat));
+        const lngPresent = Number.isFinite(Number(enrichedArgs.lng));
+        if (!latPresent || !lngPresent) {
+            const coords = await getRelayGPSCoords();
+            if (coords) {
+                enrichedArgs.lat = coords.lat;
+                enrichedArgs.lng = coords.lng;
+                console.log(`[LIVE_GPS_ENRICH] HTTP find_nearby lat=${coords.lat} lng=${coords.lng}`);
+            } else {
+                console.log('[LIVE_GPS_ENRICH] HTTP find_nearby: no GPS coords available');
+            }
+        }
+    }
+
+    // ── Restaurant scope enrichment for cart tools ──
+    // When user cleared the cart manually, Gemini may omit restaurant_id.
+    // Inject currentRestaurant from the store so backend never loses scope.
+    const isCartTool = functionCall.name === 'add_item_to_cart' || functionCall.name === 'add_items_to_cart';
+    if (isCartTool && !enrichedArgs.restaurant_id && !enrichedArgs.restaurantId && currentRestaurantId) {
+        enrichedArgs.restaurant_id = currentRestaurantId;
+        console.log(`[LIVE_HTTP_RESTAURANT_ENRICH] ${functionCall.name} restaurant_id=${currentRestaurantId}`);
+    }
+
     const body: Record<string, unknown> = {
         session_id: effectiveSessionId,
         tool: functionCall.name,
-        args: functionCall.args || {},
+        args: enrichedArgs,
         request_id: functionCall.id || `httprelay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     };
     if (transcript) body.transcript = transcript;
@@ -236,6 +272,7 @@ export function useGeminiFunctionRelay({
     getLatestTranscript,
     takeLatestTranscript,
     getSessionId,
+    getCurrentRestaurantId,
 }: UseGeminiFunctionRelayOptions): UseGeminiFunctionRelayResult {
     const pendingRef = useRef<Map<string, {
         resolve: (value: GeminiFunctionResponse) => void;
@@ -295,8 +332,9 @@ export function useGeminiFunctionRelay({
             // HTTP fallback — Vercel serverless nie wspiera WebSocket
             const sid = getSessionId?.();
             const transcript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
-            console.log(`[LiveDiag] 🔄 WS unavailable, using HTTP fallback for ${functionCall.name} sessionId=${sid ?? '?'}`);
-            return relayViaHttp(functionCall, sid, transcript);
+            const currentRestaurantId = getCurrentRestaurantId?.();
+            console.log(`[LiveDiag] 🔄 WS unavailable, using HTTP fallback for ${functionCall.name} sessionId=${sid ?? '?'} restaurantId=${currentRestaurantId ?? 'none'}`);
+            return relayViaHttp(functionCall, sid, transcript, currentRestaurantId);
         }
 
         ensureListener();
@@ -340,6 +378,17 @@ export function useGeminiFunctionRelay({
                             enrichedArgs.lng = coords.lng;
                             console.log(`[LIVE_GPS_ENRICH] find_nearby lat=${coords.lat} lng=${coords.lng}`);
                         }
+                    }
+                }
+
+                // Enrich cart tools with restaurant_id from store when model omits it.
+                // Prevents lost restaurant context after manual cart clear in UI.
+                const isCartTool = functionCall.name === 'add_item_to_cart' || functionCall.name === 'add_items_to_cart';
+                if (isCartTool && !enrichedArgs.restaurant_id && !enrichedArgs.restaurantId) {
+                    const currentRestaurantId = getCurrentRestaurantId?.();
+                    if (currentRestaurantId) {
+                        enrichedArgs.restaurant_id = currentRestaurantId;
+                        console.log(`[LIVE_WS_RESTAURANT_ENRICH] ${functionCall.name} restaurant_id=${currentRestaurantId}`);
                     }
                 }
 
