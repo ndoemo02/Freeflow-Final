@@ -20,7 +20,7 @@ const polishVoices = [
 
 export default function Settings() {
   const [text, setText] = useState(
-    'Czesc! Tutaj mozesz przetestowac, jak brzmia rozne polskie glosy wygenerowane przez sztuczna inteligencje.',
+    'Cześć! Tutaj możesz przetestować, jak brzmią różne polskie głosy wygenerowane przez sztuczną inteligencję.',
   );
   const [selectedVoice, setSelectedVoice] = useState(polishVoices[0].name);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +28,7 @@ export default function Settings() {
 
   const handlePlay = async () => {
     if (!text.trim()) {
-      setStatusMessage('Prosze wpisac tekst.');
+      setStatusMessage('Proszę wpisać tekst.');
       setTimeout(() => setStatusMessage(''), 3000);
       return;
     }
@@ -48,7 +48,7 @@ export default function Settings() {
         setStatusMessage(
           fallbackError instanceof Error
             ? fallbackError.message
-            : 'Wystapil blad. Sprobuj ponownie.',
+            : 'Wystąpił błąd. Spróbuj ponownie.',
         );
         setIsLoading(false);
       }
@@ -110,7 +110,7 @@ export default function Settings() {
 
       utterance.onerror = () => {
         setIsLoading(false);
-        reject(new Error('Blad odtwarzania glosu'));
+        reject(new Error('Błąd odtwarzania głosu'));
       };
 
       speechSynthesis.speak(utterance);
@@ -125,7 +125,7 @@ export default function Settings() {
     });
 
     if (!response.ok) {
-      let details = `Blad API: ${response.status}`;
+      let details = `Błąd API: ${response.status}`;
       try {
         const json = await response.json();
         if (json?.error) details = `${details} - ${String(json.error)}`;
@@ -162,7 +162,7 @@ export default function Settings() {
         <div className="max-w-6xl mx-auto">
           <PanelHeader
             title="Ustawienia"
-            subtitle="Konfiguracja aplikacji i tester glosow AI"
+            subtitle="Konfiguracja aplikacji i tester głosów AI"
           />
 
           <motion.div
@@ -173,7 +173,7 @@ export default function Settings() {
           >
             <div className="flex flex-col md:flex-row items-center justify-between mb-6">
               <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 md:mb-0">
-                Tester Polskich Glosow AI
+                Tester Polskich Głosów AI
               </h1>
               <div className="flex items-center space-x-2 text-blue-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
@@ -199,13 +199,13 @@ export default function Settings() {
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 text-white placeholder-gray-400"
-                  placeholder="Czesc! Tutaj mozesz przetestowac, jak brzmiem."
+                  placeholder="Cześć! Tutaj możesz przetestować, jak brzmię."
                 />
               </div>
 
               <div>
                 <label htmlFor="voice-select" className="block text-sm font-medium text-gray-300 mb-2">
-                  Wybierz glos:
+                  Wybierz głos:
                 </label>
                 <select
                   id="voice-select"
@@ -249,12 +249,12 @@ export default function Settings() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Dostepne glosy (jezyk polski)</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">Dostępne głosy (język polski)</h2>
             <div className="mb-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
               <p className="text-blue-200 text-sm">
-                <strong>Wskazowka:</strong> Kazdy glos ma inne parametry (tempo, wysokosc, glosnosc),
-                wiec beda brzmiec inaczej nawet w trybie Web Speech API.
-                Domyslnie audio generuje backend (Vertex), a Web Speech jest fallbackiem awaryjnym.
+                <strong>Wskazówka:</strong> Każdy głos ma inne parametry (tempo, wysokość, głośność),
+                więc będą brzmieć inaczej nawet w trybie Web Speech API.
+                Domyślnie audio generuje backend (Vertex), a Web Speech jest fallbackiem awaryjnym.
               </p>
             </div>
             <div className="overflow-x-auto">

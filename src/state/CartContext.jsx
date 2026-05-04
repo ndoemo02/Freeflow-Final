@@ -196,8 +196,8 @@ export function CartProvider({ children }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             session_id: sessionId,
-            input: 'wyczysc koszyk',
-            text: 'wyczysc koszyk',
+            input: 'wyczyść koszyk',
+            text: 'wyczyść koszyk',
             includeTTS: false,
             meta: { channel: 'web' }
           })

@@ -120,7 +120,7 @@ export default function Cart() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!deliveryConfirmed) {
-      alert('Potwierdz dane dostawy przed zlozeniem zamowienia.');
+      alert('Potwierdź dane dostawy przed złożeniem zamówienia.');
       return;
     }
     const result = await submitOrder(deliveryInfo);
@@ -409,12 +409,12 @@ export default function Cart() {
                               transition={{ delay: index * 0.05 }}
                               className="rounded-xl border border-cyan-500/20 bg-black/40 p-4 backdrop-blur-xl"
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="text-white font-semibold">{item.name}</h3>
+                                    <h3 className="text-white font-semibold truncate max-w-[200px] sm:max-w-[320px]">{item.name}</h3>
                                     {badges.map((badge, bi) => (
-                                      <span key={bi} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/70 leading-none">
+                                      <span key={bi} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/70 leading-none shrink-0">
                                         {badge}
                                       </span>
                                     ))}
@@ -422,16 +422,17 @@ export default function Cart() {
                                   <p className="text-sm text-slate-400">{Number(item.price).toFixed(2)} PLN</p>
                                 </div>
 
-                                {/* Quantity Controls */}
-                                <div className="flex items-center gap-3">
-                                  <div className="flex items-center gap-2 bg-black/40 rounded-lg px-2 py-1">
+                                {/* Right side: quantity + price + delete */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {/* Quantity Controls */}
+                                  <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1">
                                     <button
                                       onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                                       className="text-slate-400 hover:text-white transition-colors w-6 h-6 flex items-center justify-center"
                                     >
                                       -
                                     </button>
-                                    <span className="text-white font-semibold w-8 text-center">
+                                    <span className="text-white font-semibold w-6 text-center text-sm">
                                       {item.quantity}
                                     </span>
                                     <button
@@ -442,16 +443,19 @@ export default function Cart() {
                                     </button>
                                   </div>
 
-                                  <div className="text-white font-bold min-w-[80px] text-right">
-                                    {(Number(item.price) * Number(item.quantity)).toFixed(2)} PLN
+                                  {/* Price + Delete grouped together */}
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-white font-bold min-w-[70px] text-right text-sm">
+                                      {(Number(item.price) * Number(item.quantity)).toFixed(2)} PLN
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemoveFromCart(item.id)}
+                                      className="text-red-400 hover:text-red-300 transition-colors p-1"
+                                      aria-label="Usuń z koszyka"
+                                    >
+                                      <i className="fas fa-trash-alt" />
+                                    </button>
                                   </div>
-
-                                  <button
-                                    onClick={() => handleRemoveFromCart(item.id)}
-                                    className="text-red-400 hover:text-red-300 transition-colors ml-2"
-                                  >
-                                    <i className="fas fa-trash-alt" />
-                                  </button>
                                 </div>
                               </div>
                             </motion.div>
@@ -472,7 +476,7 @@ export default function Cart() {
                       <div className="grid grid-cols-2 gap-3">
                         <input
                           type="text"
-                          placeholder="Imie i nazwisko"
+                          placeholder="Imię i nazwisko"
                           value={deliveryInfo.name}
                           onChange={(e) => {
                             setDeliveryTouched(true);
@@ -510,7 +514,7 @@ export default function Cart() {
                       />
 
                       <textarea
-                        placeholder="Uwagi do zamowienia (opcjonalnie)"
+                        placeholder="Uwagi do zamówienia (opcjonalnie)"
                         value={deliveryInfo.notes}
                         onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
                         rows={2}
@@ -523,13 +527,13 @@ export default function Cart() {
                           onChange={(e) => setDeliveryConfirmed(e.target.checked)}
                           className="mt-0.5"
                         />
-                        <span>Potwierdzam dane dostawy (wczytane z panelu klienta lub edytowane recznie).</span>
+                        <span>Potwierdzam dane dostawy (wczytane z panelu klienta lub edytowane ręcznie).</span>
                       </label>
                     </div>
 
                     {/* Total */}
                     <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                      <span className="text-lg text-slate-300">Lacznie:</span>
+                      <span className="text-lg text-slate-300">Łącznie:</span>
                       <span className="text-2xl font-bold text-white">{total.toFixed(2)} PLN</span>
                     </div>
 
@@ -542,25 +546,25 @@ export default function Cart() {
                         className="flex-1 min-w-[180px] rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
                       >
                         <i className="fas fa-trash-alt mr-2" />
-                        Wyczysc koszyk
+                        Wyczyść koszyk
                       </button>
                       <button
                         type="button"
                         disabled={isSubmitting}
                         onClick={() => {
                           if (!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address) {
-                            alert("Uzupelnij dane dostawy:\n- Imie i nazwisko\n- Telefon\n- Adres");
+                            alert("Uzupełnij dane dostawy:\n- Imię i nazwisko\n- Telefon\n- Adres");
                             return;
                           }
                           if (!deliveryConfirmed) {
-                            alert('Potwierdz dane dostawy przed zlozeniem zamowienia.');
+                            alert('Potwierdź dane dostawy przed złożeniem zamówienia.');
                             return;
                           }
                           handleSubmit({ preventDefault: () => { } });
                         }}
                         className="flex-1 min-w-[200px] rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-3 font-semibold hover:shadow-[0_0_30px_rgba(0,234,255,0.5)] transition-all disabled:opacity-50"
                       >
-                        {isSubmitting ? 'Skladanie...' : 'Zloz zamowienie'}
+                        {isSubmitting ? 'Składanie...' : 'Złóż zamówienie'}
                       </button>
                     </div>
                   </form>

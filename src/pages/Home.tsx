@@ -343,15 +343,15 @@ export default function Home() {
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 p-4 flex justify-between items-start z-50 pointer-events-none">
-        <div className="flex flex-col gap-1 pointer-events-auto">
-          <div className="flex items-center gap-2 pl-1 mt-1">
+      <header className="fixed top-0 left-0 right-0 pt-1.5 px-3 pb-1 flex justify-between items-start z-50 pointer-events-none">
+        <div className="flex flex-col gap-0.5 pointer-events-auto">
+          <div className="flex items-center gap-2 pl-0.5 mt-0">
             <StateIsland />
             {liveModeEnabled && (
               <button
                 onClick={handleLiveToggle}
                 data-live={liveSessionActive}
-                aria-label={liveSessionActive ? 'Wstrzymaj tryb Live' : 'Wlacz lub wznow tryb Live'}
+                aria-label={liveSessionActive ? 'Wstrzymaj tryb Live' : 'Włącz lub wznów tryb Live'}
                 aria-pressed={liveSessionActive}
                 className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
                   liveSessionActive
@@ -388,7 +388,7 @@ export default function Home() {
       </header>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen min-h-[100dvh] p-4 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen min-h-[100dvh] p-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">
 
         {/* Brain UI Router - Renders "Configurable Islands" */}
         <div className="w-full mb-8">

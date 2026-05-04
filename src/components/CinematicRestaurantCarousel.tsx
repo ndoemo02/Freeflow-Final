@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useIslandFullList } from '../hooks/useIslandFullList';
 
 interface RestaurantItem {
     id: string | number;
@@ -74,6 +75,11 @@ function getCardStyle(xPx: number, gap: number): CardStyle | null {
     //   abs=0  → active  : scale 1.0, opacity 1.0, ty 0
     //   abs=1  → 1st left: scale 0.87, opacity 0.78, ty 10px down
     //   abs=2  → 2nd left: scale 0.73, opacity 0.60, ty 18px down
+    // z-index uses fine granularity (abs*10) to prevent GPU layer collisions
+    // during drag when two cards can share the same absolute distance.
+    // Tiebreaker: cards on the right (posFloat>0) render 1px above cards on the left.
+    const zBase = 100 - Math.round(abs * 10);
+    const zTie = posFloat > 0 ? 0 : -1;
     return {
         scale:          Math.max(0.48, 1 - abs * 0.135),
         opacity:        Math.max(0.18, 1 - abs * 0.22),
@@ -82,7 +88,7 @@ function getCardStyle(xPx: number, gap: number): CardStyle | null {
         tz:             Math.max(-180, -abs * 55),
         ty:             Math.min(abs * 9, 32),   // depth: each layer shifts down
         contentOpacity: Math.max(0, 1 - abs * 0.80),
-        zIndex:         Math.round(30 - abs * 5),
+        zIndex:         zBase + zTie,
         isCenter:       abs < 0.15,
     };
 }
@@ -262,11 +268,10 @@ export default function CinematicRestaurantCarousel({
         };
     }, [recalcCompactBounds]);
 
+    useIslandFullList(listOpen);
+
     useEffect(() => {
-        const root = document.querySelector('.freeflow');
-        if (!root) return;
         listOpenRef.current = listOpen;
-        root.classList.toggle('island-full-list', listOpen);
         if (listOpen) {
             wasExpandedRef.current = true;
         } else if (wasExpandedRef.current) {
@@ -293,9 +298,6 @@ export default function CinematicRestaurantCarousel({
 
         return () => {
             window.cancelAnimationFrame(warmupRaf);
-            if (listOpen) {
-                root.classList.remove('island-full-list');
-            }
         };
     }, [listOpen, recalcCompactBounds]);
 
@@ -413,7 +415,7 @@ export default function CinematicRestaurantCarousel({
         }
 
         const totalOffset = dragOffset + dragVelocityRef.current * 6;
-        const dragFraction = -(totalOffset / GAP);
+        const dragFraction = totalOffset / GAP;
         let indexDelta = 0;
         if (Math.abs(dragFraction) > 0.32) {
             indexDelta = Math.sign(dragFraction) * Math.min(Math.ceil(Math.abs(dragFraction)), 1);
@@ -501,6 +503,7 @@ export default function CinematicRestaurantCarousel({
                             position: 'relative', width: '100%', maxWidth: isMobileViewport ? 404 : 420, height: `${CARD_H}px`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             userSelect: 'none', touchAction: 'none', marginRight: isMobileViewport ? 0 : 4,
+                            transformStyle: 'preserve-3d',
                         }}
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
@@ -536,16 +539,14 @@ export default function CinematicRestaurantCarousel({
                         )}
 
                         {items.map((item, i) => {
-                            // Reversed stack: next cards queue on the LEFT of active card.
-                            // Negating dragOffset keeps swipe-left = next card intuitive.
-                            const xPx = (currentIndex - i) * GAP - dragOffset;
+                            const xPx = (currentIndex - i) * GAP + dragOffset;
                             const anchoredXPx = xPx + ACTIVE_BIAS_X;
                             const s = getCardStyle(xPx, GAP);
                             if (!s) return null;
 
                             return (
                                 <div
-                                    key={item.id}
+                                    key={`${item.id}-${i}`}
                                     onClick={() => handleCardClick(i)}
                                     style={{
                                         position: 'absolute',
@@ -558,7 +559,10 @@ export default function CinematicRestaurantCarousel({
                                             ? 'transform 0.05s linear'
                                             : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1), opacity 0.4s ease, filter 0.4s ease',
                                         cursor: 'pointer',
-                                        willChange: 'transform',
+                                        willChange: 'transform, opacity',
+                                        backfaceVisibility: 'hidden',
+                                        WebkitBackfaceVisibility: 'hidden',
+                                        isolation: 'isolate',
                                     }}
                                 >
                                     <div
@@ -573,12 +577,14 @@ export default function CinematicRestaurantCarousel({
                                                 : '0 10px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)',
                                             transform: `perspective(900px) rotateY(${s.rotY.toFixed(2)}deg) translateZ(${s.tz.toFixed(1)}px)`,
                                             transition: isDragging ? 'transform 0.05s linear' : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1)',
+                                            backfaceVisibility: 'hidden',
+                                            WebkitBackfaceVisibility: 'hidden',
                                         }}
                                     >
                                         <div style={{
                                             position: 'absolute', inset: 0,
                                             background: item.image_url
-                                                ? `url(${item.image_url}) center/cover no-repeat`
+                                                ? `url(${item.image_url}) center / cover no-repeat`
                                                 : getGradient(item.name),
                                         }}>
                                             <div style={{
@@ -678,7 +684,7 @@ export default function CinematicRestaurantCarousel({
                             <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' } as React.CSSProperties}>
                                 {items.map((item, i) => (
                                     <div
-                                        key={item.id}
+                                        key={`${item.id}-list-${i}`}
                                         onClick={() => handleListItemClick(i)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 11,

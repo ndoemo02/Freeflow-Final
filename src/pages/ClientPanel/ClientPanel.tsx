@@ -327,7 +327,7 @@ export default function ClientPanel() {
     const startStripeForOrder = async (order: any) => {
         if (!order?.id || stripeBusyOrderId) return;
         if (!canStartStripePayment(order)) {
-            push?.('To zamowienie nie kwalifikuje sie do platnosci Stripe test.', 'info');
+            push?.('To zamówienie nie kwalifikuje się do płatności Stripe test.', 'info');
             return;
         }
 
@@ -350,13 +350,13 @@ export default function ClientPanel() {
 
             const payload = await response.json().catch(() => ({}));
             if (!response.ok || !payload?.url) {
-                throw new Error(payload?.error || 'Nie udalo sie utworzyc sesji Stripe');
+                throw new Error(payload?.error || 'Nie udało się utworzyć sesji Stripe');
             }
 
             window.location.assign(payload.url);
         } catch (error: any) {
             console.error('[STRIPE_ORDER_CHECKOUT_ERROR]', error);
-            push?.(error?.message || 'Blad platnosci Stripe test', 'error');
+            push?.(error?.message || 'Błąd płatności Stripe test', 'error');
         } finally {
             setStripeBusyOrderId(null);
         }
@@ -382,7 +382,7 @@ export default function ClientPanel() {
         };
 
         if (stripeState === 'cancel') {
-            push?.('Platnosc Stripe test anulowana.', 'info');
+            push?.('Płatność Stripe test anulowana.', 'info');
             cleanStripeParams();
             return;
         }
@@ -402,7 +402,7 @@ export default function ClientPanel() {
                 });
                 const verifyPayload = await verifyResponse.json().catch(() => ({}));
                 if (!verifyResponse.ok || !verifyPayload?.paid) {
-                    throw new Error(verifyPayload?.error || 'Nie udalo sie potwierdzic platnosci Stripe');
+                    throw new Error(verifyPayload?.error || 'Nie udało się potwierdzić płatności Stripe');
                 }
 
                 const existingOrder = orders.find((item: any) => String(item?.id) === String(orderId));
@@ -423,7 +423,7 @@ export default function ClientPanel() {
                 });
                 const patchResult = await patchResponse.json().catch(() => ({}));
                 if (!patchResponse.ok) {
-                    throw new Error(patchResult?.error || 'Nie udalo sie oznaczyc platnosci przy zamowieniu');
+                    throw new Error(patchResult?.error || 'Nie udało się oznaczyć płatności przy zamówieniu');
                 }
 
                 await fetchOrders?.();
@@ -447,10 +447,10 @@ export default function ClientPanel() {
                   console.warn('[STRIPE_FINALIZE] Session cleanup failed (non-critical):', finalizeErr.message);
                 }
 
-                push?.('Platnosc Stripe test zakonczona pomyslnie.', 'success');
+                push?.('Płatność Stripe test zakończona pomyślnie.', 'success');
             } catch (error: any) {
                 console.error('[STRIPE_ORDER_FINALIZE_ERROR]', error);
-                push?.(error?.message || 'Blad finalizacji platnosci Stripe test', 'error');
+                push?.(error?.message || 'Błąd finalizacji płatności Stripe test', 'error');
             } finally {
                 setStripeBusyOrderId(null);
                 cleanStripeParams();
@@ -698,7 +698,7 @@ export default function ClientPanel() {
                                             }}
                                             className="cp-link-btn"
                                         >
-                                            Szczegoly
+                                            Szczegóły
                                         </button>
                                         {canStartStripePayment(stats.activeOrder) ? (
                                             <button
@@ -1097,7 +1097,7 @@ export default function ClientPanel() {
                                                                 setSelectedOrder(order);
                                                             }}
                                                         >
-                                                            Szczegoly
+                                                            Szczegóły
                                                         </button>
                                                         {canStartStripePayment(order) ? (
                                                             <button
@@ -1472,7 +1472,7 @@ export default function ClientPanel() {
                 <div className="modal-overlay" onClick={() => setSelectedOrder(null)}>
                     <div className="modal-content" onClick={(event) => event.stopPropagation()}>
                         <div className="modal-header">
-                            <h4>{selectedOrder.restaurant_name || 'Zamowienie'}</h4>
+                            <h4>{selectedOrder.restaurant_name || 'Zamówienie'}</h4>
                             <button onClick={() => setSelectedOrder(null)}>
                                 <i className="fas fa-times" />
                             </button>

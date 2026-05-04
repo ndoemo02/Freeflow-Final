@@ -67,7 +67,7 @@ function readCartSummary(response: Record<string, any>): string | null {
     return `Koszyk gotowy (${cartItems.length} poz.)`;
   }
   if (normalizeIntent(response?.intent) === 'open_checkout') {
-    return 'Koszyk gotowy. Mozesz potwierdzic zamowienie.';
+    return 'Koszyk gotowy. Możesz potwierdzić zamówienie.';
   }
   return null;
 }
@@ -110,7 +110,7 @@ export function mapLiveToolResultToUiState({
   if (isCartReady) {
     return {
       state: 'cart_ready',
-      statusText: cartSummary || 'Koszyk gotowy. Mozesz przejsc dalej.',
+      statusText: cartSummary || 'Koszyk gotowy. Możesz przejść dalej.',
       assistantTranscript: assistantTranscript || null,
       selectedRestaurantName,
       selectedItemSummary,

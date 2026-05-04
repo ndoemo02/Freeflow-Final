@@ -28,11 +28,11 @@ function formatPrice(item: any) {
 }
 
 function getCuisine(item: any) {
-    return item?.cuisine_type || item?.category || item?.section || 'Wybor dnia';
+    return item?.cuisine_type || item?.category || item?.section || 'Wybór dnia';
 }
 
 function getMetaLine(item: any) {
-    return item?.description || item?.ingredients || item?.allergens || 'Kliknij, aby dodac do zamowienia';
+    return item?.description || item?.ingredients || item?.allergens || 'Kliknij, aby dodać do zamówienia';
 }
 
 interface StackCardProps {

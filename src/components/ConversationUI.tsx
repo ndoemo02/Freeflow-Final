@@ -45,17 +45,17 @@ export function StateIsland() {
         label = 'Precyzowanie...';
         color = 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30 shadow-[0_0_15px_rgba(234,179,8,0.2)]';
     } else if (isConfirmingOrder) {
-        label = 'Potwierdzenie zamowienia';
+        label = 'Potwierdzenie zamówienia';
         color = 'bg-green-500/20 text-green-300 border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]';
     } else if (isOrdering) {
-        label = 'Tworzenie zamowienia';
+        label = 'Tworzenie zamówienia';
         color = 'bg-orange-500/20 text-orange-300 border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.2)]';
     } else if (isRestaurantSelected) {
         useWordmark = true;
         label = <FreeFlowWordmark variant={MENU_WORDMARK_VARIANT} />;
         color = 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
     } else if (isChoosingRestaurant) {
-        label = 'Wybor restauracji';
+        label = 'Wybór restauracji';
         color = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
     } else if (isIdle) {
         label = 'Odkrywanie';

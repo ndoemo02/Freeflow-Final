@@ -356,7 +356,7 @@ export function useGeminiFunctionRelay({
 
             pendingRef.current.set(requestId, { resolve, reject, timer });
             const latestTranscript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
-            liveUiStore.setProcessing('Analizuje...', functionCall.name);
+            liveUiStore.setProcessing('Analizuję...', functionCall.name);
             if (latestTranscript) {
                 liveUiStore.setTranscript('user', latestTranscript);
             }

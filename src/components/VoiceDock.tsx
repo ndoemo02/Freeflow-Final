@@ -85,8 +85,8 @@ function resolveLiveDockText(
   transcript: string,
 ): string {
   if (!sessionState) return "";
-  if (sessionState === "listening") return transcript || statusText || "Slucham...";
-  if (sessionState === "processing") return transcript || statusText || "Analizuje...";
+  if (sessionState === "listening") return transcript || statusText || "Słucham...";
+  if (sessionState === "processing") return transcript || statusText || "Analizuję...";
   if (sessionState === "results_ready") return transcript || statusText;
   if (sessionState === "restaurant_selected") return transcript || statusText;
   if (sessionState === "item_selected") return transcript || statusText;
@@ -141,8 +141,8 @@ export default function VoiceDock({
   const displayText = liveDockText || interimText || (recording ? "" : amberResponse);
   const showResponse = !!displayText;
   const inputPlaceholder = liveUiState === "listening"
-    ? "Slucham..."
-    : (recording ? "Slucham..." : "Napisz lub powiedz...");
+    ? "Słucham..."
+    : (recording ? "Słucham..." : "Napisz lub powiedz...");
 
   // Clear response when recording starts
   useEffect(() => {
@@ -322,7 +322,7 @@ export default function VoiceDock({
                     exit={{ opacity: 0, scale: 0.7 }}
                     whileTap={{ scale: 0.92 }}
                     transition={{ duration: 0.15 }}
-                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Wlacz mikrofon"}
+                    aria-label={recording ? "Zatrzymaj nagrywanie" : "Włącz mikrofon"}
                     aria-pressed={recording}
                   >
                     <AmberIndicator status={amberStatus} />

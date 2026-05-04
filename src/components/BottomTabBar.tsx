@@ -70,7 +70,7 @@ const TABS: Array<TabConfig | null> = [
   { id: 'home', label: 'Home', Icon: HomeIcon, to: ROUTES.HOME },
   { id: 'food', label: 'Jedzenie', Icon: FoodIcon, to: `${ROUTES.PANEL_CLIENT}?section=food`, activeSection: 'food' },
   null,
-  { id: 'orders', label: 'Zamowienia', Icon: OrdersIcon, to: ROUTES.ORDERS, activeSection: 'orders' },
+  { id: 'orders', label: 'Zamówienia', Icon: OrdersIcon, to: ROUTES.ORDERS, activeSection: 'orders' },
   { id: 'profile', label: 'Profil', Icon: ProfileIcon, to: ROUTES.PROFILE, activeSection: 'profile' },
 ]
 
@@ -208,7 +208,7 @@ export default function BottomTabBar() {
         }}
         animate={fabActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
         transition={fabActive ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' } : {}}
-        aria-label={fabActive ? 'Zatrzymaj nasluchiwanie' : 'Aktywuj glos'}
+        aria-label={fabActive ? 'Zatrzymaj nasłuchiwanie' : 'Aktywuj głos'}
         aria-pressed={fabActive}
       >
         <AnimatePresence mode="wait" initial={false}>

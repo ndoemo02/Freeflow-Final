@@ -68,7 +68,7 @@ export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
     }));
   },
 
-  setListening: (statusText = 'Slucham...') => {
+  setListening: (statusText = 'Słucham...') => {
     get().setSessionState('listening', {
       statusText,
       isLiveActive: true,
@@ -76,7 +76,7 @@ export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
     });
   },
 
-  setProcessing: (statusText = 'Analizuje...', toolName = null) => {
+  setProcessing: (statusText = 'Analizuję...', toolName = null) => {
     get().setSessionState('processing', {
       statusText,
       isLiveActive: true,
@@ -85,7 +85,7 @@ export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
     });
   },
 
-  setPaused: (statusText = 'Wstrzymano LIVE. Wznow, aby kontynuowac.') => {
+  setPaused: (statusText = 'Wstrzymano LIVE. Wznów, aby kontynuować.') => {
     get().setSessionState('paused', {
       statusText,
       isLiveActive: false,

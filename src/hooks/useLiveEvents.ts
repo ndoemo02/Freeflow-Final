@@ -565,7 +565,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
                 const liveUiStore = useLiveUiSessionStore.getState();
                 if (parsed?.type === 'live_ready') {
-                    liveUiStore.setListening('Slucham...');
+                    liveUiStore.setListening('Słucham...');
                     gpsInitRetryCount = 0;
                     sendSessionInitWithRetry(socket);
                     return;
@@ -575,7 +575,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     const toolName = String(parsed?.tool || parsed?.name || '').trim();
                     const errorText = String(parsed?.error || 'tool_error').trim() || 'tool_error';
                     liveUiStore.setSessionState('results_ready', {
-                        statusText: `Blad narzedzia: ${errorText}`,
+                        statusText: `Błąd narzędzia: ${errorText}`,
                         isLiveActive: true,
                         isPaused: false,
                         lastTool: toolName || liveUiStore.lastTool,

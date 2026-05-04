@@ -282,7 +282,7 @@ export default function AmberControlDeck({ adminToken }) {
         body: JSON.stringify({ prompt: stylizationPrompt }),
       });
     } catch (e) {
-      alert('Zapis nie powiodl sie: ' + e.message);
+      alert('Zapis nie powiódł się: ' + e.message);
     } finally {
       setStylizationSaving(false);
     }
@@ -417,7 +417,7 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="gemini-live">Gemini Live (eksperymentalnie)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Glos TTS</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Głos TTS</label>
             <select
               className={SelectClass}
               value={config.tts_voice}
@@ -436,14 +436,14 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="erinome">Gemini: Erinome (Female)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Styl jezykowy</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Styl językowy</label>
             <select
               className={SelectClass}
               value={config.speech_style}
               onChange={(e) => saveConfig('speech_style', e.target.value)}
             >
               <option value="standard">Standardowy polski</option>
-              <option value="silesian">Slaska gwara (godka)</option>
+              <option value="silesian">Śląska gwara (godka)</option>
             </select>
 
             <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Model LIVE</label>
@@ -463,13 +463,13 @@ export default function AmberControlDeck({ adminToken }) {
               placeholder="Wpisz niestandardowy model Live"
             />
             <div className="text-[10px] text-[var(--muted)]">
-              Zmiana dziala dla nowych sesji LIVE (zatrzymaj/uruchom LIVE ponownie).
+              Zmiana działa dla nowych sesji LIVE (zatrzymaj/uruchom LIVE ponownie).
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2 bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-3">
-              <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Ton glosu (TTS)</label>
+              <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Ton głosu (TTS)</label>
               <select
                 className={SelectClass}
                 value={config.tts_tone}
@@ -490,7 +490,7 @@ export default function AmberControlDeck({ adminToken }) {
                 value={config.tts_pitch}
                 onChange={(e) => saveConfig('tts_pitch', e.target.value)}
               />
-              <label className="block text-xs text-[var(--muted)] mt-3">Tempo mowienia (0.5 ... 2.0)</label>
+              <label className="block text-xs text-[var(--muted)] mt-3">Tempo mówienia (0.5 ... 2.0)</label>
               <input
                 type="number"
                 min={0.5}
@@ -715,7 +715,7 @@ export default function AmberControlDeck({ adminToken }) {
           </div>
         </div>
         <div className="text-[11px] text-[var(--muted)] mb-2 leading-relaxed">
-          Ten prompt jest uzywany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
+          Ten prompt jest używany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
           <strong> NIE</strong> stylizuje: find_nearby, menu, confirm_order, ani list numerowanych.
         </div>
         <textarea
