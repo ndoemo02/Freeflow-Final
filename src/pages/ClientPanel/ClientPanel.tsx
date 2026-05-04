@@ -14,6 +14,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
+import { useConversationStore } from '../../store/useConversationStore';
 import { supabase } from '../../lib/supabase';
 import { ROUTES } from '../../app/routeConfig';
 import StarfieldBackground from '../../components/StarfieldBackground';
@@ -426,6 +427,26 @@ export default function ClientPanel() {
                 }
 
                 await fetchOrders?.();
+
+                // ── Finalize: clean backend session + frontend state ──
+                const brainSessionId = useConversationStore.getState().sessionId;
+                try {
+                  const finalizeResponse = await fetch(getApiUrl('/api/orders/finalize'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId, session_id: brainSessionId }),
+                  });
+                  const finalizePayload = await finalizeResponse.json().catch(() => ({}));
+                  if (finalizeResponse.ok && finalizePayload?.newSessionId) {
+                    useConversationStore.getState().setSessionId(finalizePayload.newSessionId);
+                    console.log('[STRIPE_FINALIZE] Session reset to:', finalizePayload.newSessionId.slice(0, 8) + '...');
+                  }
+                  useConversationStore.getState().handleOrderSuccess();
+                  console.log('[STRIPE_FINALIZE] Frontend state cleared after payment');
+                } catch (finalizeErr: any) {
+                  console.warn('[STRIPE_FINALIZE] Session cleanup failed (non-critical):', finalizeErr.message);
+                }
+
                 push?.('Platnosc Stripe test zakonczona pomyslnie.', 'success');
             } catch (error: any) {
                 console.error('[STRIPE_ORDER_FINALIZE_ERROR]', error);

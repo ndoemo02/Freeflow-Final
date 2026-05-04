@@ -760,6 +760,19 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
                 }));
 
+                // Fix #6.4: When backend closes conversation (ORDER_CONFIRMED),
+                // adopt the newSessionId so next voice input starts fresh.
+                const responseNewSessionId = (response as any)?.newSessionId;
+                const responseConversationClosed = !!(response as any)?.conversationClosed;
+                if (responseNewSessionId && responseConversationClosed) {
+                  const storeAfter = useConversationStore.getState();
+                  if (storeAfter.sessionId !== responseNewSessionId) {
+                    useConversationStore.setState({ sessionId: responseNewSessionId });
+                    localStorage.setItem('amber-session-id', responseNewSessionId);
+                    console.log(`[LIVE_WS_SESSION] Adopted newSessionId=${responseNewSessionId.slice(0, 8)}... (conversation closed)`);
+                  }
+                }
+
                 // Mirror do ActiveSessionMap — Level 2 Memory
                 if (backendCart) {
                     activeSessionMap.updateFromResponse(

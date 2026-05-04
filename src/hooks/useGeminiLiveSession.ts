@@ -578,6 +578,18 @@ function applyToolResultToStore(
             }
         }
     }
+
+    // Fix #6.4: Adopt newSessionId after ORDER_CONFIRMED (session cleanup)
+    const responseNewSessionId = (response as any)?.newSessionId;
+    const responseConversationClosed = !!(response as any)?.conversationClosed;
+    if (responseNewSessionId && responseConversationClosed) {
+        const storeAfter = useConversationStore.getState();
+        if (storeAfter.sessionId !== responseNewSessionId) {
+            useConversationStore.setState({ sessionId: responseNewSessionId });
+            localStorage.setItem('amber-session-id', responseNewSessionId);
+            console.log(`[LIVE_HTTP_BRIDGE] Adopted newSessionId=${responseNewSessionId.slice(0, 8)}...`);
+        }
+    }
 }
 
 export function useGeminiLiveSession({
