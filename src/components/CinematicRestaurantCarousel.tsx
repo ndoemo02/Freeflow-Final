@@ -13,7 +13,17 @@ interface RestaurantItem {
     delivery_time?: string;
     image_url?: string;
     image?: string;
+    img?: string;
+    photo_gallery?: string[];
     _uiId?: string;
+}
+
+function resolveImage(item: RestaurantItem): string | null {
+    return item.image_url
+        || item.img
+        || item.image
+        || item.photo_gallery?.[0]
+        || null;
 }
 
 interface Props {
@@ -583,8 +593,8 @@ export default function CinematicRestaurantCarousel({
                                     >
                                         <div style={{
                                             position: 'absolute', inset: 0,
-                                            background: item.image_url
-                                                ? `url(${item.image_url}) center / cover no-repeat`
+                                            background: resolveImage(item)
+                                                ? `url(${resolveImage(item)}) center / cover no-repeat`
                                                 : getGradient(item.name),
                                         }}>
                                             <div style={{
@@ -695,7 +705,7 @@ export default function CinematicRestaurantCarousel({
                                         }}
                                     >
                                         <div style={{ width: 42, height: 42, borderRadius: 9, flexShrink: 0, background: getGradient(item.name), overflow: 'hidden' }}>
-                                            {item.image_url && <img src={item.image_url} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                            {resolveImage(item) && <img src={resolveImage(item)!} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
