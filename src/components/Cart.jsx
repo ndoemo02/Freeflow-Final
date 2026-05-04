@@ -177,19 +177,30 @@ export default function Cart() {
         }
       : null;
 
-    // Fix #5.6: currentRestaurant ze store jest najbardziej wiarygodnym zrodlem
-    // po voice add — applyToolResultToStore zawsze go ustawia. Backend cart nie ma
-    // pola .restaurant, a pendingOrder jest kasowany po commitPendingOrder.
-    const currentRestaurantData = currentRestaurant?.id
-      ? { id: String(currentRestaurant.id), name: String(currentRestaurant.display_name || currentRestaurant.name || '') }
+    // Fix #5.6: currentRestaurant ze store + ekstrakcja z samych itemow koszyka.
+    // Backend cart.items[] kazdy ma restaurant_id + restaurant_name — to najbardziej
+    // bezposrednie zrodlo. Uzywamy pierwszego itemu z pelnymi danymi jako ostatecznosc.
+    const currentRestaurantFromStore = currentRestaurant?.id || currentRestaurant?.name
+      ? {
+          id: String(currentRestaurant.id || currentRestaurant.restaurant_id || ''),
+          name: String(currentRestaurant.display_name || currentRestaurant.name || currentRestaurant.restaurant_name || ''),
+        }
+      : null;
+
+    const firstCartItemWithRestaurant = backendItems.find(
+      (item) => item?.restaurant_id && item?.restaurant_name,
+    );
+    const restaurantFromCartItems = firstCartItemWithRestaurant
+      ? { id: String(firstCartItemWithRestaurant.restaurant_id), name: String(firstCartItemWithRestaurant.restaurant_name) }
       : null;
 
     const restaurantData =
       storeCart?.restaurant
       || pendingOrder?.restaurant_details
       || restaurantFromPendingOrder
-      || currentRestaurantData
+      || currentRestaurantFromStore
       || activeRestaurant
+      || restaurantFromCartItems
       || null;
 
     syncCart(backendItems, restaurantData);
