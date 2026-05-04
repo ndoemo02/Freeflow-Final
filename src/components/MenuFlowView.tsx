@@ -5,6 +5,10 @@ import SheetScrollable from './sheet/SheetScrollable';
 import { SheetSnap } from './sheet/sheetTypes';
 import { useIslandGestures } from '../hooks/useIslandGestures';
 import RestaurantAvatar from './RestaurantAvatar';
+import { useUI } from '../state/ui';
+import { useCart } from '../state/CartContext';
+import { useConversationStore } from '../store/useConversationStore';
+import { useIslandFullList } from '../hooks/useIslandFullList';
 
 /* ───────── types ───────── */
 interface Section {
@@ -198,6 +202,20 @@ export default function MenuFlowView({
     restaurant,
 }: MenuFlowViewProps) {
     const { boundary } = useBottomSheetContext();
+    const openDrawer = useUI((s) => s.openDrawer);
+    const { itemCount, setIsOpen, restaurant: cartRestaurant } = useCart();
+    const storeCurrentRestaurant = useConversationStore((s) => s.currentRestaurant);
+    const pendingOrder = useConversationStore((s) => s.pendingOrder);
+
+    const cartRestaurantName: string | undefined =
+        typeof cartRestaurant === 'string' ? cartRestaurant : (cartRestaurant as any)?.name;
+    const restaurantDisplayName =
+        restaurant?.name
+        || pendingOrder?.restaurant_name
+        || cartRestaurantName
+        || storeCurrentRestaurant?.name
+        || storeCurrentRestaurant?.display_name
+        || 'Karta dań';
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -210,13 +228,18 @@ export default function MenuFlowView({
     const manualFocusAt = useRef<number>(Date.now()); // grace period after click/voice/IO commit
     const menuEnteredAt = useRef<number>(Date.now()); // tracks last menu entry for highlightedId guard
 
-    /* ── hero collapse: add island-full-list so hero shrinks to header on entry ── */
+    /* ── fullscreen class toggle: hide header + hide hero logo ── */
+    const isFullscreen = snap === 'fullscreen';
+    const isExpandedOrFs = snap === 'expanded' || isFullscreen;
+    useIslandFullList(isExpandedOrFs);
     useEffect(() => {
         const root = document.querySelector('.freeflow');
         if (!root) return;
-        root.classList.add('island-full-list');
-        return () => root.classList.remove('island-full-list');
-    }, []);
+        root.classList.toggle('island-fullscreen', isFullscreen);
+        return () => {
+            root.classList.remove('island-fullscreen');
+        };
+    }, [isFullscreen]);
 
     /* ── reset scroll + focus to first item when menu items change (new restaurant) ── */
     useEffect(() => {
@@ -232,10 +255,10 @@ export default function MenuFlowView({
         if (scrollEl) scrollEl.scrollTop = 0;
     }, [normalizedItems]);
 
-    /* ── menu stays expanded — block snap collapse from swipe gesture ── */
+    /* ── menu stays expanded or fullscreen — block snap collapse from swipe gesture ── */
     const menuSetSnap = useCallback((next: SheetSnap) => {
-        if (next === 'expanded') setSnap(next);
-        // ignore peek/closed — menu is always full-screen
+        if (next === 'fullscreen' || next === 'expanded') setSnap(next);
+        // ignore peek/closed — menu stays at least expanded
     }, [setSnap]);
 
     const gestures = useIslandGestures({
@@ -243,7 +266,7 @@ export default function MenuFlowView({
         setSnap: menuSetSnap,
         currentIndex,
         goTo,
-        isExpanded: true,
+        isExpanded: snap === 'expanded' || snap === 'fullscreen',
         atTop: boundary.atTop,
     });
 
@@ -402,24 +425,62 @@ export default function MenuFlowView({
         /* ── ALWAYS EXPANDED: sectioned list ── */
         <div className="flex h-full min-h-0 flex-1 flex-col text-white">
             {/* header */}
-            <div className="px-4 pt-2 pb-2 shrink-0">
-                <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="text-[26px] sm:text-[30px] font-extrabold text-white leading-[1.02] truncate tracking-tight drop-shadow-[0_1px_10px_rgba(255,255,255,0.14)]">
-                            {restaurant?.name || 'Karta dań'}
+            <div className={`shrink-0 ${snap === 'fullscreen' ? 'menu-fullscreen-header px-4 pb-2' : 'px-3 pt-1 pb-1'}`}>
+                {snap === 'fullscreen' ? (
+                    /* Fullscreen: hamburger + restaurant name + cart + avatar */
+                    <div className="flex items-center justify-between gap-3">
+                        <button
+                            onClick={openDrawer}
+                            className="p-2 -ml-1 bg-white/10 rounded-full hover:bg-white/20 transition"
+                            aria-label="Otwórz menu"
+                        >
+                            <i className="fas fa-bars text-white" />
+                        </button>
+                        <div className="min-w-0 flex-1 text-center">
+                            <div className="text-[18px] sm:text-[20px] font-extrabold text-white leading-[1.15] truncate tracking-tight">
+                                {restaurantDisplayName}
+                            </div>
                         </div>
-                        <div className="mt-0.5 flex items-center gap-2 text-[12px] text-white/62">
-                            {finalSubtitle && <div className="truncate">{finalSubtitle}</div>}
-                            {rightMeta && finalSubtitle && <span className="text-white/22">•</span>}
-                            {rightMeta && <div className="truncate text-white/50">{rightMeta}</div>}
+                        <div className="flex items-center gap-2">
+                            {itemCount > 0 && (
+                                <button
+                                    onClick={() => setIsOpen(true)}
+                                    className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
+                                    aria-label={`Otwórz koszyk (${itemCount})`}
+                                >
+                                    <i className="fas fa-shopping-cart text-white" />
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-orange-500 text-[10px] leading-[18px] font-bold text-white text-center">
+                                        {itemCount}
+                                    </span>
+                                </button>
+                            )}
+                            {restaurant && (
+                                <div className="flex shrink-0 items-center justify-center overflow-hidden h-8 w-8 bg-white/5 rounded-lg border border-white/10">
+                                    <RestaurantAvatar item={restaurant} size={32} />
+                                </div>
+                            )}
                         </div>
                     </div>
-                    {restaurant && (
-                        <div className="flex shrink-0 items-center justify-center overflow-hidden h-10 w-10 bg-white/5 rounded-xl border border-white/10">
-                            <RestaurantAvatar item={restaurant} size={40} />
+                ) : (
+                    /* Non-fullscreen: restaurant name + subtitle + avatar */
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <div className="text-[26px] sm:text-[30px] font-extrabold text-white leading-[1.02] truncate tracking-tight drop-shadow-[0_1px_10px_rgba(255,255,255,0.14)]">
+                                {restaurantDisplayName}
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[12px] text-white/62">
+                                {finalSubtitle && <div className="truncate">{finalSubtitle}</div>}
+                                {rightMeta && finalSubtitle && <span className="text-white/22">•</span>}
+                                {rightMeta && <div className="truncate text-white/50">{rightMeta}</div>}
+                            </div>
                         </div>
-                    )}
-                </div>
+                        {restaurant && (
+                            <div className="flex shrink-0 items-center justify-center overflow-hidden h-10 w-10 bg-white/5 rounded-xl border border-white/10">
+                                <RestaurantAvatar item={restaurant} size={40} />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* section chips */}
@@ -502,7 +563,7 @@ export default function MenuFlowView({
 
             {/* sectioned list */}
             <SheetScrollable
-                className="list-scroll tiny-scroll min-h-0 flex-1 px-3"
+                className="list-scroll tiny-scroll min-h-0 flex-1 px-[10px]"
                 style={{ paddingBottom: expandedSafeBottom }}
                 onScroll={handleListScroll}
                 onTouchStart={gestures.handleSwipeStart}

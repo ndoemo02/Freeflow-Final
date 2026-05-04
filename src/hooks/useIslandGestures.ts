@@ -29,6 +29,16 @@ export function useIslandGestures({
         velocityY: number,
         event?: { preventDefault?: () => void; stopPropagation?: () => void },
     ) => {
+        // Fullscreen: ignore swipe-up entirely (let list scroll); swipe-down only at top → expanded
+        if (snap === 'fullscreen') {
+            if (deltaY > 0 && atTop && (Math.abs(deltaY) >= 96 || Math.abs(velocityY) >= 900)) {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                setSnap('expanded');
+            }
+            return;
+        }
+
         const isStrongSwipe = Math.abs(deltaY) >= 96 || Math.abs(velocityY) >= 900;
         if (!isStrongSwipe) {
             if (snap !== 'expanded' && Math.abs(deltaY) >= 28) {

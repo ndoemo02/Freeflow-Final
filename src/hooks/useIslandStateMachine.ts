@@ -15,8 +15,9 @@ interface IslandStateMachineResult {
 
 export function useIslandStateMachine({ snap, setSnap }: IslandStateMachineOptions): IslandStateMachineResult {
     const isExpanded = snap === 'expanded';
+    const isFullscreen = snap === 'fullscreen';
     const isTeaser = snap === 'closed';
-    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : 'Wyspa';
+    const ctaLabel = snap === 'closed' ? 'Wyspa' : snap === 'peek' ? 'Pelna lista' : snap === 'fullscreen' ? 'Zmniejsz' : 'Wyspa';
 
     const handleCtaPress = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
@@ -25,6 +26,10 @@ export function useIslandStateMachine({ snap, setSnap }: IslandStateMachineOptio
             return;
         }
         if (snap === 'peek') {
+            setSnap('fullscreen');
+            return;
+        }
+        if (snap === 'fullscreen') {
             setSnap('expanded');
             return;
         }
@@ -34,11 +39,13 @@ export function useIslandStateMachine({ snap, setSnap }: IslandStateMachineOptio
     useEffect(() => {
         const root = document.querySelector('.freeflow');
         if (!root) return;
-        root.classList.toggle('island-full-list', isExpanded);
+        root.classList.toggle('island-full-list', isExpanded || isFullscreen);
+        root.classList.toggle('island-fullscreen', isFullscreen);
         return () => {
             root.classList.remove('island-full-list');
+            root.classList.remove('island-fullscreen');
         };
-    }, [isExpanded]);
+    }, [isExpanded, isFullscreen]);
 
     return { isExpanded, isTeaser, ctaLabel, handleCtaPress };
 }

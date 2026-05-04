@@ -79,7 +79,7 @@ export default function ContextualIsland({
     }, [normalizedItems, setHighlightedId]);
 
     const sheetProps = {
-        initialSnap: (type === 'menu' ? 'expanded' : 'peek') as SheetSnap,
+        initialSnap: (type === 'menu' ? 'fullscreen' : 'peek') as SheetSnap,
         lockScrollOn: 'open' as const,
         position,
         className: 'z-10',
@@ -88,6 +88,7 @@ export default function ContextualIsland({
             closed: 'contextual-island-sheet--closed',
             peek: 'contextual-island-sheet--peek',
             expanded: 'contextual-island-sheet--expanded',
+            fullscreen: 'contextual-island-sheet--fullscreen',
         },
     };
 

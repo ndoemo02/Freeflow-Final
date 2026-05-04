@@ -2,7 +2,9 @@
 
 const CLOSED_TO_PEEK_DISTANCE = 80;
 const PEEK_TO_EXPANDED_DISTANCE = 120;
+const EXPANDED_TO_FULLSCREEN_DISTANCE = 80;
 const EXPANDED_TO_PEEK_DISTANCE = 140;
+const FULLSCREEN_TO_EXPANDED_DISTANCE = 100;
 const PEEK_TO_CLOSED_DISTANCE = 90;
 const VELOCITY_THRESHOLD = 450; // 0.45px/ms
 const MAX_UP_DRAG = 220;
@@ -43,18 +45,43 @@ function resolveByDistance(snap: SheetSnap, dragOffsetY: number, boundary: Sheet
         return 'peek';
     }
 
+    if (snap === 'fullscreen') {
+        if (dragOffsetY >= FULLSCREEN_TO_EXPANDED_DISTANCE) {
+            return 'expanded';
+        }
+        return dragOffsetY >= FULLSCREEN_TO_EXPANDED_DISTANCE / 2 ? 'expanded' : 'fullscreen';
+    }
+
     if (!boundary.atTop) {
         return 'expanded';
+    }
+
+    if (dragOffsetY <= -EXPANDED_TO_FULLSCREEN_DISTANCE) {
+        return 'fullscreen';
     }
 
     if (dragOffsetY >= EXPANDED_TO_PEEK_DISTANCE) {
         return 'peek';
     }
 
+    if (dragOffsetY < 0) {
+        return Math.abs(dragOffsetY) >= EXPANDED_TO_FULLSCREEN_DISTANCE / 2 ? 'fullscreen' : 'expanded';
+    }
+
     return dragOffsetY >= EXPANDED_TO_PEEK_DISTANCE / 2 ? 'peek' : 'expanded';
 }
 
 export function clampSheetDragOffset(snap: SheetSnap, rawOffset: number, boundary: SheetBoundaryState) {
+    // Fullscreen: block all drag when scrolled (let list scroll take priority)
+    if (snap === 'fullscreen' && !boundary.atTop) {
+        return 0;
+    }
+
+    // Fullscreen at top: only allow downward drag (pull to exit fullscreen), no upward bounce
+    if (snap === 'fullscreen') {
+        return Math.max(0, Math.min(MAX_DOWN_DRAG, rawOffset));
+    }
+
     if (snap === 'expanded' && !boundary.atTop && rawOffset > 0) {
         return 0;
     }
@@ -75,10 +102,14 @@ export function resolveSheetSnap(
     if (velocityY <= -VELOCITY_THRESHOLD) {
         if (snap === 'closed') return 'peek';
         if (snap === 'peek') return 'expanded';
-        return 'expanded';
+        if (snap === 'expanded') return 'fullscreen';
+        return 'fullscreen';
     }
 
     if (velocityY >= VELOCITY_THRESHOLD) {
+        if (snap === 'fullscreen') {
+            return boundary.atTop ? 'expanded' : 'fullscreen';
+        }
         if (snap === 'expanded') {
             return boundary.atTop ? 'peek' : 'expanded';
         }

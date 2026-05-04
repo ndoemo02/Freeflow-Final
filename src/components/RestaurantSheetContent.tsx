@@ -4,6 +4,7 @@ import { useBottomSheetContext } from './sheet/BottomSheetContainer';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
 import { SheetSnap } from './sheet/sheetTypes';
 import RestaurantAvatar from './RestaurantAvatar';
+import { useIslandFullList } from '../hooks/useIslandFullList';
 
 const CARD_HEIGHT = 96;
 
@@ -427,16 +428,7 @@ export default function RestaurantSheetContent({
         pointerStartYRef.current = null;
     }, []);
 
-    useEffect(() => {
-        const root = document.querySelector('.freeflow');
-        if (!root) return;
-
-        root.classList.toggle('island-full-list', isExpanded);
-
-        return () => {
-            root.classList.remove('island-full-list');
-        };
-    }, [isExpanded]);
+    useIslandFullList(isExpanded);
 
     const stackHeight = isTeaser ? 170 : 220;
     const stackAnchorTop = useMemo(() => resolveStackAnchorTop(snap, stackHeight), [snap, stackHeight]);

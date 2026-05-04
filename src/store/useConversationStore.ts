@@ -313,8 +313,8 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationPhase: newPhase,
                 currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
-                cart: data.meta?.cart || ctx.cart || s.cart,
-                cartSyncKey: (data.meta?.cart || ctx.cart) ? s.cartSyncKey + 1 : s.cartSyncKey,
+                cart: (data.meta && 'cart' in data.meta) ? data.meta.cart : (ctx.cart ?? s.cart),
+                cartSyncKey: ((data.meta && 'cart' in data.meta) || ctx.cart != null) ? s.cartSyncKey + 1 : s.cartSyncKey,
                 // When phase resets to idle (or find_nearby forces discovery), clear expectedContext to prevent UI desynchro (P4)
                 expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : s.expectedContext),
                 conversationClosed: data.conversationClosed || false,

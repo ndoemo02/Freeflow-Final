@@ -58,7 +58,7 @@ export default function BottomSheetContainer({
     }, [onSnapChange]);
 
     useEffect(() => {
-        const shouldLock = lockScrollOn === 'open' ? snap !== 'closed' : snap === 'expanded';
+        const shouldLock = lockScrollOn === 'open' ? snap !== 'closed' : (snap === 'expanded' || snap === 'fullscreen');
         if (!shouldLock) {
             return;
         }
@@ -101,6 +101,11 @@ export default function BottomSheetContainer({
                 return;
             }
 
+            // Fullscreen: block drag initiation when scrolled — let the list scroll handle it
+            if (snap === 'fullscreen' && !boundary.atTop) {
+                return;
+            }
+
             event.currentTarget.setPointerCapture(event.pointerId);
             dragStateRef.current = {
                 pointerId: event.pointerId,
@@ -119,7 +124,18 @@ export default function BottomSheetContainer({
             }
 
             const rawOffset = event.clientY - dragState.startY;
+            // Fullscreen: only downward drag allowed (clampSheetDragOffset enforces this)
             const clampedOffset = clampSheetDragOffset(snap, rawOffset, boundary);
+            if (snap === 'fullscreen' && clampedOffset === 0 && dragState.deltaY === 0 && rawOffset > 0) {
+                // Drag started downward but boundary not at top — release and let scroll take over
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                }
+                dragStateRef.current = null;
+                setIsDragging(false);
+                setDragOffsetY(0);
+                return;
+            }
 
             dragState.lastY = event.clientY;
             dragState.deltaY = clampedOffset;
@@ -158,9 +174,10 @@ export default function BottomSheetContainer({
         closed: 'contextual-island-sheet--closed',
         peek: 'contextual-island-sheet--peek',
         expanded: 'contextual-island-sheet--expanded island-expanded',
+        fullscreen: 'contextual-island-sheet--fullscreen',
         ...snapClassNames,
     };
-    const overflowClassName = snap === 'expanded' ? 'overflow-hidden' : 'overflow-visible';
+    const overflowClassName = (snap === 'expanded' || snap === 'fullscreen') ? 'overflow-hidden' : 'overflow-visible';
 
     const renderState: BottomSheetRenderState = {
         snap,
@@ -188,8 +205,8 @@ export default function BottomSheetContainer({
             >
                 <motion.div
                     className={`contextual-island-sheet relative flex min-h-0 flex-col ${overflowClassName} ${resolvedSnapClassNames[snap]}`}
-                    layout
-                    animate={{ y: dragOffsetY }}
+                    layout={snap !== 'fullscreen'}
+                    animate={snap === 'fullscreen' ? { y: 0 } : { y: dragOffsetY }}
                     transition={isDragging ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 34 }}
                 >
                     {typeof children === 'function' ? children(renderState) : children}

@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useCart } from '../state/CartContext';
 import { useToast } from '../components/Toast';
+import { useConversationStore } from '../store/useConversationStore';
 
 interface BrainAction {
     type: string;
@@ -98,7 +99,15 @@ export function useActionDispatcher() {
                     case 'CLEAR_CART':
                         if (resetCartLocal) {
                             resetCartLocal({ clearRestaurant: false, closeDrawer: false, silent: true });
-                            console.log(`${fnTag} Cart cleared locally from backend action`);
+                            // Also clear conversation store cart to prevent sync re-population.
+                            // Cart.jsx sync effect would otherwise detect cart.length=0,
+                            // read stale storeCart items, and re-populate CartContext.
+                            useConversationStore.setState((s) => ({
+                                cart: null,
+                                cartSyncKey: s.cartSyncKey + 1,
+                                pendingOrder: null,
+                            }));
+                            console.log(`${fnTag} Cart cleared locally + store from backend action`);
                         }
                         break;
 
