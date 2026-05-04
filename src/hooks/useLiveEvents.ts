@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveLiveWsBase } from '../lib/config';
 import { useConversationStore } from '../store/useConversationStore';
-import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
+import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { liveSessionCache } from './useGeminiLiveSession';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { activeSessionMap } from '../state/ActiveSessionMap';
@@ -726,7 +726,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
                 // Fix #5: Backend cart jest "Prawdą Absolutną" — full override, bez fallbacku
                 // do state.cart. Po przejściach menu↔checkout state.cart może być niezsynchronizowany.
-                const backendCart = response.meta?.cart || response.cart;
+                // Fix #5.5: normalizeCartItems wymusza identyczną strukturę każdego przedmiotu.
+                const backendCartRaw = response.meta?.cart || response.cart;
+                const backendCart = normalizeCartItems(backendCartRaw) || backendCartRaw;
                 const backendCartHash = response.meta?.cartHash || response.cartHash || '';
                 const cartForStore = backendCart || state.cart;
 

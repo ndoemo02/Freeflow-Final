@@ -19,7 +19,7 @@ import {
 import { useConversationStore } from '../store/useConversationStore';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
-import { normalizeRestaurants, normalizeMenuItems } from '../lib/normalizeData';
+import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 
 const DEFAULT_LIVE_MODEL =
@@ -524,7 +524,10 @@ function applyToolResultToStore(
 
     // Fix #5: Backend cart jest "Prawdą Absolutną". Full override — bez fallbacku do state.cart
     // który mógłby być niezsynchronizowany po przejściach menu↔checkout.
-    const backendCart = (response.meta as any)?.cart || response.cart;
+    // Fix #5.5: normalizeCartItems wymusza identyczną strukturę każdego przedmiotu
+    // (id, name, price_pln, qty) — eliminuje "widma" z brakującymi kluczami.
+    const backendCartRaw = (response.meta as any)?.cart || response.cart;
+    const backendCart = normalizeCartItems(backendCartRaw) || backendCartRaw;
     const backendCartHash = (response.meta as any)?.cartHash || (response as any).cartHash || '';
     const cartForStore = backendCart || state.cart; // fallback tylko gdy backend nie wysłał wcale
 

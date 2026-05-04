@@ -41,6 +41,36 @@ export const normalizeMenuItems = (items: any[] | null | undefined): any[] | nul
     }));
 };
 
+/**
+ * Fix #5.5: Wymusza identyczną strukturę dla każdego przedmiotu w koszyku.
+ * Backend cart items mają kontrakt: { id, name, price_pln, qty, restaurant_id, restaurant_name }
+ * ale orderHandler tworzy je z kluczami { price, quantity } które są mapowane przez
+ * commitPendingOrder. Ta funkcja jest defensywną normalizacją na wejściu do store —
+ * gwarantuje że każdy item ma wymagane klucze, nawet jeśli przyszedł z niestandardowej ścieżki.
+ */
+export const normalizeCartItems = (cart: any): { items: any[]; total: number } | null => {
+    if (!cart) return null;
+    const items = Array.isArray(cart.items) ? cart.items : (Array.isArray(cart) ? cart : null);
+    if (!Array.isArray(items)) return null;
+
+    const normalizedItems = items
+        .filter((item: any) => Boolean(item)) // odrzuć null/undefined wpisy
+        .map((item: any, index: number) => ({
+            id: String(item.id || item.menu_item_id || item.menuItemId || `cart-${index}`),
+            name: String(item.name || item.item_name || item.base_name || `Pozycja ${index + 1}`),
+            price_pln: Number(item.price_pln ?? item.price ?? 0),
+            price: Number(item.price ?? item.price_pln ?? 0),
+            qty: Number(item.qty ?? item.quantity ?? 1),
+            quantity: Number(item.quantity ?? item.qty ?? 1),
+            restaurant_id: item.restaurant_id || item.restaurantId || null,
+            restaurant_name: item.restaurant_name || item.restaurantName || null,
+        }));
+
+    const total = normalizedItems.reduce((sum: number, item: any) => sum + (item.price_pln * item.qty), 0);
+
+    return { items: normalizedItems, total: Number(total.toFixed(2)) };
+};
+
 export const normalizeRestaurants = (items: any[] | null | undefined): any[] | null => {
     if (!Array.isArray(items)) return null;
     return items.filter(Boolean).map((item, index) => {
