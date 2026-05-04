@@ -224,6 +224,7 @@ export function CartProvider({ children }) {
       category: item.category || null,
       restaurant_id: item.restaurant_id || null,
       restaurant_name: item.restaurant_name || null,
+      special_instructions: item.special_instructions || null,
     }));
 
     setCart(mappedItems);
@@ -307,6 +308,7 @@ export function CartProvider({ children }) {
       name: item.name,
       unit_price_cents: Math.round(Number(item.price || 0) * 100),
       qty: Number(item.quantity || 1),
+      special_instructions: item.special_instructions || null,
     })),
     total_price: total,
     total_cents: Math.round(total * 100),

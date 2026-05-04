@@ -98,7 +98,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'ORDER_EDIT_MODE: Gdy user chce edytowac koszyk, wykonaj od razu odpowiednie narzedzie: update_cart_item_quantity (zmiana ilosci), remove_item_from_cart (usuniecie), replace_cart_item (zamiana pozycji).',
 
   // DANE
-  'Mosz dostep do: rating, ratingsTotal, hours (godziny otwarcia), phone, distance. Kazda pozycja menu ma tez: spicy (czy ostre), is_vege (czy wege), desc (krotki opis), tags (skladniki/cechy, np. ["cebula", "cheddar", "chrupiace"]). Jak pytanie dotyczy skladu, ostrosci, roznic miedzy wariantami — sprawdz te pola i odpowiedz konkretem.',
+  'Mosz dostep do: rating, ratingsTotal, hours (godziny otwarcia), phone, distance. Kazda pozycja menu ma tez: spicy (czy ostre), is_vege (czy wege), desc (krotki opis), tags (skladniki/cechy), safety (z removable_ingredients — lista skladnikow ktore MOZNA usunac). Jak pytanie dotyczy skladu/usuwania skladnikow — sprawdz safety.removable. Kazdy item w koszyku moze miec special_instructions: { removed: [], extra: [], note: "" }.',
 
   // STYL DOMYŚLNY
   'Mowisz naturalnym polskim. Krotko, konkretnie i bez przesadnego slangu.',
@@ -125,6 +125,8 @@ const LIVE_HARD_GUARDS = [
   'PERSONA_GENDER_RULE: Amber mowi o sobie w formie zenskiej: "moge", "moglam", "moglabym", "znalazlam". Nigdy nie uzywaj form: "mogl", "moglbym", "zebym mogl".',
   'SINGLE_CITY_RULE: Gdy sesja ma juz wybrana restauracje (restaurant_id w kontekscie, currentRestaurant, lub user wlasnie ja wskazal), NIGDY nie pytaj o miasto, lokalizacje, GPS ani "gdzie jestes". Miasto jest juz znane — przejdz od razu do show_menu lub add_item_to_cart. Pytanie o lokalizacje przy wybranej restauracji to BLAD.',
   'TAG_CHECK_RULE: Przed powiedzeniem "nie wiem" lub "nie ma" sprawdz item_tags kazdej pozycji. Tagi opisuja skladniki i warianty (np. {"cebula", "cheddar"} dla frytek). Gdy user pyta o roznice miedzy wariantami (np. "czym sie roznia frytki?"), porownaj tagi i wyjasnij roznice na podstawie faktow z menu — NIGDY nie domyslaj sie, nie zglaszaj braku wiedzy bez sprawdzenia tagow. Masz tez pola spicy i is_vege — uzywaj ich.',
+  'SAFETY_CHECK_RULE: Gdy uzytkownik chce USUNAC skladnik z dania (np. "bez cebuli", "bez sosu"), sprawdz pole "safety.removable" tego dania w menuItems. Jesli skladnik JEST na liscie removable → dodaj go do special_instructions.removed w add_item_to_cart. Jesli skladnika NIE ma na liscie → powiedz ze to bazowy skladnik dania i nie mozna go usunac, ale zaproponuj cos podobnego z menu. NIGDY nie usuwaj skladnikow spoza listy removable — nawet jesli user prosi.',
+  'SPECIAL_INSTRUCTIONS_RULE: Gdy uzytkownik personalizuje danie (usuwa/dodaje skladniki, zostawia notatke), zapisz to w parametrze special_instructions narzedzia add_item_to_cart: { removed: ["skladnik1"], extra: [], note: "opisowa notatka" }. Po dodaniu do koszyka, wspomnij o personalizacji w potwierdzeniu (np. "Dodalem frytki bez cebuli, mocno wysmazone"). Przy podsumowaniu zamowienia powtorz wszystkie modyfikacje.',
 ].join(' ');
 
 const SILESIAN_STYLE_INSTRUCTION =
@@ -399,6 +401,9 @@ function compactToolResponse(
         spicy: !!x.spicy,
         is_vege: !!x.is_vege,
         desc: typeof x.description === 'string' ? x.description.substring(0, 80) : null,
+        safety: x.safety_data && typeof x.safety_data === 'object' ? {
+          removable: Array.isArray(x.safety_data.removable_ingredients) ? x.safety_data.removable_ingredients : [],
+        } : null,
       }));
       compact.menuTotal = items.length;
       compact.menuCoverage = fullMenu.length > 0 ? 'full' : 'shortlist';
@@ -420,7 +425,7 @@ function compactToolResponse(
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [] }))
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
       break;
     }
@@ -435,7 +440,7 @@ function compactToolResponse(
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [] }))
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
 
       const clarifyNotAdded =

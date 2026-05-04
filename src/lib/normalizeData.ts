@@ -38,6 +38,7 @@ export const normalizeMenuItems = (items: any[] | null | undefined): any[] | nul
         item_tags: Array.isArray(item.item_tags) ? item.item_tags : [],
         dietary_flags: Array.isArray(item.dietary_flags) ? item.dietary_flags : [],
         section_order: Number(item.section_order ?? 0),
+        safety_data: item.safety_data || null,
     }));
 };
 
@@ -67,6 +68,7 @@ export const normalizeCartItems = (cart: any): { items: any[]; total: number } |
             // Fix #6.3: taxonomy tags for item identity
             item_tags: Array.isArray(item.item_tags) ? item.item_tags : [],
             category: item.category || null,
+            special_instructions: item.special_instructions || null,
         }));
 
     const total = normalizedItems.reduce((sum: number, item: any) => sum + (item.price_pln * item.qty), 0);

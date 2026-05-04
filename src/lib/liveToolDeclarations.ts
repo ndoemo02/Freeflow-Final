@@ -71,7 +71,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'add_item_to_cart',
-    description: 'Add one item to cart by dish name and quantity. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
+    description: 'Add one item to cart by dish name and quantity. Use special_instructions when user requests modifications (remove ingredients, add extras, leave a note). If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
     parameters: {
       type: O,
       properties: {
@@ -79,13 +79,21 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
         quantity: { type: N },
         restaurant_id: { type: S },
         restaurant_name: { type: S },
+        special_instructions: {
+          type: O,
+          properties: {
+            removed: { type: A, items: { type: S } },
+            extra: { type: A, items: { type: S } },
+            note: { type: S },
+          },
+        },
       },
       required: ['dish'],
     },
   },
   {
     name: 'add_items_to_cart',
-    description: 'Add multiple items to cart in one transaction. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
+    description: 'Add multiple items to cart in one transaction. Each item can have special_instructions for modifications. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
     parameters: {
       type: O,
       properties: {
@@ -96,6 +104,14 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
             properties: {
               dish: { type: S },
               quantity: { type: N },
+              special_instructions: {
+                type: O,
+                properties: {
+                  removed: { type: A, items: { type: S } },
+                  extra: { type: A, items: { type: S } },
+                  note: { type: S },
+                },
+              },
             },
             required: ['dish'],
           },
