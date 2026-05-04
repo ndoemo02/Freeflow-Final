@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, animate } from 'framer-motion';
 
 interface RestaurantItem {
     id: string | number;
@@ -59,33 +59,68 @@ interface CardStyle {
     blur: number;
     rotY: number;
     tz: number;
-    ty: number;          // vertical depth offset — stack cards shift slightly down
+    ty: number;
     contentOpacity: number;
     zIndex: number;
     isCenter: boolean;
+    visible: boolean;
 }
 
-function getCardStyle(xPx: number, gap: number): CardStyle | null {
-    const posFloat = xPx / gap;
+// posFloat = i - progress  (so 0 = active card, ±1 = neighbours, etc.)
+function computeCardStyle(posFloat: number): CardStyle {
     const abs = Math.abs(posFloat);
-    if (abs > 4.5) return null;
-
-    // Layered stack depth:
-    //   abs=0  → active  : scale 1.0, opacity 1.0, ty 0
-    //   abs=1  → 1st left: scale 0.87, opacity 0.78, ty 10px down
-    //   abs=2  → 2nd left: scale 0.73, opacity 0.60, ty 18px down
+    if (abs > 4.5) {
+        return {
+            scale: 0.4, opacity: 0, blur: 0, rotY: 0, tz: -200, ty: 32,
+            contentOpacity: 0, zIndex: 0, isCenter: false, visible: false,
+        };
+    }
     return {
-        scale:          Math.max(0.48, 1 - abs * 0.135),
-        opacity:        Math.max(0.18, 1 - abs * 0.22),
-        blur:           Math.min(abs * 1.2, 5),
-        rotY:           Math.max(-20, Math.min(20, posFloat * -12)),
-        tz:             Math.max(-180, -abs * 55),
-        ty:             Math.min(abs * 9, 32),   // depth: each layer shifts down
+        scale: Math.max(0.48, 1 - abs * 0.135),
+        opacity: Math.max(0.18, 1 - abs * 0.22),
+        blur: Math.min(abs * 1.2, 5),
+        // posFloat>0 means card sits to the LEFT of active → tilt right
+        rotY: Math.max(-20, Math.min(20, posFloat * 12)),
+        tz: Math.max(-180, -abs * 55),
+        ty: Math.min(abs * 9, 32),
         contentOpacity: Math.max(0, 1 - abs * 0.80),
-        zIndex:         Math.round(30 - abs * 5),
-        isCenter:       abs < 0.15,
+        zIndex: Math.round(30 - abs * 5),
+        isCenter: abs < 0.15,
+        visible: true,
     };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  PHYSICS CONFIG
+// ─────────────────────────────────────────────────────────────────────────────
+//  Spring tuned for a "buttery" feel:
+//   • stiffness 280  → reaches target in ~380 ms  (responsive but not jumpy)
+//   • damping   34   → critical-ish damping, < 3 % overshoot, NO oscillation
+//   • mass      0.9  → slightly lighter than default → snappier accel
+//  Together these kill the visible "bounce-back" you saw on incomplete swipes:
+//  the same spring handles BOTH the snap-to-current-card and the fling-forward,
+//  so there is no transition fighting React state, no two-stage animation.
+const SPRING_SNAP = {
+    type: 'spring' as const,
+    stiffness: 280,
+    damping: 34,
+    mass: 0.9,
+    restDelta: 0.0008,
+    restSpeed: 0.005,
+};
+
+//  Below this absolute index-velocity (units/sec) we treat the gesture as a
+//  drag-release, NOT a flick. Above it, we force a one-step jump in the
+//  flick direction even if the user barely moved their finger.
+const FLICK_VELOCITY_THRESHOLD = 1.1;
+
+//  Cap the velocity we forward to the spring solver so a wild flick can't
+//  rocket six cards forward and miss the index entirely.
+const MAX_VELOCITY_INDEX = 6;
+
+//  How far ahead (in seconds) we project the current velocity to decide which
+//  index the user "meant" to land on. 0.12 s ≈ iOS PagingScrollView.
+const VELOCITY_PROJECTION_SEC = 0.12;
 
 export default function CinematicRestaurantCarousel({
     items,
@@ -99,29 +134,46 @@ export default function CinematicRestaurantCarousel({
         return String(a) === String(b);
     }, []);
 
-    const [vpWidth, setVpWidth] = useState(() => window.innerWidth);
+    const [vpWidth, setVpWidth] = useState(() => (typeof window !== 'undefined' ? window.innerWidth : 480));
     const [vpHeight, setVpHeight] = useState(() => getStableViewportHeight());
     const [layoutReady, setLayoutReady] = useState(false);
-    const [currentIndex, setCurrentIndex] = useState(() => {
+
+    const initialIdx = (() => {
         const idx = items.findIndex(item => idsEqual(item.id, selectedId));
         return idx >= 0 ? idx : 0;
-    });
-    const [dragOffset, setDragOffset] = useState(0);
+    })();
+
+    const [currentIndex, setCurrentIndex] = useState(initialIdx);
     const [isDragging, setIsDragging] = useState(false);
     const [listOpen, setListOpen] = useState(false);
     const [isFullWidth, setIsFullWidth] = useState(false);
     const [compactBounds, setCompactBounds] = useState(() => ({
-        top: Math.round(window.innerHeight * 0.38),
-        bottom: Math.round(window.innerHeight * 0.16),
+        top: typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.38) : 280,
+        bottom: typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.16) : 120,
     }));
 
-    const dragStartXRef = useRef(0);
-    const dragStartYRef = useRef(0);
-    const dragLastXRef = useRef(0);
-    const dragLastTRef = useRef(0);
-    const dragVelocityRef = useRef(0);
+    // ─── PROGRESS: fractional index driving every card transform ────────────
+    // Single motion value. Mutating it does NOT trigger a React render —
+    // a single subscription writes directly to DOM refs.
+    const progress = useMotionValue(initialIdx);
+    const animationRef = useRef<ReturnType<typeof animate> | null>(null);
+
+    // Per-card refs for imperative DOM updates (zero re-render path).
+    const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const innerRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const contentRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    // Pointer / gesture refs
+    const isDraggingRef = useRef(false);
+    const startPointerXRef = useRef(0);
+    const startPointerYRef = useRef(0);
+    const startProgressRef = useRef(0);
+    const lastPointerXRef = useRef(0);
+    const lastPointerTRef = useRef(0);
+    const velocityPxPerMsRef = useRef(0);
     const dragAxisRef = useRef<'x' | 'y' | null>(null);
     const wasDraggedRef = useRef(false);
+
     const sheetStartXRef = useRef(0);
     const sheetStartYRef = useRef(0);
     const hasLoggedInitialLayoutRef = useRef(false);
@@ -130,11 +182,16 @@ export default function CinematicRestaurantCarousel({
     const justRestoredRef = useRef(false);
     const listOpenRef = useRef(false);
 
+    const stopAnim = useCallback(() => {
+        if (animationRef.current) {
+            animationRef.current.stop();
+            animationRef.current = null;
+        }
+    }, []);
+
     const recalcCompactBounds = useCallback(() => {
         const viewportHeight = getStableViewportHeight();
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        const logoZone = document.querySelector('.hero-stack') as HTMLElement | null;
-        const logoContainer = document.querySelector('.logo-container') as HTMLElement | null;
         const logoImage = document.querySelector('.hero-stack .logo') as HTMLElement | null;
         const dockLayer = document.querySelector('[data-ui-role="voice-dock-layer"]') as HTMLElement | null;
         const dockBar = document.querySelector('[data-ui-role="voice-dock-bar"]') as HTMLElement | null;
@@ -146,13 +203,11 @@ export default function CinematicRestaurantCarousel({
         let logoTopFloor = nextTop;
 
         const logoBottomCandidates: number[] = [];
-        // Only use the actual logo image to avoid artificial padding from containers
         if (logoImage) logoBottomCandidates.push(logoImage.getBoundingClientRect().bottom);
         const hasLogoAnchors = logoBottomCandidates.length > 0;
         const hasDockAnchor = !!dockRect;
         if (logoBottomCandidates.length > 0) {
             const logoBottom = Math.max(...logoBottomCandidates);
-            // Keep clear space below the logo droplet so card never touches/covers it.
             logoTopFloor = Math.round(logoBottom + 14);
             nextTop = logoTopFloor;
         }
@@ -160,8 +215,6 @@ export default function CinematicRestaurantCarousel({
         if (dockRect) {
             const dockTop = dockRect.top;
             const baseBottom = viewportHeight - dockTop;
-            // Mobile: anchor card to slightly overlap VoiceDock top edge
-            // so it visually "emerges" from the dock instead of floating above it.
             const dockOverlapOffset = isMobile ? -16 : 4;
             const anchoredBottom = baseBottom + dockOverlapOffset;
             nextBottom = Math.max(8, Math.round(anchoredBottom));
@@ -188,13 +241,12 @@ export default function CinematicRestaurantCarousel({
 
         if (hasStableAnchors && !hasLoggedInitialLayoutRef.current) {
             hasLoggedInitialLayoutRef.current = true;
-            console.log(`[CAROUSEL_LAYOUT] phase=initial compact=true listOpen=${String(listOpenRef.current)} viewportHeight=${Math.round(viewportHeight)} stageHeight=${Math.round(stageHeight)} dockHeight=${Math.round(dockRect?.height || 0)} cardHeightHint=${Math.round(stageHeight * (isMobile ? 0.9 : 0.82))}`);
+            console.log(`[CAROUSEL_LAYOUT] phase=initial compact=true listOpen=${String(listOpenRef.current)} viewportHeight=${Math.round(viewportHeight)} stageHeight=${Math.round(stageHeight)} dockHeight=${Math.round(dockRect?.height || 0)}`);
         }
-
         if (hasStableAnchors && justRestoredRef.current) {
             justRestoredRef.current = false;
             hasLoggedRestoredLayoutRef.current = true;
-            console.log(`[CAROUSEL_LAYOUT] phase=restored compact=true listOpen=${String(listOpenRef.current)} viewportHeight=${Math.round(viewportHeight)} stageHeight=${Math.round(stageHeight)} dockHeight=${Math.round(dockRect?.height || 0)} cardHeightHint=${Math.round(stageHeight * (isMobile ? 0.9 : 0.82))}`);
+            console.log(`[CAROUSEL_LAYOUT] phase=restored compact=true listOpen=${String(listOpenRef.current)} viewportHeight=${Math.round(viewportHeight)} stageHeight=${Math.round(stageHeight)}`);
         }
     }, []);
 
@@ -226,7 +278,6 @@ export default function CinematicRestaurantCarousel({
         const warmupMeasure = () => {
             window.requestAnimationFrame(recalcCompactBounds);
             warmupFrames += 1;
-            // 60 frames (~1 sec) to ensure we capture the end of the 0.6s CSS transition
             if (warmupFrames < 60) {
                 warmupRaf = window.requestAnimationFrame(warmupMeasure);
             }
@@ -274,17 +325,18 @@ export default function CinematicRestaurantCarousel({
         }
 
         // Defensive reset during compact/expanded transitions.
-        setDragOffset(0);
+        stopAnim();
+        progress.set(currentIndex);
+        isDraggingRef.current = false;
         setIsDragging(false);
         dragAxisRef.current = null;
-        dragVelocityRef.current = 0;
+        velocityPxPerMsRef.current = 0;
 
         let warmupFrames = 0;
         let warmupRaf = 0;
         const warmupMeasure = () => {
             recalcCompactBounds();
             warmupFrames += 1;
-            // 60 frames (~1 sec) to ensure we capture the end of the CSS transition
             if (warmupFrames < 60) {
                 warmupRaf = window.requestAnimationFrame(warmupMeasure);
             }
@@ -297,37 +349,37 @@ export default function CinematicRestaurantCarousel({
                 root.classList.remove('island-full-list');
             }
         };
-    }, [listOpen, recalcCompactBounds]);
+    }, [listOpen, recalcCompactBounds, currentIndex, progress, stopAnim]);
 
+    // Cancel a swipe-in-flight if the page itself scrolls (e.g. soft kbd).
     useEffect(() => {
         const resetDrag = () => {
-            if (!isDragging && dragOffset === 0) return;
-            setDragOffset(0);
+            if (!isDraggingRef.current) return;
+            isDraggingRef.current = false;
             setIsDragging(false);
             dragAxisRef.current = null;
-            dragVelocityRef.current = 0;
+            velocityPxPerMsRef.current = 0;
+            stopAnim();
+            animationRef.current = animate(progress, currentIndex, SPRING_SNAP);
         };
-
         window.addEventListener('scroll', resetDrag, { passive: true });
         const vv = window.visualViewport;
         vv?.addEventListener('scroll', resetDrag);
         vv?.addEventListener('resize', resetDrag);
-
         return () => {
             window.removeEventListener('scroll', resetDrag);
             vv?.removeEventListener('scroll', resetDrag);
             vv?.removeEventListener('resize', resetDrag);
         };
-    }, [isDragging, dragOffset]);
+    }, [currentIndex, progress, stopAnim]);
 
+    // External selection sync (e.g. from list panel)
     useEffect(() => {
         if (!selectedId) return;
-        setCurrentIndex(prev => {
-            const idx = items.findIndex(item => idsEqual(item.id, selectedId));
-            return idx >= 0 && idx !== prev ? idx : prev;
-        });
-    // currentIndex celowo pominięty — był źródłem pętli oscylacji
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        const idx = items.findIndex(item => idsEqual(item.id, selectedId));
+        if (idx < 0 || idx === currentIndex) return;
+        setCurrentIndex(idx);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId, items, idsEqual]);
 
     const prevIndexRef = useRef(currentIndex);
@@ -338,117 +390,253 @@ export default function CinematicRestaurantCarousel({
         }
     }, [currentIndex, items, onPreviewChange]);
 
+    // Animate progress whenever `currentIndex` changes from outside the
+    // pointer-up handler (clicks, list selections, external selectedId).
+    // The pointer-up handler bypasses this by writing progress directly
+    // *and* setting currentIndex in the same tick — that path passes the
+    // gesture velocity through.
+    useEffect(() => {
+        if (isDraggingRef.current) return;
+        const cur = progress.get();
+        if (Math.abs(cur - currentIndex) < 0.001) return;
+        // Skip if we already have an animation heading to currentIndex.
+        if (animationRef.current) return;
+        animationRef.current = animate(progress, currentIndex, {
+            ...SPRING_SNAP,
+            onComplete: () => { animationRef.current = null; },
+        });
+    }, [currentIndex, progress]);
+
+    // ─── LAYOUT MEASUREMENTS ────────────────────────────────────────────────
     const appWidth = Math.min(vpWidth, 480);
     const isMobileViewport = vpWidth <= 768;
-    
-    // Cinematic large card width
-    const widthFactor = isMobileViewport ? 0.44 : 0.38; 
+    const widthFactor = isMobileViewport ? 0.44 : 0.38;
     const CARD_W = Math.max(140, Math.min(Math.floor(appWidth * widthFactor), 240));
-    
     const compactStageHeight = Math.max(140, vpHeight - compactBounds.top - compactBounds.bottom);
-    
-    // Cinematic large card height - taller by 20%, then another 15%
     const heightFactor = isMobileViewport ? 1.32 : 1.05;
     const CARD_H = Math.max(220, Math.min(Math.round(compactStageHeight * heightFactor), 650));
-    
-    const GAP = Math.floor(CARD_W * 0.45); // tight stack — cards overlap like a deck
-    
-    // Active card hugs the right edge; blurred queue cards are to the LEFT
+    const GAP = Math.floor(CARD_W * 0.45);
+
     const paddingRight = 16;
     const rightHuggingBias = (appWidth - CARD_W) / 2 - paddingRight;
     const ACTIVE_BIAS_X = isMobileViewport
         ? rightHuggingBias
         : Math.max(16, Math.round(appWidth * 0.1));
 
+    // ─── IMPERATIVE RENDER LOOP ──────────────────────────────────────────────
+    // Single subscription on `progress`. Every frame the spring/drag commits
+    // a new value, we mutate transforms directly. NO React re-render, NO
+    // style diffing — just GPU-friendly transform writes.
+    useEffect(() => {
+        const apply = (val: number) => {
+            const dragging = isDraggingRef.current;
+            for (let i = 0; i < items.length; i++) {
+                const outer = cardRefs.current[i];
+                const inner = innerRefs.current[i];
+                const content = contentRefs.current[i];
+                if (!outer) continue;
+
+                const posFloat = i - val;
+                const s = computeCardStyle(posFloat);
+                if (!s.visible) {
+                    if (outer.style.display !== 'none') outer.style.display = 'none';
+                    continue;
+                }
+                if (outer.style.display === 'none') outer.style.display = '';
+
+                // Active card hugs the right edge; queue cards stack to the LEFT.
+                // posFloat>0 means card sits ahead of active in the stack → shifts left.
+                const xPx = -posFloat * GAP + ACTIVE_BIAS_X;
+
+                // OUTER: pure 2D translate + scale → composited, no layout, no paint.
+                outer.style.transform =
+                    `translate3d(${xPx.toFixed(2)}px, ${s.ty.toFixed(2)}px, 0) ` +
+                    `scale(${s.scale.toFixed(3)})`;
+                outer.style.zIndex = String(s.zIndex);
+
+                // INNER: perspective rotation — also pure transform.
+                if (inner) {
+                    inner.style.transform =
+                        `perspective(900px) ` +
+                        `rotateY(${s.rotY.toFixed(2)}deg) ` +
+                        `translateZ(${s.tz.toFixed(1)}px)`;
+                }
+
+                // Opacity is cheap; safe to update every frame.
+                outer.style.opacity = s.opacity.toFixed(3);
+                if (content) content.style.opacity = s.contentOpacity.toFixed(3);
+
+                // FILTER (blur) is the expensive one — kills the compositor on
+                // mobile if it changes 60 times/sec while the user is scrubbing.
+                // We freeze it during the drag and only refresh while the
+                // post-release spring is settling.
+                if (!dragging) {
+                    const blurStr = s.blur > 0.3 ? `blur(${s.blur.toFixed(2)}px)` : '';
+                    if (outer.style.filter !== blurStr) outer.style.filter = blurStr;
+                }
+            }
+        };
+        apply(progress.get());
+        const unsub = progress.on('change', apply);
+        return () => unsub();
+    }, [items.length, GAP, ACTIVE_BIAS_X, progress]);
+
+    // ─── POINTER HANDLERS ────────────────────────────────────────────────────
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        dragStartXRef.current = e.clientX;
-        dragStartYRef.current = e.clientY;
-        dragLastXRef.current = e.clientX;
-        dragLastTRef.current = Date.now();
-        dragVelocityRef.current = 0;
+        stopAnim();
+
+        // Promote each visible card to its own compositor layer for the
+        // duration of the gesture. We turn this OFF after settle because
+        // permanent will-change wastes GPU memory.
+        for (const el of cardRefs.current) {
+            if (el) el.style.willChange = 'transform, opacity';
+        }
+
+        isDraggingRef.current = true;
+        setIsDragging(true);
+        startPointerXRef.current = e.clientX;
+        startPointerYRef.current = e.clientY;
+        startProgressRef.current = progress.get();
+        lastPointerXRef.current = e.clientX;
+        lastPointerTRef.current = performance.now();
+        velocityPxPerMsRef.current = 0;
         dragAxisRef.current = null;
         wasDraggedRef.current = false;
-        setIsDragging(true);
-        setDragOffset(0);
-    }, []);
+    }, [progress, stopAnim]);
 
     const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-        if (!isDragging) return;
-        const dx = e.clientX - dragStartXRef.current;
-        const dy = e.clientY - dragStartYRef.current;
-        
-        // Touch needs a tighter threshold; mouse pointer can drift up to ~14px on a click
+        if (!isDraggingRef.current) return;
+        const dx = e.clientX - startPointerXRef.current;
+        const dy = e.clientY - startPointerYRef.current;
+
         const dragThreshold = e.pointerType === 'touch' ? 8 : 14;
         if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
             wasDraggedRef.current = true;
         }
-
         if (dragAxisRef.current === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
             dragAxisRef.current = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
         }
         if (dragAxisRef.current !== 'x') return;
 
-        const now = Date.now();
-        const dt = Math.max(1, now - dragLastTRef.current);
-        dragVelocityRef.current = (e.clientX - dragLastXRef.current) / dt * 14;
-        dragLastXRef.current = e.clientX;
-        dragLastTRef.current = now;
-        setDragOffset(dx);
-    }, [isDragging]);
+        // Exponentially-weighted velocity (px/ms). EMA smooths out the noise
+        // of 4–8 ms pointer deltas so the spring solver gets a sane reading
+        // instead of an outlier-driven rocket.
+        const now = performance.now();
+        const dt = Math.max(1, now - lastPointerTRef.current);
+        const instV = (e.clientX - lastPointerXRef.current) / dt;
+        velocityPxPerMsRef.current = velocityPxPerMsRef.current * 0.6 + instV * 0.4;
+        lastPointerXRef.current = e.clientX;
+        lastPointerTRef.current = now;
+
+        // Drive the motion value imperatively. Negative because dragging
+        // RIGHT should reveal the previous card (lower index), while the
+        // queue stack visually sits to the LEFT of the active card.
+        const next = startProgressRef.current - dx / GAP;
+        // Soft rubber-band at the ends so users feel the boundary.
+        const clamped =
+            next < 0
+                ? next * 0.35
+                : next > items.length - 1
+                    ? (items.length - 1) + (next - (items.length - 1)) * 0.35
+                    : next;
+        progress.set(clamped);
+    }, [GAP, items.length, progress]);
 
     const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-        if (!isDragging) return;
-
-        const dx = e.clientX - dragStartXRef.current;
-        const dy = e.clientY - dragStartYRef.current;
+        if (!isDraggingRef.current) return;
+        const dx = e.clientX - startPointerXRef.current;
+        const dy = e.clientY - startPointerYRef.current;
         const axis = dragAxisRef.current;
 
+        isDraggingRef.current = false;
+        setIsDragging(false);
+        dragAxisRef.current = null;
+
+        // Vertical flick-up → open list (preserved gesture, no spring needed).
         if ((axis === 'y' || axis === null) && dy < -60 && Math.abs(dy) > Math.abs(dx)) {
-            setDragOffset(0);
-            setIsDragging(false);
-            dragAxisRef.current = null;
+            // Snap progress back to the integer index (it never moved on X).
+            stopAnim();
+            animationRef.current = animate(progress, currentIndex, {
+                ...SPRING_SNAP,
+                onComplete: () => {
+                    animationRef.current = null;
+                    for (const el of cardRefs.current) if (el) el.style.willChange = 'auto';
+                },
+            });
             setListOpen(true);
             return;
         }
 
-        const totalOffset = dragOffset + dragVelocityRef.current * 6;
-        const dragFraction = -(totalOffset / GAP);
-        let indexDelta = 0;
-        if (Math.abs(dragFraction) > 0.32) {
-            indexDelta = Math.sign(dragFraction) * Math.min(Math.ceil(Math.abs(dragFraction)), 1);
-        }
-        
-        const newIndex = Math.max(0, Math.min(items.length - 1, currentIndex + indexDelta));
+        // px/ms → index/sec
+        const velIndex = -velocityPxPerMsRef.current * 1000 / GAP;
+        const clampedVel = Math.max(-MAX_VELOCITY_INDEX, Math.min(MAX_VELOCITY_INDEX, velIndex));
+        const current = progress.get();
 
-        setCurrentIndex(newIndex);
-        setDragOffset(0);
-        setIsDragging(false);
-        dragAxisRef.current = null;
-    }, [isDragging, dragOffset, currentIndex, items.length, GAP, isMobileViewport]);
+        // Combine current position with velocity projection (~120 ms ahead).
+        const projection = current + clampedVel * VELOCITY_PROJECTION_SEC;
+        let target = Math.round(projection);
+
+        // If the user clearly flicked but didn't move far enough on its own,
+        // force a one-step jump in the flick direction.
+        if (
+            Math.abs(clampedVel) > FLICK_VELOCITY_THRESHOLD &&
+            target === Math.round(current)
+        ) {
+            target = Math.round(current) + (clampedVel > 0 ? 1 : -1);
+        }
+        target = Math.max(0, Math.min(items.length - 1, target));
+
+        // ONE spring handles both "snap back" (no flick) and "fling forward"
+        // (strong flick) — the same physics, just different `velocity`. This
+        // is what makes the result feel buttery: there is no behavioural
+        // branch the user can perceive, only a continuous response curve.
+        stopAnim();
+        animationRef.current = animate(progress, target, {
+            ...SPRING_SNAP,
+            velocity: clampedVel,
+            onComplete: () => {
+                animationRef.current = null;
+                // Release GPU layer promotion — keeping `will-change` on
+                // permanently is the #1 way to leak compositor memory.
+                for (const el of cardRefs.current) if (el) el.style.willChange = 'auto';
+            },
+        });
+
+        if (target !== currentIndex) {
+            setCurrentIndex(target);
+        }
+    }, [GAP, items.length, currentIndex, progress, stopAnim]);
 
     const handlePointerCancel = useCallback(() => {
-        setDragOffset(0);
+        if (!isDraggingRef.current) return;
+        isDraggingRef.current = false;
         setIsDragging(false);
         dragAxisRef.current = null;
-    }, []);
+        velocityPxPerMsRef.current = 0;
+        stopAnim();
+        animationRef.current = animate(progress, currentIndex, {
+            ...SPRING_SNAP,
+            onComplete: () => {
+                animationRef.current = null;
+                for (const el of cardRefs.current) if (el) el.style.willChange = 'auto';
+            },
+        });
+    }, [currentIndex, progress, stopAnim]);
 
     const handleCardClick = useCallback((index: number) => {
         if (wasDraggedRef.current) return;
-        if (Math.abs(dragOffset) > 8) return;
         if (isMobileViewport) {
-            // Mobile: first tap focuses the card, second tap (center) opens menu
             if (index !== currentIndex) {
                 setCurrentIndex(index);
             } else {
                 onSelect(items[index]);
             }
         } else {
-            // Desktop: one click = open restaurant directly
             setCurrentIndex(index);
             onSelect(items[index]);
         }
-    }, [dragOffset, currentIndex, items, onSelect, isMobileViewport]);
+    }, [currentIndex, items, onSelect, isMobileViewport]);
 
     const handleListItemClick = useCallback((index: number) => {
         setListOpen(false);
@@ -498,9 +686,16 @@ export default function CinematicRestaurantCarousel({
                 <div className="flex-1 w-full flex items-end justify-end min-h-0 relative overflow-visible pointer-events-auto">
                     <div
                         style={{
-                            position: 'relative', width: '100%', maxWidth: isMobileViewport ? 404 : 420, height: `${CARD_H}px`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            userSelect: 'none', touchAction: 'none', marginRight: isMobileViewport ? 0 : 4,
+                            position: 'relative',
+                            width: '100%',
+                            maxWidth: isMobileViewport ? 404 : 420,
+                            height: `${CARD_H}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            userSelect: 'none',
+                            touchAction: 'none',
+                            marginRight: isMobileViewport ? 0 : 4,
                         }}
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
@@ -521,7 +716,6 @@ export default function CinematicRestaurantCarousel({
                                 }}
                             >&#8249;</button>
                         )}
-
                         {!isMobileViewport && currentIndex < items.length - 1 && !isDragging && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.min(items.length - 1, i + 1)); }}
@@ -536,43 +730,40 @@ export default function CinematicRestaurantCarousel({
                         )}
 
                         {items.map((item, i) => {
-                            // Reversed stack: next cards queue on the LEFT of active card.
-                            // Negating dragOffset keeps swipe-left = next card intuitive.
-                            const xPx = (currentIndex - i) * GAP - dragOffset;
-                            const anchoredXPx = xPx + ACTIVE_BIAS_X;
-                            const s = getCardStyle(xPx, GAP);
-                            if (!s) return null;
-
+                            // Each card is rendered ONCE. All animation goes
+                            // through `progress` → imperative DOM writes.
+                            // No transition on transform (it's driven at 60+
+                            // fps by the spring solver). Opacity/filter use
+                            // a tiny ease so the post-settle blur fade looks
+                            // soft instead of popping.
                             return (
                                 <div
                                     key={item.id}
+                                    ref={(el) => { cardRefs.current[i] = el; }}
                                     onClick={() => handleCardClick(i)}
                                     style={{
                                         position: 'absolute',
-                                        width: CARD_W, height: CARD_H,
-                                        zIndex: s.zIndex,
-                                        opacity: s.opacity,
-                                        filter: s.blur > 0.3 ? `blur(${s.blur.toFixed(1)}px)` : 'none',
-                                        transform: `translateX(${anchoredXPx.toFixed(1)}px) translateY(${s.ty.toFixed(1)}px) scale(${s.scale.toFixed(3)})`,
-                                        transition: isDragging
-                                            ? 'transform 0.05s linear'
-                                            : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1), opacity 0.4s ease, filter 0.4s ease',
+                                        width: CARD_W,
+                                        height: CARD_H,
                                         cursor: 'pointer',
-                                        willChange: 'transform',
+                                        // Will-change is toggled imperatively
+                                        // ONLY during a gesture so we don't
+                                        // hold GPU layers when idle.
+                                        backfaceVisibility: 'hidden',
+                                        transition: isDragging ? 'none' : 'opacity 220ms ease-out, filter 260ms ease-out',
                                     }}
                                 >
                                     <div
+                                        ref={(el) => { innerRefs.current[i] = el; }}
                                         style={{
-                                            width: '100%', height: '100%',
-                                            borderRadius: 16, overflow: 'hidden', position: 'relative',
-                                            border: s.isCenter
-                                                ? '1px solid rgba(249,115,22,0.4)'
-                                                : '1px solid rgba(255,255,255,0.08)',
-                                            boxShadow: s.isCenter
-                                                ? '0 20px 60px rgba(0,0,0,0.6), 0 0 48px rgba(249,115,22,0.18), 0 24px 60px rgba(0,0,0,0.88)'
-                                                : '0 10px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)',
-                                            transform: `perspective(900px) rotateY(${s.rotY.toFixed(2)}deg) translateZ(${s.tz.toFixed(1)}px)`,
-                                            transition: isDragging ? 'transform 0.05s linear' : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1)',
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: 16,
+                                            overflow: 'hidden',
+                                            position: 'relative',
+                                            border: '1px solid rgba(255,255,255,0.08)',
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)',
+                                            backfaceVisibility: 'hidden',
                                         }}
                                     >
                                         <div style={{
@@ -587,12 +778,14 @@ export default function CinematicRestaurantCarousel({
                                             }} />
                                         </div>
 
-                                        <div style={{
-                                            position: 'absolute', top: 10, left: 0, right: 0, bottom: 10, padding: '0 14px',
-                                            display: 'flex', flexDirection: 'column',
-                                            opacity: s.contentOpacity,
-                                            transition: isDragging ? 'none' : 'opacity 0.3s ease',
-                                        }}>
+                                        <div
+                                            ref={(el) => { contentRefs.current[i] = el; }}
+                                            style={{
+                                                position: 'absolute', top: 10, left: 0, right: 0, bottom: 10, padding: '0 14px',
+                                                display: 'flex', flexDirection: 'column',
+                                                transition: isDragging ? 'none' : 'opacity 220ms ease-out',
+                                            }}
+                                        >
                                             <div style={{ fontSize: 8, letterSpacing: 2, color: 'rgba(255,180,40,0.85)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase' }}>
                                                 {item.cuisine_type || 'Restauracja'}
                                                 {item.id === recommendedId && (
@@ -661,7 +854,6 @@ export default function CinematicRestaurantCarousel({
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 32, stiffness: 280 }}
                         >
-                            {/* Strefa gestów — tylko nagłówek, poza scroll divem */}
                             <div
                                 onTouchStart={handleSheetTouchStart}
                                 onTouchEnd={handleSheetTouchEnd}
