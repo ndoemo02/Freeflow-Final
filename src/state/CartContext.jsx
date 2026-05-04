@@ -23,8 +23,27 @@ export function CartProvider({ children }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // Fix #5.6: Wykryj nową sesję po refreshu strony.
+    // CartContext persistuje w localStorage, ale backendowa sesja jest NOWA
+    // (nowy sessionId). Stare dane koszyka z innej sesji powodują konflikt:
+    // cart.length > backendItems.length → sync blokowany → restaurant=null → submit fail.
     const savedCart = localStorage.getItem('freeflow_cart');
     const savedRestaurant = localStorage.getItem('freeflow_cart_restaurant');
+    const savedSessionId = localStorage.getItem('freeflow_cart_session');
+    const currentSessionId = localStorage.getItem('amber-session-id') || localStorage.getItem('brain_session_id');
+
+    // Nowa sesja = inne sessionId niż przy ostatnim zapisie → wyczyść stare dane
+    const isNewSession = !savedSessionId || (currentSessionId && savedSessionId !== currentSessionId);
+
+    if (isNewSession) {
+      console.log('[CART_SESSION] Nowa sesja — czyszcze stary koszyk z localStorage');
+      localStorage.removeItem('freeflow_cart');
+      localStorage.removeItem('freeflow_cart_restaurant');
+      if (currentSessionId) {
+        localStorage.setItem('freeflow_cart_session', currentSessionId);
+      }
+      return; // nie ładuj starych danych
+    }
 
     if (savedCart) {
       try {
@@ -46,6 +65,8 @@ export function CartProvider({ children }) {
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem('freeflow_cart', JSON.stringify(cart));
+      const sid = localStorage.getItem('amber-session-id') || localStorage.getItem('brain_session_id');
+      if (sid) localStorage.setItem('freeflow_cart_session', sid);
     } else {
       localStorage.removeItem('freeflow_cart');
     }
