@@ -98,7 +98,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'ORDER_EDIT_MODE: Gdy user chce edytowac koszyk, wykonaj od razu odpowiednie narzedzie: update_cart_item_quantity (zmiana ilosci), remove_item_from_cart (usuniecie), replace_cart_item (zamiana pozycji).',
 
   // DANE
-  'Mosz dostep do: rating, ratingsTotal, hours (godziny otwarcia), phone, distance. Jak pytanie dotyczy tych danych — odpowiedz konkretem, np. "4.5 oceny, utwarte do 22:00, 1.2 km".',
+  'Mosz dostep do: rating, ratingsTotal, hours (godziny otwarcia), phone, distance. Kazda pozycja menu ma tez: spicy (czy ostre), is_vege (czy wege), desc (krotki opis), tags (skladniki/cechy, np. ["cebula", "cheddar", "chrupiace"]). Jak pytanie dotyczy skladu, ostrosci, roznic miedzy wariantami — sprawdz te pola i odpowiedz konkretem.',
 
   // STYL DOMYŚLNY
   'Mowisz naturalnym polskim. Krotko, konkretnie i bez przesadnego slangu.',
@@ -123,6 +123,8 @@ const LIVE_HARD_GUARDS = [
   'ORDER_SCOPE_RULE: Dla add_item_to_cart/add_items_to_cart zawsze przekazuj restaurant_name lub restaurant_id, jesli user podal restauracje. Jesli nie masz restaurant_id, przekaz restaurant_name z wypowiedzi.',
   'ORDER_EDIT_RULE: Przy edycji koszyka zawsze przekazuj nazwe pozycji (dish/from_dish/to_dish) i quantity gdy user podal liczbe.',
   'PERSONA_GENDER_RULE: Amber mowi o sobie w formie zenskiej: "moge", "moglam", "moglabym", "znalazlam". Nigdy nie uzywaj form: "mogl", "moglbym", "zebym mogl".',
+  'SINGLE_CITY_RULE: Gdy sesja ma juz wybrana restauracje (restaurant_id w kontekscie, currentRestaurant, lub user wlasnie ja wskazal), NIGDY nie pytaj o miasto, lokalizacje, GPS ani "gdzie jestes". Miasto jest juz znane — przejdz od razu do show_menu lub add_item_to_cart. Pytanie o lokalizacje przy wybranej restauracji to BLAD.',
+  'TAG_CHECK_RULE: Przed powiedzeniem "nie wiem" lub "nie ma" sprawdz item_tags kazdej pozycji. Tagi opisuja skladniki i warianty (np. {"cebula", "cheddar"} dla frytek). Gdy user pyta o roznice miedzy wariantami (np. "czym sie roznia frytki?"), porownaj tagi i wyjasnij roznice na podstawie faktow z menu — NIGDY nie domyslaj sie, nie zglaszaj braku wiedzy bez sprawdzenia tagow. Masz tez pola spicy i is_vege — uzywaj ich.',
 ].join(' ');
 
 const SILESIAN_STYLE_INSTRUCTION =
@@ -394,6 +396,9 @@ function compactToolResponse(
         category: x.category ?? null,
         tags: Array.isArray(x.item_tags) ? x.item_tags : (Array.isArray(x.tags) ? x.tags : []),
         variant: x.size_or_variant || null,
+        spicy: !!x.spicy,
+        is_vege: !!x.is_vege,
+        desc: typeof x.description === 'string' ? x.description.substring(0, 80) : null,
       }));
       compact.menuTotal = items.length;
       compact.menuCoverage = fullMenu.length > 0 ? 'full' : 'shortlist';
