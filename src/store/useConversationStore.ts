@@ -13,6 +13,7 @@ interface ConversationState {
     currentRestaurant: any | null;
     pendingOrder: any | null;
     cart: any | null;
+    cartSyncKey: number;
     expectedContext: string | null;
     conversationClosed: boolean;
     closedReason: string | null;
@@ -54,6 +55,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     currentRestaurant: null,
     pendingOrder: null,
     cart: null,
+    cartSyncKey: 0,
     expectedContext: null,
     conversationClosed: false,
     closedReason: null,
@@ -76,8 +78,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
     handleOrderSuccess: () => {
         console.log('[POST_SUBMIT_RESET] Resetting all UI state after order success');
-        set({
+        set((s) => ({
             cart: null,
+            cartSyncKey: s.cartSyncKey + 1,
             pendingOrder: null,
             expectedContext: null,
             uiMode: 'list',
@@ -91,19 +94,20 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             selectedRestaurantPreviewId: null,
             menuItems: null,
             lastIntent: null,
-        });
+        }));
     },
 
     resetSession: () => {
         const newId = generateSessionId();
         localStorage.setItem('amber-session-id', newId);
-        set({
+        set((s) => ({
             sessionId: newId,
             uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
             pendingOrder: null,
             cart: null,
+            cartSyncKey: s.cartSyncKey + 1,
             expectedContext: null,
             conversationClosed: false,
             closedReason: null,
@@ -117,7 +121,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             menuItems: null,
             lastIntent: null,
             lastSource: null
-        });
+        }));
     },
 
     closeMenuContext: () => {
@@ -263,7 +267,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 || data.actions?.some((a: any) => a.type === 'order_success' || a.type === 'order_confirmed');
 
             if (isOrderSuccess) {
-                set({
+                set((s) => ({
                     isThinking: false,
                     lastResponse: amberReply,
                     conversationHistory: newHistory,
@@ -274,6 +278,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     currentRestaurant: null,
                     pendingOrder: null,
                     cart: null,
+                    cartSyncKey: s.cartSyncKey + 1,
                     expectedContext: null,
                     conversationClosed: data.conversationClosed || false,
                     closedReason: data.closedReason || data.meta?.closedReason || null,
@@ -283,11 +288,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     menuItems: null,
                     lastIntent: data.intent || null,
                     lastSource: data.meta?.source || null,
-                });
+                }));
                 return;
             }
 
-            set({
+            set((s) => ({
                 isThinking: false,
                 lastResponse: amberReply,
                 conversationHistory: newHistory,
@@ -297,18 +302,19 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 conversationPhase: newPhase,
                 currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
-                cart: data.meta?.cart || ctx.cart || get().cart,
+                cart: data.meta?.cart || ctx.cart || s.cart,
+                cartSyncKey: (data.meta?.cart || ctx.cart) ? s.cartSyncKey + 1 : s.cartSyncKey,
                 // When phase resets to idle (or find_nearby forces discovery), clear expectedContext to prevent UI desynchro (P4)
-                expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : get().expectedContext),
+                expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : s.expectedContext),
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
-                suggestedRestaurants: (restaurantsFromResponse && restaurantsFromResponse.length > 0) ? restaurantsFromResponse : (isIdle ? null : get().suggestedRestaurants),
-                selectedRestaurantPreviewId: restaurantsFromResponse?.[0]?.id || (isIdle ? null : get().selectedRestaurantPreviewId),
-                menuItems: menuFromResponse || (isIdle ? null : get().menuItems),
+                suggestedRestaurants: (restaurantsFromResponse && restaurantsFromResponse.length > 0) ? restaurantsFromResponse : (isIdle ? null : s.suggestedRestaurants),
+                selectedRestaurantPreviewId: restaurantsFromResponse?.[0]?.id || (isIdle ? null : s.selectedRestaurantPreviewId),
+                menuItems: menuFromResponse || (isIdle ? null : s.menuItems),
                 lastIntent: data.intent || null,
                 lastSource: data.meta?.source || null,
-            });
+            }));
 
             if (data.conversationClosed && data.newSessionId) {
                 setTimeout(() => {

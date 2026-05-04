@@ -755,7 +755,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     console.log(`[LIVE_CART] pendingOrder=${JSON.stringify(nextStoreState.pendingOrder || null)}`);
                     console.log(`[LIVE_CART] checkoutVisible=${String(nextUiMode === 'checkout')}`);
                 }
-                useConversationStore.setState(nextStoreState);
+                useConversationStore.setState((prev) => ({
+                    ...nextStoreState,
+                    cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
+                }));
 
                 // Mirror do ActiveSessionMap — Level 2 Memory
                 if (backendCart) {

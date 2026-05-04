@@ -101,10 +101,11 @@ export default function Cart() {
     const clearedPendingOrder = state.pendingOrder
       ? { ...state.pendingOrder, items: [], total: 0 }
       : null;
-    useConversationStore.setState({
+    useConversationStore.setState((prev) => ({
       cart: emptyStoreCart,
+      cartSyncKey: prev.cartSyncKey + 1,
       pendingOrder: clearedPendingOrder,
-    });
+    }));
     setIsOpen(false);
     if (phase === 'checkout' || uiMode === 'checkout') {
       restoreUiModeAfterClose();
@@ -137,8 +138,15 @@ export default function Cart() {
   const phase = useConversationStore(state => state.conversationPhase);
   const uiMode = useConversationStore(state => state.uiMode);
   const storeCart = useConversationStore(state => state.cart);
+  const storeCartSyncKey = useConversationStore(state => state.cartSyncKey);
   const pendingOrder = useConversationStore(state => state.pendingOrder);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
+
+  // Fix #5.7: cartSyncKey to monotonically increasing counter bumped on every
+  // store cart mutation (both WS and HTTP paths). Using a ref to track the last
+  // synced key bypasses ALL React timing/batching edge cases — no length
+  // comparison heuristic can fool it.
+  const lastSyncedCartKeyRef = useRef(0);
 
   // Zabezpieczenie przed "wiszacym" koszykiem - jesli uzytkownik w 'checkout' zamknie koszyk z palca, nie otwieraj go
   const [closedInCheckout, setClosedInCheckout] = useState(false);
@@ -152,23 +160,47 @@ export default function Cart() {
 
   const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
 
-  // Fix #5.5: Sync store cart → local CartContext whenever store content differs.
-  // Previous guard (cart.length > 0) blocked sync when local had 2 items and store
-  // got updated to 3 (Amber added item) — the 3rd item was silently dropped from UI.
+  // Fix #5.7: Sync store cart → local CartContext.
+  // Uses cartSyncKey (monotonic counter) as the primary trigger.
+  // When cartSyncKey advances, we know the store cart was mutated by a tool
+  // result (WS or HTTP). Force sync regardless of length — backend is truth.
   //
-  // New rule: sync when store item count >= local item count (backend truth wins).
-  // Only skip when local has MORE items (user added manually, not yet in backend).
+  // The length guard (cart.length > backendItems.length) still serves as a
+  // secondary safety net for edge cases where the user manually added items
+  // that haven't reached the backend yet. But cartSyncKey always wins.
   React.useEffect(() => {
     if (typeof syncCart !== 'function') return;
 
     const backendItems = Array.isArray(storeCart?.items)
       ? storeCart.items
       : (Array.isArray(storeCart) ? storeCart : []);
-    if (backendItems.length === 0) return;
 
-    // Skip only when local cart has strictly MORE items than store
-    // (manual user additions not yet reflected in backend).
-    if (cart.length > backendItems.length) return;
+    const localCount = cart.length;
+    const backendCount = backendItems.length;
+    const syncKeyAdvanced = storeCartSyncKey > lastSyncedCartKeyRef.current;
+    const localHasMore = localCount > backendCount;
+
+    console.log(
+      `[LIVE_CART_DEBUG] sync effect — local=${localCount} backend=${backendCount} ` +
+      `syncKey=${storeCartSyncKey} lastSyncedKey=${lastSyncedCartKeyRef.current} ` +
+      `keyAdvanced=${syncKeyAdvanced} localHasMore=${localHasMore} ` +
+      `backendEmpty=${backendCount === 0}`,
+    );
+
+    if (backendCount === 0 && !syncKeyAdvanced) {
+      console.log(`[LIVE_CART_DEBUG] skip: backend empty, key not advanced`);
+      return;
+    }
+
+    // When cartSyncKey advanced: backend explicitly mutated the cart — force sync.
+    // When key did NOT advance: only skip if local has strictly MORE items
+    // (user added manually, not yet in backend).
+    if (!syncKeyAdvanced && localHasMore) {
+      console.log(`[LIVE_CART_DEBUG] skip: localHasMore without key advance`);
+      return;
+    }
+
+    console.log(`[LIVE_CART_DEBUG] syncing... trigger=${syncKeyAdvanced ? 'key' : 'items'}`);
 
     const restaurantFromPendingOrder = pendingOrder?.restaurant
       ? {
@@ -177,9 +209,6 @@ export default function Cart() {
         }
       : null;
 
-    // Fix #5.6: currentRestaurant ze store + ekstrakcja z samych itemow koszyka.
-    // Backend cart.items[] kazdy ma restaurant_id + restaurant_name — to najbardziej
-    // bezposrednie zrodlo. Uzywamy pierwszego itemu z pelnymi danymi jako ostatecznosc.
     const currentRestaurantFromStore = currentRestaurant?.id || currentRestaurant?.name
       ? {
           id: String(currentRestaurant.id || currentRestaurant.restaurant_id || ''),
@@ -203,8 +232,13 @@ export default function Cart() {
       || restaurantFromCartItems
       || null;
 
+    console.log(`[LIVE_CART_DEBUG] restaurantData=${JSON.stringify(restaurantData?.name || restaurantData)}`);
+    console.log(`[LIVE_CART_DEBUG] backendItems preview=${JSON.stringify(backendItems.slice(0, 5).map((i) => ({id: i.id, name: i.name, qty: i.qty || i.quantity})))}`);
+
     syncCart(backendItems, restaurantData);
-  }, [cart.length, storeCart, pendingOrder, currentRestaurant, activeRestaurant, syncCart]);
+    lastSyncedCartKeyRef.current = storeCartSyncKey;
+    console.log(`[LIVE_CART_DEBUG] sync done — lastSyncedKey now=${storeCartSyncKey}`);
+  }, [cart.length, storeCart, storeCartSyncKey, pendingOrder, currentRestaurant, activeRestaurant, syncCart]);
 
   React.useEffect(() => {
     if (phase !== 'checkout' && uiMode !== 'checkout') return;

@@ -536,7 +536,7 @@ function applyToolResultToStore(
     const hasFreshMenu = menuItems && menuItems.length > 0;
     const hasFreshRestaurants = restaurants && restaurants.length > 0;
 
-    useConversationStore.setState({
+    useConversationStore.setState((prev) => ({
         isThinking: false,
         error: null,
         lastResponse: reply,
@@ -546,13 +546,12 @@ function applyToolResultToStore(
         currentRestaurant: enrichedRestaurant,
         pendingOrder: (response.context as any)?.pendingOrder || null,
         cart: cartForStore,
+        cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
         lastIntent: nextIntent || state.lastIntent,
         lastSource: ((response.meta as any)?.source as string) || 'live_http_relay',
         suggestedRestaurants: hasFreshRestaurants ? restaurants : state.suggestedRestaurants,
-        // Only overwrite menuItems when response actually contains them.
-        // Empty [] from normalizeMenuItems would be truthy and wipe the store.
         menuItems: hasFreshMenu ? menuItems : state.menuItems,
-    });
+    }));
 
     // Mirror do ActiveSessionMap — Level 2 Memory
     if (backendCart) {
