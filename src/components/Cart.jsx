@@ -177,15 +177,23 @@ export default function Cart() {
         }
       : null;
 
+    // Fix #5.6: currentRestaurant ze store jest najbardziej wiarygodnym zrodlem
+    // po voice add — applyToolResultToStore zawsze go ustawia. Backend cart nie ma
+    // pola .restaurant, a pendingOrder jest kasowany po commitPendingOrder.
+    const currentRestaurantData = currentRestaurant?.id
+      ? { id: String(currentRestaurant.id), name: String(currentRestaurant.display_name || currentRestaurant.name || '') }
+      : null;
+
     const restaurantData =
       storeCart?.restaurant
       || pendingOrder?.restaurant_details
       || restaurantFromPendingOrder
+      || currentRestaurantData
       || activeRestaurant
       || null;
 
     syncCart(backendItems, restaurantData);
-  }, [cart.length, storeCart, pendingOrder, activeRestaurant, syncCart]);
+  }, [cart.length, storeCart, pendingOrder, currentRestaurant, activeRestaurant, syncCart]);
 
   React.useEffect(() => {
     if (phase !== 'checkout' && uiMode !== 'checkout') return;
