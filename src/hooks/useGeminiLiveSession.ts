@@ -392,6 +392,8 @@ function compactToolResponse(
         name: x.base_name || x.name,
         price: x.price ?? null,
         category: x.category ?? null,
+        tags: Array.isArray(x.item_tags) ? x.item_tags : (Array.isArray(x.tags) ? x.tags : []),
+        variant: x.size_or_variant || null,
       }));
       compact.menuTotal = items.length;
       compact.menuCoverage = fullMenu.length > 0 ? 'full' : 'shortlist';
@@ -412,6 +414,9 @@ function compactToolResponse(
       const cart = (response.cart as any) ?? {};
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
+      compact.cartItems = Array.isArray(cart.items)
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [] }))
+        : [];
       break;
     }
     case 'update_cart_item_quantity':
@@ -424,6 +429,9 @@ function compactToolResponse(
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
+      compact.cartItems = Array.isArray(cart.items)
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [] }))
+        : [];
 
       const clarifyNotAdded =
         responseIntent === 'clarify_order'

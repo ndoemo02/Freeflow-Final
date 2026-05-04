@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../state/CartContext';
 import { useAuth } from '../state/auth';
 import { useConversationStore } from '../store/useConversationStore';
+import { activeSessionMap } from '../state/ActiveSessionMap';
 import { ROUTES } from '../app/routeConfig';
 import { normalizeMenuItems } from '../lib/normalizeData';
 
@@ -106,6 +107,10 @@ export default function Cart() {
       cartSyncKey: prev.cartSyncKey + 1,
       pendingOrder: clearedPendingOrder,
     }));
+    // Fix #6.1: Clear ActiveSessionMap so no stale data survives.
+    if (state.sessionId) {
+      activeSessionMap.delete(state.sessionId);
+    }
     setIsOpen(false);
     if (phase === 'checkout' || uiMode === 'checkout') {
       restoreUiModeAfterClose();

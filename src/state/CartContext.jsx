@@ -3,6 +3,8 @@ import { useAuth } from './auth';
 import { supabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
 import { useToast } from '../components/Toast';
+import { useConversationStore } from '../store/useConversationStore';
+import { activeSessionMap } from '../state/ActiveSessionMap';
 
 const CartContext = createContext();
 
@@ -33,6 +35,20 @@ export function CartProvider({ children }) {
     const currentSessionId = localStorage.getItem('amber-session-id') || localStorage.getItem('brain_session_id');
 
     // Nowa sesja = inne sessionId niż przy ostatnim zapisie → wyczyść stare dane
+    // Fix #6.1 Ghost Cart guard: store wyczyszczony → ignoruj localStorage
+    let storeWasCleared = false;
+    try {
+      const storeState = useConversationStore.getState();
+      storeWasCleared = storeState?.cart === null && (storeState?.cartSyncKey ?? 0) > 0;
+    } catch (_) { /* store not initialized yet */ }
+    if (storeWasCleared) {
+      console.log('[CART_GHOST_GUARD] Store cart=null + cartSyncKey>0 — czyszcze localStorage');
+      localStorage.removeItem('freeflow_cart');
+      localStorage.removeItem('freeflow_cart_restaurant');
+      localStorage.removeItem('freeflow_cart_session');
+      return;
+    }
+
     const isNewSession = !savedSessionId || (currentSessionId && savedSessionId !== currentSessionId);
 
     if (isNewSession) {
@@ -152,6 +168,14 @@ export function CartProvider({ children }) {
       if (clearRestaurant) {
         window.localStorage.removeItem('freeflow_cart_restaurant');
       }
+      window.localStorage.removeItem('freeflow_cart_session');
+
+      // Fix #6.1: Clear ActiveSessionMap so no stale data survives.
+      const sid = window.localStorage.getItem('amber-session-id') || window.localStorage.getItem('brain_session_id');
+      if (sid) {
+        activeSessionMap.delete(sid);
+        console.log('[CART_RESET] ActiveSessionMap cleared for session', sid.slice(0, 8));
+      }
     }
 
     if (!silent) {
@@ -195,7 +219,11 @@ export function CartProvider({ children }) {
       id: item.id || item.menu_item_id,
       name: item.name,
       price: Number(item.price_pln ?? item.price ?? 0),
-      quantity: Number(item.qty ?? item.quantity ?? 1)
+      quantity: Number(item.qty ?? item.quantity ?? 1),
+      item_tags: Array.isArray(item.item_tags) ? item.item_tags : [],
+      category: item.category || null,
+      restaurant_id: item.restaurant_id || null,
+      restaurant_name: item.restaurant_name || null,
     }));
 
     setCart(mappedItems);

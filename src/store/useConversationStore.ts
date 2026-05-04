@@ -2,6 +2,7 @@
 import { getApiUrl } from '../lib/config';
 import { repairMojibakeText } from '../lib/textSanitizer';
 import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
+import { activeSessionMap } from '../state/ActiveSessionMap';
 
 interface ConversationState {
     sessionId: string;
@@ -78,6 +79,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
     handleOrderSuccess: () => {
         console.log('[POST_SUBMIT_RESET] Resetting all UI state after order success');
+        const sid = get().sessionId;
+        if (sid) {
+          activeSessionMap.delete(sid);
+          console.log('[POST_SUBMIT_RESET] ActiveSessionMap cleared for session', sid.slice(0, 8));
+        }
         set((s) => ({
             cart: null,
             cartSyncKey: s.cartSyncKey + 1,
@@ -98,6 +104,11 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     },
 
     resetSession: () => {
+        const oldSid = get().sessionId;
+        if (oldSid) {
+          activeSessionMap.delete(oldSid);
+          console.log('[RESET_SESSION] ActiveSessionMap cleared for session', oldSid.slice(0, 8));
+        }
         const newId = generateSessionId();
         localStorage.setItem('amber-session-id', newId);
         set((s) => ({

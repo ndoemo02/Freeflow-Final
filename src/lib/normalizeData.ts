@@ -64,6 +64,9 @@ export const normalizeCartItems = (cart: any): { items: any[]; total: number } |
             quantity: Number(item.quantity ?? item.qty ?? 1),
             restaurant_id: item.restaurant_id || item.restaurantId || null,
             restaurant_name: item.restaurant_name || item.restaurantName || null,
+            // Fix #6.3: taxonomy tags for item identity
+            item_tags: Array.isArray(item.item_tags) ? item.item_tags : [],
+            category: item.category || null,
         }));
 
     const total = normalizedItems.reduce((sum: number, item: any) => sum + (item.price_pln * item.qty), 0);
