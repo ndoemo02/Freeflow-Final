@@ -33,3 +33,6 @@ test.js
 .env
 .env.local
 .vercel
+
+# Graphify analysis cache (generated artifacts)
+src/graphify-out/
