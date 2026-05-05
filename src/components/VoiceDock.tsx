@@ -372,14 +372,14 @@ export default function VoiceDock({
       {visible && (
         <motion.div
           data-ui-role="voice-dock-layer"
-          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center px-5 sm:px-8 pb-[calc(env(safe-area-inset-bottom)+12px)]"
           style={dockWrapperStyle}
           initial={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
           animate={{ opacity: 1, y: isMobile ? mobileYOffset : 0 }}
           exit={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="w-full pointer-events-auto flex flex-col gap-2">
+          <div className="w-full max-w-3xl pointer-events-auto flex flex-col gap-2">
             {/* ----- Message history ----- */}
             <AnimatePresence initial={false}>
               {showHistory && messages.length > 0 && (
@@ -452,7 +452,7 @@ export default function VoiceDock({
             <div
               ref={barRef}
               data-ui-role="voice-dock-bar"
-              className="relative flex items-end gap-2.5 px-3 py-2"
+              className="relative flex items-center gap-2.5 px-3 h-12"
               style={dockGlassStyle}
             >
               {/* Listening pulse glow (subtle, infinite) */}
