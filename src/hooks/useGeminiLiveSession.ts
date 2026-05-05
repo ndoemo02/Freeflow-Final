@@ -92,7 +92,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'MULTI_MENU_COUNT_RULE: Jesli user poda liczbe pozycji na restauracje (np. "po 2 dania"), ustaw max_restaurants i max_items_per_restaurant zgodnie z prosba (limit bezpieczenstwa max 3).',
 
   // TRYB ORDER — uzytkownik zamawia
-  'TRYB_ORDER: natychmiast add_item_to_cart. Niy pytej "czy na pewno". Po dodaniu zapytaj czy cosik jeszcze.',
+  'TRYB_ORDER: natychmiast add_item_to_cart. Nie pytaj "czy na pewno". Po dodaniu zapytaj czy coś jeszcze.',
   'TOOL_RESULT_TRUTH_RULE: Po add_item_to_cart/add_items_to_cart NIGDY nie mow "dodane", jesli response.intent=clarify_order albo actionStatus=not_added_clarify albo cartChanged=false. Wtedy jasno powiedz, ze pozycja NIE zostala jeszcze dodana i popros o doprecyzowanie.',
   'ORDER_WITH_RESTAURANT_RULE: Gdy user podaje pozycje ORAZ restauracje (np. "2x Kurczak XL z Lawasz Kebab"), nie wymagaj wczesniejszego show_menu ani find_nearby. Od razu wywolaj add_items_to_cart/add_item_to_cart z restaurant_name i pozycjami.',
   'ORDER_EDIT_MODE: Gdy user chce edytowac koszyk, wykonaj od razu odpowiednie narzedzie: update_cart_item_quantity (zmiana ilosci), remove_item_from_cart (usuniecie), replace_cart_item (zamiana pozycji).',
@@ -110,7 +110,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'ZABRONIONE: "moge sprawdzic", "pozwol ze", "chwileczke", "nie mam dostepu", nazwy narzedzi (find_nearby/show_menu/add_item_to_cart), zapowiadanie tool call zamiast jego wykonania.',
 
   // STYL
-  'Maks 2 zdania przed pytaniem. Niy czytej list, CHYBA ZE user wprost prosi o liste/porownanie/ranking — wtedy lista jest dozwolona i preferowana. Konczac pytaniem — roznicuj formule.',
+  'Maks 2 zdania przed pytaniem. Nie czytaj list, CHYBA ŻE user wprost prosi o listę/porównanie/ranking — wtedy lista jest dozwolona i preferowana. Kończąc pytaniem — różnicuj formułę.',
 
 ].join(' ');
 
@@ -126,7 +126,7 @@ const LIVE_HARD_GUARDS = [
   'SINGLE_CITY_RULE: Gdy sesja ma juz wybrana restauracje (restaurant_id w kontekscie, currentRestaurant, lub user wlasnie ja wskazal), NIGDY nie pytaj o miasto, lokalizacje, GPS ani "gdzie jestes". Miasto jest juz znane — przejdz od razu do show_menu lub add_item_to_cart. Pytanie o lokalizacje przy wybranej restauracji to BLAD.',
   'TAG_CHECK_RULE: Przed powiedzeniem "nie wiem" lub "nie ma" sprawdz item_tags kazdej pozycji. Tagi opisuja skladniki i warianty (np. {"cebula", "cheddar"} dla frytek). Gdy user pyta o roznice miedzy wariantami (np. "czym sie roznia frytki?"), porownaj tagi i wyjasnij roznice na podstawie faktow z menu — NIGDY nie domyslaj sie, nie zglaszaj braku wiedzy bez sprawdzenia tagow. Masz tez pola spicy i is_vege — uzywaj ich.',
   'SAFETY_CHECK_RULE: Gdy uzytkownik chce USUNAC skladnik z dania (np. "bez cebuli", "bez sosu"), sprawdz pole "safety.removable" tego dania w menuItems. Jesli skladnik JEST na liscie removable → dodaj go do special_instructions.removed w add_item_to_cart. Jesli skladnika NIE ma na liscie → powiedz ze to bazowy skladnik dania i nie mozna go usunac, ale zaproponuj cos podobnego z menu. NIGDY nie usuwaj skladnikow spoza listy removable — nawet jesli user prosi.',
-  'SPECIAL_INSTRUCTIONS_RULE: Gdy uzytkownik personalizuje danie (usuwa/dodaje skladniki, zostawia notatke), zapisz to w parametrze special_instructions narzedzia add_item_to_cart: { removed: ["skladnik1"], extra: [], note: "opisowa notatka" }. Po dodaniu do koszyka, wspomnij o personalizacji w potwierdzeniu (np. "Dodalem frytki bez cebuli, mocno wysmazone"). Przy podsumowaniu zamowienia powtorz wszystkie modyfikacje.',
+  'SPECIAL_INSTRUCTIONS_RULE: Gdy uzytkownik personalizuje danie (usuwa/dodaje skladniki, zostawia notatke), zapisz to w parametrze special_instructions narzedzia add_item_to_cart: { removed: ["skladnik1"], extra: [], note: "opisowa notatka" }. Po dodaniu do koszyka, wspomnij o personalizacji w potwierdzeniu (np. "Dodalam frytki bez cebuli, mocno wysmazone"). Przy podsumowaniu zamowienia powtorz wszystkie modyfikacje.',
 ].join(' ');
 
 const SILESIAN_STYLE_INSTRUCTION =
@@ -381,6 +381,9 @@ function compactToolResponse(
         rating: x.maps_rating ?? x.rating ?? null,
         ratingsTotal: x.maps_ratings_total ?? null,
         distance: x.distance ?? null,
+        image_url: x.image_url || null,
+        city: x.city || null,
+        opening_hours: x.opening_hours || null,
       }));
       break;
     }
@@ -401,6 +404,8 @@ function compactToolResponse(
         spicy: !!x.spicy,
         is_vege: !!x.is_vege,
         desc: typeof x.description === 'string' ? x.description.substring(0, 80) : null,
+        dietary_flags: Array.isArray(x.dietary_flags) ? x.dietary_flags : [],
+        image_url: x.image_url || null,
         safety: x.safety_data && typeof x.safety_data === 'object' ? {
           removable: Array.isArray(x.safety_data.removable_ingredients) ? x.safety_data.removable_ingredients : [],
         } : null,
@@ -425,7 +430,7 @@ function compactToolResponse(
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], image_url: i.image_url || null, ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
       break;
     }
@@ -440,7 +445,7 @@ function compactToolResponse(
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, tags: i.item_tags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], image_url: i.image_url || null, ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
 
       const clarifyNotAdded =

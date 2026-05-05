@@ -266,7 +266,7 @@ export async function manageTurn(userText: string, prev: Slots): Promise<TurnRes
       if (restaurants.length > 0) {
         const r = restaurants[0];
         return {
-          speech: `Znalazłem ${r.name}${r.city ? ` w ${r.city}` : ""}. Co chciałbyś zamówić?`,
+          speech: `Znalazłam ${r.name}${r.city ? ` w ${r.city}` : ""}. Co chcesz zamówić?`,
           ui_suggestions: ["Pizza", "Burger", "Frytki"],
           slots: { ...prev, restaurant: r.name, restaurantId: r.id },
           action: "search_menu",
@@ -274,7 +274,7 @@ export async function manageTurn(userText: string, prev: Slots): Promise<TurnRes
         };
       } else {
         return {
-          speech: "Nie znalazłem tej restauracji. Spróbuj 'Pizza Hut', 'KFC' albo 'McDonald's'.",
+          speech: "Nie znalazłam tej restauracji. Spróbuj 'Pizza Hut', 'KFC' albo 'McDonald's'.",
           ui_suggestions: ["Pizza Hut", "KFC", "McDonald's"],
           slots: prev,
         };
@@ -331,7 +331,7 @@ if (!prev.restaurantId && isFoodItem) {
     if (items.length > 0) {
       const bestMatch = items[0];
       return {
-        speech: `Znalazłem ${bestMatch.name} w ${restaurant.name} za ${bestMatch.price} zł. Dodaję do koszyka?`,
+        speech: `Znalazłam ${bestMatch.name} w ${restaurant.name} za ${bestMatch.price} zł. Dodaję do koszyka?`,
         ui_suggestions: ["Tak", "Nie", "Pokaż inne"],
         slots: { 
           ...prev, 
@@ -348,7 +348,7 @@ if (!prev.restaurantId && isFoodItem) {
   }
   
   return {
-    speech: `Nie znalazłem "${normalized}" w dostępnych restauracjach. Wybierz restaurację z listy.`,
+    speech: `Nie znalazłam "${normalized}" w dostępnych restauracjach. Wybierz restaurację z listy.`,
     ui_suggestions: ["Pokaż restauracje", "KFC", "Pizza Hut"],
     slots: prev,
     action: "search_restaurants_general"
@@ -380,7 +380,7 @@ if (prev.restaurantId || isFoodItem) {
       };
     } else {
       return {
-        speech: "Nie znalazłem pozycji w menu. Spróbuj powiedzieć, na co masz ochotę – np. pizza, burger, frytki.",
+        speech: "Nie znalazłam pozycji w menu. Spróbuj powiedzieć, na co masz ochotę – np. pizza, burger, frytki.",
         ui_suggestions: ["Pizza", "Burger", "Frytki"],
         slots: { ...prev },
       };
@@ -446,7 +446,7 @@ if (isFoodItem) {
     };
   } else {
     return {
-      speech: `Nie znalazłem "${normalized}" w menu. Spróbuj powiedzieć "pizza" lub "burger".`,
+      speech: `Nie znalazłam "${normalized}" w menu. Spróbuj powiedzieć "pizza" lub "burger".`,
       ui_suggestions: ["Pizza", "Burger", "Frytki"],
       slots: { ...prev },
     };
@@ -459,7 +459,7 @@ if (isFoodItem) {
     const qty = parseInt(normalized.match(/\d+/)![0] || "1", 10);
     const total = (prev.price || 0) * qty;
     return {
-      speech: `Dodałem ${qty}× ${prev.menuItem} za ${total} zł. Chcesz coś jeszcze?`,
+      speech: `Dodałam ${qty}× ${prev.menuItem} za ${total} zł. Chcesz coś jeszcze?`,
       ui_suggestions: ["Tak", "Nie", "Koszyk", "Finalizuj", "Zamów"],
       slots: { ...prev, quantity: qty, price: prev.price }, // zachowaj cenę jednostkową
       action: "add_to_cart",
@@ -488,7 +488,7 @@ if (isFoodItem) {
   if (items.length > 0) {
     const bestMatch = items[0];
     return {
-      speech: `Znalazłem ${bestMatch.name} za ${bestMatch.price} zł. Dodaję do koszyka?`,
+      speech: `Znalazłam ${bestMatch.name} za ${bestMatch.price} zł. Dodaję do koszyka?`,
       ui_suggestions: ["Tak", "Nie", "Pokaż inne"],
       slots: { 
         ...prev, 
