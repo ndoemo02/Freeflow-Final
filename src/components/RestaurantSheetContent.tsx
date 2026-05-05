@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { WheelPicker, WheelPickerWrapper, type WheelPickerOption } from '@ncdai/react-wheel-picker';
 import SheetScrollable from './sheet/SheetScrollable';
 import { useBottomSheetContext } from './sheet/BottomSheetContainer';
 import { getSheetViewportSnapPositions } from './sheet/sheetPhysics';
@@ -61,11 +62,13 @@ function FloatingRestaurantFocusCard({
     stackOffset,
     isRecommended,
     onClick,
+    interactive = true,
 }: {
     item: any;
     stackOffset: number;
     isRecommended: boolean;
     onClick: () => void;
+    interactive?: boolean;
 }) {
     const depthStyle = getDepthStyle(stackOffset);
     const isFocused = stackOffset === 0;
@@ -83,6 +86,7 @@ function FloatingRestaurantFocusCard({
                 opacity: depthStyle.opacity,
                 filter: isFocused ? 'none' : 'blur(0.6px)',
                 zIndex: depthStyle.z,
+                pointerEvents: interactive ? 'auto' : 'none',
                 transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease, filter 220ms ease',
                 willChange: 'transform',
             }}
@@ -296,17 +300,29 @@ export default function RestaurantSheetContent({
     setSnap,
 }: RestaurantSheetContentProps) {
     const { boundary } = useBottomSheetContext();
+    const [isCoarsePointer, setIsCoarsePointer] = useState(false);
     const swipeStartYRef = useRef<number | null>(null);
     const swipeStartAtRef = useRef(0);
     const lastWheelAtRef = useRef(0);
     const pointerStartYRef = useRef<number | null>(null);
     const pointerStartAtRef = useRef(0);
+    const wheelUpdateRafRef = useRef<number | null>(null);
+    const pendingWheelValueRef = useRef<string | null>(null);
+    const wheelOptions = useMemo<WheelPickerOption<string>[]>(() => {
+        return items.map((item, index) => ({
+            value: item._uiId,
+            label: item?.name || `Pozycja ${index + 1}`,
+            textValue: item?.name || `Pozycja ${index + 1}`,
+        }));
+    }, [items]);
     const activeIndex = useMemo(() => {
         const found = items.findIndex((item) => item._uiId === highlightedId);
         return found >= 0 ? found : 0;
     }, [highlightedId, items]);
+    const activeWheelValue = items[activeIndex]?._uiId || wheelOptions[0]?.value || '';
 
     const isExpanded = snap === 'expanded';
+    const useWheelPicker = !isExpanded && isCoarsePointer && items.length > 1;
     const isTeaser = snap === 'closed';
     const stackOffsets = isTeaser ? [-1, 0, 1] : [-2, -1, 0, 1, 2];
 
@@ -343,7 +359,7 @@ export default function RestaurantSheetContent({
     }, []);
 
     const handlePeekWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
-        if (isExpanded || Math.abs(event.deltaY) < 8) {
+        if (isExpanded || useWheelPicker || Math.abs(event.deltaY) < 8) {
             return;
         }
 
@@ -354,7 +370,56 @@ export default function RestaurantSheetContent({
         const direction = event.deltaY > 0 ? 1 : -1;
         const steps = Math.min(3, Math.max(1, Math.round(Math.abs(event.deltaY) / 120)));
         selectIndex(activeIndex + direction * steps);
-    }, [activeIndex, isExpanded, selectIndex]);
+    }, [activeIndex, isExpanded, selectIndex, useWheelPicker]);
+
+    const handleWheelValueChange = useCallback((nextValue: string) => {
+        if (!nextValue || nextValue === highlightedId) {
+            return;
+        }
+        pendingWheelValueRef.current = nextValue;
+        if (wheelUpdateRafRef.current != null) {
+            return;
+        }
+        wheelUpdateRafRef.current = window.requestAnimationFrame(() => {
+            wheelUpdateRafRef.current = null;
+            const queuedValue = pendingWheelValueRef.current;
+            pendingWheelValueRef.current = null;
+            if (queuedValue && queuedValue !== highlightedId) {
+                setHighlightedId(queuedValue);
+            }
+        });
+    }, [highlightedId, setHighlightedId]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return;
+        }
+
+        const mediaQuery = window.matchMedia('(pointer: coarse)');
+        const update = (event?: MediaQueryListEvent) => {
+            setIsCoarsePointer(event ? event.matches : mediaQuery.matches);
+        };
+
+        update();
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', update);
+            return () => mediaQuery.removeEventListener('change', update);
+        }
+
+        mediaQuery.addListener(update);
+        return () => mediaQuery.removeListener(update);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (wheelUpdateRafRef.current != null) {
+                window.cancelAnimationFrame(wheelUpdateRafRef.current);
+                wheelUpdateRafRef.current = null;
+            }
+            pendingWheelValueRef.current = null;
+        };
+    }, []);
 
     const applyGesture = useCallback((
         deltaY: number,
@@ -529,6 +594,7 @@ export default function RestaurantSheetContent({
                                         item={item}
                                         stackOffset={offset}
                                         isRecommended={item._uiId === recommendedId}
+                                        interactive={!useWheelPicker}
                                         onClick={() => {
                                             setHighlightedId(item._uiId);
                                             onSelect(item);
@@ -536,6 +602,28 @@ export default function RestaurantSheetContent({
                                     />
                                 ))}
                             </div>
+
+                            {useWheelPicker ? (
+                                <div className="freeflow-wheel-overlay absolute inset-0 z-[120]">
+                                    <WheelPickerWrapper className="h-full w-full">
+                                        <WheelPicker<string>
+                                            value={activeWheelValue}
+                                            onValueChange={handleWheelValueChange}
+                                            options={wheelOptions}
+                                            infinite={items.length >= 4}
+                                            visibleCount={12}
+                                            optionItemHeight={CARD_HEIGHT}
+                                            dragSensitivity={4}
+                                            scrollSensitivity={8}
+                                            classNames={{
+                                                optionItem: 'freeflow-wheel-option',
+                                                highlightWrapper: 'freeflow-wheel-highlight-wrapper',
+                                                highlightItem: 'freeflow-wheel-highlight-item',
+                                            }}
+                                        />
+                                    </WheelPickerWrapper>
+                                </div>
+                            ) : null}
                         </div>
                     </div>
                     <div className="pointer-events-auto mt-auto flex justify-end pb-[calc(env(safe-area-inset-bottom)+96px)] pr-1">
