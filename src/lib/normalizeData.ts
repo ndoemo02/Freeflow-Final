@@ -81,9 +81,12 @@ export const normalizeRestaurants = (items: any[] | null | undefined): any[] | n
     return items.filter(Boolean).map((item, index) => {
         const rating = item.maps_rating || item.rating || 4.5;
         const ratingsCount = item.maps_ratings_total || 0;
+        // Stabilny UI id: priorytet to istniejący _uiId, potem crypto.randomUUID, potem fallback
+        const stableUiId = item._uiId || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `r-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 9)}`);
         
         return {
             ...item,
+            _uiId: stableUiId,
             id: item.id || `restaurant-${index}`,
             name: repairMojibakeText(item.display_name || item.name || 'Restauracja'),
             cuisine_type: repairMojibakeText(item.cuisine_type || item.category || item.city || 'Restauracja'),

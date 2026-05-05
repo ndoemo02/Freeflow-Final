@@ -738,7 +738,7 @@ export default function CinematicRestaurantCarousel({
                             // soft instead of popping.
                             return (
                                 <div
-                                    key={item.id}
+                                    key={item._uiId || item.id}
                                     ref={(el) => { cardRefs.current[i] = el; }}
                                     onClick={() => handleCardClick(i)}
                                     style={{
@@ -870,7 +870,7 @@ export default function CinematicRestaurantCarousel({
                             <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' } as React.CSSProperties}>
                                 {items.map((item, i) => (
                                     <div
-                                        key={item.id}
+                                        key={item._uiId || item.id}
                                         onClick={() => handleListItemClick(i)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 11,
