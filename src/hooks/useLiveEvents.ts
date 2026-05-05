@@ -325,9 +325,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
     const wsUrl = useMemo(() => {
         if (!enabled || !sessionId) return null;
         const resolved = buildLiveWsUrl(sessionId);
-        console.log(`[LIVE_WS] source=${resolved.source}`);
-        console.log(`[LIVE_WS] resolvedBase=${resolved.base ?? 'null'}`);
-        console.log(`[LIVE_WS] finalWsUrl=${resolved.wsUrl ?? 'null'}`);
         return resolved.wsUrl;
     }, [enabled, sessionId]);
 
@@ -353,7 +350,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 && current.suggestedRestaurants.some((restaurant: any) => String(restaurant?.id ?? '') === restaurantId);
             if (!hasRestaurant) return {};
             if (String(current.selectedRestaurantPreviewId || '') === restaurantId) return {};
-            console.log(`[UI_LIVE_FOCUS_SYNC] reason=${reason} id=${restaurantId}`);
             return { selectedRestaurantPreviewId: restaurantId };
         });
     }, []);
@@ -413,7 +409,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
     }, [enabled, sessionId, clearFocusSyncTimers, focusRestaurantById]);
 
     useEffect(() => {
-        console.log(`[LIVE_EFFECT] useLiveEvents effect fired â€” wsUrl=${wsUrl ? 'set' : 'null'} sessionId=${sessionId || 'none'}`);
 
         if (!wsUrl || !sessionId) {
             shouldReconnectRef.current = false;
@@ -457,12 +452,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                         lat: coords.lat,
                         lng: coords.lng,
                     }));
-                    console.log(`[LIVE_GPS_INIT] sent lat=${coords.lat} lng=${coords.lng} retry=${gpsInitRetryCount}`);
                     return;
                 }
 
                 if (gpsInitRetryCount >= MAX_GPS_INIT_RETRIES) {
-                    console.log('[LIVE_GPS_INIT] no coords after retries, stop retrying');
                     return;
                 }
 
@@ -505,7 +498,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 activeSocketSessionIdRef.current === effectSessionId &&
                 (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)
             ) {
-                console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect skipped â€” socket already ${existing.readyState === WebSocket.OPEN ? 'OPEN' : 'CONNECTING'}`);
+                // socket already OPEN or CONNECTING — skip â€” socket already ${existing.readyState === WebSocket.OPEN ? 'OPEN' : 'CONNECTING'}`);
                 return;
             }
 
@@ -513,7 +506,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             if (reason === 'reconnect') sessionInitSent = false;
 
             const nonce = ++connectNonceRef.current;
-            console.log(`[LIVE_INIT_CALLSITE] useLiveEvents connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);
+            // connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);
             const socket = new WebSocket(wsUrl);
             socketRef.current = socket;
             activeSocketSessionIdRef.current = effectSessionId;
@@ -523,7 +516,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 setConnected(true);
                 reconnectAttemptRef.current = 0;
                 clearReconnectTimer();
-                console.log('LIVE EVENTS WS OPEN - backend tool relay ready');
                 // GPS init triggered by live_ready handler (poniżej) —
                 // unikamy podwójnego wysłania session_init z onopen + live_ready.
                 gpsInitRetryCount = 0;
@@ -533,11 +525,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 if (nonce !== connectNonceRef.current) return;
                 setConnected(false);
                 if (socketRef.current === socket) socketRef.current = null;
-                console.log(`[LIVE] STOP sessionId=${effectSessionId} code=${e.code} reason=${e.reason || '(none)'}`);
                 // Do NOT reconnect on intentional close or permanent policy errors.
                 // 1000 = Normal closure, 4001/4002 = live disabled or missing session id
                 if (e.code === 1000 || e.code === 4001 || e.code === 4002) {
-                    console.log(`[LIVE] RECONNECT HALTED - intentional/policy close (${e.code})`);
                     return;
                 }
                 if (e.code === 4003) {
@@ -650,25 +640,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     nextUiMode = 'restaurant';
                 }
 
-                const liveMenuRenderVisible = nextUiMode === 'restaurant' && !!(menuItems && menuItems.length);
-                if (liveToolName === 'show_menu' || nextIntent === 'show_menu' || nextIntent === 'menu_request') {
-                    console.log('[LIVE_MENU] tool=show_menu');
-                    console.log(`[LIVE_MENU] menuItemsCount=${menuItems?.length ?? 0}`);
-                    console.log(`[LIVE_MENU] currentRestaurant=${nextCurrentRestaurantEnriched?.name || 'null'}`);
-                    console.log(`[LIVE_MENU] uiMode=${nextUiMode}`);
-                    console.log(`[LIVE_MENU] renderVisible=${liveMenuRenderVisible}`);
-                }
-                if (menuSurfaceTool || menuSurfaceIntent || hasMenuItems) {
-                    console.log('[MENU_UI] show_menu received');
-                    console.log(`[MENU_UI] uiMode=${nextUiMode}`);
-                    console.log(`[MENU_UI] currentRestaurant=${nextCurrentRestaurantEnriched?.name || 'null'}`);
-                    console.log(`[MENU_UI] menuItemsCount=${menuItems?.length ?? 0}`);
-                }
-                if (isLiveCartTool) {
-                    console.log(`[LIVE_CART] tool=${liveToolName}`);
-                    console.log(`[LIVE_CART] backendCartItems=${JSON.stringify(summarizeCartItems(response.cart || response.meta?.cart))}`);
-                }
-
                 dispatchRef.current(
                     response.actions,
                     {
@@ -709,9 +680,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                         nextSelectedRestaurantPreviewId = previousSelectedRestaurantPreviewId;
                     }
                     if (nextSelectedRestaurantPreviewId !== resolvedSelectedRestaurantPreviewId) {
-                        console.log(
-                            `[UI_LIVE_FOCUS_LOCK] mode=${nextUiMode} phase=${newPhase} selected=${nextSelectedRestaurantPreviewId}`,
-                        );
+                        // focus lock applied
                     }
                 }
                 const shouldAnimateFocusSequence = !isIdle
@@ -750,11 +719,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
                     menuItems: (menuItems && menuItems.length > 0) ? menuItems : (isIdle ? null : state.menuItems),
                 };
-                if (isLiveCartTool) {
-                    console.log(`[LIVE_CART] storeCartItems=${JSON.stringify(summarizeCartItems(nextStoreState.cart))}`);
-                    console.log(`[LIVE_CART] pendingOrder=${JSON.stringify(nextStoreState.pendingOrder || null)}`);
-                    console.log(`[LIVE_CART] checkoutVisible=${String(nextUiMode === 'checkout')}`);
-                }
                 useConversationStore.setState((prev) => ({
                     ...nextStoreState,
                     cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
@@ -769,7 +733,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                   if (storeAfter.sessionId !== responseNewSessionId) {
                     useConversationStore.setState({ sessionId: responseNewSessionId });
                     localStorage.setItem('amber-session-id', responseNewSessionId);
-                    console.log(`[LIVE_WS_SESSION] Adopted newSessionId=${responseNewSessionId.slice(0, 8)}... (conversation closed)`);
                   }
                 }
 
@@ -785,8 +748,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                         const hashOk = activeSessionMap.verifyCartHash(String(effectSessionId || state.sessionId || ''), backendCartHash);
                         if (!hashOk) {
                             console.warn(`[LIVE_CART_HASH] ❌ WS MISMATCH — frontend=${activeSessionMap.getCartHash(String(effectSessionId || state.sessionId || ''))} backend=${backendCartHash} — FORCE OVERRIDE applied`);
-                        } else {
-                            console.log(`[LIVE_CART_HASH] ✅ WS OK frontend=backend=${backendCartHash}`);
                         }
                     }
                 }

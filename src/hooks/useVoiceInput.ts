@@ -77,7 +77,7 @@ export function useVoiceInput(): UseVoiceInputReturn {
             try {
                 recognitionRef.current.start();
             } catch (e) {
-                console.warn("Recognition already started or failed to start", e);
+                // Recognition already started or failed to start
             }
         }
     }, [isListening]);

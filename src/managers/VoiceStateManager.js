@@ -13,7 +13,6 @@ export class VoiceStateManager {
 
     setState(newState) {
         if (!this.isEnabled) return;
-        console.log(`[ASM] State change: ${this.state} -> ${newState}`);
         this.state = newState;
         this.notifyListeners();
     }
@@ -26,19 +25,16 @@ export class VoiceStateManager {
 
         const now = Date.now();
         if (now < this.echoGuardUntil) {
-            console.log('[ASM] Echo Guard: Ignoring VAD start (system voice detected as user input)');
             return false; // Ignore
         }
 
         if (this.state === 'SYSTEM_SPEAKING') {
-            console.log('[ASM] Barge-in detected! Stopping TTS.');
             this.stopTTS();
             this.setState('USER_SPEAKING');
             return true;
         }
 
         if (this.state === 'PROCESSING') {
-            console.log('[ASM] Processing... ignoring new speech (unless "stop")');
             // Assuming we don't handle "stop" logic here, just blocking
             return false;
         }
@@ -64,7 +60,6 @@ export class VoiceStateManager {
 
         // Activate Echo Guard for 300ms (system latency + speaker travel time)
         this.echoGuardUntil = Date.now() + 500;
-        console.log('[ASM] TTS Started. Echo Guard active for 500ms.');
     }
 
     // Called when TTS finishes naturally
@@ -85,18 +80,16 @@ export class VoiceStateManager {
         // This method should be bound to actual cancellation logic or emit event
         // For now we just update state, actual stopping needs to be hooked up
         if (this.currentAudio) {
-            console.log('[ASM] Stopping Google TTS Audio');
             try {
                 this.currentAudio.pause();
                 this.currentAudio.currentTime = 0;
             } catch (e) {
-                console.warn('[ASM] Error stopping audio:', e);
+                // Error stopping audio
             }
             this.currentAudio = null;
         }
 
         if (typeof window.speechSynthesis !== 'undefined') {
-            console.log('[ASM] Cancelling WebSpeech TTS');
             window.speechSynthesis.cancel();
         }
 

@@ -39,10 +39,6 @@ function compactText(value: unknown, maxLen = 160): string {
   return text.length > maxLen ? `${text.slice(0, maxLen - 1)}...` : text;
 }
 
-function logLiveState(nextState: LiveUiSessionState) {
-  console.log(`[UI_LIVE_STATE] ${nextState}`);
-}
-
 export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
   sessionState: 'idle',
   statusText: 'Gotowe.',
@@ -57,10 +53,6 @@ export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
   cartSummary: null,
 
   setSessionState: (nextState, patch = {}) => {
-    const prevState = get().sessionState;
-    if (prevState !== nextState) {
-      logLiveState(nextState);
-    }
     set((state) => ({
       ...state,
       sessionState: nextState,

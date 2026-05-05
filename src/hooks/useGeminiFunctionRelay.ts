@@ -191,7 +191,6 @@ async function relayViaHttp(
         const nearbyGpsOnly = transcriptSuggestsNearbyWithoutExplicitLocation(transcript, enrichedArgs.location);
         if (nearbyGpsOnly && Number.isFinite(Number(enrichedArgs.lat)) && Number.isFinite(Number(enrichedArgs.lng))) {
             delete enrichedArgs.location;
-            console.log('[LIVE_GPS_ONLY] HTTP: nearby cue detected, dropping model location in favor of GPS');
         }
 
         const latPresent = Number.isFinite(Number(enrichedArgs.lat));
@@ -201,9 +200,6 @@ async function relayViaHttp(
             if (coords) {
                 enrichedArgs.lat = coords.lat;
                 enrichedArgs.lng = coords.lng;
-                console.log(`[LIVE_GPS_ENRICH] HTTP find_nearby lat=${coords.lat} lng=${coords.lng}`);
-            } else {
-                console.log('[LIVE_GPS_ENRICH] HTTP find_nearby: no GPS coords available');
             }
         }
     }
@@ -214,7 +210,6 @@ async function relayViaHttp(
     const isCartTool = functionCall.name === 'add_item_to_cart' || functionCall.name === 'add_items_to_cart';
     if (isCartTool && !enrichedArgs.restaurant_id && !enrichedArgs.restaurantId && currentRestaurantId) {
         enrichedArgs.restaurant_id = currentRestaurantId;
-        console.log(`[LIVE_HTTP_RESTAURANT_ENRICH] ${functionCall.name} restaurant_id=${currentRestaurantId}`);
     }
 
     const body: Record<string, unknown> = {
@@ -225,7 +220,6 @@ async function relayViaHttp(
     };
     if (transcript) body.transcript = transcript;
 
-    console.log(`[LiveDiag] 🌐 relay HTTP POST: ${functionCall.name} → ${url}  sessionId=${effectiveSessionId.slice(0, 8)}...`);
     const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -247,7 +241,6 @@ async function relayViaHttp(
     const inner = (data?.response && typeof data.response === 'object' && !Array.isArray(data.response))
         ? data.response
         : data;
-    console.log(`[LiveDiag] ✅ relay HTTP response: ${functionCall.name} ok=${inner.ok}  intent=${inner.intent || '-'}  hasMenu=${!!inner.menu}  hasMenuItems=${!!inner.menuItems}  hasRestaurants=${!!inner.restaurants}`);
     return { name: functionCall.name, response: inner };
 }
 
@@ -333,17 +326,12 @@ export function useGeminiFunctionRelay({
             const sid = getSessionId?.();
             const transcript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
             const currentRestaurantId = getCurrentRestaurantId?.();
-            console.log(`[LiveDiag] 🔄 WS unavailable, using HTTP fallback for ${functionCall.name} sessionId=${sid ?? '?'} restaurantId=${currentRestaurantId ?? 'none'}`);
             return relayViaHttp(functionCall, sid, transcript, currentRestaurantId);
         }
 
         ensureListener();
 
         const requestId = functionCall.id || `relay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
-        // ── DIAG: WS send ─────────────────────────────────────────────
-        console.log(`[LiveDiag] 🔀 relay WS.send: ${functionCall.name}  req:${requestId}  ws:${ws.readyState}`);
-        // ──────────────────────────────────────────────────────────────
 
         return new Promise<GeminiFunctionResponse>((resolve, reject) => {
             const timer = setTimeout(() => {
@@ -366,7 +354,6 @@ export function useGeminiFunctionRelay({
                     const nearbyGpsOnly = transcriptSuggestsNearbyWithoutExplicitLocation(latestTranscript, enrichedArgs.location);
                     if (nearbyGpsOnly && Number.isFinite(Number(enrichedArgs?.lat)) && Number.isFinite(Number(enrichedArgs?.lng))) {
                         delete enrichedArgs.location;
-                        console.log('[LIVE_GPS_ONLY] nearby cue detected, dropping model location in favor of GPS');
                     }
 
                     const latPresent = Number.isFinite(Number(enrichedArgs?.lat));
@@ -376,7 +363,6 @@ export function useGeminiFunctionRelay({
                         if (coords) {
                             enrichedArgs.lat = coords.lat;
                             enrichedArgs.lng = coords.lng;
-                            console.log(`[LIVE_GPS_ENRICH] find_nearby lat=${coords.lat} lng=${coords.lng}`);
                         }
                     }
                 }

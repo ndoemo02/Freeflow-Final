@@ -465,8 +465,6 @@ function applyToolResultToStore(
     toolName: string,
     response: Record<string, unknown>,
 ): void {
-    console.log(`[LIVE_HTTP_BRIDGE] applyToolResultToStore tool=${toolName}`);
-    console.dir(response);
     const state = useConversationStore.getState();
     const restaurants = normalizeRestaurants(
         (response.restaurants as any[] | undefined) || (response.context as any)?.last_restaurants_list || null,
@@ -549,8 +547,6 @@ function applyToolResultToStore(
     const backendCartHash = (response.meta as any)?.cartHash || (response as any).cartHash || '';
     const cartForStore = backendCart || state.cart; // fallback tylko gdy backend nie wysłał wcale
 
-    console.log(`[LIVE_HTTP_BRIDGE] ${toolName} → store: uiMode=${nextUiMode} intent=${nextIntent} restaurants=${restaurants?.length ?? 0} menuItems=${menuItems?.length ?? 0} cart=${!!backendCart} cartHash=${backendCartHash} cartItems=${backendCart?.items?.length ?? '?'}`);
-
     const hasFreshMenu = menuItems && menuItems.length > 0;
     const hasFreshRestaurants = restaurants && restaurants.length > 0;
 
@@ -583,8 +579,6 @@ function applyToolResultToStore(
             const hashOk = activeSessionMap.verifyCartHash(String(state.sessionId || ''), backendCartHash);
             if (!hashOk) {
                 console.warn(`[LIVE_CART_HASH] ❌ MISMATCH — frontend hash=${activeSessionMap.getCartHash(String(state.sessionId || ''))} backend hash=${backendCartHash} — FORCE OVERRIDE applied`);
-            } else {
-                console.log(`[LIVE_CART_HASH] ✅ OK frontend=backend=${backendCartHash}`);
             }
         }
     }
@@ -597,7 +591,6 @@ function applyToolResultToStore(
         if (storeAfter.sessionId !== responseNewSessionId) {
             useConversationStore.setState({ sessionId: responseNewSessionId });
             localStorage.setItem('amber-session-id', responseNewSessionId);
-            console.log(`[LIVE_HTTP_BRIDGE] Adopted newSessionId=${responseNewSessionId.slice(0, 8)}...`);
         }
     }
 }
@@ -728,7 +721,6 @@ export function useGeminiLiveSession({
       cleanupRuntime(true);
       setError(null);
       useLiveUiSessionStore.getState().setPaused();
-      console.log(`[LIVE] STOP sessionId=${sessionIdRef.current ?? 'unknown'} code=user_stop`);
     } finally {
       stopInFlightRef.current = false;
       startInFlightRef.current = false;
@@ -740,7 +732,7 @@ export function useGeminiLiveSession({
 
     // Fix #2: singleton guard â€” check sessionRef too
     if (sessionRef.current || activeRef.current || startInFlightRef.current) {
-      console.log('[LIVE] session already active â€“ skip start');
+      // session already active â€“ skip start');
       return;
     }
 
@@ -767,13 +759,6 @@ export function useGeminiLiveSession({
     setReconnectHalted(false);
     startInFlightRef.current = true;
     useLiveUiSessionStore.getState().setProcessing('Lacze z sesja LIVE...');
-    console.log(`[LIVE_INIT_CALLSITE] useGeminiLiveSession start requested â€” sessionId=${sid}`);
-    console.log(
-      `[LIVE_RUNTIME_CONFIG] sessionId=${sid} model=${activeModel} speech_style=${runtimeConfig.speechStyle} prompt_source=${runtimeConfig.promptSource}`,
-    );
-    console.log(`[LIVE] START sessionId=${sid} model=${activeModel}`);
-    console.log(`[LIVE FRONT MODEL] ${activeModel}`);
-
     const scheduleReconnect = () => {
       if (!desiredActiveRef.current || stopInFlightRef.current) return;
       if (reconnectTimerRef.current) return;
@@ -809,7 +794,6 @@ export function useGeminiLiveSession({
         const stored = localStorage.getItem('amber_live_prompt');
         if (stored && stored.trim().length > 40) {
           activeInstruction = stored.trim();
-          console.log(`[LIVE] Using local prompt fallback (${activeInstruction.length} chars)`);
         }
       } catch { /* noop */ }
     }
@@ -824,9 +808,6 @@ export function useGeminiLiveSession({
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
         if (!sessionRef.current || !activeRef.current) return;
         frameCount += 1;
-        if (frameCount <= 3) {
-          console.log(`[GeminiLive] frame#${frameCount} bytes=${pcm16.byteLength}`);
-        }
 
         try {
           sessionRef.current.sendRealtimeInput({
@@ -937,14 +918,13 @@ export function useGeminiLiveSession({
                 autoNearbyRecoveryInFlightRef.current = true;
                 autoNearbyRecoveryLastTsRef.current = now;
                 useLiveUiSessionStore.getState().setProcessing('Sprawdzam miejsca w poblizu...');
-                console.log('[LIVE_AUTO_RECOVERY] location requested despite GPS -> forcing find_nearby');
                 void relay({
                   id: `auto_find_nearby_${now}`,
                   name: 'find_nearby',
                   args: {},
                 })
-                  .catch((err) => {
-                    console.warn('[LIVE_AUTO_RECOVERY] relay failed:', err instanceof Error ? err.message : err);
+                  .catch(() => {
+                    // auto-recovery relay failed — silent
                   })
                   .finally(() => {
                     autoNearbyRecoveryInFlightRef.current = false;
@@ -955,8 +935,6 @@ export function useGeminiLiveSession({
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
               clearStallWatchdog();
               if (lastToolResponseSentAtRef.current) {
-                const deltaMs = Date.now() - lastToolResponseSentAtRef.current;
-                console.log(`[LIVE_AUDIO_LATENCY] tool_response_to_first_audio_ms=${deltaMs}`);
                 lastToolResponseSentAtRef.current = null;
               }
               player.enqueueBase64(blob.data);
@@ -1006,7 +984,6 @@ export function useGeminiLiveSession({
             const cached = liveSessionCache.get(sid);
             if (cached) {
               useConversationStore.setState(cached);
-              console.log(`[STATE] restored cart items=${cached.cart?.items?.length ?? 0}`);
             }
           },
           onmessage: handleMessage,
@@ -1030,14 +1007,10 @@ export function useGeminiLiveSession({
             });
             const wasIntentional = intentionalCloseRef.current;
             intentionalCloseRef.current = false;
-            const code = event?.code ?? 'unknown';
-            const reason = event?.reason || 'none';
-            console.log(`[LIVE] STOP sessionId=${sid} code=${code} reason=${reason} intentional=${wasIntentional}`);
             cleanupRuntime(false);
             // Do NOT reconnect on intentional close (user stop / cleanup / 1000 / 1001 equivalent)
             if (wasIntentional || !desiredActiveRef.current) {
               useLiveUiSessionStore.getState().setPaused();
-              console.log('[LIVE] RECONNECT HALTED â€” intentional close');
               return;
             }
             useLiveUiSessionStore.getState().setProcessing('Wznawiam sesje LIVE...');
@@ -1074,10 +1047,6 @@ export function useGeminiLiveSession({
       if (!isSessionActive) return;
       if (modelSwitchRestartRef.current) return;
       modelSwitchRestartRef.current = true;
-
-      console.log(
-        `[LIVE_MODEL_SWITCH] restarting active session previous=${previousModel || 'unknown'} next=${nextModel} source=${detail?.source || 'unknown'}`,
-      );
 
       stop();
       window.setTimeout(() => {
