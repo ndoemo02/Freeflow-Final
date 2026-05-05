@@ -452,7 +452,7 @@ export default function VoiceDock({
             <div
               ref={barRef}
               data-ui-role="voice-dock-bar"
-              className="relative flex items-center gap-2.5 px-3 h-12"
+              className="relative flex items-center gap-2.5 px-3 h-14"
               style={dockGlassStyle}
             >
               {/* Listening pulse glow (subtle, infinite) */}
