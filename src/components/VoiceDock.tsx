@@ -372,7 +372,7 @@ export default function VoiceDock({
       {visible && (
         <motion.div
           data-ui-role="voice-dock-layer"
-          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center pl-14 pr-5 sm:pl-20 sm:pr-8 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center pl-10 pr-5 sm:pl-12 sm:pr-8 pb-[calc(env(safe-area-inset-bottom)+12px)]"
           style={dockWrapperStyle}
           initial={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
           animate={{ opacity: 1, y: isMobile ? mobileYOffset : 0 }}
