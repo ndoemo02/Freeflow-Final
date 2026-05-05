@@ -314,6 +314,30 @@ export async function manageTurn(userText: string, prev: Slots): Promise<TurnRes
     }
   }
 
+// Rozpoznawanie - sprawdź czy to może być nazwa dania
+const isFoodItem =
+  normalized.includes("pizza") ||
+  normalized.includes("burger") ||
+  normalized.includes("frytki") ||
+  normalized.includes("cola") ||
+  normalized.includes("margherita") ||
+  normalized.includes("pepperoni") ||
+  normalized.includes("popcorn") ||
+  normalized.includes("chicken") ||
+  normalized.includes("zinger") ||
+  normalized.includes("wings") ||
+  normalized.includes("gulasz") ||
+  normalized.includes("pierogi") ||
+  normalized.includes("sýr") ||
+  normalized.includes("zupa") ||
+  normalized.includes("czosnkowa") ||
+  normalized.includes("wieprzowy") ||
+  normalized.includes("knedlik") ||
+  normalized.includes("mięsem") ||
+  normalized.includes("smažený") ||
+  // Sprawdź czy tekst zawiera więcej niż 2 słowa (może być pełna nazwa dania)
+  (normalized.split(' ').length >= 2 && !normalized.includes("chcę") && !normalized.includes("pokaż"));
+
 // Jeśli nie ma restauracji, ale użytkownik mówi nazwę dania - wyszukaj w dostępnych restauracjach
 if (!prev.restaurantId && isFoodItem) {
   console.log("🔍 No restaurant selected, searching for dish in available restaurants:", normalized);
@@ -388,30 +412,6 @@ if (prev.restaurantId || isFoodItem) {
   }
 
 // jeśli user mówi konkretnie o produkcie – szukamy itemu i od razu proponujemy
-// Rozszerzone rozpoznawanie - sprawdź czy to może być nazwa dania
-const isFoodItem = 
-  normalized.includes("pizza") ||
-  normalized.includes("burger") ||
-  normalized.includes("frytki") ||
-  normalized.includes("cola") ||
-  normalized.includes("margherita") ||
-  normalized.includes("pepperoni") ||
-  normalized.includes("popcorn") ||
-  normalized.includes("chicken") ||
-  normalized.includes("zinger") ||
-  normalized.includes("wings") ||
-  normalized.includes("gulasz") ||
-  normalized.includes("pierogi") ||
-  normalized.includes("sýr") ||
-  normalized.includes("zupa") ||
-  normalized.includes("czosnkowa") ||
-  normalized.includes("wieprzowy") ||
-  normalized.includes("knedlik") ||
-  normalized.includes("mięsem") ||
-  normalized.includes("smažený") ||
-  // Sprawdź czy tekst zawiera więcej niż 2 słowa (może być pełna nazwa dania)
-  (normalized.split(' ').length >= 2 && !normalized.includes("chcę") && !normalized.includes("pokaż"));
-
 if (isFoodItem) {
   console.log("🔍 Searching menu for:", normalized, "in restaurant:", prev.restaurantId);
   const items = await searchMenuItems(prev.restaurantId, normalized);

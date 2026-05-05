@@ -521,8 +521,9 @@ function MenuTab({ restaurantId }) {
     // Try with image_url first; if that column doesn't exist yet, fall back
     let { data, error } = await supabase
       .from('menu_items_v2')
-      .select('id,name,price_pln,description,category,available,image_url')
+      .select('id,name,price_pln,description,category,available,image_url,section_order')
       .eq('restaurant_id', id)
+      .order('section_order', { ascending: true })
       .order('category', { nullsFirst: false })
       .order('name')
 
@@ -530,8 +531,9 @@ function MenuTab({ restaurantId }) {
       // Column doesn't exist yet → fetch without it
       const fb = await supabase
         .from('menu_items_v2')
-        .select('id,name,price_pln,description,category,available')
+        .select('id,name,price_pln,description,category,available,section_order')
         .eq('restaurant_id', id)
+        .order('section_order', { ascending: true })
         .order('category', { nullsFirst: false })
         .order('name')
       data = fb.data; error = fb.error
