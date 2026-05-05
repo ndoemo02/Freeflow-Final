@@ -2,14 +2,6 @@
  * VoiceDock - canonical voice bar for FreeFlow
  * Replaces VoiceCommandCenterV2 and VoiceInputBar.
  * Dark premium glass, interaction-first, token-based styling.
- *
- * Redesign notes:
- * - Local message history (last 6) of user/assistant turns rendered as chat bubbles
- *   above the input bar. Hidden when idle and empty.
- * - Backward compatible props: existing Home.tsx integration (466 lines) keeps
- *   working unchanged. New OPTIONAL props `liveUserTranscript` /
- *   `liveAssistantTranscript` enable cleaner role separation; otherwise we
- *   derive the role from `liveUiState` + `liveTranscript`.
  */
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,15 +38,6 @@ interface VoiceDockProps {
 type DockGlassVariant = "clean-premium" | "neon-soft-glow" | "closest-to-logo";
 
 const MOBILE_HERO_DOCK_VARIANT: DockGlassVariant = "neon-soft-glow";
-
-const MAX_MESSAGES = 6;
-
-type ChatRole = "user" | "assistant";
-interface ChatMessage {
-  id: string;
-  role: ChatRole;
-  text: string;
-}
 
 function getDockGlassStyle(
   variant: DockGlassVariant,
@@ -135,10 +118,6 @@ function resolveLiveDockText(
   return transcript || statusText;
 }
 
-function genId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 export default function VoiceDock({
   amberResponse = "",
   interimText = "",
@@ -164,15 +143,8 @@ export default function VoiceDock({
     if (typeof window.matchMedia !== "function") return false;
     return window.matchMedia("(max-width: 768px)").matches;
   });
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-
   const inputRef = useRef<HTMLInputElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
-  const historyRef = useRef<HTMLDivElement>(null);
-
-  const prevUserRef = useRef<string>("");
-  const prevAssistantRef = useRef<string>("");
-  const prevTranscriptRef = useRef<string>("");
 
   const handleSubmit = onTextSubmit ?? onSubmitText;
   const hasTypedText = inputValue.trim().length > 0;
@@ -196,73 +168,9 @@ export default function VoiceDock({
   else if (isProcessing) amberStatus = "thinking";
   else if (isSpeaking || isPresenting) amberStatus = "ok";
 
-  // ----- Append messages on transcript prop change -----
-  // Prefer explicit user/assistant props when provided; otherwise infer from
-  // the combined `liveTranscript` + `liveUiState`.
-  useEffect(() => {
-    if (typeof liveUserTranscript !== "string") return;
-    const next = liveUserTranscript.trim();
-    if (!next) return;
-    if (next === prevUserRef.current) return;
-    prevUserRef.current = next;
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === "user" && last.text === next) return prev;
-      const updated = [...prev, { id: genId(), role: "user" as const, text: next }];
-      return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
-    });
-  }, [liveUserTranscript]);
-
-  useEffect(() => {
-    if (typeof liveAssistantTranscript !== "string") return;
-    const next = liveAssistantTranscript.trim();
-    if (!next) return;
-    if (next === prevAssistantRef.current) return;
-    prevAssistantRef.current = next;
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === "assistant" && last.text === next) return prev;
-      const updated = [
-        ...prev,
-        { id: genId(), role: "assistant" as const, text: next },
-      ];
-      return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
-    });
-  }, [liveAssistantTranscript]);
-
-  // Fallback: if the dedicated props are not provided, derive role from session state.
-  useEffect(() => {
-    if (
-      typeof liveUserTranscript === "string" ||
-      typeof liveAssistantTranscript === "string"
-    ) {
-      return;
-    }
-    const next = (liveTranscript || "").trim();
-    if (!next) return;
-    if (next === prevTranscriptRef.current) return;
-    prevTranscriptRef.current = next;
-    const role: ChatRole = liveUiState === "listening" ? "user" : "assistant";
-    setMessages((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && last.role === role && last.text === next) return prev;
-      const updated = [...prev, { id: genId(), role, text: next }];
-      return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
-    });
-  }, [liveTranscript, liveUiState, liveUserTranscript, liveAssistantTranscript]);
-
-  // Auto-scroll history to bottom on new message.
-  useEffect(() => {
-    const node = historyRef.current;
-    if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [messages]);
-
   // ----- Live status text (placeholder/ghost line) -----
   const liveDockText = resolveLiveDockText(liveUiState, liveStatusText, liveTranscript);
-  const ghostLine =
-    !messages.length && (liveDockText || interimText || (recording ? "" : amberResponse));
-  const showHistory = messages.length > 0 || isListeningState || isProcessingState;
+  const ghostLine = liveDockText || interimText || (recording ? "" : amberResponse);
 
   let inputPlaceholder = "Napisz lub powiedz...";
   if (isProcessingState) inputPlaceholder = "Amber mysli...";
@@ -332,17 +240,10 @@ export default function VoiceDock({
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", alignToStatusRail);
     };
-  }, [isMobile, hasTypedText, recording, messages.length]);
+  }, [isMobile, hasTypedText, recording]);
 
   const submit = () => {
     if (hasTypedText) {
-      // Optimistically push the typed message into local history so the user
-      // sees their bubble immediately (assistant follow-up arrives via props).
-      const text = inputValue.trim();
-      setMessages((prev) => {
-        const updated = [...prev, { id: genId(), role: "user" as const, text }];
-        return updated.length > MAX_MESSAGES ? updated.slice(-MAX_MESSAGES) : updated;
-      });
       handleSubmit?.(inputValue);
       setInputValue("");
     }
@@ -380,74 +281,6 @@ export default function VoiceDock({
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="w-full max-w-3xl pointer-events-auto flex flex-col gap-2">
-            {/* ----- Message history ----- */}
-            <AnimatePresence initial={false}>
-              {showHistory && messages.length > 0 && (
-                <motion.div
-                  key="dock-history"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 6 }}
-                  transition={{ duration: 0.18 }}
-                  className="px-1"
-                >
-                  <div
-                    ref={historyRef}
-                    className="flex flex-col gap-1.5 overflow-y-auto pr-1"
-                    style={{
-                      maxHeight: 120,
-                      WebkitMaskImage:
-                        "linear-gradient(to bottom, transparent 0, black 24px, black 100%)",
-                      maskImage:
-                        "linear-gradient(to bottom, transparent 0, black 24px, black 100%)",
-                      scrollbarWidth: "none",
-                      msOverflowStyle: "none",
-                    }}
-                  >
-                    <style>{`[data-ui-role="voice-dock-history"]::-webkit-scrollbar{display:none;}`}</style>
-                    <div data-ui-role="voice-dock-history" className="flex flex-col gap-1.5">
-                      <AnimatePresence initial={false}>
-                        {messages.map((msg) => (
-                          <motion.div
-                            key={msg.id}
-                            layout
-                            initial={{
-                              opacity: 0,
-                              x: msg.role === "user" ? -20 : 20,
-                            }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className={
-                              msg.role === "user"
-                                ? "self-start"
-                                : "self-end"
-                            }
-                            style={{ maxWidth: "60%" }}
-                          >
-                            <div
-                              className={
-                                msg.role === "user"
-                                  ? "rounded-2xl rounded-bl-sm bg-white/10 px-3 py-1.5 text-xs leading-snug text-white/80 backdrop-blur-sm"
-                                  : "rounded-2xl rounded-br-sm bg-orange-500/15 px-3 py-1.5 text-xs leading-snug text-orange-100 backdrop-blur-sm"
-                              }
-                              style={
-                                msg.role === "user"
-                                  ? { border: "1px solid rgba(255,255,255,0.10)" }
-                                  : { border: "1px solid rgba(249,115,22,0.25)" }
-                              }
-                            >
-                              {msg.text}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* ----- Voice bar ----- */}
             <div
               ref={barRef}
