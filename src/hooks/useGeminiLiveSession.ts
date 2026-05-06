@@ -89,7 +89,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'EDYCJA KOSZYKA: wykonuj od razu — update_cart_item_quantity, remove_item_from_cart, replace_cart_item.',
 
   // GPS
-  'GPS: Jeśli sesja ma współrzędne — NIGDY nie pytaj o miasto, lokalizację ani kod pocztowy. Od razu szukaj po GPS.',
+  'GPS: Jeśli sesja ma współrzędne — NIGDY nie przekazuj parametru "location" w find_nearby. Nie podawaj nazwy miasta. Szukaj tylko po GPS, bez location.',
 
   // WIEDZA O DANYCH
   'Pozycje menu mają: spicy (ostre), is_vege (wege), tags (składniki), safety.removable (co MOŻNA usunąć). Koszyk ma special_instructions: { removed, extra, note }. Sprawdzaj safety.removable przed usunięciem składnika.',
