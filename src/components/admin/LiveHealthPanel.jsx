@@ -43,7 +43,7 @@ export default function LiveHealthPanel({ adminToken }) {
 
   const fetchHealth = async () => {
     try {
-      const url = getApiUrl(`/admin/live/health?token=${encodeURIComponent(adminToken)}`);
+      const url = getApiUrl(`/api/admin/live/health?token=${encodeURIComponent(adminToken)}`);
       const res = await fetch(url);
       const json = await res.json();
       if (json.ok) setHealth(json);
