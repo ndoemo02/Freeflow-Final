@@ -44,14 +44,20 @@ export default function LiveHealthPanel({ adminToken }) {
   const fetchHealth = async () => {
     try {
       const url = getApiUrl(`/api/admin/live/health?token=${encodeURIComponent(adminToken)}`);
-      const res = await fetch(url);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8_000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
       const json = await res.json();
-      if (json.ok) setHealth(json);
-      setError(null);
+      if (json.ok) {
+        setHealth(json);
+        setError(null);
+      } else {
+        setError(json.error || 'Nieznany błąd backendu');
+      }
     } catch (e) {
-      setError(e.message);
+      setError(e.name === 'AbortError' ? 'Timeout — backend nie odpowiada' : e.message);
     }
-    // Cognitive load z localStorage (aktualizowane przez useGeminiLiveSession w tej samej przeglądarce)
     setCognitiveLoad(readLocalCognitiveLoad());
   };
 
