@@ -34,6 +34,19 @@ const AUTO_RECOVERY_GPS_KEY = 'ff_last_gps';
 const AUTO_RECOVERY_GPS_TTL_MS = 30 * 60 * 1000;
 const AUTO_RECOVERY_COOLDOWN_MS = 7000;
 const LIVE_STALL_WARNING_MS = 9000;
+const SESSION_RESUMPTION_HANDLE_KEY = 'ff_live_resumption_handle';
+
+function saveResumptionHandle(handle: string): void {
+  try { localStorage.setItem(SESSION_RESUMPTION_HANDLE_KEY, handle); } catch { /* noop */ }
+}
+
+function readResumptionHandle(): string | null {
+  try { return localStorage.getItem(SESSION_RESUMPTION_HANDLE_KEY); } catch { return null; }
+}
+
+function clearResumptionHandle(): void {
+  try { localStorage.removeItem(SESSION_RESUMPTION_HANDLE_KEY); } catch { /* noop */ }
+}
 const LIVE_VAD_CONFIG = {
   activityHandling: ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
   turnCoverage: TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -599,6 +612,7 @@ export function useGeminiLiveSession({
   const stallWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Marks that the close was triggered intentionally (user stop / cleanup) â€” suppress reconnect
   const intentionalCloseRef = useRef(false);
+  const sessionResumptionHandleRef = useRef<string | null>(readResumptionHandle());
   // Fix #4: stable ref so start() closure always sees current sessionId
   const sessionIdRef = useRef(propSessionId);
   useEffect(() => { sessionIdRef.current = propSessionId; }, [propSessionId]);
@@ -695,6 +709,8 @@ export function useGeminiLiveSession({
       autoNearbyRecoveryLastTsRef.current = 0;
       lastToolResponseSentAtRef.current = null;
       clearStallWatchdog();
+      sessionResumptionHandleRef.current = null;
+      clearResumptionHandle();
       cleanupRuntime(true);
       setError(null);
       useLiveUiSessionStore.getState().setPaused();
@@ -923,6 +939,17 @@ export function useGeminiLiveSession({
           clearStallWatchdog();
           player.stop();
         }
+
+        const sru = (msg as any).serverContent?.sessionResumptionUpdate;
+        if (sru?.resumable && sru.newHandle) {
+          sessionResumptionHandleRef.current = sru.newHandle;
+          saveResumptionHandle(sru.newHandle);
+        }
+
+        const goAway = (msg as any).serverContent?.goAway;
+        if (goAway) {
+          console.log('[LIVE] GoAway received — reconnect with resumption handle pending');
+        }
       };
 
       const session = await ai.live.connect({
@@ -937,6 +964,9 @@ export function useGeminiLiveSession({
             },
           },
           tools: [{ functionDeclarations: LIVE_FUNCTION_DECLARATIONS }],
+          ...(sessionResumptionHandleRef.current
+            ? { sessionResumption: { transparent: true, handle: sessionResumptionHandleRef.current } }
+            : {}),
         },
         callbacks: {
           onopen: () => {
@@ -1044,6 +1074,7 @@ export function useGeminiLiveSession({
       intentionalCloseRef.current = true;   // unmount = intentional, suppress reconnect
       desiredActiveRef.current = false;
       clearReconnectTimer();
+      sessionResumptionHandleRef.current = null;
       cleanupRuntime(true);
       playerRef.current.close();
     };
