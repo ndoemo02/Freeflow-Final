@@ -30,6 +30,7 @@ import AmberLiveMonitor from '../components/AmberLiveMonitor';
 import FreeFunSection from '../components/FreeFunSection';
 import ConversationViewer from '../components/admin/ConversationViewer';
 import ConversationDebugView, { ConversationDebugList } from '../components/admin/ConversationDebugView';
+import LiveHealthPanel from '../components/admin/LiveHealthPanel';
 
 ChartJS.register(
   CategoryScale,
@@ -994,7 +995,8 @@ export default function AdminPanel() {
                 { id: 'alerts', label: 'System Alerts' },
                 { id: 'config', label: 'Konfiguracja Menu' },
                 { id: 'events', label: 'Wydarzenia' },
-                { id: 'conversations', label: 'Rozmowy' }
+                { id: 'conversations', label: 'Rozmowy' },
+                { id: 'health', label: 'Health' }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -1287,6 +1289,11 @@ export default function AdminPanel() {
           {activeTab === 'conversations' && (
             <div className="glass rounded-xl border border-[var(--border)] p-4 h-[650px]">
               <ConversationViewer adminToken={adminToken} />
+            </div>
+          )}
+          {activeTab === 'health' && (
+            <div className="glass rounded-xl border border-[var(--border)] p-4">
+              <LiveHealthPanel adminToken={adminToken} />
             </div>
           )}
         </main>

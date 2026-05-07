@@ -47,6 +47,33 @@ function readResumptionHandle(): string | null {
 function clearResumptionHandle(): void {
   try { localStorage.removeItem(SESSION_RESUMPTION_HANDLE_KEY); } catch { /* noop */ }
 }
+
+const COGNITIVE_LOAD_PROMPT_KEY = 'ff_cognitive_load_prompt';
+const COGNITIVE_LOAD_PAYLOAD_KEY = 'ff_cognitive_load_payload';
+const COGNITIVE_LOAD_MAX_HISTORY = 20;
+
+function reportPromptSize(sizeBytes: number): void {
+  try {
+    const entry = { ts: new Date().toISOString(), size: sizeBytes };
+    const arr = JSON.parse(localStorage.getItem(COGNITIVE_LOAD_PROMPT_KEY) || '[]');
+    arr.push(entry);
+    if (arr.length > COGNITIVE_LOAD_MAX_HISTORY) arr.splice(0, arr.length - COGNITIVE_LOAD_MAX_HISTORY);
+    localStorage.setItem(COGNITIVE_LOAD_PROMPT_KEY, JSON.stringify(arr));
+    localStorage.setItem('ff_cognitive_load_prompt_last', String(sizeBytes));
+  } catch { /* noop */ }
+}
+
+function reportPayloadSize(toolName: string, sizeBytes: number): void {
+  try {
+    const entry = { ts: new Date().toISOString(), tool: toolName, size: sizeBytes };
+    const arr = JSON.parse(localStorage.getItem(COGNITIVE_LOAD_PAYLOAD_KEY) || '[]');
+    arr.push(entry);
+    if (arr.length > COGNITIVE_LOAD_MAX_HISTORY) arr.splice(0, arr.length - COGNITIVE_LOAD_MAX_HISTORY);
+    localStorage.setItem(COGNITIVE_LOAD_PAYLOAD_KEY, JSON.stringify(arr));
+    localStorage.setItem('ff_cognitive_load_payload_last', String(sizeBytes));
+  } catch { /* noop */ }
+}
+
 const LIVE_VAD_CONFIG = {
   activityHandling: ActivityHandling.START_OF_ACTIVITY_INTERRUPTS,
   turnCoverage: TurnCoverage.TURN_INCLUDES_ONLY_ACTIVITY,
@@ -854,13 +881,16 @@ export function useGeminiLiveSession({
                     (result.response ?? {}) as Record<string, unknown>,
                   );
                 }
+                const compact = compactToolResponse(
+                  result.name,
+                  (result.response ?? {}) as Record<string, unknown>,
+                );
+                const payloadBytes = new TextEncoder().encode(JSON.stringify(compact)).length;
+                reportPayloadSize(result.name, payloadBytes);
                 return {
                   id: fc.id ?? '',
                   name: result.name,
-                  response: compactToolResponse(
-                    result.name,
-                    (result.response ?? {}) as Record<string, unknown>,
-                  ),
+                  response: compact,
                 };
               } catch (err) {
                 return {
@@ -951,6 +981,8 @@ export function useGeminiLiveSession({
           console.log('[LIVE] GoAway received — reconnect with resumption handle pending');
         }
       };
+
+      reportPromptSize(new TextEncoder().encode(activeInstruction).length);
 
       const session = await ai.live.connect({
         model: activeModel,
