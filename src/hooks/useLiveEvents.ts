@@ -557,6 +557,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 if (parsed?.type === 'live_ready') {
                     liveUiStore.setListening('Słucham...');
                     gpsInitRetryCount = 0;
+                    // Zawsze wysyłaj GPS przy live_ready — SessionResumption reconnect
+                    // nie przechodzi przez connectSocket('reconnect'), więc guard
+                    // sessionInitSent nie jest resetowany. Bez tego Gemini gubi GPS.
+                    sessionInitSent = false;
                     sendSessionInitWithRetry(socket);
                     return;
                 }
