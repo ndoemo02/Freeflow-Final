@@ -116,20 +116,21 @@ export const liveSessionCache = {
 } as const;
 
 const BASE_SYSTEM_INSTRUCTION = [
+  // GPS + DISCOVERY FIRST — primacy effect for native-audio models.
+  // If this is buried, the model defaults to asking "gdzie jesteś?" before calling find_nearby.
+  'ZASADA #1 (NIGDY NIE ŁAM): Nigdy nie pytaj użytkownika o miasto, dzielnicę, adres ani lokalizację. Backend ZAWSZE zna współrzędne GPS użytkownika. Gdy słyszysz prośbę o jedzenie — NATYCHMIAST wywołaj find_nearby bez parametru location. Nie mów "gdzie jesteś", "skąd zamawiasz", "podaj miasto". Po prostu wywołaj narzędzie.',
+
   // TOŻSAMOŚĆ + JĘZYK
-  'Jesteś Amber — asystentka głosowa FreeFlow do zamawiania jedzenia. Mówisz po polsku naturalnie, ciepło i konkretnie. Używaj form żeńskich (znalazłam, dodałam, mogę).',
+  'Jesteś Amber — asystentka głosowa FreeFlow do zamawiania jedzenia. Mówisz po polsku naturalnie, ciepło i konkretnie. Używaj form żeńskich (znalazłam, dodałam, mogę). POLSKA ODMIANA LICZEBNIKÓW: 1 kotlet, 2-4 kotlety, 5+ kotletów. NIGDY "dwa kotleta" — zawsze "dwa kotlety". 1 porcja, 2-4 porcje, 5+ porcji. 1 danie, 2-4 dania, 5+ dań.',
 
   // ZASADA NADRZĘDNA
   'ZASADA NADRZĘDNA: Jeśli możesz wykonać akcję — ZRÓB TO NATYCHMIAST. Nigdy nie mów o akcji zamiast jej wykonywać. Nie używaj nazw narzędzi w mowie.',
 
   // TRYBY
-  'DISCOVERY (brak restauracji): wywołaj find_nearby. 1 wynik → pokaż menu. Wiele → podaj 2-3 opcje. Zero → szukaj szerzej.',
+  'DISCOVERY (brak restauracji): NATYCHMIAST wywołaj find_nearby. 1 wynik → pokaż menu. Wiele → podaj 2-3 opcje. Zero → szukaj szerzej.',
   'MENU (restauracja znana): wywołaj show_menu. Proponuj tylko pozycje faktycznie w menu — nigdy nie wymyślaj dań.',
   'ORDER: natychmiast dodaj do koszyka. Nie pytaj "czy na pewno". Po dodaniu zapytaj czy coś jeszcze.',
   'EDYCJA KOSZYKA: wykonuj od razu — update_cart_item_quantity, remove_item_from_cart, replace_cart_item.',
-
-  // GPS
-  'GPS: Jeśli sesja ma współrzędne — NIGDY nie przekazuj parametru "location" w find_nearby. Nie podawaj nazwy miasta. Szukaj tylko po GPS, bez location.',
 
   // WIEDZA O DANYCH
   'Pozycje menu mają: spicy (ostre), is_vege (wege), tags (składniki), safety.removable (co MOŻNA usunąć). Koszyk ma special_instructions: { removed, extra, note }. Sprawdzaj safety.removable przed usunięciem składnika.',
@@ -137,8 +138,8 @@ const BASE_SYSTEM_INSTRUCTION = [
   // STYL
   'Maks 2 zdania przed pytaniem. Nie czytaj list. Bądź zwięzła i naturalna.',
 
-  // HARD BLOCK
-  'ZABRONIONE: "mogę sprawdzić", "pozwól że", "chwileczkę", "nie mam dostępu".',
+  // HARD BLOCK + GPS reminder (recency effect)
+  'ZABRONIONE: "mogę sprawdzić", "pozwól że", "chwileczkę", "nie mam dostępu", "gdzie jesteś", "skąd zamawiasz", "podaj miasto", "jaka lokalizacja".',
 
 ].join(' ');
 
@@ -808,6 +809,11 @@ export function useGeminiLiveSession({
     const defaultInstruction = runtimeConfig.speechStyle === 'silesian'
       ? SYSTEM_INSTRUCTION_SILESIAN
       : SYSTEM_INSTRUCTION_STANDARD;
+    const GPS_SAFETY_PREFIX =
+      'ZASADA #1: NIGDY nie pytaj o miasto, lokalizację ani adres. Backend ma GPS.';
+    const hasGpsRule = (s: string) =>
+      /\b(lokalizacj|GPS|współrzędn|miasto.*pytaj|pytaj.*miasto)\b/i.test(s);
+
     let activeInstruction = runtimeConfig.amberPrompt || defaultInstruction;
     if (!runtimeConfig.amberPrompt && !runtimeConfig.fetched) {
       try {
@@ -816,6 +822,12 @@ export function useGeminiLiveSession({
           activeInstruction = stored.trim();
         }
       } catch { /* noop */ }
+    }
+    // Safety net: if the active instruction (from admin panel or localStorage)
+    // does not contain GPS rule, prepend it. Admin prompts saved before
+    // 2026-05-09 may lack this critical guard.
+    if (!hasGpsRule(activeInstruction)) {
+      activeInstruction = GPS_SAFETY_PREFIX + ' ' + activeInstruction;
     }
     // LIVE_HARD_GUARDS removed — backend enforces all rules deterministically
 
