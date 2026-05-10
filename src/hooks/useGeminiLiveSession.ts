@@ -176,6 +176,7 @@ const SYSTEM_INSTRUCTION_SILESIAN = `${BASE_SYSTEM_INSTRUCTION} ${SILESIAN_STYLE
 type LiveRuntimeConfig = {
   fetched: boolean;
   liveModel: string;
+  liveVoice: string;
   speechStyle: 'standard' | 'silesian';
   amberPrompt: string;
   promptSource: string;
@@ -205,6 +206,7 @@ async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
   const fallback: LiveRuntimeConfig = {
     fetched: false,
     liveModel: localLiveModelOverride || DEFAULT_LIVE_MODEL,
+    liveVoice: 'Aoede',
     speechStyle: 'standard',
     amberPrompt: '',
     promptSource: 'fallback',
@@ -218,9 +220,11 @@ async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
     const liveModel = localLiveModelOverride || backendModel || DEFAULT_LIVE_MODEL;
     const speechStyle = normalizeSpeechStyle(json.speech_style);
     const amberPrompt = typeof json.amber_prompt === 'string' ? json.amber_prompt.trim() : '';
+    const liveVoice = typeof json.live_voice === 'string' && json.live_voice.trim() ? json.live_voice.trim() : 'Aoede';
     return {
       fetched: true,
       liveModel,
+      liveVoice,
       speechStyle,
       amberPrompt,
       promptSource: String(json.prompt_source || (amberPrompt ? 'system_config:amber_prompt' : `speech_style:${speechStyle}`)),
@@ -1069,7 +1073,7 @@ export function useGeminiLiveSession({
           realtimeInputConfig: LIVE_VAD_CONFIG,
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Aoede' },
+              prebuiltVoiceConfig: { voiceName: runtimeConfig.liveVoice || 'Aoede' },
             },
           },
           tools: [{ functionDeclarations: LIVE_FUNCTION_DECLARATIONS }],
