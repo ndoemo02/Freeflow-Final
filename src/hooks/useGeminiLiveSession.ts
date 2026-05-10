@@ -909,8 +909,8 @@ export function useGeminiLiveSession({
           || null;
         if (typeof possibleTranscript === 'string' && possibleTranscript.trim()) {
           const now = Date.now();
-          if (lastAudioFrameAt && !lastTranscriptAt) {
-            perfTimings.push({ stage: 'vad_gap', ms: now - lastAudioFrameAt });
+          if (firstAudioFrameAt) {
+            perfTimings.push({ stage: 'vad_gap', ms: now - firstAudioFrameAt });
           }
           lastTranscriptAt = now;
           const normalizedTranscript = possibleTranscript.trim();
@@ -923,9 +923,7 @@ export function useGeminiLiveSession({
 
         if (msg.toolCall?.functionCalls?.length) {
           lastToolCallAt = Date.now();
-          if (lastTranscriptAt) {
-            perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - lastTranscriptAt });
-          }
+          perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - (lastTranscriptAt || firstAudioFrameAt || lastToolCallAt) });
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
