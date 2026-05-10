@@ -36,6 +36,28 @@ const AUTO_RECOVERY_COOLDOWN_MS = 7000;
 const LIVE_STALL_WARNING_MS = 9000;
 const SESSION_RESUMPTION_HANDLE_KEY = 'ff_live_resumption_handle';
 
+// ── Live Performance Instrumentation ──
+const PERF_ENDPOINT = '/api/live/perf';
+const PERF_LOG_HISTORY_KEY = 'ff_live_perf_log';
+
+type PerfTiming = { stage: string; ms: number; metadata?: Record<string, unknown> };
+
+function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[]): void {
+  if (!timings.length) return;
+  const body = { entries: timings.map(t => ({ ...t, session_id: sessionId, model })) };
+  try {
+    const url = `${window.location.origin}${PERF_ENDPOINT}`;
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+  } catch {}
+  // Also persist locally for debugging
+  try {
+    const arr = JSON.parse(localStorage.getItem(PERF_LOG_HISTORY_KEY) || '[]');
+    arr.push({ ts: new Date().toISOString(), sessionId: sessionId.slice(0, 8), timings });
+    if (arr.length > 50) arr.splice(0, arr.length - 50);
+    localStorage.setItem(PERF_LOG_HISTORY_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
 function saveResumptionHandle(handle: string): void {
   try { localStorage.setItem(SESSION_RESUMPTION_HANDLE_KEY, handle); } catch { /* noop */ }
 }
@@ -837,9 +859,28 @@ export function useGeminiLiveSession({
       const player = playerRef.current;
 
       let frameCount = 0;
+      let lastAudioFrameAt = 0;
+      let lastTranscriptAt = 0;
+      let lastToolCallAt = 0;
+      const perfTimings: PerfTiming[] = [];
+      let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
+
+      const flushPerf = () => {
+        if (!perfTimings.length) return;
+        const sid = sessionIdRef.current || 'unknown';
+        const e2e = perfTimings.length >= 3
+          ? perfTimings[perfTimings.length - 1].ms - (lastAudioFrameAt || perfTimings[0].ms)
+          : 0;
+        if (e2e > 0) perfTimings.push({ stage: 'total_e2e', ms: e2e });
+        console.log(`[LivePerf] ${sid.slice(0,8)} ${perfTimings.map(t => `${t.stage}=${t.ms}ms`).join(' | ')}`);
+        postPerfTimings(sid, perfModel, [...perfTimings]);
+        perfTimings.length = 0;
+      };
+
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
         if (!sessionRef.current || !activeRef.current) return;
         frameCount += 1;
+        lastAudioFrameAt = Date.now();
 
         try {
           sessionRef.current.sendRealtimeInput({
@@ -861,6 +902,11 @@ export function useGeminiLiveSession({
           || (msg as any)?.serverContent?.inputTranscript?.text
           || null;
         if (typeof possibleTranscript === 'string' && possibleTranscript.trim()) {
+          const now = Date.now();
+          if (lastAudioFrameAt && !lastTranscriptAt) {
+            perfTimings.push({ stage: 'vad_gap', ms: now - lastAudioFrameAt });
+          }
+          lastTranscriptAt = now;
           const normalizedTranscript = possibleTranscript.trim();
           latestUserTranscriptRef.current = normalizedTranscript;
           const liveUiStore = useLiveUiSessionStore.getState();
@@ -870,6 +916,10 @@ export function useGeminiLiveSession({
         }
 
         if (msg.toolCall?.functionCalls?.length) {
+          lastToolCallAt = Date.now();
+          if (lastTranscriptAt) {
+            perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - lastTranscriptAt });
+          }
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
@@ -884,7 +934,14 @@ export function useGeminiLiveSession({
                 args: (fc.args ?? {}) as Record<string, unknown>,
               };
               try {
+                const relayStart = Date.now();
                 const result = await relay(geminiCall);
+                const relayMs = Date.now() - relayStart;
+                const backendMs = (result.response as any)?.backend_ms;
+                perfTimings.push({ stage: 'http_roundtrip', ms: relayMs });
+                if (typeof backendMs === 'number') {
+                  perfTimings.push({ stage: 'backend_execution', ms: backendMs, metadata: { tool: result.name } });
+                }
                 // HTTP fallback bridge: when WS is not connected, sync structured
                 // response to useConversationStore so the UI renders menus, cart, etc.
                 if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -893,10 +950,12 @@ export function useGeminiLiveSession({
                     (result.response ?? {}) as Record<string, unknown>,
                   );
                 }
+                const compactStart = Date.now();
                 const compact = compactToolResponse(
                   result.name,
                   (result.response ?? {}) as Record<string, unknown>,
                 );
+                perfTimings.push({ stage: 'compact_response', ms: Date.now() - compactStart });
                 const payloadBytes = new TextEncoder().encode(JSON.stringify(compact)).length;
                 reportPayloadSize(result.name, payloadBytes);
                 return {
@@ -968,10 +1027,12 @@ export function useGeminiLiveSession({
             }
             const blob = (part as { inlineData?: { data?: string; mimeType?: string } }).inlineData;
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
-              clearStallWatchdog();
               if (lastToolResponseSentAtRef.current) {
+                perfTimings.push({ stage: 'tts_generation', ms: Date.now() - lastToolResponseSentAtRef.current });
+                flushPerf();
                 lastToolResponseSentAtRef.current = null;
               }
+              clearStallWatchdog();
               player.enqueueBase64(blob.data);
             }
           }
