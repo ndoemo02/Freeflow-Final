@@ -182,6 +182,17 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: { type: O, properties: {} },
   },
   {
+    name: 'search_menu_items',
+    description: 'Search for a specific dish by name in the current restaurant menu. Use when menu is large and the dish name isnt in the initial list. Returns matching items with full details.',
+    parameters: {
+      type: O,
+      properties: {
+        query: { type: S },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'get_cart_state',
     description: 'Read current server-side cart/session state.',
     parameters: { type: O, properties: {} },

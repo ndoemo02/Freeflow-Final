@@ -433,7 +433,7 @@ function compactToolResponse(
       const shortlist = Array.isArray(response.menuItems) ? (response.menuItems as any[]) : [];
       const items = fullMenu.length > 0 ? fullMenu : shortlist;
       const hints = buildMenuSpeechHints(items);
-      const menuItemsLimit = items.length <= 16 ? items.length : 12;
+      const menuItemsLimit = items.length <= 25 ? items.length : 20;
       compact.menuItems = items.slice(0, menuItemsLimit).map((x: any) => ({
         id: x.id,
         name: x.base_name || x.name,
@@ -486,8 +486,21 @@ function compactToolResponse(
       compact.cartItems = Array.isArray(cart.items)
         ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
-
-      const clarifyNotAdded =
+      break;
+    }
+    case 'search_menu_items': {
+      const found = Array.isArray(response.menuItems) ? (response.menuItems as any[]) : [];
+      compact.menuItems = found.map((x: any) => ({
+        id: x.id,
+        name: x.name,
+        price: x.price ?? null,
+        tags: Array.isArray(x.tags) ? x.tags : [],
+        variant: x.variant || null,
+      }));
+      compact.menuFound = found.length;
+      compact.menuSearchQuery = String(response.meta?.query || '?');
+      break;
+    }
         responseIntent === 'clarify_order'
         || liveToolMeta.clarifyNotAdded === true
         || (!mutationObserved && (toolName === 'add_item_to_cart' || toolName === 'add_items_to_cart'));
