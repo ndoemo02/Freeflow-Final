@@ -46,7 +46,7 @@ function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[]
   if (!timings.length) return;
   const body = { entries: timings.map(t => ({ ...t, session_id: sessionId, model })) };
   try {
-    const url = `${window.location.origin}${PERF_ENDPOINT}`;
+    const url = getApiUrl(PERF_ENDPOINT);
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
   } catch {}
   // Also persist locally for debugging
