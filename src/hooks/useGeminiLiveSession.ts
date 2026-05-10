@@ -860,6 +860,7 @@ export function useGeminiLiveSession({
 
       let frameCount = 0;
       let lastAudioFrameAt = 0;
+      let firstAudioFrameAt = 0;
       let lastTranscriptAt = 0;
       let lastToolCallAt = 0;
       const perfTimings: PerfTiming[] = [];
@@ -868,19 +869,24 @@ export function useGeminiLiveSession({
       const flushPerf = () => {
         if (!perfTimings.length) return;
         const sid = sessionIdRef.current || 'unknown';
-        const e2e = perfTimings.length >= 3
-          ? perfTimings[perfTimings.length - 1].ms - (lastAudioFrameAt || perfTimings[0].ms)
-          : 0;
+        // total_e2e = from first audio frame (start of speech) to now (Amber's first audio byte)
+        const e2e = firstAudioFrameAt ? Date.now() - firstAudioFrameAt : 0;
         if (e2e > 0) perfTimings.push({ stage: 'total_e2e', ms: e2e });
         console.log(`[LivePerf] ${sid.slice(0,8)} ${perfTimings.map(t => `${t.stage}=${t.ms}ms`).join(' | ')}`);
         postPerfTimings(sid, perfModel, [...perfTimings]);
         perfTimings.length = 0;
+        // Reset per-turn state for next interaction
+        firstAudioFrameAt = 0;
+        lastTranscriptAt = 0;
+        lastToolCallAt = 0;
       };
 
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
         if (!sessionRef.current || !activeRef.current) return;
         frameCount += 1;
-        lastAudioFrameAt = Date.now();
+        const now = Date.now();
+        lastAudioFrameAt = now;
+        if (!firstAudioFrameAt) firstAudioFrameAt = now;
 
         try {
           sessionRef.current.sendRealtimeInput({
@@ -955,7 +961,7 @@ export function useGeminiLiveSession({
                   result.name,
                   (result.response ?? {}) as Record<string, unknown>,
                 );
-                perfTimings.push({ stage: 'compact_response', ms: Date.now() - compactStart });
+                perfTimings.push({ stage: 'compact_response', ms: Math.max(1, Date.now() - compactStart) });
                 const payloadBytes = new TextEncoder().encode(JSON.stringify(compact)).length;
                 reportPayloadSize(result.name, payloadBytes);
                 return {
