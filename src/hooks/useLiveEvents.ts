@@ -5,6 +5,7 @@ import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '..
 import { liveSessionCache } from './useGeminiLiveSession';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { activeSessionMap } from '../state/ActiveSessionMap';
+import { logBridge } from '../lib/interactionBridge';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
@@ -579,6 +580,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
                 if (parsed?.type !== 'tool_result' || !parsed?.response) return;
 
+                const wsTurnId = String(parsed?.turn_id || '');
+                logBridge('action_result_received', { turn_id: wsTurnId, session_id: effectSessionId, tool: parsed.tool, source: 'ws' });
+
                 const response = parsed.response;
                 const reply = response.reply || response.text || '';
                 const state = useConversationStore.getState();
@@ -723,10 +727,12 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
                     menuItems: (menuItems && menuItems.length > 0) ? menuItems : (isIdle ? null : state.menuItems),
                 };
+                const uiUpdateStart = Date.now();
                 useConversationStore.setState((prev) => ({
                     ...nextStoreState,
                     cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
                 }));
+                logBridge('ui_update_applied', { turn_id: wsTurnId, duration_ms: Date.now() - uiUpdateStart });
 
                 // Fix #6.4: When backend closes conversation (ORDER_CONFIRMED),
                 // adopt the newSessionId so next voice input starts fresh.

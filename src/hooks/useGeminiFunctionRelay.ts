@@ -148,6 +148,8 @@ export interface GeminiFunctionCall {
     id?: string;
     name: string;
     args: Record<string, unknown>;
+    /** Per-turn ID for telemetry correlation (InteractionBridge) */
+    turnId?: string;
 }
 
 /** Shape returned to Gemini as FunctionResponse */
@@ -217,6 +219,7 @@ async function relayViaHttp(
         tool: functionCall.name,
         args: enrichedArgs,
         request_id: functionCall.id || `httprelay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        turn_id: functionCall.turnId || undefined,
     };
     if (transcript) body.transcript = transcript;
 
@@ -390,6 +393,7 @@ export function useGeminiFunctionRelay({
                     tool: functionCall.name,
                     args: enrichedArgs,
                     request_id: requestId,
+                    turn_id: functionCall.turnId || undefined,
                     transcript_final: latestTranscript,
                 }));
             })();

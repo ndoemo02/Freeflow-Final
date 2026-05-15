@@ -21,6 +21,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
+import { generateTurnId, logBridge } from '../lib/interactionBridge';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -42,9 +43,9 @@ const PERF_LOG_HISTORY_KEY = 'ff_live_perf_log';
 
 type PerfTiming = { stage: string; ms: number; metadata?: Record<string, unknown> };
 
-function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[]): void {
+function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[], turnId?: string | null): void {
   if (!timings.length) return;
-  const body = { entries: timings.map(t => ({ ...t, session_id: sessionId, model })) };
+  const body = { entries: timings.map(t => ({ ...t, session_id: sessionId, model, turn_id: turnId || undefined })) };
   try {
     const url = getApiUrl(PERF_ENDPOINT);
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
@@ -487,6 +488,13 @@ function compactToolResponse(
       compact.cartItems = Array.isArray(cart.items)
         ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
+      const clarifyNotAdded = responseIntent === 'clarify_order'
+        || liveToolMeta.clarifyNotAdded === true
+        || (!mutationObserved && (toolName === 'add_item_to_cart' || toolName === 'add_items_to_cart'));
+      compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
+      if (clarifyNotAdded) {
+        compact.mustClarify = true;
+      }
       break;
     }
     case 'search_menu_items': {
@@ -500,16 +508,6 @@ function compactToolResponse(
       }));
       compact.menuFound = found.length;
       compact.menuSearchQuery = String(response.meta?.query || '?');
-      break;
-    }
-        responseIntent === 'clarify_order'
-        || liveToolMeta.clarifyNotAdded === true
-        || (!mutationObserved && (toolName === 'add_item_to_cart' || toolName === 'add_items_to_cart'));
-
-      compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
-      if (clarifyNotAdded) {
-        compact.mustClarify = true;
-      }
       break;
     }
     default:
@@ -881,19 +879,22 @@ export function useGeminiLiveSession({
       let firstAudioFrameAt = 0;
       let lastTranscriptAt = 0;
       let lastToolCallAt = 0;
+      let turnId: string | null = null;
       const perfTimings: PerfTiming[] = [];
       let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
       const flushPerf = () => {
         if (!perfTimings.length) return;
         const sid = sessionIdRef.current || 'unknown';
+        const tid = turnId || undefined;
         // total_e2e = from first audio frame (start of speech) to now (Amber's first audio byte)
         const e2e = firstAudioFrameAt ? Date.now() - firstAudioFrameAt : 0;
         if (e2e > 0) perfTimings.push({ stage: 'total_e2e', ms: e2e });
-        console.log(`[LivePerf] ${sid.slice(0,8)} ${perfTimings.map(t => `${t.stage}=${t.ms}ms`).join(' | ')}`);
-        postPerfTimings(sid, perfModel, [...perfTimings]);
+        console.log(`[LivePerf] ${sid.slice(0,8)} turn=${tid || '?'} ${perfTimings.map(t => `${t.stage}=${t.ms}ms`).join(' | ')}`);
+        postPerfTimings(sid, perfModel, [...perfTimings], tid);
         perfTimings.length = 0;
         // Reset per-turn state for next interaction
+        turnId = null;
         firstAudioFrameAt = 0;
         lastTranscriptAt = 0;
         lastToolCallAt = 0;
@@ -904,7 +905,11 @@ export function useGeminiLiveSession({
         frameCount += 1;
         const now = Date.now();
         lastAudioFrameAt = now;
-        if (!firstAudioFrameAt) firstAudioFrameAt = now;
+        if (!firstAudioFrameAt) {
+          firstAudioFrameAt = now;
+          turnId = generateTurnId(sessionIdRef.current || 'unknown');
+          logBridge('user_input_received', { turn_id: turnId, session_id: sessionIdRef.current, source: 'live_audio' });
+        }
 
         try {
           sessionRef.current.sendRealtimeInput({
@@ -933,6 +938,7 @@ export function useGeminiLiveSession({
           lastTranscriptAt = now;
           const normalizedTranscript = possibleTranscript.trim();
           latestUserTranscriptRef.current = normalizedTranscript;
+          logBridge('transcript_received', { turn_id: turnId, session_id: sessionIdRef.current, text: normalizedTranscript.slice(0, 80) });
           const liveUiStore = useLiveUiSessionStore.getState();
           liveUiStore.setTranscript('user', normalizedTranscript);
           liveUiStore.setProcessing('Analizuje...');
@@ -942,6 +948,8 @@ export function useGeminiLiveSession({
         if (msg.toolCall?.functionCalls?.length) {
           lastToolCallAt = Date.now();
           perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - (lastTranscriptAt || firstAudioFrameAt || lastToolCallAt) });
+          const toolNames = msg.toolCall.functionCalls.map((fc: any) => fc.name || '?').join(',');
+          logBridge('toolcall_received', { turn_id: turnId, session_id: sessionIdRef.current, tools: toolNames });
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
@@ -954,6 +962,7 @@ export function useGeminiLiveSession({
                 id: fc.id,
                 name: fc.name ?? 'unknown',
                 args: (fc.args ?? {}) as Record<string, unknown>,
+                turnId: turnId ?? undefined,
               };
               try {
                 const relayStart = Date.now();
@@ -967,10 +976,13 @@ export function useGeminiLiveSession({
                 // HTTP fallback bridge: when WS is not connected, sync structured
                 // response to useConversationStore so the UI renders menus, cart, etc.
                 if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+                  const applyStart = Date.now();
                   applyToolResultToStore(
                     result.name,
                     (result.response ?? {}) as Record<string, unknown>,
                   );
+                  logBridge('action_result_received', { turn_id: turnId, session_id: sessionIdRef.current, tool: result.name, source: 'http_fallback' });
+                  logBridge('ui_update_applied', { turn_id: turnId, duration_ms: Date.now() - applyStart });
                 }
                 const compactStart = Date.now();
                 const compact = compactToolResponse(
@@ -1038,6 +1050,7 @@ export function useGeminiLiveSession({
                   id: `auto_find_nearby_${now}`,
                   name: 'find_nearby',
                   args: {},
+                  turnId: turnId ?? undefined,
                 })
                   .catch(() => {
                     // auto-recovery relay failed — silent
@@ -1051,6 +1064,7 @@ export function useGeminiLiveSession({
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
               if (lastToolResponseSentAtRef.current) {
                 perfTimings.push({ stage: 'tts_generation', ms: Date.now() - lastToolResponseSentAtRef.current });
+                logBridge('first_audio_output', { turn_id: turnId, session_id: sessionIdRef.current });
                 flushPerf();
                 lastToolResponseSentAtRef.current = null;
               }

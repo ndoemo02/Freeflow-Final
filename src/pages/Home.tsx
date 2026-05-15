@@ -33,6 +33,7 @@ import { useLiveUiSessionStore } from "../state/liveUiSession";
 import ErrorFallback from "../components/ErrorFallback";
 import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
+import { generateTurnId, logBridge } from '../lib/interactionBridge';
 
 // --- UI View Mode Types ---
 type ViewMode = 'tiles' | 'bar';
@@ -206,6 +207,8 @@ export default function Home() {
       return;
     }
 
+    const textTurnId = generateTurnId(sessionId);
+    logBridge('user_input_received', { turn_id: textTurnId, session_id: sessionId, source: 'voicebar_text', text: sanitized.slice(0, 60) });
     stop(); // Stop TTS before sending
     await sendMessage(sanitized);
   }, [liveSessionActive, sendMessage, stop]);
