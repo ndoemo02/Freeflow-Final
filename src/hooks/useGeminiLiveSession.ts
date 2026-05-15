@@ -933,7 +933,10 @@ export function useGeminiLiveSession({
         if (typeof possibleTranscript === 'string' && possibleTranscript.trim()) {
           const now = Date.now();
           if (firstAudioFrameAt) {
-            perfTimings.push({ stage: 'vad_gap', ms: now - firstAudioFrameAt });
+            // audio_to_transcript_ms = speech duration + post-speech silence + server-side VAD commit + transcription.
+            // Gemini Live SDK does not expose client-side speech_end events, so precise
+            // speech_end_to_transcript_ms cannot currently be measured.
+            perfTimings.push({ stage: 'audio_to_transcript_ms', ms: now - firstAudioFrameAt });
           }
           lastTranscriptAt = now;
           const normalizedTranscript = possibleTranscript.trim();
