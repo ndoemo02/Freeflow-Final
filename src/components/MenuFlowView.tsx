@@ -331,9 +331,7 @@ export default function MenuFlowView({
     /* ── voice-driven focus: highlight bez konfliktu ze scrollem ── */
     useEffect(() => {
         if (!highlightedId) return;
-        // Blokujemy AI-recommendation przez 1000ms od wejścia w menu —
-        // AI może wspomnieć produkt w opisie restauracji, to nie powinno przeskakiwać focusu.
-        if (Date.now() - menuEnteredAt.current < 1000) return;
+        // Assistant focus must move immediately so the focus panel follows spoken dishes.
         // highlightedId may come from MenuIsland using raw item.id (no index prefix),
         // while _uiId now has "index__" prefix. Try exact match first, then suffix match.
         let matchedUiId = highlightedId;

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
+import { findMentionedMenuItemId } from '../lib/assistantFocusMatcher';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
@@ -10,29 +11,6 @@ function normalizeId(value: unknown): string {
 
 function normalizeText(value: string = '') {
     return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-}
-
-function findDishInTranscript(transcript: string, items: any[]): string | null {
-    if (!transcript || !items?.length) return null;
-    const normalizedTranscript = normalizeText(transcript);
-    if (normalizedTranscript.length < 4) return null;
-
-    let bestMatch: { id: string; nameLen: number } | null = null;
-
-    for (const item of items) {
-        const itemName = normalizeText(item.name || item.base_name || '');
-        if (!itemName || itemName.length < 3) continue;
-        if (normalizedTranscript.includes(itemName)) {
-            if (!bestMatch || itemName.length > bestMatch.nameLen) {
-                const id = String(item.id || item.menuItemId || item.menu_item_id || '');
-                if (id) {
-                    bestMatch = { id, nameLen: itemName.length };
-                }
-            }
-        }
-    }
-
-    return bestMatch?.id ?? null;
 }
 
 function pickRecommendedMenuId(items: any[], response: any) {
@@ -48,14 +26,14 @@ function pickRecommendedMenuId(items: any[], response: any) {
     }
 
     // Priority 2: text-based matching from reply
-    const replyText = normalizeText(response?.reply || response?.text || response?.tts?.text || '');
     const explicitDish = normalizeText(response?.context?.pendingOrder?.items?.[0]?.name || response?.meta?.dish || '');
+    const mentionedDishId = findMentionedMenuItemId(response?.reply || response?.text || response?.tts?.text || '', items);
+    if (mentionedDishId) return mentionedDishId;
 
     for (const item of items) {
         const itemName = normalizeText(item.name || item.base_name || '');
         if (!itemName) continue;
         if (explicitDish && explicitDish.includes(itemName)) return normalizeId(item.id || item.menuItemId || item.menu_item_id);
-        if (replyText.includes(itemName)) return normalizeId(item.id || item.menuItemId || item.menu_item_id);
     }
 
     return normalizeId(items[0]?.id || items[0]?.menuItemId || items[0]?.menu_item_id || null);
@@ -149,7 +127,7 @@ export default function MenuIsland() {
             const currentItems = useConversationStore.getState().menuItems;
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
 
-            const matchedId = findDishInTranscript(speechText, currentItems);
+            const matchedId = findMentionedMenuItemId(speechText, currentItems);
             if (!matchedId) return;
 
             // Debounce: wait 600ms after last speech part before committing highlight.
@@ -165,12 +143,23 @@ export default function MenuIsland() {
             }, 600);
         };
 
+        window.addEventListener('freeflow:assistant-focus-text', onAssistantSpeechPart as EventListener);
         window.addEventListener('freeflow:live-assistant-part', onAssistantSpeechPart as EventListener);
         return () => {
+            window.removeEventListener('freeflow:assistant-focus-text', onAssistantSpeechPart as EventListener);
             window.removeEventListener('freeflow:live-assistant-part', onAssistantSpeechPart as EventListener);
             if (debounceTimer) clearTimeout(debounceTimer);
         };
     }, [isVisible]);
+
+    useEffect(() => {
+        if (!isVisible || !Array.isArray(menuItems) || menuItems.length === 0) return;
+        const assistantText = lastFullResponse?.reply || lastFullResponse?.text || lastFullResponse?.tts?.text || '';
+        const matchedId = findMentionedMenuItemId(assistantText, menuItems);
+        if (matchedId && normalizeId(highlightedId) !== matchedId) {
+            setHighlightedId(matchedId);
+        }
+    }, [isVisible, menuItems, lastFullResponse, highlightedId]);
 
     useEffect(() => {
         if (!menuItems?.length) {

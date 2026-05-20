@@ -1,16 +1,17 @@
-﻿import React, { useEffect, useMemo } from 'react';
+﻿import React, { useEffect, useMemo, useRef } from 'react';
 import { useConversationUIState } from '../hooks/useConversationUIState';
 import { useConversationStore } from '../store/useConversationStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import CinematicRestaurantCarousel from './CinematicRestaurantCarousel';
 import FreeFlowWordmark, { FreeFlowWordmarkVariant } from './FreeFlowWordmark';
+import {
+    extractMentionedRestaurantIdsInOrder,
+    findMentionedRestaurantId,
+    normalizeAssistantFocusText,
+} from '../lib/assistantFocusMatcher';
 
 // Available variants: 'clean-premium' | 'neon-soft-glow' | 'closest-to-logo'
 const MENU_WORDMARK_VARIANT: FreeFlowWordmarkVariant = 'closest-to-logo';
-
-function normalizeText(value: string = '') {
-    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
 
 function normalizeId(value: unknown): string {
     return String(value ?? '');
@@ -23,13 +24,8 @@ function pickRecommendedRestaurantId(items: any[], response: any, currentRestaur
         return activeRestaurantId;
     }
 
-    const replyText = normalizeText(response?.reply || response?.text || response?.tts?.text || '');
-    for (const item of items) {
-        const name = normalizeText(item.display_name || item.name || '');
-        if (name && replyText.includes(name)) {
-            return normalizeId(item.id);
-        }
-    }
+    const byAssistantText = findMentionedRestaurantId(response?.reply || response?.text || response?.tts?.text || '', items);
+    if (byAssistantText) return byAssistantText;
 
     return items[0]?.id != null ? normalizeId(items[0].id) : null;
 }
@@ -133,14 +129,33 @@ export function SuggestedRestaurantsCarousel() {
     const setSelectedRestaurantPreviewId = useConversationStore(state => state.setSelectedRestaurantPreviewId);
     const currentRestaurant = useConversationStore(state => state.currentRestaurant);
     const lastFullResponse = useConversationStore(state => state.lastFullResponse);
+    const lastAssistantFocusKeyRef = useRef<string | null>(null);
 
     const recommendedId = useMemo(
         () => pickRecommendedRestaurantId(suggestedRestaurants || [], lastFullResponse, currentRestaurant),
         [suggestedRestaurants, lastFullResponse, currentRestaurant]
     );
+    const assistantFocusText = useMemo(
+        () => String(lastFullResponse?.reply || lastFullResponse?.text || lastFullResponse?.tts?.text || ''),
+        [lastFullResponse]
+    );
+    const assistantFocusKey = useMemo(
+        () => `${lastFullResponse?.turn_id || lastFullResponse?.timestamp || lastFullResponse?.request_id || ''}:${normalizeAssistantFocusText(assistantFocusText)}`,
+        [assistantFocusText, lastFullResponse]
+    );
+    const orderedAssistantMentions = useMemo(
+        () => extractMentionedRestaurantIdsInOrder(assistantFocusText, suggestedRestaurants || []),
+        [assistantFocusText, suggestedRestaurants]
+    );
 
     useEffect(() => {
         if (!suggestedRestaurants?.length) return;
+
+        if (recommendedId && assistantFocusKey && lastAssistantFocusKeyRef.current !== assistantFocusKey) {
+            lastAssistantFocusKeyRef.current = assistantFocusKey;
+            setSelectedRestaurantPreviewId(recommendedId);
+            return;
+        }
 
         const hasCurrentSelection = selectedRestaurantPreviewId
             ? suggestedRestaurants.some((item) => normalizeId(item.id) === normalizeId(selectedRestaurantPreviewId))
@@ -154,7 +169,38 @@ export function SuggestedRestaurantsCarousel() {
         }
 
         setSelectedRestaurantPreviewId(normalizeId(suggestedRestaurants[0].id));
-    }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId]);
+    }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId, assistantFocusKey]);
+
+    useEffect(() => {
+        if (!suggestedRestaurants?.length) return;
+
+        const handleAssistantFocus = (rawEvent: Event) => {
+            const event = rawEvent as CustomEvent<any>;
+            const matchedId = findMentionedRestaurantId(event?.detail?.text || '', suggestedRestaurants);
+            if (matchedId) {
+                setSelectedRestaurantPreviewId(matchedId);
+            }
+        };
+
+        window.addEventListener('freeflow:assistant-focus-text', handleAssistantFocus as EventListener);
+        window.addEventListener('freeflow:live-assistant-part', handleAssistantFocus as EventListener);
+        return () => {
+            window.removeEventListener('freeflow:assistant-focus-text', handleAssistantFocus as EventListener);
+            window.removeEventListener('freeflow:live-assistant-part', handleAssistantFocus as EventListener);
+        };
+    }, [suggestedRestaurants, setSelectedRestaurantPreviewId]);
+
+    useEffect(() => {
+        if (orderedAssistantMentions.length < 2) return;
+        const timers = orderedAssistantMentions.map((restaurantId, index) =>
+            window.setTimeout(() => {
+                setSelectedRestaurantPreviewId(restaurantId);
+            }, 450 + index * 1100),
+        );
+        return () => {
+            timers.forEach((timer) => window.clearTimeout(timer));
+        };
+    }, [orderedAssistantMentions, setSelectedRestaurantPreviewId]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
 
