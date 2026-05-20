@@ -414,7 +414,7 @@ export default function Home() {
             aria-label="Uruchom mikrofon"
           >
             <img
-              src="/logo/freeflow-drop.png"
+              src="/logo/logoglosnik.png"
               alt="FreeFlow"
               className={`logo ${isListening ? "recording" : ""}`}
             />

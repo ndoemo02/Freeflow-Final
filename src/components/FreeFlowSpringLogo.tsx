@@ -16,7 +16,7 @@ function LogoScene() {
     const gltf = useLoader(GLTFLoader, '/logo/logo.glb');
     const [logoTexture, silhouetteTexture] = useLoader(TextureLoader, [
         '/logo/logo.png',
-        '/logo/freeflow-drop.png',
+        '/logo/logoglosnik.png',
     ]);
 
     useEffect(() => {
