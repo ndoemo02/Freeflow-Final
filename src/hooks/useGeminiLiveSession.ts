@@ -507,7 +507,7 @@ function compactToolResponse(
         variant: x.variant || null,
       }));
       compact.menuFound = found.length;
-      compact.menuSearchQuery = String(response.meta?.query || '?');
+      compact.menuSearchQuery = String((response.meta as any)?.query || '?');
       break;
     }
     default:
@@ -880,6 +880,7 @@ export function useGeminiLiveSession({
       let lastTranscriptAt = 0;
       let lastToolCallAt = 0;
       let turnId: string | null = null;
+      let assistantTranscriptBuffer = '';
       const perfTimings: PerfTiming[] = [];
       let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
@@ -895,6 +896,7 @@ export function useGeminiLiveSession({
         perfTimings.length = 0;
         // Reset per-turn state for next interaction
         turnId = null;
+        assistantTranscriptBuffer = '';
         firstAudioFrameAt = 0;
         lastTranscriptAt = 0;
         lastToolCallAt = 0;
@@ -907,6 +909,7 @@ export function useGeminiLiveSession({
         lastAudioFrameAt = now;
         if (!firstAudioFrameAt) {
           firstAudioFrameAt = now;
+          assistantTranscriptBuffer = '';
           turnId = generateTurnId(sessionIdRef.current || 'unknown');
           logBridge('user_input_received', { turn_id: turnId, session_id: sessionIdRef.current, source: 'live_audio' });
         }
@@ -1024,14 +1027,17 @@ export function useGeminiLiveSession({
 
         if (msg.serverContent?.modelTurn?.parts) {
           for (const part of msg.serverContent.modelTurn.parts) {
-            const textPart = String((part as any)?.text || '').trim();
+            const rawTextPart = String((part as any)?.text || '');
+            const textPart = rawTextPart.trim();
             if (textPart) {
+              assistantTranscriptBuffer += rawTextPart;
               clearStallWatchdog();
               useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
               window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
                 detail: {
                   sessionId: sid,
                   text: textPart,
+                  transcript: assistantTranscriptBuffer,
                 },
               }));
 
@@ -1078,6 +1084,7 @@ export function useGeminiLiveSession({
         }
 
         if (msg.serverContent?.interrupted) {
+          assistantTranscriptBuffer = '';
           clearStallWatchdog();
           player.stop();
         }

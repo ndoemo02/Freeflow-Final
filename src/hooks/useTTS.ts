@@ -8,6 +8,17 @@ export interface UseTTSReturn {
     currentSource: 'backend' | 'webspeech' | null;
 }
 
+function emitAssistantFocusText(text: string, source: 'backend_tts' | 'webspeech'): void {
+    if (typeof window === 'undefined' || !text.trim()) return;
+    window.dispatchEvent(new CustomEvent('freeflow:assistant-focus-text', {
+        detail: {
+            source,
+            text,
+            transcript: text,
+        },
+    }));
+}
+
 /**
  * useTTS - Hybrid TTS Hook
  * 
@@ -128,6 +139,7 @@ export function useTTS(): UseTTSReturn {
                 audio.onplay = () => {
                     setIsSpeaking(true);
                     setCurrentSource('backend');
+                    emitAssistantFocusText(text, 'backend_tts');
                     console.log('[TTS] 🔊 Playing backend audio (Gemini/Vertex)');
                 };
 
@@ -190,6 +202,7 @@ export function useTTS(): UseTTSReturn {
         utterance.onstart = () => {
             setIsSpeaking(true);
             setCurrentSource('webspeech');
+            emitAssistantFocusText(text, 'webspeech');
             console.log('[TTS] 🔊 Playing WebSpeech (browser)');
         };
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
-import { findMentionedMenuItemId } from '../lib/assistantFocusMatcher';
+import { findLastMentionedMenuItemId, findMentionedMenuItemId, isCartConfirmationText } from '../lib/assistantFocusMatcher';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
@@ -25,10 +25,8 @@ function pickRecommendedMenuId(items: any[], response: any) {
         }
     }
 
-    // Priority 2: text-based matching from reply
+    // Priority 2: explicit dish metadata from backend
     const explicitDish = normalizeText(response?.context?.pendingOrder?.items?.[0]?.name || response?.meta?.dish || '');
-    const mentionedDishId = findMentionedMenuItemId(response?.reply || response?.text || response?.tts?.text || '', items);
-    if (mentionedDishId) return mentionedDishId;
 
     for (const item of items) {
         const itemName = normalizeText(item.name || item.base_name || '');
@@ -63,6 +61,7 @@ export default function MenuIsland() {
         return full || currentRestaurant;
     }, [currentRestaurant, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const lastAssistantMenuFocusAtRef = useRef(0);
     const menuBackStatePushedRef = useRef(false);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
@@ -81,6 +80,9 @@ export default function MenuIsland() {
             const detail = (event as CustomEvent)?.detail || {};
             const lastAddedRaw = String(detail?.lastAdded || '').trim();
             if (!lastAddedRaw || !Array.isArray(menuItems) || menuItems.length === 0) {
+                return;
+            }
+            if (Date.now() - lastAssistantMenuFocusAtRef.current < 5000) {
                 return;
             }
 
@@ -121,13 +123,14 @@ export default function MenuIsland() {
             const currentSessionId = useConversationStore.getState().sessionId;
             if (eventSessionId && currentSessionId && eventSessionId !== currentSessionId) return;
 
-            const speechText = String(event?.detail?.text || '').trim();
+            const speechText = String(event?.detail?.transcript || event?.detail?.text || '').trim();
             if (!speechText) return;
+            if (isCartConfirmationText(speechText)) return;
 
             const currentItems = useConversationStore.getState().menuItems;
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
 
-            const matchedId = findMentionedMenuItemId(speechText, currentItems);
+            const matchedId = findLastMentionedMenuItemId(speechText, currentItems);
             if (!matchedId) return;
 
             // Debounce: wait 600ms after last speech part before committing highlight.
@@ -136,6 +139,7 @@ export default function MenuIsland() {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 if (pendingMatchId) {
+                    lastAssistantMenuFocusAtRef.current = Date.now();
                     setHighlightedId(pendingMatchId);
                     pendingMatchId = null;
                 }
@@ -151,15 +155,6 @@ export default function MenuIsland() {
             if (debounceTimer) clearTimeout(debounceTimer);
         };
     }, [isVisible]);
-
-    useEffect(() => {
-        if (!isVisible || !Array.isArray(menuItems) || menuItems.length === 0) return;
-        const assistantText = lastFullResponse?.reply || lastFullResponse?.text || lastFullResponse?.tts?.text || '';
-        const matchedId = findMentionedMenuItemId(assistantText, menuItems);
-        if (matchedId && normalizeId(highlightedId) !== matchedId) {
-            setHighlightedId(matchedId);
-        }
-    }, [isVisible, menuItems, lastFullResponse, highlightedId]);
 
     useEffect(() => {
         if (!menuItems?.length) {

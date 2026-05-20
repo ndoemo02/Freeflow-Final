@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useConversationUIState } from '../hooks/useConversationUIState';
 import { useConversationStore } from '../store/useConversationStore';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,9 +23,6 @@ function pickRecommendedRestaurantId(items: any[], response: any, currentRestaur
     if (activeRestaurantId && items.some((item: any) => normalizeId(item.id) === activeRestaurantId)) {
         return activeRestaurantId;
     }
-
-    const byAssistantText = findMentionedRestaurantId(response?.reply || response?.text || response?.tts?.text || '', items);
-    if (byAssistantText) return byAssistantText;
 
     return items[0]?.id != null ? normalizeId(items[0].id) : null;
 }
@@ -130,32 +127,53 @@ export function SuggestedRestaurantsCarousel() {
     const currentRestaurant = useConversationStore(state => state.currentRestaurant);
     const lastFullResponse = useConversationStore(state => state.lastFullResponse);
     const lastAssistantFocusKeyRef = useRef<string | null>(null);
+    const restaurantFocusTimersRef = useRef<number[]>([]);
 
     const recommendedId = useMemo(
         () => pickRecommendedRestaurantId(suggestedRestaurants || [], lastFullResponse, currentRestaurant),
         [suggestedRestaurants, lastFullResponse, currentRestaurant]
     );
-    const assistantFocusText = useMemo(
-        () => String(lastFullResponse?.reply || lastFullResponse?.text || lastFullResponse?.tts?.text || ''),
-        [lastFullResponse]
-    );
-    const assistantFocusKey = useMemo(
-        () => `${lastFullResponse?.turn_id || lastFullResponse?.timestamp || lastFullResponse?.request_id || ''}:${normalizeAssistantFocusText(assistantFocusText)}`,
-        [assistantFocusText, lastFullResponse]
-    );
-    const orderedAssistantMentions = useMemo(
-        () => extractMentionedRestaurantIdsInOrder(assistantFocusText, suggestedRestaurants || []),
-        [assistantFocusText, suggestedRestaurants]
-    );
+    const clearRestaurantFocusTimers = useCallback(() => {
+        restaurantFocusTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+        restaurantFocusTimersRef.current = [];
+    }, []);
+
+    const applyAssistantRestaurantFocus = useCallback((text: unknown, sourceKey = 'assistant') => {
+        const restaurants = suggestedRestaurants || [];
+        if (!restaurants.length) return false;
+
+        const normalizedText = normalizeAssistantFocusText(text);
+        if (!normalizedText) return false;
+
+        const orderedMentions = extractMentionedRestaurantIdsInOrder(normalizedText, restaurants);
+        const isLiveTranscript = sourceKey.startsWith('live');
+        const matchedId = (isLiveTranscript && orderedMentions.length > 0)
+            ? orderedMentions[orderedMentions.length - 1]
+            : (orderedMentions[0] || findMentionedRestaurantId(normalizedText, restaurants));
+        if (!matchedId) return false;
+
+        const focusKey = `${sourceKey}:${orderedMentions.join(',') || matchedId}:${normalizedText}`;
+        if (lastAssistantFocusKeyRef.current === focusKey) return true;
+        lastAssistantFocusKeyRef.current = focusKey;
+        clearRestaurantFocusTimers();
+
+        if (!isLiveTranscript && orderedMentions.length >= 2) {
+            restaurantFocusTimersRef.current = orderedMentions.map((restaurantId, index) =>
+                window.setTimeout(() => {
+                    setSelectedRestaurantPreviewId(restaurantId);
+                }, 250 + index * 1100),
+            );
+            return true;
+        }
+
+        setSelectedRestaurantPreviewId(matchedId);
+        return true;
+    }, [clearRestaurantFocusTimers, setSelectedRestaurantPreviewId, suggestedRestaurants]);
+
+    useEffect(() => () => clearRestaurantFocusTimers(), [clearRestaurantFocusTimers]);
 
     useEffect(() => {
         if (!suggestedRestaurants?.length) return;
-
-        if (recommendedId && assistantFocusKey && lastAssistantFocusKeyRef.current !== assistantFocusKey) {
-            lastAssistantFocusKeyRef.current = assistantFocusKey;
-            setSelectedRestaurantPreviewId(recommendedId);
-            return;
-        }
 
         const hasCurrentSelection = selectedRestaurantPreviewId
             ? suggestedRestaurants.some((item) => normalizeId(item.id) === normalizeId(selectedRestaurantPreviewId))
@@ -169,17 +187,17 @@ export function SuggestedRestaurantsCarousel() {
         }
 
         setSelectedRestaurantPreviewId(normalizeId(suggestedRestaurants[0].id));
-    }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId, assistantFocusKey]);
+    }, [suggestedRestaurants, recommendedId, selectedRestaurantPreviewId, setSelectedRestaurantPreviewId]);
 
     useEffect(() => {
         if (!suggestedRestaurants?.length) return;
 
         const handleAssistantFocus = (rawEvent: Event) => {
             const event = rawEvent as CustomEvent<any>;
-            const matchedId = findMentionedRestaurantId(event?.detail?.text || '', suggestedRestaurants);
-            if (matchedId) {
-                setSelectedRestaurantPreviewId(matchedId);
-            }
+            const source = event.type === 'freeflow:live-assistant-part'
+                ? `live:${event?.detail?.sessionId || 'event'}`
+                : String(event?.detail?.source || event?.detail?.sessionId || 'event');
+            applyAssistantRestaurantFocus(event?.detail?.transcript || event?.detail?.text || '', source);
         };
 
         window.addEventListener('freeflow:assistant-focus-text', handleAssistantFocus as EventListener);
@@ -188,19 +206,7 @@ export function SuggestedRestaurantsCarousel() {
             window.removeEventListener('freeflow:assistant-focus-text', handleAssistantFocus as EventListener);
             window.removeEventListener('freeflow:live-assistant-part', handleAssistantFocus as EventListener);
         };
-    }, [suggestedRestaurants, setSelectedRestaurantPreviewId]);
-
-    useEffect(() => {
-        if (orderedAssistantMentions.length < 2) return;
-        const timers = orderedAssistantMentions.map((restaurantId, index) =>
-            window.setTimeout(() => {
-                setSelectedRestaurantPreviewId(restaurantId);
-            }, 450 + index * 1100),
-        );
-        return () => {
-            timers.forEach((timer) => window.clearTimeout(timer));
-        };
-    }, [orderedAssistantMentions, setSelectedRestaurantPreviewId]);
+    }, [suggestedRestaurants, applyAssistantRestaurantFocus]);
 
     if (!suggestedRestaurants || suggestedRestaurants.length === 0) return null;
 

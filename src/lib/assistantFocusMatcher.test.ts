@@ -3,6 +3,8 @@ import {
     extractMentionedRestaurantIdsInOrder,
     findMentionedMenuItemId,
     findMentionedRestaurantId,
+    findLastMentionedMenuItemId,
+    isCartConfirmationText,
 } from './assistantFocusMatcher';
 
 const restaurants = [
@@ -37,5 +39,14 @@ describe('assistantFocusMatcher', () => {
 
     it('prefers the strongest dish match over generic category words', () => {
         expect(findMentionedMenuItemId('Bacon Burger pasuje najlepiej.', menuItems)).toBe('m1');
+    });
+
+    it('recognizes add-to-cart confirmations as non-recommendation text', () => {
+        expect(isCartConfirmationText('Dodałem Bacon Burger do koszyka.')).toBe(true);
+        expect(isCartConfirmationText('Polecam Bacon Burger jako najlepszy wybór.')).toBe(false);
+    });
+
+    it('returns the latest dish mention from a growing transcript buffer', () => {
+        expect(findLastMentionedMenuItemId('Najpierw Bacon Burger, a teraz Krem pomidorowy.', menuItems)).toBe('m3');
     });
 });

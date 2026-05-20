@@ -9,6 +9,14 @@ export function normalizeAssistantFocusText(value: unknown): string {
         .trim();
 }
 
+export function isCartConfirmationText(text: unknown): boolean {
+    const normalized = normalizeAssistantFocusText(text);
+    if (!normalized) return false;
+    const mentionsCart = /\b(koszyk|koszyka|zamowienia|zamowienie)\b/.test(normalized);
+    const confirmsAdd = /\b(dodalem|dodalam|dodaje|dodano|dodany|dodana|wrzucilem|wrzucilam|jest w)\b/.test(normalized);
+    return mentionsCart && confirmsAdd;
+}
+
 function itemId(item: any): string | null {
     const id = item?.id ?? item?.menuItemId ?? item?.menu_item_id ?? null;
     return id == null ? null : String(id);
@@ -164,4 +172,37 @@ export function findMentionedMenuItemId(text: unknown, items: any[]): string | n
     });
 
     return bestId;
+}
+
+export function findLastMentionedMenuItemId(text: unknown, items: any[]): string | null {
+    if (!Array.isArray(items) || items.length === 0) return null;
+    const normalizedText = normalizeAssistantFocusText(text);
+    if (!normalizedText) return null;
+
+    let latestId: string | null = null;
+    let latestIndex = -1;
+    let latestLength = 0;
+
+    items.forEach((item) => {
+        const id = itemId(item);
+        const rawName = displayName(item);
+        if (!id || !rawName) return;
+
+        const variants = [
+            normalizeAssistantFocusText(rawName),
+            normalizeAssistantFocusText(stripMenuSize(rawName)),
+        ].filter((variant, index, all) => variant.length >= 3 && all.indexOf(variant) === index);
+
+        variants.forEach((variant) => {
+            const index = normalizedText.lastIndexOf(variant);
+            if (index < 0) return;
+            if (index > latestIndex || (index === latestIndex && variant.length > latestLength)) {
+                latestId = id;
+                latestIndex = index;
+                latestLength = variant.length;
+            }
+        });
+    });
+
+    return latestId || findMentionedMenuItemId(text, items);
 }
