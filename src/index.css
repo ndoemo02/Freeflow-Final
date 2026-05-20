@@ -74,6 +74,12 @@ body {
   --kds-bg: #0a0a10;
   --kds-card: #12121a;
   --op-surface: #0d1020;
+
+  /* === Consumer Voice Dock === */
+  --ff-voice-panel: rgba(11, 14, 24, 0.88);
+  --ff-voice-border: rgba(255, 255, 255, 0.10);
+  --ff-voice-accent: #67e8f9;
+  --ff-voice-shadow: 0 14px 34px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255,255,255,0.05) inset;
 }
 
 html:not(.dark) {

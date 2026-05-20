@@ -47,22 +47,22 @@ function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React
 
   const variants: Record<DockGlassVariant, React.CSSProperties> = {
     "clean-premium": {
-      background: "linear-gradient(135deg, rgba(10,14,24,0.36) 0%, rgba(14,20,34,0.46) 100%)",
-      border: "1px solid rgba(235,242,255,0.16)",
+      background: "linear-gradient(135deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(14,17,28,0.72) 100%)",
+      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
       boxShadow:
-        "0 14px 34px rgba(2,6,14,0.38), 0 1px 0 rgba(255,255,255,0.16) inset, 0 -1px 0 rgba(4,8,18,0.24) inset",
+        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 1px 0 rgba(255,255,255,0.12) inset, 0 -1px 0 rgba(4,8,18,0.24) inset",
     },
     "neon-soft-glow": {
-      background: "linear-gradient(132deg, rgba(10,14,24,0.40) 0%, rgba(13,20,34,0.50) 100%)",
-      border: "1px solid rgba(228,236,255,0.17)",
+      background: "linear-gradient(132deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(14,17,28,0.76) 100%)",
+      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
       boxShadow:
-        "0 16px 42px rgba(2,6,14,0.42), 0 0 18px rgba(82,122,255,0.14), 0 0 14px rgba(45,212,191,0.10), 0 1px 0 rgba(255,255,255,0.14) inset, 0 -1px 0 rgba(4,8,18,0.26) inset",
+        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 16px rgba(103,232,249,0.08), 0 1px 0 rgba(255,255,255,0.12) inset, 0 -1px 0 rgba(4,8,18,0.26) inset",
     },
     "closest-to-logo": {
-      background: "linear-gradient(138deg, rgba(10,12,22,0.42) 0%, rgba(16,20,33,0.54) 52%, rgba(12,17,28,0.50) 100%)",
-      border: "1px solid rgba(238,246,255,0.18)",
+      background: "linear-gradient(138deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(16,20,33,0.74) 52%, rgba(12,17,28,0.68) 100%)",
+      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
       boxShadow:
-        "0 16px 46px rgba(1,5,14,0.46), 0 0 20px rgba(249,115,22,0.15), 0 0 18px rgba(59,130,246,0.12), 0 1px 0 rgba(255,255,255,0.15) inset",
+        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 18px rgba(249,115,22,0.10), 0 1px 0 rgba(255,255,255,0.12) inset",
     },
   };
 
@@ -72,11 +72,23 @@ function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React
 
   return {
     ...base,
-    background: "linear-gradient(135deg, rgba(24,10,16,0.44) 0%, rgba(28,14,24,0.56) 100%)",
-    border: "1px solid rgba(239,68,68,0.38)",
+    background: "linear-gradient(135deg, rgba(9,18,25,0.84) 0%, rgba(10,24,32,0.78) 100%)",
+    border: "1px solid rgba(103,232,249,0.34)",
     boxShadow:
-      "0 16px 44px rgba(10,4,8,0.52), 0 0 18px rgba(239,68,68,0.18), 0 0 12px rgba(99,102,241,0.10), 0 1px 0 rgba(255,255,255,0.10) inset",
+      "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 18px rgba(103,232,249,0.16), 0 1px 0 rgba(255,255,255,0.12) inset",
   };
+}
+
+function isTechnicalDockText(value: string): boolean {
+  const text = value.trim();
+  if (!text) return true;
+  if (/^gotowe\.?$/i.test(text)) return true;
+  if ((text.startsWith("{") && text.endsWith("}")) || (text.startsWith("[") && text.endsWith("]"))) return true;
+  return /interactionbridge|gemini|tool_call|tool_result|ws_|https?:\/\/|session|request_id/i.test(text);
+}
+
+function firstUserFacingDockText(...values: string[]): string {
+  return values.find((value) => value.trim() && !isTechnicalDockText(value))?.trim() || "";
 }
 
 function resolveLiveDockText(
@@ -113,6 +125,7 @@ export default function VoiceDock({
 }: VoiceDockProps) {
   const [inputValue, setInputValue] = useState("");
   const [mobileYOffset, setMobileYOffset] = useState(0);
+  const [mobileLeftInset, setMobileLeftInset] = useState(48);
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     if (typeof window.matchMedia !== "function") return false;
@@ -138,8 +151,9 @@ export default function VoiceDock({
   else if (isSpeaking || isPresenting) amberStatus = "ok";
 
   const liveDockText = resolveLiveDockText(liveUiState, liveStatusText, liveTranscript);
-  const displayText = liveDockText || interimText || (recording ? "" : amberResponse);
+  const displayText = firstUserFacingDockText(liveDockText, interimText, recording ? "" : amberResponse);
   const showResponse = !!displayText;
+  const voiceActive = recording || liveUiState === "listening";
   const inputPlaceholder = liveUiState === "listening"
     ? "Słucham..."
     : (recording ? "Słucham..." : "Napisz lub powiedz...");
@@ -191,6 +205,10 @@ export default function VoiceDock({
       // Keep micro-adjustment small and stable across devices.
       const nextDelta = Math.max(-22, Math.min(22, Math.round(rawDelta + upwardNudge)));
       setMobileYOffset((prev) => (prev === nextDelta ? prev : nextDelta));
+
+      const horizontalAnchorRect = baseRect || trackRect || statusRect;
+      const nextLeftInset = Math.max(40, Math.min(96, Math.round(horizontalAnchorRect.right + 14)));
+      setMobileLeftInset((prev) => (prev === nextLeftInset ? prev : nextLeftInset));
     };
 
     const rafId = window.requestAnimationFrame(() => {
@@ -201,7 +219,7 @@ export default function VoiceDock({
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", alignToStatusRail);
     };
-  }, [isMobile, hasTypedText, recording, showResponse]);
+  }, [isMobile, hasTypedText, recording, showResponse, voiceActive]);
 
   const submit = () => {
     if (hasTypedText) {
@@ -220,10 +238,15 @@ export default function VoiceDock({
   };
 
   const dockWrapperStyle = isMobile
-    ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }
+    ? {
+        paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)",
+        paddingLeft: `calc(env(safe-area-inset-left) + ${mobileLeftInset}px)`,
+        paddingRight: "max(env(safe-area-inset-right), 8px)",
+        justifyContent: "flex-start",
+      }
     : undefined;
 
-  const dockGlassStyle = getDockGlassStyle(MOBILE_HERO_DOCK_VARIANT, recording);
+  const dockGlassStyle = getDockGlassStyle(MOBILE_HERO_DOCK_VARIANT, voiceActive);
 
   return (
     <AnimatePresence>
@@ -240,8 +263,8 @@ export default function VoiceDock({
           <div
             className="w-full pointer-events-auto"
             style={{
-              width: isMobile ? "min(84vw, 440px)" : "100%",
-              maxWidth: isMobile ? 440 : 600,
+              width: "100%",
+              maxWidth: isMobile ? "none" : 600,
             }}
           >
             {/* Voice bar */}
@@ -262,7 +285,8 @@ export default function VoiceDock({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 2 }}
                       transition={{ duration: 0.18 }}
-                      className="mb-1 text-[11px] leading-tight text-cyan-200/85 truncate"
+                      className="mb-1 text-[11px] leading-tight truncate"
+                      style={{ color: "color-mix(in srgb, var(--ff-voice-accent, #67e8f9) 82%, white 18%)" }}
                       title={displayText}
                     >
                       {displayText}
@@ -316,7 +340,14 @@ export default function VoiceDock({
                     data-ui-role="action-orb"
                     onClick={onMicClick}
                     className="shrink-0 relative flex items-center justify-center"
-                    style={{ width: 36, height: 36 }}
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: "var(--radius-pill)",
+                      overflow: "hidden",
+                      background: voiceActive ? "rgba(103,232,249,0.10)" : "rgba(255,255,255,0.045)",
+                      border: voiceActive ? "1px solid rgba(103,232,249,0.22)" : "1px solid rgba(255,255,255,0.08)",
+                    }}
                     initial={{ opacity: 0, scale: 0.7 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.7 }}
@@ -325,7 +356,7 @@ export default function VoiceDock({
                     aria-label={recording ? "Zatrzymaj nagrywanie" : "Włącz mikrofon"}
                     aria-pressed={recording}
                   >
-                    <AmberIndicator status={amberStatus} />
+                    <AmberIndicator status={amberStatus} className="h-9 w-9 overflow-hidden pointer-events-none" />
                     {recording && (
                       <motion.div
                         className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"

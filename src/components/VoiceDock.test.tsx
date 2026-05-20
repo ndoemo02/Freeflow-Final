@@ -24,6 +24,33 @@ describe('VoiceDock', () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText(/slucham/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Słucham...')).toBeInTheDocument();
+  });
+
+  it('hides idle and technical status text from the user-facing transcript line', () => {
+    render(
+      <VoiceDock
+        recording={false}
+        liveUiState="idle"
+        liveStatusText="Gotowe."
+        amberResponse="[InteractionBridge] tool_call session=abc"
+        visible
+      />,
+    );
+
+    expect(screen.queryByText(/gotowe/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/interactionbridge/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps natural assistant text visible', () => {
+    render(
+      <VoiceDock
+        recording={false}
+        amberResponse="Jasne, dodaje burgera do koszyka."
+        visible
+      />,
+    );
+
+    expect(screen.getByText(/dodaje burgera/i)).toBeInTheDocument();
   });
 });
