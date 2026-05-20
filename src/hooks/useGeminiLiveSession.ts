@@ -884,6 +884,24 @@ export function useGeminiLiveSession({
       const perfTimings: PerfTiming[] = [];
       let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
+      const emitAssistantSpeechPart = (rawTextPart: unknown): string => {
+        const rawText = String(rawTextPart || '');
+        const textPart = rawText.trim();
+        if (!textPart) return '';
+
+        assistantTranscriptBuffer += rawText;
+        clearStallWatchdog();
+        useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
+        window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
+          detail: {
+            sessionId: sessionIdRef.current || 'unknown',
+            text: textPart,
+            transcript: assistantTranscriptBuffer,
+          },
+        }));
+        return textPart;
+      };
+
       const flushPerf = () => {
         if (!perfTimings.length) return;
         const sid = sessionIdRef.current || 'unknown';
@@ -950,6 +968,14 @@ export function useGeminiLiveSession({
           liveUiStore.setProcessing('Analizuje...');
           armStallWatchdog('transcript_final');
         }
+
+        const possibleAssistantTranscript =
+          (msg as any)?.serverContent?.outputTranscription?.text
+          || (msg as any)?.serverContent?.outputTranscription?.transcript
+          || (msg as any)?.serverContent?.outputTranscript?.text
+          || (msg as any)?.serverContent?.outputTranscript?.transcript
+          || null;
+        const emittedOutputTranscript = emitAssistantSpeechPart(possibleAssistantTranscript);
 
         if (msg.toolCall?.functionCalls?.length) {
           lastToolCallAt = Date.now();
@@ -1028,19 +1054,8 @@ export function useGeminiLiveSession({
         if (msg.serverContent?.modelTurn?.parts) {
           for (const part of msg.serverContent.modelTurn.parts) {
             const rawTextPart = String((part as any)?.text || '');
-            const textPart = rawTextPart.trim();
+            const textPart = emittedOutputTranscript ? rawTextPart.trim() : emitAssistantSpeechPart(rawTextPart);
             if (textPart) {
-              assistantTranscriptBuffer += rawTextPart;
-              clearStallWatchdog();
-              useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
-              window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
-                detail: {
-                  sessionId: sid,
-                  text: textPart,
-                  transcript: assistantTranscriptBuffer,
-                },
-              }));
-
               const userTranscript = latestUserTranscriptRef.current || '';
               const hasRecentGps = !!readRecentGpsHint();
               const now = Date.now();
