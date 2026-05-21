@@ -893,6 +893,7 @@
 /* ── COMPACT ROW (non-focused items) ── */
 .mf-row {
   position: relative;
+  scroll-margin-top: 38px;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -917,14 +918,15 @@
 }
 
 .mf-row--recommended {
-  border-left-color: rgba(249, 115, 22, 0.34);
+  border-left-color: rgba(249, 115, 22, 0.24);
 }
 
 .mf-row--is-focused {
-  background: var(--ff-menu-row-active, rgba(249, 115, 22, 0.105));
-  border-color: rgba(249, 115, 22, 0.18);
-  border-left-color: rgba(249, 115, 22, 0.72);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.045) inset;
+  background:
+    linear-gradient(90deg, rgba(249, 115, 22, 0.085), rgba(56, 189, 248, 0.025) 42%, rgba(255, 255, 255, 0.025));
+  border-color: rgba(249, 115, 22, 0.16);
+  border-left-color: rgba(249, 115, 22, 0.48);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
 }
 
 .mf-row--is-focused .mf-row__name {
@@ -1011,15 +1013,88 @@
 .mf-focus-panel {
   flex-shrink: 0;
   margin: 0 0 6px;
-  border-radius: var(--ff-radius-panel, 16px);
+  position: relative;
+  border-radius: var(--ff-radius-panel, 18px);
   overflow: hidden;
-  border: 1px solid var(--ff-menu-border-strong, rgba(249, 115, 22, 0.42));
-  background: var(--ff-menu-panel-strong, rgba(14, 17, 28, 0.96));
-  box-shadow: var(--ff-shadow-panel, 0 14px 34px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255,255,255,0.05) inset);
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  background:
+    radial-gradient(120px 90px at 4% 2%, rgba(249, 115, 22, 0.18), transparent 65%),
+    radial-gradient(110px 82px at 98% 4%, rgba(56, 189, 248, 0.09), transparent 66%),
+    linear-gradient(156deg, rgba(24, 18, 15, 0.95) 0%, rgba(10, 13, 22, 0.97) 44%, rgba(6, 9, 17, 0.99) 100%);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 177, 115, 0.08) inset,
+    0 1px 0 rgba(255,255,255,0.055) inset;
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  isolation: isolate;
   transition: margin 0.2s ease-out, border-radius 0.2s ease-out;
 }
 
 /* ── FOCUSED CARD (legacy inline — kept for compatibility) ── */
+.mf-focus-panel::before,
+.mf-focus-panel::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mf-focus-panel::before {
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.86;
+  background:
+    linear-gradient(90deg, rgba(249, 115, 22, 0.72), rgba(255, 177, 115, 0.28), transparent 34%) top left / 44% 1px no-repeat,
+    linear-gradient(180deg, rgba(249, 115, 22, 0.58), rgba(255, 177, 115, 0.12), transparent 50%) top left / 1px 42% no-repeat,
+    linear-gradient(270deg, rgba(56, 189, 248, 0.44), rgba(249, 115, 22, 0.22), transparent 38%) bottom right / 42% 1px no-repeat,
+    linear-gradient(0deg, rgba(56, 189, 248, 0.36), rgba(249, 115, 22, 0.18), transparent 55%) bottom right / 1px 38% no-repeat;
+  filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.14));
+  animation: mf-edge-breathe 7.5s ease-in-out infinite;
+}
+
+.mf-focus-panel::after {
+  inset: 0;
+  border-radius: inherit;
+  z-index: 0;
+  opacity: 0.42;
+  background:
+    radial-gradient(150px 40px at 12% 0%, rgba(249, 115, 22, 0.20), transparent 72%),
+    radial-gradient(130px 34px at 92% 100%, rgba(56, 189, 248, 0.10), transparent 75%);
+  filter: blur(0.6px);
+}
+
+.mf-focus-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes mf-edge-breathe {
+  0%, 100% {
+    opacity: 0.56;
+    filter: saturate(0.96);
+  }
+  50% {
+    opacity: 0.82;
+    filter: saturate(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-focus-panel::before {
+    animation: none;
+    opacity: 0.64;
+  }
+
+  .mf-row,
+  .mf-focus-panel,
+  .mf-card__banner,
+  .mf-card__body,
+  .mf-card__footer {
+    transition: none;
+  }
+}
+
 .mf-card {
   display: block;
   width: 100%;
@@ -1041,7 +1116,7 @@
 /* image/gradient banner */
 .mf-card__banner {
   position: relative;
-  height: 78px;
+  height: clamp(112px, 16vh, 132px);
   width: 100%;
   overflow: hidden;
   display: flex;
@@ -1057,12 +1132,15 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 48%;
 }
 
 .mf-card__banner-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.62) 100%);
+  background:
+    radial-gradient(circle at 16% 14%, rgba(249, 115, 22, 0.08), transparent 38%),
+    linear-gradient(to bottom, rgba(0,0,0,0.00) 0%, rgba(5,8,16,0.08) 48%, rgba(7,9,16,0.46) 100%);
 }
 
 .mf-card__price-pill {
@@ -1071,24 +1149,59 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--ff-food-text, #ffb173);
-  background: rgba(5, 8, 16, 0.68);
+  background: rgba(5, 8, 16, 0.74);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(249, 115, 22, 0.20);
+  border: 1px solid rgba(249, 115, 22, 0.24);
   padding: 5px 10px;
   border-radius: 999px;
   font-family: system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.10) inset;
 }
 
 /* body */
 .mf-card__body {
-  padding: 10px 12px 5px;
+  padding: 9px 13px 2px;
   transition: padding 0.2s ease-out;
 }
 
+.mf-card__status-chip {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 1;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill, 999px);
+  color: rgba(255, 213, 178, 0.92);
+  background:
+    linear-gradient(135deg, rgba(5, 8, 16, 0.78), rgba(22, 17, 13, 0.70)),
+    linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(56, 189, 248, 0.08));
+  border: 1px solid rgba(255, 177, 115, 0.20);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.065) inset, 0 4px 14px rgba(0,0,0,0.18);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.mf-card__status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.58);
+}
+
 .mf-card__name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #fff;
   line-height: 1.25;
@@ -1097,10 +1210,14 @@
 
 .mf-card__desc {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.52);
-  margin-top: 4px;
+  color: rgba(234, 240, 255, 0.62);
+  margin-top: 5px;
   line-height: 1.45;
   font-family: system-ui, sans-serif;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* footer */
@@ -1109,8 +1226,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 6px 12px 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  padding: 7px 13px 10px;
+  border-top: 0;
+  background: transparent;
   transition: padding 0.2s ease-out;
 }
 
@@ -1128,7 +1246,7 @@
   border: 1px solid rgba(255, 177, 115, 0.32);
   letter-spacing: 0;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(249, 115, 22, 0.16), 0 1px 0 rgba(255, 255, 255, 0.20) inset;
+  box-shadow: 0 8px 18px rgba(249, 115, 22, 0.14), 0 1px 0 rgba(255, 255, 255, 0.20) inset;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 

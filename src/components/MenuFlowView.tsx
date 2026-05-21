@@ -310,6 +310,26 @@ export default function MenuFlowView({
         }
     }, []);
 
+    const revealMenuRow = useCallback((el: HTMLElement) => {
+        const scrollEl = scrollElRef.current || (el.closest('.list-scroll') as HTMLElement | null);
+        if (!scrollEl) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return;
+        }
+
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const rowRect = el.getBoundingClientRect();
+        const stickyOffset = 36;
+        const safeTop = scrollRect.top + stickyOffset;
+        const safeBottom = scrollRect.bottom - 12;
+
+        if (rowRect.top < safeTop) {
+            scrollEl.scrollBy({ top: rowRect.top - safeTop, behavior: 'smooth' });
+        } else if (rowRect.bottom > safeBottom) {
+            scrollEl.scrollBy({ top: rowRect.bottom - safeBottom, behavior: 'smooth' });
+        }
+    }, []);
+
     const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         scrollElRef.current = event.currentTarget;
         if (debounceRef.current !== null) clearTimeout(debounceRef.current);
@@ -344,9 +364,9 @@ export default function MenuFlowView({
         setFocusedId((prev) => (prev === matchedUiId ? prev : matchedUiId));
         const el = itemRefs.current.get(matchedUiId);
         if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            revealMenuRow(el);
         }
-    }, [highlightedId, normalizedItems]);
+    }, [highlightedId, normalizedItems, revealMenuRow]);
 
     /* ── sticky header intersection for active chip ── */
     useEffect(() => {
@@ -519,6 +539,10 @@ export default function MenuFlowView({
                             />
                         )}
                         <div className="mf-card__banner-overlay" />
+                        <div className="mf-card__status-chip" aria-label="Amber poleca to danie">
+                            <span className="mf-card__status-dot" aria-hidden="true" />
+                            Amber poleca
+                        </div>
                         {focusedDisplay.price && (
                             <span className="mf-card__price-pill">{focusedDisplay.price}</span>
                         )}
@@ -592,7 +616,7 @@ export default function MenuFlowView({
                                     manualFocusAt.current = Date.now();
                                     setFocusedId(item._uiId);
                                     const el = itemRefs.current.get(item._uiId);
-                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    if (el) revealMenuRow(el);
                                 };
 
                                 const rowClasses = [
