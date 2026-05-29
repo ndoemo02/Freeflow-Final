@@ -23,6 +23,7 @@ interface MenuFlowViewProps {
     highlightedId: string | null;
     setHighlightedId: (id: string | null) => void;
     recommendedId?: string | null;
+    autoRevealRequest?: { id: string; seq: number } | null;
     headerTitle: string;
     resultSummary: string | null;
     currentIndex: number;
@@ -191,6 +192,7 @@ export default function MenuFlowView({
     highlightedId,
     setHighlightedId,
     recommendedId,
+    autoRevealRequest,
     headerTitle,
     resultSummary,
     currentIndex,
@@ -227,6 +229,7 @@ export default function MenuFlowView({
     const [activeChip, setActiveChip] = useState<string | null>(null);
     const manualFocusAt = useRef<number>(Date.now()); // grace period after click/voice/IO commit
     const menuEnteredAt = useRef<number>(Date.now()); // tracks last menu entry for highlightedId guard
+    const lastAutoRevealSeqRef = useRef<number | null>(null);
 
     /* ── fullscreen class toggle: hide header + hide hero logo ── */
     const isFullscreen = snap === 'fullscreen';
@@ -348,25 +351,36 @@ export default function MenuFlowView({
         };
     }, [normalizedItems, commitFocus]);
 
+    const resolveUiId = useCallback((rawId: string | null | undefined): string | null => {
+        if (!rawId) return null;
+        const exact = normalizedItems.find((i: any) => i._uiId === rawId);
+        if (exact) return exact._uiId;
+        const suffix = normalizedItems.find((i: any) => i._uiId.endsWith(`__${rawId}`));
+        return suffix?._uiId || null;
+    }, [normalizedItems]);
+
     /* ── voice-driven focus: highlight bez konfliktu ze scrollem ── */
     useEffect(() => {
         if (!highlightedId) return;
         // Assistant focus must move immediately so the focus panel follows spoken dishes.
         // highlightedId may come from MenuIsland using raw item.id (no index prefix),
         // while _uiId now has "index__" prefix. Try exact match first, then suffix match.
-        let matchedUiId = highlightedId;
-        const exact = normalizedItems.find((i: any) => i._uiId === highlightedId);
-        if (!exact) {
-            const suffix = normalizedItems.find((i: any) => i._uiId.endsWith(`__${highlightedId}`));
-            if (suffix) matchedUiId = suffix._uiId;
-        }
+        const matchedUiId = resolveUiId(highlightedId);
+        if (!matchedUiId) return;
         manualFocusAt.current = Date.now();
         setFocusedId((prev) => (prev === matchedUiId ? prev : matchedUiId));
-        const el = itemRefs.current.get(matchedUiId);
-        if (el) {
-            revealMenuRow(el);
+
+        const shouldReveal = autoRevealRequest
+            && autoRevealRequest.seq !== lastAutoRevealSeqRef.current
+            && resolveUiId(autoRevealRequest.id) === matchedUiId;
+        if (shouldReveal) {
+            lastAutoRevealSeqRef.current = autoRevealRequest.seq;
+            const el = itemRefs.current.get(matchedUiId);
+            if (el) {
+                revealMenuRow(el);
+            }
         }
-    }, [highlightedId, normalizedItems, revealMenuRow]);
+    }, [highlightedId, autoRevealRequest, revealMenuRow, resolveUiId]);
 
     /* ── sticky header intersection for active chip ── */
     useEffect(() => {

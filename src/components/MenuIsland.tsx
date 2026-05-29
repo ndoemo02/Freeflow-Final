@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
-import { findLastMentionedMenuItemId, findMentionedMenuItemId, isCartConfirmationText } from '../lib/assistantFocusMatcher';
+import { findLastMentionedMenuItemId, isCartConfirmationText } from '../lib/assistantFocusMatcher';
+import { getMenuItemStableId, resolveStructuredFocusedMenuItemId } from '../lib/menuFocusContract';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
@@ -17,13 +18,8 @@ function pickRecommendedMenuId(items: any[], response: any) {
     if (!items?.length) return null;
 
     // Priority 1: explicit focusedMenuItemId from backend meta (Menu Deep Dive)
-    const focusedId = response?.meta?.focusedMenuItemId;
-    if (focusedId) {
-        const id = normalizeId(focusedId);
-        if (items.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === id)) {
-            return id;
-        }
-    }
+    const focusedId = resolveStructuredFocusedMenuItemId(response, items);
+    if (focusedId) return focusedId;
 
     // Priority 2: explicit dish metadata from backend
     const explicitDish = normalizeText(response?.context?.pendingOrder?.items?.[0]?.name || response?.meta?.dish || '');
@@ -31,10 +27,10 @@ function pickRecommendedMenuId(items: any[], response: any) {
     for (const item of items) {
         const itemName = normalizeText(item.name || item.base_name || '');
         if (!itemName) continue;
-        if (explicitDish && explicitDish.includes(itemName)) return normalizeId(item.id || item.menuItemId || item.menu_item_id);
+        if (explicitDish && explicitDish.includes(itemName)) return normalizeId(getMenuItemStableId(item));
     }
 
-    return normalizeId(items[0]?.id || items[0]?.menuItemId || items[0]?.menu_item_id || null);
+    return normalizeId(getMenuItemStableId(items[0]));
 }
 
 export default function MenuIsland() {
@@ -61,8 +57,10 @@ export default function MenuIsland() {
         return full || currentRestaurant;
     }, [currentRestaurant, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
+    const [autoRevealRequest, setAutoRevealRequest] = useState<{ id: string; seq: number } | null>(null);
     const lastAssistantMenuFocusAtRef = useRef(0);
     const menuBackStatePushedRef = useRef(false);
+    const autoRevealSeqRef = useRef(0);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
     const recommendedId = useMemo(() => pickRecommendedMenuId(menuItems || [], lastFullResponse), [menuItems, lastFullResponse]);
@@ -82,6 +80,16 @@ export default function MenuIsland() {
             if (!lastAddedRaw || !Array.isArray(menuItems) || menuItems.length === 0) {
                 return;
             }
+            const structuredFocusedId = resolveStructuredFocusedMenuItemId(
+                useConversationStore.getState().lastFullResponse,
+                menuItems,
+            );
+            if (structuredFocusedId) {
+                if (normalizeId(highlightedId) !== structuredFocusedId) {
+                    setHighlightedId(structuredFocusedId);
+                }
+                return;
+            }
             if (Date.now() - lastAssistantMenuFocusAtRef.current < 5000) {
                 return;
             }
@@ -97,7 +105,7 @@ export default function MenuIsland() {
 
             if (!matched) return;
 
-            const nextId = normalizeId(matched.id || matched.menuItemId || matched.menu_item_id || null);
+            const nextId = normalizeId(getMenuItemStableId(matched));
             if (nextId) {
                 setHighlightedId(nextId);
             }
@@ -107,7 +115,7 @@ export default function MenuIsland() {
         return () => {
             window.removeEventListener('freeflow:cartUpdated', onCartUpdated as EventListener);
         };
-    }, [menuItems]);
+    }, [highlightedId, menuItems]);
 
     // Live speech-to-dish synchronization:
     // When Amber discusses a dish by name, highlight it in the menu view.
@@ -125,10 +133,20 @@ export default function MenuIsland() {
 
             const speechText = String(event?.detail?.transcript || event?.detail?.text || '').trim();
             if (!speechText) return;
-            if (isCartConfirmationText(speechText)) return;
 
             const currentItems = useConversationStore.getState().menuItems;
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
+
+            const structuredFocusedId = resolveStructuredFocusedMenuItemId(
+                useConversationStore.getState().lastFullResponse,
+                currentItems,
+            );
+            if (structuredFocusedId) {
+                setHighlightedId((current) => normalizeId(current) === structuredFocusedId ? current : structuredFocusedId);
+                return;
+            }
+
+            if (isCartConfirmationText(speechText)) return;
 
             const matchedId = findLastMentionedMenuItemId(speechText, currentItems);
             if (!matchedId) return;
@@ -159,32 +177,32 @@ export default function MenuIsland() {
     useEffect(() => {
         if (!menuItems?.length) {
             setHighlightedId(null);
+            setAutoRevealRequest(null);
             return;
         }
 
         // Menu Deep Dive: backend explicitly identified a focused item — always honor it
-        const backendFocusedId = lastFullResponse?.meta?.focusedMenuItemId;
+        const backendFocusedId = resolveStructuredFocusedMenuItemId(lastFullResponse, menuItems);
         if (backendFocusedId) {
-            const id = normalizeId(backendFocusedId);
-            const exists = menuItems.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === id);
-            if (exists && normalizeId(highlightedId) !== id) {
-                setHighlightedId(id);
+            if (normalizeId(highlightedId) !== backendFocusedId) {
+                setHighlightedId(backendFocusedId);
+                setAutoRevealRequest({ id: backendFocusedId, seq: ++autoRevealSeqRef.current });
             }
             return;
         }
 
         const hasCurrentSelection = highlightedId
-            ? menuItems.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === normalizeId(highlightedId))
+            ? menuItems.some((item) => normalizeId(getMenuItemStableId(item)) === normalizeId(highlightedId))
             : false;
 
         if (hasCurrentSelection) return;
 
-        if (recommendedId && menuItems.some((item) => normalizeId(item.id || item.menuItemId || item.menu_item_id) === normalizeId(recommendedId))) {
+        if (recommendedId && menuItems.some((item) => normalizeId(getMenuItemStableId(item)) === normalizeId(recommendedId))) {
             setHighlightedId(normalizeId(recommendedId));
             return;
         }
 
-        setHighlightedId(normalizeId(menuItems[0].id || menuItems[0].menuItemId || menuItems[0].menu_item_id || null));
+        setHighlightedId(normalizeId(getMenuItemStableId(menuItems[0])));
     }, [menuItems, recommendedId, highlightedId, lastFullResponse]);
 
     useEffect(() => {
@@ -247,6 +265,7 @@ export default function MenuIsland() {
             highlightedId={highlightedId}
             setHighlightedId={setHighlightedId}
             recommendedId={recommendedId}
+            autoRevealRequest={autoRevealRequest}
             title={enrichedRestaurant?.name ? `Menu: ${enrichedRestaurant.name}` : 'Menu restauracji'}
             subtitle={enrichedRestaurant?.city || enrichedRestaurant?.address || 'Pozycje aktualnie widoczne dla tej restauracji'}
             restaurantDistance={enrichedRestaurant?.distance ?? null}
