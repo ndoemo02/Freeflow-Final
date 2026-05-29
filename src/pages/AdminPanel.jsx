@@ -553,6 +553,19 @@ export default function AdminPanel() {
     return <span title={label} className="cursor-help">{icon}</span>;
   };
 
+  const formatPercentDelta = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '—';
+    return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}%`;
+  };
+
+  const aiInterventionRate = (() => {
+    const total = Number(learningStats?.total || 0);
+    const negative = Number(learningStats?.feedbackStats?.negative || 0);
+    if (total <= 0) return null;
+    return (1 - (negative / total)) * 100;
+  })();
+
   const kpiData = analyticsData ? [
     {
       value: analyticsData.totalRevenue.toLocaleString('pl-PL'),
@@ -892,7 +905,7 @@ export default function AdminPanel() {
                 </div>
                 {analyticsData?.revenueChange !== undefined && (
                   <div className={`text-[11px] font-medium px-2 py-0.5 rounded-full border border-[var(--border)] glass ${analyticsData.revenueChange >= 0 ? 'text-[var(--good)]' : 'text-[var(--bad)]'}`}>
-                    {analyticsData.revenueChange > 0 ? '+' : ''}{analyticsData.revenueChange}%
+                    {formatPercentDelta(analyticsData.revenueChange)}
                   </div>
                 )}
               </div>
@@ -910,7 +923,7 @@ export default function AdminPanel() {
                       {getStatusIcon('ai_intervention')} Interwencje AI
                     </div>
                     <div className="text-[16px] font-semibold tracking-tight text-[var(--fg0)]">
-                      {((1 - (learningStats.feedbackStats.negative / (learningStats.total || 1))) * 100).toFixed(1)}%
+                      {aiInterventionRate === null ? '—' : `${aiInterventionRate.toFixed(1)}%`}
                     </div>
                   </div>
                 </div>
@@ -936,7 +949,7 @@ export default function AdminPanel() {
                 </div>
                 {analyticsData?.ordersChange !== undefined && (
                   <div className={`text-[11px] font-medium px-2 py-0.5 rounded-full border border-[var(--border)] glass ${analyticsData.ordersChange >= 0 ? 'text-[var(--good)]' : 'text-[var(--bad)]'}`}>
-                    {analyticsData.ordersChange > 0 ? '+' : ''}{analyticsData.ordersChange}%
+                    {formatPercentDelta(analyticsData.ordersChange)}
                   </div>
                 )}
               </div>

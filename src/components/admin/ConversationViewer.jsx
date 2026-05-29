@@ -11,6 +11,25 @@ const STAGES_CONFIG = [
     { id: 4, label: 'Potwierdzenie', icon: CheckCircle, steps: ['confirm_order'] }
 ];
 
+function getConversationTimestamp(conversation) {
+    return conversation?.created_at
+        || conversation?.createdAt
+        || conversation?.started_at
+        || conversation?.startedAt
+        || null;
+}
+
+function getEventTimestamp(event) {
+    return event?.created_at || event?.timestamp || null;
+}
+
+function formatTimeSafe(value, options = undefined) {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleTimeString([], options);
+}
+
 /**
  * Komponent wyświetlający wizualną oś etapów rozmowy
  */
@@ -267,9 +286,9 @@ export default function ConversationViewer({ adminToken }) {
                                     </div>
 
                                     {/* Label */}
-                                    <div className="text-center">
-                                        <div className="text-[10px] font-mono text-[var(--muted)] font-bold">{new Date(c.created_at || c.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                        <div className="text-[10px] text-[var(--fg0)] max-w-[80px] truncate">{c.metadata?.lastRestaurant?.name || c.id.substring(0, 6)}</div>
+                                        <div className="text-center">
+                                        <div className="text-[10px] font-mono text-[var(--muted)] font-bold">{formatTimeSafe(getConversationTimestamp(c), { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="text-[10px] text-[var(--fg0)] max-w-[80px] truncate">{c.metadata?.lastRestaurant?.name || c.sessionId || c.id.substring(0, 6)}</div>
                                     </div>
 
                                     {/* Tooltip */}
@@ -305,7 +324,7 @@ export default function ConversationViewer({ adminToken }) {
                                 <div className="flex justify-between text-xs mb-1">
                                     <span className="font-mono text-[var(--muted)] font-bold" title={c.id}>{c.id.substring(0, 8)}...</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[var(--muted)]">{new Date(c.created_at || c.started_at).toLocaleTimeString()}</span>
+                                        <span className="text-[var(--muted)]">{formatTimeSafe(getConversationTimestamp(c))}</span>
                                         <button
                                             onClick={(e) => deleteConversation(e, c.id)}
                                             className="text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
@@ -386,7 +405,11 @@ export default function ConversationViewer({ adminToken }) {
                                             <span className="opacity-30">•</span>
                                             <span className={`uppercase tracking-wider font-bold ${sourceLabel === 'live' ? 'text-cyan-400' : 'text-purple-400'}`}>{sourceLabel}</span>
                                             <span className="opacity-30">•</span>
-                                            <span className="font-mono opacity-50">{new Date(turn.startedAt).toLocaleTimeString() + '.' + String(new Date(turn.startedAt).getMilliseconds()).padStart(3, '0')}</span>
+                                            <span className="font-mono opacity-50">{(() => {
+                                                const ts = new Date(turn.startedAt);
+                                                if (Number.isNaN(ts.getTime())) return '—';
+                                                return ts.toLocaleTimeString() + '.' + String(ts.getMilliseconds()).padStart(3, '0');
+                                            })()}</span>
                                         </div>
 
                                         <div className="glass-strong p-3 rounded-lg text-xs border border-[var(--border)] overflow-x-auto shadow-inner bg-black/20 space-y-2">
@@ -443,7 +466,12 @@ export default function ConversationViewer({ adminToken }) {
                             ${evt.event_type.includes('intent') ? 'text-purple-400' : 'text-[var(--fg0)]'}
                          `}>{evt.event_type}</span>
                                         <span className="opacity-30">•</span>
-                                        <span className="font-mono opacity-50">{new Date(evt.created_at).toLocaleTimeString() + '.' + String(new Date(evt.created_at).getMilliseconds()).padStart(3, '0')}</span>
+                                        <span className="font-mono opacity-50">{(() => {
+                                            const rawTs = getEventTimestamp(evt);
+                                            const ts = rawTs ? new Date(rawTs) : null;
+                                            if (!ts || Number.isNaN(ts.getTime())) return '—';
+                                            return ts.toLocaleTimeString() + '.' + String(ts.getMilliseconds()).padStart(3, '0');
+                                        })()}</span>
                                     </div>
 
                                     {/* Payload Viewer */}
