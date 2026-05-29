@@ -629,6 +629,7 @@ export default function MenuFlowView({
                                     event.stopPropagation();
                                     manualFocusAt.current = Date.now();
                                     setFocusedId(item._uiId);
+                                    setHighlightedId(item._uiId);
                                     const el = itemRefs.current.get(item._uiId);
                                     if (el) revealMenuRow(el);
                                 };
