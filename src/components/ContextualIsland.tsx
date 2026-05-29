@@ -3,6 +3,7 @@ import RestaurantSheetContent from './RestaurantSheetContent';
 import MenuFlowView from './MenuFlowView';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
 import { SheetSnap } from './sheet/sheetTypes';
+import { getMenuItemStableId } from '../lib/menuFocusContract';
 
 interface ContextualIslandProps {
     items: any[];
@@ -13,6 +14,7 @@ interface ContextualIslandProps {
     setHighlightedId: (id: string | null) => void;
     onClose?: () => void;
     recommendedId?: string | null;
+    autoRevealRequest?: { id: string; seq: number } | null;
     title?: string;
     subtitle?: string | null;
     restaurantDistance?: number | null;
@@ -48,12 +50,16 @@ export default function ContextualIsland({
     setHighlightedId,
     onClose,
     recommendedId,
+    autoRevealRequest,
     title,
     subtitle,
     restaurantDistance,
     restaurant: restaurantProp,
 }: ContextualIslandProps) {
-    const normalizedItems = useMemo(() => items.map((item, index) => ({ ...item, _uiId: getItemId(item, index) })), [items]);
+    const normalizedItems = useMemo(() => items.map((item, index) => {
+        const stableId = getMenuItemStableId(item);
+        return { ...item, _uiId: stableId ?? getItemId(item, index) };
+    }), [items]);
 
     if (!normalizedItems.length) return null;
 
@@ -126,6 +132,7 @@ export default function ContextualIsland({
                         highlightedId={highlightedId}
                         setHighlightedId={setHighlightedId}
                         recommendedId={recommendedId}
+                        autoRevealRequest={autoRevealRequest}
                         headerTitle={headerTitle}
                         resultSummary={resultSummary}
                         currentIndex={currentIndex}
