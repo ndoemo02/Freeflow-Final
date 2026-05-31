@@ -1,4 +1,6 @@
+/* @vitest-environment jsdom */
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 import VoiceDock from './VoiceDock';
 
 describe('VoiceDock', () => {
@@ -24,7 +26,7 @@ describe('VoiceDock', () => {
       />,
     );
 
-    expect(screen.getByPlaceholderText('Słucham...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/słucham/i)).toBeInTheDocument();
   });
 
   it('hides idle and technical status text from the user-facing transcript line', () => {
@@ -52,5 +54,33 @@ describe('VoiceDock', () => {
     );
 
     expect(screen.getByText(/dodaje burgera/i)).toBeInTheDocument();
+  });
+
+  it('prefers live user transcript while listening even if an older assistant transcript exists', () => {
+    render(
+      <VoiceDock
+        recording
+        liveUiState="listening"
+        liveUserTranscript="Szukam lodow w Piekarach Slaskich"
+        liveAssistantTranscript="W poblizu znalazlam piekarnie."
+        visible
+      />,
+    );
+
+    expect(screen.getByText(/szukam lodow/i)).toBeInTheDocument();
+    expect(screen.queryByText(/piekarnie/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the accumulated assistant transcript once results are ready', () => {
+    render(
+      <VoiceDock
+        recording={false}
+        liveUiState="results_ready"
+        liveAssistantTranscript="W poblizu znalazlam 2 miejsca z deserami. Ktora wybierasz?"
+        visible
+      />,
+    );
+
+    expect(screen.getByText(/2 miejsca z deserami/i)).toBeInTheDocument();
   });
 });

@@ -28,6 +28,8 @@ interface VoiceDockProps {
   };
   liveUiState?: LiveUiSessionState;
   liveStatusText?: string;
+  liveUserTranscript?: string;
+  liveAssistantTranscript?: string;
   liveTranscript?: string;
 }
 
@@ -95,16 +97,22 @@ function resolveLiveDockText(
   sessionState: LiveUiSessionState | undefined,
   statusText: string,
   transcript: string,
+  userTranscript = "",
+  assistantTranscript = "",
 ): string {
-  if (!sessionState) return "";
-  if (sessionState === "listening") return transcript || statusText || "Słucham...";
-  if (sessionState === "processing") return transcript || statusText || "Analizuję...";
-  if (sessionState === "results_ready") return transcript || statusText;
-  if (sessionState === "restaurant_selected") return transcript || statusText;
-  if (sessionState === "item_selected") return transcript || statusText;
-  if (sessionState === "cart_ready") return transcript || statusText;
-  if (sessionState === "paused") return transcript || statusText || "Wstrzymano LIVE.";
-  return transcript || statusText;
+  const userFacingUserTranscript = String(userTranscript || "").trim();
+  const userFacingAssistantTranscript = String(assistantTranscript || "").trim();
+  const fallbackTranscript = String(transcript || "").trim();
+
+  if (!sessionState) return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript;
+  if (sessionState === "listening") return userFacingUserTranscript || userFacingAssistantTranscript || fallbackTranscript || statusText || "Słucham...";
+  if (sessionState === "processing") return userFacingUserTranscript || userFacingAssistantTranscript || fallbackTranscript || statusText || "Analizuję...";
+  if (sessionState === "results_ready") return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText;
+  if (sessionState === "restaurant_selected") return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText;
+  if (sessionState === "item_selected") return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText;
+  if (sessionState === "cart_ready") return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText;
+  if (sessionState === "paused") return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText || "Wstrzymano LIVE.";
+  return userFacingAssistantTranscript || userFacingUserTranscript || fallbackTranscript || statusText;
 }
 
 export default function VoiceDock({
@@ -121,6 +129,8 @@ export default function VoiceDock({
   onClearResponse,
   liveUiState,
   liveStatusText = "",
+  liveUserTranscript = "",
+  liveAssistantTranscript = "",
   liveTranscript = "",
 }: VoiceDockProps) {
   const [inputValue, setInputValue] = useState("");
@@ -136,7 +146,6 @@ export default function VoiceDock({
   const handleSubmit = onTextSubmit ?? onSubmitText;
   const hasTypedText = inputValue.trim().length > 0;
 
-  // Amber status mapping
   let amberStatus: AmberStatusNode = "idle";
   if (liveUiState === "listening") amberStatus = "listening";
   else if (liveUiState === "processing") amberStatus = "thinking";
@@ -150,7 +159,13 @@ export default function VoiceDock({
   else if (isProcessing) amberStatus = "thinking";
   else if (isSpeaking || isPresenting) amberStatus = "ok";
 
-  const liveDockText = resolveLiveDockText(liveUiState, liveStatusText, liveTranscript);
+  const liveDockText = resolveLiveDockText(
+    liveUiState,
+    liveStatusText,
+    liveTranscript,
+    liveUserTranscript,
+    liveAssistantTranscript,
+  );
   const displayText = firstUserFacingDockText(liveDockText, interimText, recording ? "" : amberResponse);
   const showResponse = !!displayText;
   const voiceActive = recording || liveUiState === "listening";
@@ -158,12 +173,11 @@ export default function VoiceDock({
     ? "Słucham..."
     : (recording ? "Słucham..." : "Napisz lub powiedz...");
 
-  // Clear response when recording starts
   useEffect(() => {
     if (recording && amberResponse && onClearResponse) {
       onClearResponse();
     }
-  }, [recording]);
+  }, [recording, amberResponse, onClearResponse]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -202,7 +216,6 @@ export default function VoiceDock({
       const rawDelta = targetCenterY - barCenterY;
       const upwardNudge = 6;
 
-      // Keep micro-adjustment small and stable across devices.
       const nextDelta = Math.max(-22, Math.min(22, Math.round(rawDelta + upwardNudge)));
       setMobileYOffset((prev) => (prev === nextDelta ? prev : nextDelta));
 
@@ -267,7 +280,6 @@ export default function VoiceDock({
               maxWidth: isMobile ? "none" : 600,
             }}
           >
-            {/* Voice bar */}
             <div
               ref={barRef}
               data-ui-role="voice-dock-bar"
@@ -285,15 +297,19 @@ export default function VoiceDock({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 2 }}
                       transition={{ duration: 0.18 }}
-                      className="mb-1 text-[11px] leading-tight truncate"
-                      style={{ color: "color-mix(in srgb, var(--ff-voice-accent, #67e8f9) 82%, white 18%)" }}
+                      className="mb-1 text-[11px] leading-tight break-words overflow-hidden"
+                      style={{
+                        color: "color-mix(in srgb, var(--ff-voice-accent, #67e8f9) 82%, white 18%)",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
                       title={displayText}
                     >
                       {displayText}
                     </motion.p>
                   )}
                 </AnimatePresence>
-                {/* Text input */}
                 <input
                   ref={inputRef}
                   type="text"
@@ -306,8 +322,6 @@ export default function VoiceDock({
                 />
               </div>
 
-
-              {/* Send / mic button */}
               <AnimatePresence mode="wait">
                 {hasTypedText ? (
                   <motion.button
@@ -374,4 +388,3 @@ export default function VoiceDock({
     </AnimatePresence>
   );
 }
-

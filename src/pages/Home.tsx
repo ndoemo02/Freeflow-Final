@@ -66,7 +66,6 @@ export default function Home() {
   const liveUiStatusText = useLiveUiSessionStore((state) => state.statusText);
   const liveUserTranscript = useLiveUiSessionStore((state) => state.lastUserTranscript);
   const liveAssistantTranscript = useLiveUiSessionStore((state) => state.lastAssistantTranscript);
-  const liveDockTranscript = liveAssistantTranscript || liveUserTranscript || '';
 
   // --- UI View State (tiles vs voicebar) ---
   const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
@@ -482,7 +481,8 @@ export default function Home() {
             isPresenting={uiHints.panel !== 'none'}
             liveUiState={liveUiState}
             liveStatusText={liveUiStatusText}
-            liveTranscript={liveDockTranscript}
+            liveUserTranscript={liveUserTranscript || ''}
+            liveAssistantTranscript={liveAssistantTranscript || ''}
             liveSession={{
               isActive: liveSessionActive,
               start: startLiveSession,

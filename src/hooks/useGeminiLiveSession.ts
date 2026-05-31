@@ -891,7 +891,7 @@ export function useGeminiLiveSession({
 
         assistantTranscriptBuffer += rawText;
         clearStallWatchdog();
-        useLiveUiSessionStore.getState().setTranscript('assistant', textPart);
+        useLiveUiSessionStore.getState().setTranscript('assistant', assistantTranscriptBuffer.trim());
         window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
           detail: {
             sessionId: sessionIdRef.current || 'unknown',
