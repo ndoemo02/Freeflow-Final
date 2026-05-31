@@ -12,6 +12,8 @@ describe('useLiveUiSessionStore', () => {
       lastIntent: null,
       lastUserTranscript: null,
       lastAssistantTranscript: null,
+      lastModelInputText: null,
+      lastTranscriptQuality: 'unknown',
       selectedRestaurantName: null,
       selectedItemSummary: null,
       cartSummary: null,
@@ -42,5 +44,27 @@ describe('useLiveUiSessionStore', () => {
     const current = useLiveUiSessionStore.getState();
     expect(current.sessionState).toBe('cart_ready');
     expect(current.statusText).toContain('Koszyk');
+  });
+
+  it('keeps model input separate from user transcript and marks mismatch as low confidence', () => {
+    const store = useLiveUiSessionStore.getState();
+    store.setTranscript('user', 'Stereo Radio liebe du');
+    store.applyToolResult('add_item_to_cart', {
+      reply: 'Dodalam pozycje.',
+      meta: {
+        liveTool: {
+          turnTrace: {
+            stt: { final_transcript: 'Stereo Radio liebe du' },
+            model: { input_text: 'dodaj lody z malinami' },
+            warnings: [{ code: 'TEXT_DISH_MISMATCH' }],
+          },
+        },
+      },
+    });
+
+    const current = useLiveUiSessionStore.getState();
+    expect(current.lastUserTranscript).toBe('Stereo Radio liebe du');
+    expect(current.lastModelInputText).toBe('dodaj lody z malinami');
+    expect(current.lastTranscriptQuality).toBe('low_confidence');
   });
 });
