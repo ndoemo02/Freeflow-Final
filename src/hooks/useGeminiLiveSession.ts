@@ -21,7 +21,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
-import { generateTurnId, logBridge } from '../lib/interactionBridge';
+import { generateTurnId, logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -57,6 +57,20 @@ function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[]
     if (arr.length > 50) arr.splice(0, arr.length - 50);
     localStorage.setItem(PERF_LOG_HISTORY_KEY, JSON.stringify(arr));
   } catch {}
+}
+
+function postLiveDiag(stage: string, sessionId: string | null | undefined, turnId: string | null | undefined, metadata: Record<string, unknown>, ms = 0): void {
+  try {
+    postBridgeTelemetry([{
+      stage,
+      session_id: String(sessionId || 'unknown'),
+      turn_id: String(turnId || ''),
+      ms,
+      metadata,
+    }]);
+  } catch {
+    // diagnostics must never affect live flow
+  }
 }
 
 function saveResumptionHandle(handle: string): void {
@@ -982,6 +996,10 @@ export function useGeminiLiveSession({
           perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - (lastTranscriptAt || firstAudioFrameAt || lastToolCallAt) });
           const toolNames = msg.toolCall.functionCalls.map((fc: any) => fc.name || '?').join(',');
           logBridge('toolcall_received', { turn_id: turnId, session_id: sessionIdRef.current, tools: toolNames });
+          postLiveDiag('live_function_call_received', sessionIdRef.current, turnId, {
+            tools: toolNames,
+            count: msg.toolCall.functionCalls.length,
+          });
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
@@ -1009,12 +1027,20 @@ export function useGeminiLiveSession({
                 // response to useConversationStore so the UI renders menus, cart, etc.
                 if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
                   const applyStart = Date.now();
+                  const responseForUi = (result.response ?? {}) as Record<string, unknown>;
                   applyToolResultToStore(
                     result.name,
-                    (result.response ?? {}) as Record<string, unknown>,
+                    responseForUi,
                   );
                   logBridge('action_result_received', { turn_id: turnId, session_id: sessionIdRef.current, tool: result.name, source: 'http_fallback' });
                   logBridge('ui_update_applied', { turn_id: turnId, duration_ms: Date.now() - applyStart });
+                  postLiveDiag('live_ui_restaurants_applied', sessionIdRef.current, turnId, {
+                    source: 'http_fallback',
+                    tool: result.name,
+                    restaurants_count: Array.isArray((responseForUi as any).restaurants) ? (responseForUi as any).restaurants.length : 0,
+                    menu_count: Array.isArray((responseForUi as any).menu || (responseForUi as any).menuItems) ? ((responseForUi as any).menu || (responseForUi as any).menuItems).length : 0,
+                    intent: (responseForUi as any).intent || null,
+                  }, Date.now() - applyStart);
                 }
                 const compactStart = Date.now();
                 const compact = compactToolResponse(

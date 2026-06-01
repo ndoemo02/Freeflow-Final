@@ -5,13 +5,27 @@ import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '..
 import { liveSessionCache } from './useGeminiLiveSession';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { activeSessionMap } from '../state/ActiveSessionMap';
-import { logBridge } from '../lib/interactionBridge';
+import { logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
 const GPS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 const GPS_STALE_FALLBACK_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const GPS_PERSIST_KEY = 'ff_last_gps';
+
+function postLiveEventsDiag(stage: string, sessionId: string, turnId: string, metadata: Record<string, unknown>, ms = 0): void {
+    try {
+        postBridgeTelemetry([{
+            stage,
+            session_id: sessionId || 'unknown',
+            turn_id: turnId || '',
+            ms,
+            metadata,
+        }]);
+    } catch {
+        // diagnostics must never affect live flow
+    }
+}
 
 function readPersistedGps(): { lat: number; lng: number; ts: number } | null {
     try {
@@ -733,6 +747,14 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
                 }));
                 logBridge('ui_update_applied', { turn_id: wsTurnId, duration_ms: Date.now() - uiUpdateStart });
+                postLiveEventsDiag('live_ui_restaurants_applied', effectSessionId, wsTurnId, {
+                    source: 'ws',
+                    tool: liveToolName,
+                    restaurants_count: Array.isArray(restaurants) ? restaurants.length : 0,
+                    menu_count: Array.isArray(menuItems) ? menuItems.length : 0,
+                    intent: response.intent || null,
+                    ui_mode: nextUiMode,
+                }, Date.now() - uiUpdateStart);
 
                 // Fix #6.4: When backend closes conversation (ORDER_CONFIRMED),
                 // adopt the newSessionId so next voice input starts fresh.
