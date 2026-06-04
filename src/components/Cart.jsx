@@ -26,6 +26,11 @@ function cartItemBadges(rawItem) {
     return badges;
 }
 
+function formatCartPrice(value) {
+    const amount = Number(value || 0);
+    return `${amount.toFixed(2)} zł`;
+}
+
 export default function Cart() {
   const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen, syncCart } = useCart();
 
@@ -412,14 +417,24 @@ export default function Cart() {
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="text-white font-semibold truncate max-w-[200px] sm:max-w-[320px]">{item.name}</h3>
+                                    <h3
+                                      className="text-white font-semibold max-w-[220px] sm:max-w-[340px] leading-snug break-words overflow-hidden"
+                                      style={{
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                      }}
+                                      title={item.name}
+                                    >
+                                      {item.name}
+                                    </h3>
                                     {badges.map((badge, bi) => (
                                       <span key={bi} className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/8 border border-white/10 text-white/70 leading-none shrink-0">
                                         {badge}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-slate-400">{Number(item.price).toFixed(2)} PLN</p>
+                                  <p className="text-sm text-slate-400">{formatCartPrice(item.price)}</p>
                                 </div>
 
                                 {/* Right side: quantity + price + delete */}
@@ -446,7 +461,7 @@ export default function Cart() {
                                   {/* Price + Delete grouped together */}
                                   <div className="flex items-center gap-2">
                                     <div className="text-white font-bold min-w-[70px] text-right text-sm">
-                                      {(Number(item.price) * Number(item.quantity)).toFixed(2)} PLN
+                                      {formatCartPrice(Number(item.price) * Number(item.quantity))}
                                     </div>
                                     <button
                                       onClick={() => handleRemoveFromCart(item.id)}
@@ -527,14 +542,14 @@ export default function Cart() {
                           onChange={(e) => setDeliveryConfirmed(e.target.checked)}
                           className="mt-0.5"
                         />
-                        <span>Potwierdzam dane dostawy (wczytane z panelu klienta lub edytowane ręcznie).</span>
+                        <span>Potwierdzam dane dostawy.</span>
                       </label>
                     </div>
 
                     {/* Total */}
                     <div className="flex items-center justify-between pt-4 border-t border-white/10">
                       <span className="text-lg text-slate-300">Łącznie:</span>
-                      <span className="text-2xl font-bold text-white">{total.toFixed(2)} PLN</span>
+                      <span className="text-2xl font-bold text-white">{formatCartPrice(total)}</span>
                     </div>
 
                     {/* Actions */}
@@ -543,7 +558,7 @@ export default function Cart() {
                         type="button"
                         onClick={handleClearCart}
                         disabled={isSubmitting}
-                        className="flex-1 min-w-[180px] rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-3 font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                        className="flex-1 min-w-[160px] rounded-lg bg-transparent text-red-300/80 border border-red-400/25 px-4 py-3 font-semibold hover:bg-red-500/10 hover:text-red-200 transition-colors disabled:opacity-50"
                       >
                         <i className="fas fa-trash-alt mr-2" />
                         Wyczyść koszyk
@@ -562,7 +577,7 @@ export default function Cart() {
                           }
                           handleSubmit({ preventDefault: () => { } });
                         }}
-                        className="flex-1 min-w-[200px] rounded-lg bg-gradient-to-r from-cyan-500 to-purple-500 text-white px-4 py-3 font-semibold hover:shadow-[0_0_30px_rgba(0,234,255,0.5)] transition-all disabled:opacity-50"
+                        className="flex-[1.4] min-w-[200px] rounded-lg bg-gradient-to-r from-orange-500 to-amber-400 text-white px-4 py-3 font-semibold shadow-[0_0_24px_rgba(249,115,22,0.22)] hover:shadow-[0_0_30px_rgba(249,115,22,0.38)] transition-all disabled:opacity-50"
                       >
                         {isSubmitting ? 'Składanie...' : 'Złóż zamówienie'}
                       </button>
