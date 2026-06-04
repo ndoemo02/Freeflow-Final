@@ -4,6 +4,7 @@ import { useKDSPolling } from '../hooks/useKDSPolling';
 import { OwnerRestaurantSelector } from '../components/OwnerRestaurantSelector';
 import { useOwnerRestaurant } from '../hooks/useOwnerRestaurant';
 import { KDSOrder } from '../lib/kdsApi';
+import { formatDemoOrderLabel } from '../lib/demoLabels';
 import '../components/panels/KitchenDisplay.css'; // Dodany CSS prototypu
 
 type StationFilter = 'all' | 'kuchnia' | 'grill' | 'zimne' | 'bar' | 'desery' | 'wydawka';
@@ -67,7 +68,7 @@ function OrderCard({
                     </div>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-sm font-mono font-bold text-slate-200 truncate">#{order.order_number || order.id.substring(0, 4)}</span>
+                            <span className="text-sm font-bold text-slate-200 truncate">{formatDemoOrderLabel(order.order_number || order.id)}</span>
                             <span className="text-xs text-slate-500">{new Date(order.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">

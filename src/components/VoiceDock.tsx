@@ -167,6 +167,14 @@ export default function VoiceDock({
     liveAssistantTranscript,
   );
   const displayText = firstUserFacingDockText(liveDockText, interimText, recording ? "" : amberResponse);
+  const displayTextSource = displayText === String(liveAssistantTranscript || "").trim()
+    ? "Amber"
+    : displayText === String(liveUserTranscript || "").trim()
+      ? "Ty"
+      : displayText === String(liveTranscript || "").trim()
+        ? "Rozpoznano"
+        : "";
+  const displayLine = displayText && displayTextSource ? `${displayTextSource}: ${displayText}` : displayText;
   const showResponse = !!displayText;
   const voiceActive = recording || liveUiState === "listening";
   const inputPlaceholder = liveUiState === "listening"
@@ -304,9 +312,9 @@ export default function VoiceDock({
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical",
                       }}
-                      title={displayText}
+                      title={displayLine}
                     >
-                      {displayText}
+                      {displayLine}
                     </motion.p>
                   )}
                 </AnimatePresence>

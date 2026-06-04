@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
+import { formatDemoOrderLabel } from "../lib/demoLabels";
 
 export default function AnimatedCards({ 
   items = [], 
@@ -106,7 +107,7 @@ export default function AnimatedCards({
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">
-                Order #{item.id}
+                {formatDemoOrderLabel(item.id)}
               </h3>
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                 item.status === 'completed' ? 'bg-green-600 text-white' :
@@ -298,5 +299,4 @@ export default function AnimatedCards({
     </motion.div>
   );
 }
-
 

@@ -21,6 +21,7 @@ import StarfieldBackground from '../../components/StarfieldBackground';
 import ErrorFallback from '../../components/ErrorFallback';
 import { useToast } from '../../components/Toast';
 import { getApiUrl } from '../../lib/config';
+import { formatDemoOrderLabel } from '../../lib/demoLabels';
 import './ClientPanel.css';
 
 // Types
@@ -327,7 +328,7 @@ export default function ClientPanel() {
     const startStripeForOrder = async (order: any) => {
         if (!order?.id || stripeBusyOrderId) return;
         if (!canStartStripePayment(order)) {
-            push?.('To zamówienie nie kwalifikuje się do płatności Stripe test.', 'info');
+            push?.('To zamówienie nie kwalifikuje się do płatności testowej.', 'info');
             return;
         }
 
@@ -356,7 +357,7 @@ export default function ClientPanel() {
             window.location.assign(payload.url);
         } catch (error: any) {
             console.error('[STRIPE_ORDER_CHECKOUT_ERROR]', error);
-            push?.(error?.message || 'Błąd płatności Stripe test', 'error');
+            push?.(error?.message || 'Błąd płatności testowej', 'error');
         } finally {
             setStripeBusyOrderId(null);
         }
@@ -382,7 +383,7 @@ export default function ClientPanel() {
         };
 
         if (stripeState === 'cancel') {
-            push?.('Płatność Stripe test anulowana.', 'info');
+            push?.('Płatność testowa anulowana.', 'info');
             cleanStripeParams();
             return;
         }
@@ -447,10 +448,10 @@ export default function ClientPanel() {
                   console.warn('[STRIPE_FINALIZE] Session cleanup failed (non-critical):', finalizeErr.message);
                 }
 
-                push?.('Płatność Stripe test zakończona pomyślnie.', 'success');
+                push?.('Płatność testowa zakończona pomyślnie.', 'success');
             } catch (error: any) {
                 console.error('[STRIPE_ORDER_FINALIZE_ERROR]', error);
-                push?.(error?.message || 'Błąd finalizacji płatności Stripe test', 'error');
+                push?.(error?.message || 'Błąd finalizacji płatności testowej', 'error');
             } finally {
                 setStripeBusyOrderId(null);
                 cleanStripeParams();
@@ -675,7 +676,7 @@ export default function ClientPanel() {
                                                     'Zamówienie'}
                                             </p>
                                             <p className="order-items">
-                                                #{stats.activeOrder.id.slice(0, 8)} • {(Number(stats.activeOrder.total_price) || 0).toFixed(2)} zł
+                                                {formatDemoOrderLabel(stats.activeOrder.id)} • {(Number(stats.activeOrder.total_price) || 0).toFixed(2)} zł
                                             </p>
                                         </div>
                                     </div>
@@ -710,10 +711,10 @@ export default function ClientPanel() {
                                                 disabled={stripeBusyOrderId === stats.activeOrder.id}
                                                 className="primary-btn"
                                             >
-                                                {stripeBusyOrderId === stats.activeOrder.id ? 'Przekierowanie...' : 'Stripe test'}
+                                                {stripeBusyOrderId === stats.activeOrder.id ? 'Przekierowanie...' : 'Przejdź do płatności'}
                                             </button>
                                         ) : (
-                                            <span className="status-badge green">Stripe test: Opłacone</span>
+                                            <span className="status-badge green">Płatność testowa: opłacone</span>
                                         )}
                                     </div>
                                 </div>
@@ -1073,7 +1074,7 @@ export default function ClientPanel() {
                                                         </div>
                                                         <div>
                                                             <h4>{order.restaurant_name || (order.channel === 'taxi' ? 'Taxi' : 'Zamówienie')}</h4>
-                                                            <p>Zamówienie #{order.id.slice(0, 8)}</p>
+                                                            <p>{formatDemoOrderLabel(order.id)}</p>
                                                         </div>
                                                     </div>
                                                     <span className={`status-badge ${statusTone}`}>
@@ -1109,10 +1110,10 @@ export default function ClientPanel() {
                                                                     startStripeForOrder(order);
                                                                 }}
                                                             >
-                                                                {stripeBusyOrderId === order.id ? 'Przekierowanie...' : 'Stripe test'}
+                                                                {stripeBusyOrderId === order.id ? 'Przekierowanie...' : 'Przejdź do płatności'}
                                                             </button>
                                                         ) : (
-                                                            <span className="status-badge green">Stripe test: Opłacone</span>
+                                                            <span className="status-badge green">Płatność testowa: opłacone</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -1480,7 +1481,7 @@ export default function ClientPanel() {
                         <div className="modal-form">
                             <div className="form-group">
                                 <label>Numer</label>
-                                <input type="text" readOnly value={`#${String(selectedOrder.id || '').slice(0, 8)}`} />
+                                <input type="text" readOnly value={formatDemoOrderLabel(selectedOrder.id)} />
                             </div>
                             <div className="form-group">
                                 <label>Status</label>
@@ -1511,11 +1512,11 @@ export default function ClientPanel() {
                                         disabled={stripeBusyOrderId === selectedOrder.id}
                                         onClick={() => startStripeForOrder(selectedOrder)}
                                     >
-                                        {stripeBusyOrderId === selectedOrder.id ? 'Przekierowanie...' : 'Zaplac Stripe test'}
+                                        {stripeBusyOrderId === selectedOrder.id ? 'Przekierowanie...' : 'Zapłać testowo'}
                                     </button>
                                 ) : (
                                     <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-                                        Stripe test: Opłacone
+                                        Płatność testowa: opłacone
                                     </div>
                                 )}
                             </div>

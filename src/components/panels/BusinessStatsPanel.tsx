@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDemoOrderLabel } from '../../lib/demoLabels';
 
 interface Props {
     data: any;
@@ -51,7 +52,7 @@ export default function BusinessStatsPanel({ data }: Props) {
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-white font-medium">{order.restaurant || order.restaurantName || 'Restaurant'}</span>
-                                        <span className="text-xs text-gray-500">#{order.id?.slice(0, 4)}</span>
+                                        <span className="text-xs text-gray-500">{formatDemoOrderLabel(order.id)}</span>
                                     </div>
                                     <p className="text-gray-400 text-sm">{order.customer || 'Customer'} • {order.items ? `${order.items.length} items` : 'Order'}</p>
                                 </div>

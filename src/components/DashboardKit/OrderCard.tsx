@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBadge, OrderStatus } from './StatusBadge';
+import { formatDemoOrderLabel } from '../../lib/demoLabels';
 
 export interface OrderItem {
     name: string;
@@ -71,7 +72,7 @@ export function OrderCard({ order, onStatusChange, className = '' }: OrderCardPr
     const actionConfig = getActionConfig(order.status);
 
     // Format order ID for display
-    const displayId = order.id.length > 8 ? `#${order.id.slice(-6).toUpperCase()}` : `#${order.id}`;
+    const displayId = formatDemoOrderLabel(order.id);
 
     // Urgency indicator (orders older than 10 min get highlighted)
     const diffMins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60000);

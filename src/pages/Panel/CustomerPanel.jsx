@@ -8,6 +8,7 @@ import { useToast } from '../../components/Toast'
 import PanelHeader from '../../components/PanelHeader'
 import { useCart } from '../../state/CartContext'
 import { getApiUrl } from '../../lib/config'
+import { formatDemoOrderLabel } from '../../lib/demoLabels'
 import Cart from '../../components/Cart'
 
 export default function CustomerPanel() {
@@ -737,7 +738,7 @@ function OrdersTab({ orders, loading, cancelOrder, filter, setFilter }) {
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-1">
-                    Zamówienie #{order.id.slice(-8)}
+                    {formatDemoOrderLabel(order.id)}
                   </h3>
                   <p className="text-sm text-slate-400">
                     {new Date(order.created_at).toLocaleDateString('pl-PL', {

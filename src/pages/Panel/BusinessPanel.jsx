@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { Dialog, Transition } from '@headlessui/react'
 import { getApiUrl } from '../../lib/config'
 import { ROUTES } from '../../app/routeConfig'
+import { formatDemoOrderLabel } from '../../lib/demoLabels'
 
 // ─── Surface token overrides for business mode ───────────────────────────────
 const BP = {
@@ -711,7 +712,7 @@ function OrderRow({ order: o, onDetails, onAction, compact = false }) {
             <StatusBadge status={o.status} />
           </div>
           <div className="text-[11px] flex items-center gap-2 tabular-nums" style={{ color: BP.textLow }}>
-            <span>#{o.id.substring(0, 8)}</span>
+            <span>{formatDemoOrderLabel(o.id)}</span>
             <span>·</span>
             <span>{(o.total_price ?? 0).toFixed(2)} zł</span>
             {!compact && o.items?.length > 0 && (

@@ -67,7 +67,7 @@ describe('VoiceDock', () => {
       />,
     );
 
-    expect(screen.getByText(/szukam lodow/i)).toBeInTheDocument();
+    expect(screen.getByText(/ty: szukam lodow/i)).toBeInTheDocument();
     expect(screen.queryByText(/piekarnie/i)).not.toBeInTheDocument();
   });
 
@@ -81,6 +81,19 @@ describe('VoiceDock', () => {
       />,
     );
 
-    expect(screen.getByText(/2 miejsca z deserami/i)).toBeInTheDocument();
+    expect(screen.getByText(/amber: .*2 miejsca z deserami/i)).toBeInTheDocument();
+  });
+
+  it('labels fallback live transcript as recognized text', () => {
+    render(
+      <VoiceDock
+        recording={false}
+        liveUiState="processing"
+        liveTranscript="Chce zamowic lody w Piekarach"
+        visible
+      />,
+    );
+
+    expect(screen.getByText(/rozpoznano: chce zamowic lody/i)).toBeInTheDocument();
   });
 });

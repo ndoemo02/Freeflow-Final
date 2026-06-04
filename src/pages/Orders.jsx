@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getUserOrders, createOrder } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { formatDemoOrderLabel } from '../lib/demoLabels';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -250,7 +251,7 @@ export default function Orders() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Zamówienie #{order.id.slice(-8)}
+                      {formatDemoOrderLabel(order.id)}
                     </h3>
                     <p className="text-sm text-gray-600">
                       {order.restaurants?.name || 'Nieznana restauracja'}
@@ -287,5 +288,4 @@ export default function Orders() {
     </main>
   );
 }
-
 
