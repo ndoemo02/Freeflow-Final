@@ -359,9 +359,11 @@ export default function CinematicRestaurantCarousel({
     
     const compactStageHeight = Math.max(140, vpHeight - compactBounds.top - compactBounds.bottom);
     
-    // Cinematic large card height - taller by 20%, then another 15%
-    const heightFactor = isMobileViewport ? 1.32 : 1.05;
-    const CARD_H = Math.max(220, Math.min(Math.round(compactStageHeight * heightFactor), 650));
+    // Keep compact cards inside the measured safe zone between logo and VoiceDock.
+    // The previous mobile factor intentionally oversized cards and could overlap the hero logo.
+    const heightFactor = isMobileViewport ? 0.92 : 1.05;
+    const maxCardHeight = isMobileViewport ? Math.max(180, compactStageHeight - 8) : 650;
+    const CARD_H = Math.max(180, Math.min(Math.round(compactStageHeight * heightFactor), maxCardHeight));
     
     const GAP = Math.floor(CARD_W * 0.45); // tight stack — cards overlap like a deck
     
