@@ -14,6 +14,24 @@
   transition: all 0.3s ease;
 }
 
+[data-amber-status="listening"] .orb-container {
+  filter: drop-shadow(0 0 7px #22c55e99) drop-shadow(0 0 5px #67e8f966);
+}
+
+[data-amber-status="thinking"] .orb-container {
+  filter: drop-shadow(0 0 8px #a855f799) drop-shadow(0 0 5px #67e8f966);
+}
+
+[data-amber-status="ok"] .orb-container,
+[data-amber-status="speaking"] .orb-container,
+[data-amber-status="presenting"] .orb-container {
+  filter: drop-shadow(0 0 7px #22d3ee99) drop-shadow(0 0 5px #ff8a0066);
+}
+
+[data-amber-status="error"] .orb-container {
+  filter: drop-shadow(0 0 7px #ef444499) drop-shadow(0 0 4px #ff8a0066);
+}
+
 .orb {
   position: absolute;
   width: 200px;
@@ -58,6 +76,24 @@
   transition: all 0.3s ease;
 }
 
+[data-amber-status="listening"] .orb-inner {
+  background: #22c55e;
+}
+
+[data-amber-status="thinking"] .orb-inner {
+  background: #a855f7;
+}
+
+[data-amber-status="ok"] .orb-inner,
+[data-amber-status="speaking"] .orb-inner,
+[data-amber-status="presenting"] .orb-inner {
+  background: #22d3ee;
+}
+
+[data-amber-status="error"] .orb-inner {
+  background: #ef4444;
+}
+
 .orb-inner:nth-child(2) {
   left: auto;
   right: -120%;
@@ -79,6 +115,24 @@
     80% 0%,
     50% 30%
   );
+}
+
+[data-amber-status="listening"] .orb-inner:nth-child(2) {
+  background: #67e8f9;
+}
+
+[data-amber-status="thinking"] .orb-inner:nth-child(2) {
+  background: #7c3aed;
+}
+
+[data-amber-status="ok"] .orb-inner:nth-child(2),
+[data-amber-status="speaking"] .orb-inner:nth-child(2),
+[data-amber-status="presenting"] .orb-inner:nth-child(2) {
+  background: #ff8a00;
+}
+
+[data-amber-status="error"] .orb-inner:nth-child(2) {
+  background: #f97316;
 }
 
 @keyframes rotate {

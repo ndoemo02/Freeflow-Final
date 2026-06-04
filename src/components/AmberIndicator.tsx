@@ -13,7 +13,7 @@ export function AmberIndicator({ status, className = "" }: AmberIndicatorProps) 
     // Scale factor: 56 / 200 = 0.28.
     
     return (
-        <div className={`relative flex items-center justify-center ${className}`}>
+        <div className={`relative flex items-center justify-center ${className}`} data-amber-status={status}>
              <div style={{ transform: 'scale(0.28)', transformOrigin: 'center' }}>
                 <div className="orb-container">
                   <div className="orb">

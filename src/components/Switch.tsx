@@ -5,12 +5,14 @@ type Props = {
   onToggle?: (checked: boolean) => void
   initial?: boolean
   amberReady?: boolean
+  amberStatus?: 'ready' | 'thinking' | 'action' | 'error'
 }
 
-export default function Switch({ onToggle, initial = false, amberReady = true }: Props) {
+export default function Switch({ onToggle, initial = false, amberReady = true, amberStatus }: Props) {
   const [checked, setChecked] = useState<boolean>(initial)
   const switchBodyRef = useRef<HTMLDivElement | null>(null)
   const knobRef = useRef<HTMLDivElement | null>(null)
+  const status = amberStatus || (amberReady ? 'ready' : 'error')
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -53,7 +55,7 @@ export default function Switch({ onToggle, initial = false, amberReady = true }:
   }, [checked])
 
   return (
-    <Wrapper $amberReady={amberReady}>
+    <Wrapper $amberReady={amberReady} $amberStatus={status}>
       <div className="vertical-switch" ref={switchBodyRef}>
         <input
           type="checkbox"
@@ -81,7 +83,7 @@ export default function Switch({ onToggle, initial = false, amberReady = true }:
   )
 }
 
-const Wrapper = styled.div<{ $amberReady: boolean }>`
+const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thinking' | 'action' | 'error' }>`
   position: fixed;
   left: clamp(12px, 3vw, 20px);
   bottom: clamp(1rem, 3vh, 1.5rem);
@@ -112,14 +114,30 @@ const Wrapper = styled.div<{ $amberReady: boolean }>`
     width: clamp(1.5em, 4vw, 2em);
     height: clamp(1.5em, 4vw, 2em);
     border-radius: 50%;
-    background-image: ${props => props.$amberReady
-    ? 'radial-gradient(farthest-corner at 70% 30%, #00ff77 4%, #00cc55 12% 24%, #009944 50% 65%, #00ff77 75%)'
-    : 'radial-gradient(farthest-corner at 70% 30%, #ff4444 4%, #cc2222 12% 24%, #aa0000 50% 65%, #ff4444 75%)'
-  };
-    box-shadow: ${props => props.$amberReady
-    ? '0 0 15px rgba(0, 255, 119, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)'
-    : '0 0 15px rgba(255, 68, 68, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)'
-  };
+    background-image: ${props => {
+      switch (props.$amberStatus) {
+        case 'thinking':
+          return 'radial-gradient(farthest-corner at 70% 30%, #d8b4fe 4%, #a855f7 12% 28%, #6d28d9 50% 68%, #c084fc 78%)';
+        case 'action':
+          return 'radial-gradient(farthest-corner at 70% 30%, #a5f3fc 4%, #22d3ee 12% 28%, #0891b2 50% 68%, #67e8f9 78%)';
+        case 'error':
+          return 'radial-gradient(farthest-corner at 70% 30%, #ff4444 4%, #cc2222 12% 24%, #aa0000 50% 65%, #ff4444 75%)';
+        default:
+          return 'radial-gradient(farthest-corner at 70% 30%, #00ff77 4%, #00cc55 12% 24%, #009944 50% 65%, #00ff77 75%)';
+      }
+    }};
+    box-shadow: ${props => {
+      switch (props.$amberStatus) {
+        case 'thinking':
+          return '0 0 16px rgba(168, 85, 247, 0.72), inset 0 0 8px 2px rgb(255 255 255 / .38)';
+        case 'action':
+          return '0 0 16px rgba(34, 211, 238, 0.68), inset 0 0 8px 2px rgb(255 255 255 / .38)';
+        case 'error':
+          return '0 0 15px rgba(255, 68, 68, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)';
+        default:
+          return '0 0 15px rgba(0, 255, 119, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)';
+      }
+    }};
     transition: all 0.3s cubic-bezier(.65, 1.35, .5, 1);
     position: relative;
     z-index: 2;

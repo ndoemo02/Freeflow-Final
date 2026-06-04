@@ -73,9 +73,20 @@ export default function Home() {
   // Auto-reset UI po potwierdzeniu zamówienia
   usePostOrderReset();
 
-  // --- Amber Status (green = free, red = processing) ---
-  // Derived from isThinking state: free when idle, processing when thinking
-  const amberStatus: 'free' | 'processing' = isThinking ? 'processing' : 'free';
+  // --- Amber Status ---
+  // green = ready/listening, purple = thinking/tool work, cyan = response/action, red = real error only.
+  const amberStatus: 'ready' | 'thinking' | 'action' | 'error' = error
+    ? 'error'
+    : (isThinking || liveUiState === 'processing')
+      ? 'thinking'
+      : (
+          liveUiState === 'results_ready'
+          || liveUiState === 'restaurant_selected'
+          || liveUiState === 'item_selected'
+          || liveUiState === 'cart_ready'
+        )
+        ? 'action'
+        : 'ready';
 
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
@@ -426,7 +437,8 @@ export default function Home() {
       <Switch
         onToggle={(checked) => setViewMode(checked ? 'bar' : 'tiles')}
         initial={viewMode === 'bar'}
-        amberReady={amberStatus === 'free'}
+        amberReady={amberStatus !== 'error'}
+        amberStatus={amberStatus}
       />
 
       {/* Tiles Panel - widoczne gdy viewMode === 'tiles' */}

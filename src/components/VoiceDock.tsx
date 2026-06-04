@@ -118,6 +118,7 @@ function resolveLiveDockText(
 export default function VoiceDock({
   amberResponse = "",
   interimText = "",
+  finalText = "",
   recording = false,
   visible = true,
   onMicClick,
@@ -166,12 +167,15 @@ export default function VoiceDock({
     liveUserTranscript,
     liveAssistantTranscript,
   );
-  const displayText = firstUserFacingDockText(liveDockText, interimText, recording ? "" : amberResponse);
+  const displayText = firstUserFacingDockText(liveDockText, interimText, finalText, recording ? "" : amberResponse);
   const displayTextSource = displayText === String(liveAssistantTranscript || "").trim()
+    || displayText === String(amberResponse || "").trim()
     ? "Amber"
     : displayText === String(liveUserTranscript || "").trim()
       ? "Ty"
       : displayText === String(liveTranscript || "").trim()
+        || displayText === String(interimText || "").trim()
+        || displayText === String(finalText || "").trim()
         ? "Rozpoznano"
         : "";
   const displayLine = displayText && displayTextSource ? `${displayTextSource}: ${displayText}` : displayText;
@@ -381,7 +385,7 @@ export default function VoiceDock({
                     <AmberIndicator status={amberStatus} className="h-9 w-9 overflow-hidden pointer-events-none" />
                     {recording && (
                       <motion.div
-                        className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"
+                        className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400"
                         animate={{ opacity: [1, 0.3, 1] }}
                         transition={{ duration: 1, repeat: Infinity }}
                       />
