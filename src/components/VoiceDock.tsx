@@ -309,11 +309,11 @@ export default function VoiceDock({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 2 }}
                       transition={{ duration: 0.18 }}
-                      className="mb-1 text-[11px] leading-tight break-words overflow-hidden"
+                      className="mb-1 text-[10px] leading-tight break-words overflow-hidden"
                       style={{
-                        color: "color-mix(in srgb, var(--ff-voice-accent, #67e8f9) 82%, white 18%)",
+                        color: "rgba(226, 232, 240, 0.62)",
                         display: "-webkit-box",
-                        WebkitLineClamp: 2,
+                        WebkitLineClamp: 1,
                         WebkitBoxOrient: "vertical",
                       }}
                       title={displayLine}

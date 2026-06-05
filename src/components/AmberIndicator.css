@@ -25,7 +25,7 @@
 [data-amber-status="ok"] .orb-container,
 [data-amber-status="speaking"] .orb-container,
 [data-amber-status="presenting"] .orb-container {
-  filter: drop-shadow(0 0 7px #22d3ee99) drop-shadow(0 0 5px #ff8a0066);
+  filter: drop-shadow(0 0 7px #f9731699) drop-shadow(0 0 5px #b91c1c66);
 }
 
 [data-amber-status="error"] .orb-container {
@@ -87,7 +87,7 @@
 [data-amber-status="ok"] .orb-inner,
 [data-amber-status="speaking"] .orb-inner,
 [data-amber-status="presenting"] .orb-inner {
-  background: #22d3ee;
+  background: #f97316;
 }
 
 [data-amber-status="error"] .orb-inner {
@@ -128,7 +128,7 @@
 [data-amber-status="ok"] .orb-inner:nth-child(2),
 [data-amber-status="speaking"] .orb-inner:nth-child(2),
 [data-amber-status="presenting"] .orb-inner:nth-child(2) {
-  background: #ff8a00;
+  background: #b91c1c;
 }
 
 [data-amber-status="error"] .orb-inner:nth-child(2) {

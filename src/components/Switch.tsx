@@ -119,7 +119,7 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
         case 'thinking':
           return 'radial-gradient(farthest-corner at 70% 30%, #d8b4fe 4%, #a855f7 12% 28%, #6d28d9 50% 68%, #c084fc 78%)';
         case 'action':
-          return 'radial-gradient(farthest-corner at 70% 30%, #a5f3fc 4%, #22d3ee 12% 28%, #0891b2 50% 68%, #67e8f9 78%)';
+          return 'radial-gradient(farthest-corner at 70% 30%, #fed7aa 4%, #f97316 12% 28%, #b91c1c 50% 68%, #fb923c 78%)';
         case 'error':
           return 'radial-gradient(farthest-corner at 70% 30%, #ff4444 4%, #cc2222 12% 24%, #aa0000 50% 65%, #ff4444 75%)';
         default:
@@ -131,7 +131,7 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
         case 'thinking':
           return '0 0 16px rgba(168, 85, 247, 0.72), inset 0 0 8px 2px rgb(255 255 255 / .38)';
         case 'action':
-          return '0 0 16px rgba(34, 211, 238, 0.68), inset 0 0 8px 2px rgb(255 255 255 / .38)';
+          return '0 0 16px rgba(249, 115, 22, 0.74), 0 0 8px rgba(185, 28, 28, 0.44), inset 0 0 8px 2px rgb(255 255 255 / .38)';
         case 'error':
           return '0 0 15px rgba(255, 68, 68, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)';
         default:

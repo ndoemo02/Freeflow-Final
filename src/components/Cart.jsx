@@ -418,7 +418,7 @@ export default function Cart() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h3
-                                      className="text-white font-semibold max-w-[220px] sm:max-w-[340px] leading-snug break-words overflow-hidden"
+                                      className="text-white font-semibold max-w-[300px] sm:max-w-[420px] leading-snug break-words overflow-hidden"
                                       style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: 2,
@@ -438,7 +438,7 @@ export default function Cart() {
                                 </div>
 
                                 {/* Right side: quantity + price + delete */}
-                                <div className="flex items-center gap-2 shrink-0">
+                                <div className="flex flex-col items-end gap-2 shrink-0">
                                   {/* Quantity Controls */}
                                   <div className="flex items-center gap-1 bg-black/40 rounded-lg px-2 py-1">
                                     <button
