@@ -5,7 +5,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AmberIndicator, AmberStatusNode } from "./AmberIndicator";
+import type { AmberStatusNode } from "./AmberIndicator";
 import type { LiveUiSessionState } from "../lib/liveUiSessionAdapter";
 
 interface VoiceDockProps {
@@ -302,7 +302,11 @@ export default function VoiceDock({
               }}
             >
               <div className="ff-voice-dock__speaker" aria-hidden="true">
-                <img src="/logo/layers/logo-speaker.png" alt="" draggable={false} />
+                <svg className="ff-voice-dock__speaker-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+                  <path className="ff-voice-dock__speaker-body" d="M8.5 18.5H5.8a1.8 1.8 0 0 1-1.8-1.8v-1.4a1.8 1.8 0 0 1 1.8-1.8h2.7l5.8-4.7c.75-.6 1.87-.07 1.87.9v12.6c0 .97-1.12 1.5-1.87.9l-5.8-4.7Z" />
+                  <path className="ff-voice-dock__speaker-wave ff-voice-dock__speaker-wave--cyan" d="M20.2 11.4c1.3 1.1 2.08 2.72 2.08 4.6s-.78 3.5-2.08 4.6" />
+                  <path className="ff-voice-dock__speaker-wave ff-voice-dock__speaker-wave--amber" d="M23.7 8.6c2.18 1.78 3.54 4.42 3.54 7.4s-1.36 5.62-3.54 7.4" />
+                </svg>
               </div>
 
               <div className="ff-voice-dock__core flex-1 min-w-0 pr-1">
@@ -349,7 +353,7 @@ export default function VoiceDock({
                     style={{
                       width: 42,
                       height: 42,
-                      borderRadius: "var(--ff-radius-chip)",
+                      borderRadius: "999px",
                       background: "radial-gradient(circle at 38% 30%, rgba(255,205,120,0.95), rgba(249,115,22,0.82) 42%, rgba(88,35,8,0.92) 100%)",
                       border: "1px solid rgba(255,162,82,0.48)",
                     }}
@@ -369,12 +373,13 @@ export default function VoiceDock({
                     key="mic"
                     type="button"
                     data-ui-role="action-orb"
+                    data-amber-status={amberStatus}
                     onClick={onMicClick}
                     className="ff-voice-dock__orb shrink-0 relative flex items-center justify-center"
                     style={{
                       width: 42,
                       height: 42,
-                      borderRadius: "var(--ff-radius-chip)",
+                      borderRadius: "999px",
                       overflow: "hidden",
                       background: voiceActive
                         ? "radial-gradient(circle at 38% 32%, rgba(147,245,255,0.78), rgba(19,116,135,0.44) 42%, rgba(5,10,18,0.78) 100%)"
@@ -389,7 +394,7 @@ export default function VoiceDock({
                     aria-label={recording ? "Zatrzymaj nagrywanie" : "Włącz mikrofon"}
                     aria-pressed={recording}
                   >
-                    <AmberIndicator status={amberStatus} className="h-9 w-9 overflow-hidden pointer-events-none" />
+                    <span className="ff-voice-dock__orb-core" aria-hidden="true" />
                     {recording && (
                       <motion.div
                         className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400"

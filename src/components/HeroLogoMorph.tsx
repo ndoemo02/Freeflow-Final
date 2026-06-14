@@ -140,52 +140,10 @@ export default function HeroLogoMorph({
           transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
         >
           <img
-            src="/logo/logo-shell-base-clean.png"
+            src={phase === 'idle' ? '/logo/logoglosnik.png' : '/logo/logo-shell-base-clean.png'}
             alt="FreeFlow"
             className="logo hero-logo-morph__image hero-logo-morph__shell"
             draggable={false}
-          />
-          <img
-            src="/logo/layers/logo-waves.svg"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--waves"
-            draggable={false}
-            aria-hidden="true"
-          />
-          <img
-            src="/logo/layers/logo-speaker.png"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--speaker"
-            draggable={false}
-            aria-hidden="true"
-          />
-          <img
-            src="/logo/layers/logo-wordmark.svg"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--wordmark"
-            draggable={false}
-            aria-hidden="true"
-          />
-          <img
-            src="/logo/layers/logo-icon-food.svg"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--icon hero-logo-morph__asset--food"
-            draggable={false}
-            aria-hidden="true"
-          />
-          <img
-            src="/logo/layers/logo-icon-car.svg"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--icon hero-logo-morph__asset--car"
-            draggable={false}
-            aria-hidden="true"
-          />
-          <img
-            src="/logo/layers/logo-icon-home.svg"
-            alt=""
-            className="hero-logo-morph__asset hero-logo-morph__asset--icon hero-logo-morph__asset--home"
-            draggable={false}
-            aria-hidden="true"
           />
           <svg className="hero-logo-morph__overlay" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
             <defs>

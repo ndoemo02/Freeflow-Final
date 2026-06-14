@@ -570,14 +570,39 @@
 
 .ff-voice-dock__speaker::after {
   inset: -13px;
-  opacity: 0.42;
+  opacity: 0.18;
 }
 
-.ff-voice-dock__speaker img {
-  width: 30px;
-  height: 30px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 7px rgba(34, 211, 238, 0.20)) drop-shadow(0 0 6px rgba(255, 122, 28, 0.14));
+.ff-voice-dock__speaker-icon {
+  width: 26px;
+  height: 26px;
+  overflow: visible;
+  filter:
+    drop-shadow(0 0 7px rgba(34, 211, 238, 0.26))
+    drop-shadow(0 0 7px rgba(255, 122, 28, 0.16));
+}
+
+.ff-voice-dock__speaker-icon path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ff-voice-dock__speaker-body {
+  stroke: rgba(34, 211, 238, 0.86);
+  stroke-width: 1.65;
+}
+
+.ff-voice-dock__speaker-wave {
+  stroke-width: 1.45;
+}
+
+.ff-voice-dock__speaker-wave--cyan {
+  stroke: rgba(34, 211, 238, 0.62);
+}
+
+.ff-voice-dock__speaker-wave--amber {
+  stroke: rgba(255, 122, 28, 0.68);
 }
 
 .ff-voice-dock__core {
@@ -590,10 +615,35 @@
 
 .ff-voice-dock__orb,
 .ff-voice-dock__send {
+  border-radius: 999px;
   box-shadow:
     0 0 18px rgba(255, 122, 28, 0.24),
     0 1px 0 rgba(255, 255, 255, 0.15) inset,
     0 -1px 0 rgba(0, 0, 0, 0.28) inset;
+}
+
+.ff-voice-dock__orb-core {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 235, 188, 0.78) 0%, rgba(255, 122, 28, 0.62) 31%, rgba(7, 12, 20, 0.92) 74%),
+    radial-gradient(circle at 72% 76%, rgba(34, 211, 238, 0.72), transparent 42%);
+  box-shadow:
+    0 0 13px rgba(255, 122, 28, 0.28),
+    0 0 16px rgba(34, 211, 238, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.24) inset;
+}
+
+.ff-voice-dock__orb[data-amber-status="listening"] .ff-voice-dock__orb-core,
+.ff-voice-dock__orb[data-amber-status="thinking"] .ff-voice-dock__orb-core {
+  background:
+    radial-gradient(circle at 35% 27%, rgba(177, 250, 255, 0.76) 0%, rgba(34, 211, 238, 0.5) 32%, rgba(6, 12, 20, 0.92) 74%),
+    radial-gradient(circle at 74% 78%, rgba(255, 122, 28, 0.58), transparent 44%);
+  box-shadow:
+    0 0 16px rgba(34, 211, 238, 0.24),
+    0 0 14px rgba(255, 122, 28, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.22) inset;
 }
 
 .ff-voice-dock[data-voice-active="true"] .ff-voice-dock__speaker {
@@ -627,9 +677,14 @@
     flex-basis: 38px;
   }
 
-  .ff-voice-dock__speaker img {
-    width: 27px;
-    height: 27px;
+  .ff-voice-dock__speaker-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ff-voice-dock__orb-core {
+    width: 28px;
+    height: 28px;
   }
 }
 
