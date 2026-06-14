@@ -126,6 +126,7 @@ export default function CinematicRestaurantCarousel({
     const [isDragging, setIsDragging] = useState(false);
     const [listOpen, setListOpen] = useState(false);
     const [isFullWidth, setIsFullWidth] = useState(false);
+    const [cardsReady, setCardsReady] = useState(false);
     const [compactBounds, setCompactBounds] = useState(() => ({
         top: Math.round(window.innerHeight * 0.38),
         bottom: Math.round(window.innerHeight * 0.16),
@@ -342,6 +343,13 @@ export default function CinematicRestaurantCarousel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId, items, idsEqual]);
 
+    useEffect(() => {
+        setCardsReady(false);
+        if (!items.length) return;
+        const timer = window.setTimeout(() => setCardsReady(true), 190);
+        return () => window.clearTimeout(timer);
+    }, [items.length]);
+
     const prevIndexRef = useRef(currentIndex);
     useEffect(() => {
         if (currentIndex !== prevIndexRef.current && items[currentIndex]) {
@@ -492,7 +500,7 @@ export default function CinematicRestaurantCarousel({
     }, [closeList]);
 
     if (!items.length) return null;
-    if (!layoutReady) return null;
+    if (!layoutReady || !cardsReady) return null;
 
     return (
         <>
@@ -614,7 +622,7 @@ export default function CinematicRestaurantCarousel({
                                             <div style={{ fontSize: 8, letterSpacing: 2, color: 'rgba(255,180,40,0.85)', fontWeight: 600, marginBottom: 4, textTransform: 'uppercase' }}>
                                                 {item.cuisine_type || 'Restauracja'}
                                                 {item.id === recommendedId && (
-                                                    <span style={{ marginLeft: 6, color: '#f97316', letterSpacing: 0 }}>Polecane</span>
+                                                    <span style={{ marginLeft: 6, color: 'var(--ff-amber-500)', letterSpacing: 0 }}>Polecane</span>
                                                 )}
                                             </div>
                                             <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: 1.2, marginBottom: 3 }}>
@@ -624,7 +632,7 @@ export default function CinematicRestaurantCarousel({
                                                 {item.city || item.address || ''}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 'auto' }}>
-                                                <span style={{ fontSize: 10, color: '#f97316' }}>Ocena {item.rating || '4.5'}</span>
+                                                <span style={{ fontSize: 10, color: 'var(--ff-amber-500)' }}>Ocena {item.rating || '4.5'}</span>
                                                 <span style={{
                                                     fontSize: 8, padding: '2px 7px', borderRadius: 20,
                                                     background: 'rgba(34,197,94,0.13)', color: 'rgba(100,220,130,0.9)',
@@ -718,7 +726,7 @@ export default function CinematicRestaurantCarousel({
                                             </div>
                                         </div>
                                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                            <div style={{ fontSize: 9, color: '#f97316' }}>Ocena {item.rating || '4.5'}</div>
+                                            <div style={{ fontSize: 9, color: 'var(--ff-amber-500)' }}>Ocena {item.rating || '4.5'}</div>
                                             <div style={{ fontSize: 8, color: 'rgba(100,220,120,0.6)' }}>{formatDist(item)}</div>
                                         </div>
                                     </div>

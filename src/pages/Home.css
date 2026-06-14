@@ -164,6 +164,21 @@
   align-items: center;
 }
 
+.header-logo-slot {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 20px);
+  left: calc(env(safe-area-inset-left, 0px) + 14px);
+  width: clamp(54px, 12vw, 72px);
+  height: clamp(54px, 12vw, 72px);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 51;
+}
+
+.home-header__left {
+  margin-left: calc(env(safe-area-inset-left, 0px) + clamp(58px, 13vw, 84px));
+}
+
 .cart-btn,
 .menu-btn {
   padding: clamp(0.5rem, 1.5vw, 0.75rem);
@@ -246,7 +261,378 @@
   transform: scale(1);
 }
 
+.hero-logo-morph-source {
+  position: relative;
+  width: clamp(280px, 34vw, 440px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.hero-logo-morph-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  will-change: left, top, width, height;
+  z-index: 200;
+}
+
+.hero-logo-morph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.hero-logo-morph__squash {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 78%;
+}
+
+.hero-logo-morph__squash .hero-logo-morph__image.logo {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-logo-morph__shell {
+  z-index: 1;
+}
+
+.hero-logo-morph__asset {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  object-fit: contain;
+  z-index: 2;
+}
+
+.hero-logo-morph__asset--waves {
+  left: 13.5%;
+  top: 16.5%;
+  width: 73%;
+  height: auto;
+  opacity: 0.88;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 9px rgba(34, 211, 238, 0.24)) drop-shadow(0 0 10px rgba(255, 122, 28, 0.18));
+  transform-origin: 50% 45%;
+  z-index: 2;
+}
+
+.hero-logo-morph__asset--speaker {
+  left: 53%;
+  top: 10.5%;
+  width: 29%;
+  height: auto;
+  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.34)) drop-shadow(0 0 10px rgba(255, 122, 28, 0.18));
+  transform-origin: 50% 55%;
+  z-index: 4;
+}
+
+.hero-logo-morph__asset--wordmark {
+  left: 25.5%;
+  top: 45.5%;
+  width: 55%;
+  height: auto;
+  filter: drop-shadow(0 0 8px rgba(255, 122, 28, 0.5));
+  z-index: 5;
+}
+
+.hero-logo-morph__asset--icon {
+  top: 64.5%;
+  height: auto;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 7px currentColor);
+  z-index: 5;
+}
+
+.hero-logo-morph__asset--food {
+  left: 33.2%;
+  width: 7.2%;
+}
+
+.hero-logo-morph__asset--car {
+  left: 45.2%;
+  width: 10.2%;
+}
+
+.hero-logo-morph__asset--home {
+  left: 60.5%;
+  width: 8.4%;
+}
+
+.hero-logo-morph[data-logo-active="true"] .hero-logo-morph__asset--waves {
+  animation: heroLogoLayerBreath 2.2s ease-in-out infinite;
+}
+
+.hero-logo-morph[data-logo-active="true"] .hero-logo-morph__asset--speaker {
+  animation: heroLogoSpeakerLift 2.4s ease-in-out infinite;
+}
+
+@keyframes heroLogoLayerBreath {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.018);
+  }
+}
+
+@keyframes heroLogoSpeakerLift {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-1.5%) scale(1.012);
+  }
+}
+
+.hero-logo-morph__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.hero-logo-morph__edge {
+  fill: none;
+  stroke: url("#hero-logo-edge");
+  stroke-width: 0.55;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+  filter: drop-shadow(0 0 3px rgba(255, 122, 28, 0.55)) drop-shadow(0 0 5px rgba(34, 211, 238, 0.22));
+}
+
+.hero-logo-morph__waves {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 0.42;
+}
+
+.hero-logo-morph__waves path:nth-child(1) {
+  stroke: rgba(34, 211, 238, 0.82);
+}
+
+.hero-logo-morph__waves path:nth-child(2) {
+  stroke: rgba(255, 122, 28, 0.72);
+}
+
+.hero-logo-morph__waves path:nth-child(3) {
+  stroke: rgba(34, 211, 238, 0.48);
+}
+
+.hero-logo-morph__drip {
+  fill: rgba(255, 122, 28, 0.84);
+  filter: drop-shadow(0 0 6px rgba(255, 94, 10, 0.8));
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+.hero-logo-morph__live-pulse {
+  position: absolute;
+  inset: 16%;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  box-shadow: 0 0 26px rgba(34, 211, 238, 0.18), 0 0 32px rgba(255, 122, 28, 0.14) inset;
+  animation: heroLogoLivePulse 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes heroLogoLivePulse {
+  0%,
+  100% {
+    opacity: 0.36;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-logo-morph[data-logo-active="true"] .hero-logo-morph__asset--waves,
+  .hero-logo-morph[data-logo-active="true"] .hero-logo-morph__asset--speaker {
+    animation: none;
+  }
+
+  .hero-logo-morph__live-pulse {
+    animation: none;
+  }
+}
+
 /* Warstwa tĹ‚a - najniĹĽszy z-index */
+.ff-voice-dock {
+  min-height: 60px;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.ff-voice-dock::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background:
+    linear-gradient(92deg,
+      rgba(34, 211, 238, 0.82) 0%,
+      rgba(111, 231, 255, 0.34) 26%,
+      rgba(255, 255, 255, 0.16) 48%,
+      rgba(255, 122, 28, 0.52) 74%,
+      rgba(255, 122, 28, 0.9) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ff-voice-dock::after {
+  content: '';
+  position: absolute;
+  left: 48px;
+  right: 52px;
+  top: 7px;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.58), rgba(255, 255, 255, 0.34), rgba(255, 122, 28, 0.68));
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.22), 0 0 10px rgba(255, 122, 28, 0.20);
+  opacity: 0.82;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ff-voice-dock__speaker,
+.ff-voice-dock__core,
+.ff-voice-dock__orb,
+.ff-voice-dock__send {
+  position: relative;
+  z-index: 1;
+}
+
+.ff-voice-dock__speaker {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 48% 44%, rgba(15, 24, 32, 0.82) 0%, rgba(3, 8, 14, 0.78) 52%, rgba(4, 10, 18, 0.36) 100%);
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.18),
+    0 0 0 8px rgba(34, 211, 238, 0.035),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset;
+}
+
+.ff-voice-dock__speaker::before,
+.ff-voice-dock__speaker::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
+  border: 1px solid rgba(34, 211, 238, 0.13);
+  pointer-events: none;
+}
+
+.ff-voice-dock__speaker::after {
+  inset: -13px;
+  opacity: 0.42;
+}
+
+.ff-voice-dock__speaker img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 7px rgba(34, 211, 238, 0.20)) drop-shadow(0 0 6px rgba(255, 122, 28, 0.14));
+}
+
+.ff-voice-dock__core {
+  padding-left: 2px;
+}
+
+.ff-voice-dock__input {
+  line-height: 1.25;
+}
+
+.ff-voice-dock__orb,
+.ff-voice-dock__send {
+  box-shadow:
+    0 0 18px rgba(255, 122, 28, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.15) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.28) inset;
+}
+
+.ff-voice-dock[data-voice-active="true"] .ff-voice-dock__speaker {
+  border-color: rgba(103, 232, 249, 0.34);
+  box-shadow:
+    0 0 22px rgba(34, 211, 238, 0.24),
+    0 0 0 8px rgba(34, 211, 238, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.13) inset;
+}
+
+.ff-voice-dock[data-voice-active="true"]::after {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .ff-voice-dock {
+    min-height: 58px;
+    gap: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .ff-voice-dock::after {
+    left: 44px;
+    right: 48px;
+  }
+
+  .ff-voice-dock__speaker {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+  }
+
+  .ff-voice-dock__speaker img {
+    width: 27px;
+    height: 27px;
+  }
+}
+
 .freeflow::before {
   content: '';
   position: absolute;
@@ -387,10 +773,10 @@
   width: 100%;
   height: 100%;
   fill: none;
-  stroke: #00ffc8;
+  stroke: #3DDCC3;
   stroke-width: 3;
   stroke-dasharray: 20;
-  filter: drop-shadow(0 0 6px #00ffc8);
+  filter: drop-shadow(0 0 6px #3DDCC3);
   animation: wave 2.5s infinite linear;
 }
 

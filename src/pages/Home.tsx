@@ -21,6 +21,7 @@ import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceDock from "../components/VoiceDock";
+import HeroLogoMorph from "../components/HeroLogoMorph";
 import IntentChips from "../components/IntentChips";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
@@ -34,6 +35,7 @@ import ErrorFallback from "../components/ErrorFallback";
 import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
 import { generateTurnId, logBridge } from '../lib/interactionBridge';
+import { deriveLogoScenePhase } from '../lib/logoSceneContract';
 
 // --- UI View Mode Types ---
 type ViewMode = 'tiles' | 'bar';
@@ -46,6 +48,7 @@ export default function Home() {
   const clearHomeContext = useConversationStore(state => state.clearHomeContext);
   const uiMode = useConversationStore(state => state.uiMode);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
+  const suggestedRestaurants = useConversationStore(state => state.suggestedRestaurants);
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useVoiceInput();
   const { uiHints, setHints } = useUIPanels();
   const { play, stop, isSpeaking } = useTTS();
@@ -69,6 +72,8 @@ export default function Home() {
 
   // --- UI View State (tiles vs voicebar) ---
   const [viewMode, setViewMode] = useState<ViewMode>('bar'); // domyślnie voice bar
+  const [logoLiveRequested, setLogoLiveRequested] = useState(false);
+  const logoLiveActive = liveSessionActive || logoLiveRequested;
 
   // Auto-reset UI po potwierdzeniu zamówienia
   usePostOrderReset();
@@ -87,6 +92,14 @@ export default function Home() {
         )
         ? 'action'
         : 'ready';
+  const logoScenePhase = deriveLogoScenePhase({
+    uiMode,
+    isListening: isListening || logoLiveRequested,
+    isThinking,
+    liveSessionActive: logoLiveActive,
+    liveUiState: logoLiveActive ? liveUiState : undefined,
+    hasSuggestedRestaurants: !!suggestedRestaurants?.length,
+  });
 
   // --- Legacy UI state for drawers (Presentation Only) ---
   const openDrawer = useUI((s) => s.openDrawer);
@@ -224,12 +237,22 @@ export default function Home() {
   }, [liveSessionActive, sendMessage, stop]);
 
   const handleLiveToggle = useCallback(() => {
-    if (liveSessionActive) {
+    if (logoLiveActive) {
+      setLogoLiveRequested(false);
       stopLiveSession();
       return;
     }
-    void startLiveSession();
-  }, [liveSessionActive, startLiveSession, stopLiveSession]);
+    setLogoLiveRequested(true);
+    void Promise.resolve(startLiveSession()).catch(() => {
+      setLogoLiveRequested(false);
+    });
+  }, [logoLiveActive, startLiveSession, stopLiveSession]);
+
+  useEffect(() => {
+    if (liveSessionActive) {
+      setLogoLiveRequested(true);
+    }
+  }, [liveSessionActive]);
 
   // Handle voice transcript finalization
   useEffect(() => {
@@ -356,25 +379,15 @@ export default function Home() {
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 pt-1.5 px-3 pb-1 flex justify-between items-start z-50 pointer-events-none">
-        <div className="flex flex-col gap-0.5 pointer-events-auto">
+      <header className="home-header fixed top-0 left-0 right-0 pt-1.5 px-3 pb-1 flex justify-between items-start z-50 pointer-events-none">
+        <div
+          className="header-logo-slot"
+          data-ui-role="header-logo-target"
+          aria-hidden="true"
+        />
+        <div className="home-header__left flex flex-col gap-0.5 pointer-events-auto">
           <div className="flex items-center gap-2 pl-0.5 mt-0">
             <StateIsland />
-            {liveModeEnabled && (
-              <button
-                onClick={handleLiveToggle}
-                data-live={liveSessionActive}
-                aria-label={liveSessionActive ? 'Wstrzymaj tryb Live' : 'Włącz lub wznów tryb Live'}
-                aria-pressed={liveSessionActive}
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition ${
-                  liveSessionActive
-                    ? 'text-emerald-400 bg-emerald-400/10 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-                    : 'text-white/50 bg-white/10 hover:bg-white/20'
-                }`}
-              >
-                {liveSessionActive ? '● LIVE ON' : (liveUiState === 'paused' ? '◌ LIVE PAUSE' : '○ LIVE')}
-              </button>
-            )}
           </div>
         </div>
         <div className="flex gap-4 pointer-events-auto">
@@ -417,18 +430,12 @@ export default function Home() {
 
         {/* Logo/Brand Centerpiece: static voice trigger on the main screen */}
         <div className="hero-stack">
-          <button
-            type="button"
-            onClick={handleLogoPull}
-            className="logo-container"
-            aria-label="Uruchom mikrofon"
-          >
-            <img
-              src="/logo/logoglosnik.png"
-              alt="FreeFlow"
-              className={`logo ${isListening ? "recording" : ""}`}
-            />
-          </button>
+          <HeroLogoMorph
+            phase={logoScenePhase}
+            active={logoLiveActive || isListening}
+            onClick={liveModeEnabled ? handleLiveToggle : handleLogoPull}
+            label={liveModeEnabled ? (logoLiveActive ? 'Wstrzymaj tryb Live' : 'Włącz tryb Live') : 'Uruchom mikrofon'}
+          />
         </div>
 
       </main>

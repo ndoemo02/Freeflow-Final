@@ -39,9 +39,9 @@ const MOBILE_HERO_DOCK_VARIANT: DockGlassVariant = "neon-soft-glow";
 
 function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React.CSSProperties {
   const base: React.CSSProperties = {
-    borderRadius: "var(--radius-pill)",
-    backdropFilter: "blur(16px) saturate(128%)",
-    WebkitBackdropFilter: "blur(16px) saturate(128%)",
+    borderRadius: "999px",
+    backdropFilter: "blur(20px) saturate(132%)",
+    WebkitBackdropFilter: "blur(20px) saturate(132%)",
     transition: "border-color var(--anim-fast), box-shadow var(--anim-normal), background var(--anim-normal)",
     position: "relative",
     overflow: "visible",
@@ -49,22 +49,22 @@ function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React
 
   const variants: Record<DockGlassVariant, React.CSSProperties> = {
     "clean-premium": {
-      background: "linear-gradient(135deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(14,17,28,0.72) 100%)",
-      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
+      background: "linear-gradient(92deg, rgba(5,9,15,0.92) 0%, rgba(9,14,22,0.82) 48%, rgba(20,12,8,0.82) 100%)",
+      border: "1px solid rgba(255,255,255,0.10)",
       boxShadow:
-        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 1px 0 rgba(255,255,255,0.12) inset, 0 -1px 0 rgba(4,8,18,0.24) inset",
+        "0 18px 42px rgba(0,0,0,0.40), 0 0 26px rgba(34,211,238,0.08), 0 0 28px rgba(249,115,22,0.08), 0 1px 0 rgba(255,255,255,0.14) inset",
     },
     "neon-soft-glow": {
-      background: "linear-gradient(132deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(14,17,28,0.76) 100%)",
-      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
+      background: "linear-gradient(92deg, rgba(4,10,16,0.93) 0%, rgba(8,13,21,0.84) 46%, rgba(23,12,7,0.84) 100%)",
+      border: "1px solid rgba(255,255,255,0.10)",
       boxShadow:
-        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 16px rgba(103,232,249,0.08), 0 1px 0 rgba(255,255,255,0.12) inset, 0 -1px 0 rgba(4,8,18,0.26) inset",
+        "0 18px 46px rgba(0,0,0,0.44), 0 0 22px rgba(34,211,238,0.12), 0 0 24px rgba(249,115,22,0.10), 0 1px 0 rgba(255,255,255,0.16) inset",
     },
     "closest-to-logo": {
-      background: "linear-gradient(138deg, var(--ff-voice-panel, rgba(11,14,24,0.88)) 0%, rgba(16,20,33,0.74) 52%, rgba(12,17,28,0.68) 100%)",
-      border: "1px solid var(--ff-voice-border, rgba(255,255,255,0.10))",
+      background: "linear-gradient(94deg, rgba(3,8,14,0.94) 0%, rgba(8,12,20,0.84) 52%, rgba(25,12,6,0.84) 100%)",
+      border: "1px solid rgba(255,255,255,0.11)",
       boxShadow:
-        "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 18px rgba(249,115,22,0.10), 0 1px 0 rgba(255,255,255,0.12) inset",
+        "0 18px 46px rgba(0,0,0,0.44), 0 0 24px rgba(34,211,238,0.10), 0 0 28px rgba(249,115,22,0.12), 0 1px 0 rgba(255,255,255,0.16) inset",
     },
   };
 
@@ -74,10 +74,10 @@ function getDockGlassStyle(variant: DockGlassVariant, recording: boolean): React
 
   return {
     ...base,
-    background: "linear-gradient(135deg, rgba(9,18,25,0.84) 0%, rgba(10,24,32,0.78) 100%)",
-    border: "1px solid rgba(103,232,249,0.34)",
+    background: "linear-gradient(92deg, rgba(4,14,20,0.94) 0%, rgba(6,14,23,0.86) 44%, rgba(26,13,6,0.86) 100%)",
+    border: "1px solid rgba(103,232,249,0.24)",
     boxShadow:
-      "var(--ff-voice-shadow, 0 14px 34px rgba(0,0,0,0.34)), 0 0 18px rgba(103,232,249,0.16), 0 1px 0 rgba(255,255,255,0.12) inset",
+      "0 18px 46px rgba(0,0,0,0.46), 0 0 26px rgba(34,211,238,0.16), 0 0 26px rgba(249,115,22,0.10), 0 1px 0 rgba(255,255,255,0.16) inset",
   };
 }
 
@@ -278,7 +278,7 @@ export default function VoiceDock({
       {visible && (
         <motion.div
           data-ui-role="voice-dock-layer"
-          className="fixed inset-x-0 bottom-0 z-[120] flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+          className="w-full z-[120] flex justify-center px-0 mb-2"
           style={dockWrapperStyle}
           initial={{ opacity: 0, y: 24 + (isMobile ? mobileYOffset : 0) }}
           animate={{ opacity: 1, y: isMobile ? mobileYOffset : 0 }}
@@ -295,12 +295,17 @@ export default function VoiceDock({
             <div
               ref={barRef}
               data-ui-role="voice-dock-bar"
-              className="flex items-end gap-2.5 px-3 py-2"
+              data-voice-active={voiceActive ? "true" : "false"}
+              className="ff-voice-dock flex items-center gap-2.5 px-3 py-2"
               style={{
                 ...dockGlassStyle,
               }}
             >
-              <div className="flex-1 min-w-0 pr-1">
+              <div className="ff-voice-dock__speaker" aria-hidden="true">
+                <img src="/logo/layers/logo-speaker.png" alt="" draggable={false} />
+              </div>
+
+              <div className="ff-voice-dock__core flex-1 min-w-0 pr-1">
                 <AnimatePresence initial={false}>
                   {showResponse && (
                     <motion.p
@@ -329,7 +334,7 @@ export default function VoiceDock({
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={inputPlaceholder}
-                  className="w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 focus:outline-none caret-cyan-300"
+                  className="ff-voice-dock__input w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 focus:outline-none caret-cyan-300"
                   style={{ letterSpacing: "0.01em" }}
                 />
               </div>
@@ -340,13 +345,13 @@ export default function VoiceDock({
                     key="send"
                     type="button"
                     onClick={submit}
-                    className="shrink-0 flex items-center justify-center text-[13px] font-semibold text-white"
+                    className="ff-voice-dock__send shrink-0 flex items-center justify-center text-[13px] font-semibold text-white"
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "var(--radius-pill)",
-                      background: "linear-gradient(135deg, rgba(249,115,22,0.85), rgba(249,115,22,0.65))",
-                      border: "1px solid rgba(249,115,22,0.35)",
+                      width: 42,
+                      height: 42,
+                      borderRadius: "var(--ff-radius-chip)",
+                      background: "radial-gradient(circle at 38% 30%, rgba(255,205,120,0.95), rgba(249,115,22,0.82) 42%, rgba(88,35,8,0.92) 100%)",
+                      border: "1px solid rgba(255,162,82,0.48)",
                     }}
                     initial={{ opacity: 0, scale: 0.7 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -365,14 +370,16 @@ export default function VoiceDock({
                     type="button"
                     data-ui-role="action-orb"
                     onClick={onMicClick}
-                    className="shrink-0 relative flex items-center justify-center"
+                    className="ff-voice-dock__orb shrink-0 relative flex items-center justify-center"
                     style={{
-                      width: 38,
-                      height: 38,
-                      borderRadius: "var(--radius-pill)",
+                      width: 42,
+                      height: 42,
+                      borderRadius: "var(--ff-radius-chip)",
                       overflow: "hidden",
-                      background: voiceActive ? "rgba(103,232,249,0.10)" : "rgba(255,255,255,0.045)",
-                      border: voiceActive ? "1px solid rgba(103,232,249,0.22)" : "1px solid rgba(255,255,255,0.08)",
+                      background: voiceActive
+                        ? "radial-gradient(circle at 38% 32%, rgba(147,245,255,0.78), rgba(19,116,135,0.44) 42%, rgba(5,10,18,0.78) 100%)"
+                        : "radial-gradient(circle at 38% 30%, rgba(255,190,104,0.92), rgba(249,115,22,0.66) 42%, rgba(36,18,10,0.86) 100%)",
+                      border: voiceActive ? "1px solid rgba(103,232,249,0.34)" : "1px solid rgba(255,162,82,0.42)",
                     }}
                     initial={{ opacity: 0, scale: 0.7 }}
                     animate={{ opacity: 1, scale: 1 }}
