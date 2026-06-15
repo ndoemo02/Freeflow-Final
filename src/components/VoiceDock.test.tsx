@@ -1,99 +1,89 @@
 /* @vitest-environment jsdom */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import VoiceDock from './VoiceDock';
+import { useLiveUiSessionStore } from '../state/liveUiSession';
+
+beforeEach(() => {
+  // Reset store przed każdym testem
+  useLiveUiSessionStore.getState().setIdle();
+});
 
 describe('VoiceDock', () => {
-  it('renders dock with placeholder', () => {
-    render(
-      <VoiceDock
-        recording={false}
-        onMicClick={() => {}}
-        onTextSubmit={() => {}}
-        visible
-      />,
-    );
-
-    expect(screen.getByPlaceholderText(/napisz lub powiedz/i)).toBeInTheDocument();
+  it('renders dock with input placeholder by default', () => {
+    render(<VoiceDock />);
+    expect(
+      screen.getByPlaceholderText(/napisz lub powiedz/i),
+    ).toBeInTheDocument();
   });
 
-  it('shows listening placeholder when recording', () => {
-    render(
-      <VoiceDock
-        recording
-        onMicClick={() => {}}
-        visible
-      />,
-    );
-
+  it('shows listening placeholder when session state is listening', () => {
+    useLiveUiSessionStore.getState().setListening();
+    render(<VoiceDock />);
     expect(screen.getByPlaceholderText(/słucham/i)).toBeInTheDocument();
   });
 
-  it('hides idle and technical status text from the user-facing transcript line', () => {
-    render(
-      <VoiceDock
-        recording={false}
-        liveUiState="idle"
-        liveStatusText="Gotowe."
-        amberResponse="[InteractionBridge] tool_call session=abc"
-        visible
-      />,
+  it('shows user transcript when listening', () => {
+    useLiveUiSessionStore.getState().setListening();
+    useLiveUiSessionStore.getState().setTranscript(
+      'user',
+      'Szukam lodow w Piekarach',
     );
-
-    expect(screen.queryByText(/gotowe/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/interactionbridge/i)).not.toBeInTheDocument();
+    render(<VoiceDock />);
+    expect(screen.getByText(/szukam lodow/i)).toBeInTheDocument();
   });
 
-  it('keeps natural assistant text visible', () => {
-    render(
-      <VoiceDock
-        recording={false}
-        amberResponse="Jasne, dodaje burgera do koszyka."
-        visible
-      />,
+  it('shows assistant transcript after results are ready', () => {
+    // Symuluj results_ready
+    useLiveUiSessionStore
+      .getState()
+      .setSessionState('results_ready', { statusText: 'Gotowe.' });
+    useLiveUiSessionStore.getState().setTranscript(
+      'assistant',
+      'W poblizu znalazlam 2 miejsca z deserami.',
     );
-
-    expect(screen.getByText(/dodaje burgera/i)).toBeInTheDocument();
+    render(<VoiceDock />);
+    expect(
+      screen.getByText(/2 miejsca z deserami/i),
+    ).toBeInTheDocument();
   });
 
-  it('prefers live user transcript while listening even if an older assistant transcript exists', () => {
-    render(
-      <VoiceDock
-        recording
-        liveUiState="listening"
-        liveUserTranscript="Szukam lodow w Piekarach Slaskich"
-        liveAssistantTranscript="W poblizu znalazlam piekarnie."
-        visible
-      />,
+  it('strips markdown ** from transcript', () => {
+    useLiveUiSessionStore
+      .getState()
+      .setSessionState('results_ready', { statusText: '' });
+    useLiveUiSessionStore.getState().setTranscript(
+      'assistant',
+      'Znajduje **2 restauracje** w okolicy.',
     );
-
-    expect(screen.getByText(/ty: szukam lodow/i)).toBeInTheDocument();
-    expect(screen.queryByText(/piekarnie/i)).not.toBeInTheDocument();
+    render(<VoiceDock />);
+    expect(
+      screen.getByText(/znajduje 2 restauracje w okolicy/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/\*\*/i)).not.toBeInTheDocument();
   });
 
-  it('shows the accumulated assistant transcript once results are ready', () => {
-    render(
-      <VoiceDock
-        recording={false}
-        liveUiState="results_ready"
-        liveAssistantTranscript="W poblizu znalazlam 2 miejsca z deserami. Ktora wybierasz?"
-        visible
-      />,
+  it('hides technical noise from transcript', () => {
+    useLiveUiSessionStore
+      .getState()
+      .setSessionState('results_ready', { statusText: '' });
+    useLiveUiSessionStore.getState().setTranscript(
+      'assistant',
+      '[tool_call] sessionId=abc',
     );
-
-    expect(screen.getByText(/amber: .*2 miejsca z deserami/i)).toBeInTheDocument();
+    render(<VoiceDock />);
+    expect(
+      screen.queryByText(/tool_call/i),
+    ).not.toBeInTheDocument();
   });
 
-  it('labels fallback live transcript as recognized text', () => {
-    render(
-      <VoiceDock
-        recording={false}
-        liveUiState="processing"
-        liveTranscript="Chce zamowic lody w Piekarach"
-        visible
-      />,
-    );
+  it('has data-state attribute reflecting dock state', () => {
+    const { container, rerender } = render(<VoiceDock />);
+    const dock = container.querySelector('.ff-voice-dock');
+    expect(dock).toHaveAttribute('data-state', 'idle');
 
-    expect(screen.getByText(/rozpoznano: chce zamowic lody/i)).toBeInTheDocument();
+    useLiveUiSessionStore.getState().setListening();
+    rerender(<VoiceDock />);
+    expect(dock).toHaveAttribute('data-state', 'listening');
   });
 });

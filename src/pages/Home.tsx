@@ -485,28 +485,8 @@ export default function Home() {
         <div className="fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <IntentChips />
           <VoiceDock
-            recording={isListening}
-            isProcessing={isThinking}
-            isSpeaking={isSpeaking}
-            interimText={transcript}
-            finalText={transcript}
-            amberResponse={lastResponse || lastFullResponse?.reply || ''}
             onMicClick={handleMicClick}
             onTextSubmit={handleTextSubmit}
-            onClearResponse={() => {
-              useConversationStore.setState({ lastResponse: '', lastFullResponse: null });
-            }}
-            visible={true}
-            isPresenting={uiHints.panel !== 'none'}
-            liveUiState={liveUiState}
-            liveStatusText={liveUiStatusText}
-            liveUserTranscript={liveUserTranscript || ''}
-            liveAssistantTranscript={liveAssistantTranscript || ''}
-            liveSession={{
-              isActive: liveSessionActive,
-              start: startLiveSession,
-              stop: stopLiveSession,
-            }}
           />
         </div>
       )}
