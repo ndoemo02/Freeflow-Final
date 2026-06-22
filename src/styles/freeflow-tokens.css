@@ -1,0 +1,76 @@
+/* ============================================================
+   FreeFlow Design Tokens — v1
+   Źródło prawdy: scena Discovery (neon amber + teal na ciepłym szkle)
+   Import w src/styles/ przed Tailwindem: @import './freeflow-tokens.css';
+   ============================================================ */
+
+:root {
+  /* ---------- KOLOR: marka ---------- */
+  --ff-amber-500: #FF7A1C;   /* logo script, akcent główny */
+  --ff-amber-400: #FF9433;   /* hover / gradient end */
+  --ff-amber-600: #E8650A;   /* pressed */
+  --ff-gold-400:  #F6B73C;   /* ceny, rating ★ — zawsze ten, nigdy amber */
+
+  --ff-teal-400:  #3DDCC3;   /* systemowy feedback: wybrane, dock confirm, intent tagi */
+  --ff-teal-300:  #7AD6E0;   /* teal wtórny: ikony, linki w docku */
+
+  /* ---------- KOLOR: powierzchnie (scena = ciepła czerń, nie fiolet!) ---------- */
+  --ff-bg-0:      #0B0908;   /* tło sceny pod zdjęciem; zamiast "galaktyki" w panelach */
+  --ff-bg-1:      #14110F;   /* sekcje, drawer */
+  --ff-glass:     rgba(16, 19, 22, 0.62);  /* karta na szkle — zawsze z --ff-blur */
+  --ff-glass-strong: rgba(12, 14, 16, 0.82); /* dock, nagłówek sticky */
+  --ff-stroke:    rgba(255, 255, 255, 0.08); /* obrys kart neutralnych */
+  --ff-stroke-selected: rgba(61, 220, 195, 0.65); /* obrys karty "Wybrane" */
+  --ff-fill-selected:   rgba(61, 220, 195, 0.08); /* tint wypełnienia "Wybrane" */
+
+  /* ---------- KOLOR: tekst ---------- */
+  --ff-text-1:    #F4F6F7;   /* tytuły */
+  --ff-text-2:    #AEB6BA;   /* opisy, meta */
+  --ff-text-3:    #6E7A80;   /* eyebrow / kategorie (PRZYSTAWKA, ZUPA) */
+  --ff-on-amber:  #1A0E04;   /* tekst na przycisku amber */
+
+  /* ---------- KOLOR: statusy (jedna mapa — wszędzie ta sama) ---------- */
+  --ff-status-new:        #7AD6E0;  /* nowe / przyjęte */
+  --ff-status-pending:    #F6B73C;  /* oczekujące — ŻÓŁTY, nie zielony */
+  --ff-status-progress:   #FF7A1C;  /* w realizacji — amber, nie różowy gradient */
+  --ff-status-ready:      #3DDCC3;  /* gotowe / sukces / LIVE ON */
+  --ff-status-error:      #FF5A4E;  /* błąd / anuluj / badge */
+
+  /* ---------- TYPOGRAFIA ---------- */
+  /* Display tylko dla liczb-hero i nagłówków paneli; UI dla całej reszty. */
+  --ff-font-ui:      'Space Grotesk', system-ui, sans-serif;
+  --ff-font-display: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;
+
+  --ff-text-eyebrow: 0.6875rem; /* 11px, uppercase */
+  --ff-track-eyebrow: 0.14em;   /* PRZYSTAWKA-style letterspacing */
+  --ff-text-body:    0.9375rem; /* 15px */
+  --ff-text-title:   1.125rem;  /* 18px — nazwa dania / restauracji */
+  --ff-text-price:   1.0625rem; /* 17px, --ff-gold-400, font-weight 700 */
+
+  /* ---------- KSZTAŁT ---------- */
+  --ff-radius-card: 18px;   /* karty dań i restauracji */
+  --ff-radius-chip: 999px;  /* chipy, dock, intent tagi */
+  --ff-radius-btn:  14px;
+  --ff-blur:        14px;   /* backdrop-filter dla --ff-glass */
+
+  /* ---------- CIENIE / POŚWIATA ---------- */
+  --ff-glow-amber: 0 0 24px rgba(255, 122, 28, 0.35);
+  --ff-glow-teal:  0 0 18px rgba(61, 220, 195, 0.30);
+  --ff-shadow-card: 0 8px 28px rgba(0, 0, 0, 0.45);
+
+  /* ---------- RUCH (zgrane z fizyką kołowrotka) ---------- */
+  --ff-dur-fast:   140ms;   /* hover, tap feedback */
+  --ff-dur-base:   260ms;   /* pojawianie kart, chipów */
+  --ff-dur-reorder: 420ms;  /* animowany reorder kart — NIE reset */
+  --ff-ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ff-ease-spring: cubic-bezier(0.34, 1.45, 0.42, 1); /* clamped overshoot */
+}
+
+/* Dostępność: szanuj reduced motion bez wyłączania feedbacku */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ff-dur-fast: 0ms;
+    --ff-dur-base: 0ms;
+    --ff-dur-reorder: 0ms;
+  }
+}

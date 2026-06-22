@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUI } from "../state/ui";
@@ -67,7 +67,7 @@ function NavItem({ iconName, label, route, onClick, isDanger = false, badge, req
       className="w-full flex items-center gap-3 text-left transition-colors"
       style={{
         padding: "9px 10px",
-        borderRadius: "var(--radius-sm)",
+        borderRadius: "var(--ff-radius-btn)",
         background: isActive ? "rgba(249,115,22,0.08)" : "transparent",
         color: isDanger
           ? "rgba(248,113,113,0.85)"
@@ -88,7 +88,7 @@ function NavItem({ iconName, label, route, onClick, isDanger = false, badge, req
       {badge > 0 && (
         <span
           className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-          style={{ background: "rgba(249,115,22,0.18)", color: "#f97316" }}
+          style={{ background: "rgba(249,115,22,0.18)", color: "#FF7A1C" }}
         >
           {badge}
         </span>
@@ -120,7 +120,7 @@ function OpItem({ iconName, label, route, requiresAuth = false }) {
       className="w-full flex items-center gap-2.5 text-left transition-colors"
       style={{
         padding: "7px 10px",
-        borderRadius: "var(--radius-sm)",
+        borderRadius: "var(--ff-radius-btn)",
         color: "rgba(255,255,255,0.42)",
       }}
     >
@@ -164,6 +164,8 @@ export default function MenuDrawer() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, close]);
+
+  const [workspaceOpen, setWorkspaceOpen] = useState(hasWorkspaceAccess);
 
   const displayName = user?.email?.split("@")[0] || null;
   const roleLabel = userRole === "admin"
@@ -232,7 +234,7 @@ export default function MenuDrawer() {
                   style={{
                     width: 28,
                     height: 28,
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "var(--ff-radius-btn)",
                     background: "linear-gradient(135deg, rgba(249,115,22,0.22), rgba(249,115,22,0.08))",
                     border: "1px solid rgba(249,115,22,0.24)",
                     color: "var(--ff-orange)",
@@ -255,7 +257,7 @@ export default function MenuDrawer() {
                   style={{
                     width: 28,
                     height: 28,
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "var(--ff-radius-btn)",
                     color: "rgba(255,255,255,0.30)",
                   }}
                 >
@@ -268,7 +270,7 @@ export default function MenuDrawer() {
                   style={{
                     width: 28,
                     height: 28,
-                    borderRadius: "var(--radius-sm)",
+                    borderRadius: "var(--ff-radius-btn)",
                     color: "rgba(255,255,255,0.30)",
                   }}
                 >
@@ -284,23 +286,49 @@ export default function MenuDrawer() {
               <NavItem iconName="history" label="Moje zamówienia" route={ROUTES.ORDERS} onClick={handleDrawerOrders} />
               <NavItem iconName="profile" label="Panel Klienta" route={ROUTES.PANEL_CLIENT} onClick={handleDrawerClientPanel} />
 
-              {hasWorkspaceAccess && (
-                <>
-                  <Hairline />
+              <Hairline />
 
-                  <GroupLabel>Przestrzeń pracy</GroupLabel>
-                  <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.PANEL_BUSINESS} requiresAuth />
-                  <OpItem iconName="kds" label="Zarządzanie restauracją" route={ROUTES.PANEL_MANAGE} requiresAuth />
-                  <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
-                  <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
+              {/* Przestrzeń pracy — zwijany accordion */}
+              <button
+                onClick={() => setWorkspaceOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-2 pt-5 pb-0.5 select-none"
+                style={{ color: "rgba(255,255,255,0.18)" }}
+              >
+                <span className="text-[9.5px] uppercase tracking-[0.20em] font-semibold">
+                  Przestrzeń pracy
+                </span>
+                <motion.span
+                  animate={{ rotate: workspaceOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: "rgba(255,255,255,0.18)", fontSize: 10 }}
+                >
+                  ▸
+                </motion.span>
+              </button>
 
-                  {userRole === "admin" && FEATURE_FLAGS.DEV_LABS && (
-                    <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />
-                  )}
+              <AnimatePresence initial={false}>
+                {workspaceOpen && (
+                  <motion.div
+                    key="workspace-items"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className="pt-1 pb-0.5 space-y-0.5">
+                      <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.PANEL_BUSINESS} requiresAuth />
+                      <OpItem iconName="kds" label="Zarządzanie restauracją" route={ROUTES.PANEL_MANAGE} requiresAuth />
+                      <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
+                      <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
 
-                  <Hairline />
-                </>
-              )}
+                      {userRole === "admin" && FEATURE_FLAGS.DEV_LABS && (
+                        <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <GroupLabel>Ustawienia</GroupLabel>
               <NavItem iconName="settings" label="Ustawienia" route={ROUTES.SETTINGS} />
@@ -308,7 +336,7 @@ export default function MenuDrawer() {
                 <NavItem iconName="history" label="Historia zamówień" route="/order-history" />
               )}
               {isRouteEnabled("/faq") && (
-                <NavItem iconName="faq" label="FAQ" route="/faq" />
+                <NavItem iconName="faq" label="Pomoc" route="/faq" />
               )}
 
               <Hairline />
@@ -342,7 +370,7 @@ export default function MenuDrawer() {
                   style={{
                     width: 28,
                     height: 28,
-                    borderRadius: "var(--radius-pill)",
+                    borderRadius: "var(--ff-radius-chip)",
                     background: "rgba(255,255,255,0.07)",
                     border: "1px solid rgba(255,255,255,0.10)",
                     color: "rgba(255,255,255,0.60)",

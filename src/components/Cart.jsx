@@ -354,7 +354,7 @@ export default function Cart() {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl border border-cyan-500/20 bg-[#0c0f14]/95 backdrop-blur-xl shadow-[0_0_50px_rgba(0,234,255,0.2)] transition-all">
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl border border-amber-500/15 bg-[#0c0f14]/95 backdrop-blur-xl shadow-[0_0_50px_rgba(255,122,28,0.10)] transition-all">
                 {/* Header */}
                 <div className="border-b border-white/10 p-6">
                   <div className="flex items-center justify-between">
@@ -412,7 +412,7 @@ export default function Cart() {
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: 20 }}
                               transition={{ delay: index * 0.05 }}
-                              className="rounded-xl border border-cyan-500/20 bg-black/40 p-4 backdrop-blur-xl"
+                              className="rounded-xl border border-white/8 bg-black/40 p-4 backdrop-blur-xl"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex-1 min-w-0">
@@ -553,16 +553,16 @@ export default function Cart() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
                         onClick={handleClearCart}
                         disabled={isSubmitting}
-                        className="flex-1 min-w-[160px] rounded-lg bg-transparent text-red-300/80 border border-red-400/25 px-4 py-3 font-semibold hover:bg-red-500/10 hover:text-red-200 transition-colors disabled:opacity-50"
+                        className="text-sm text-slate-500 hover:text-slate-400 underline underline-offset-2 decoration-slate-600/40 transition-colors disabled:opacity-50"
                       >
-                        <i className="fas fa-trash-alt mr-2" />
                         Wyczyść koszyk
                       </button>
+                      <div className="flex-1" />
                       <button
                         type="button"
                         disabled={isSubmitting}
@@ -577,7 +577,7 @@ export default function Cart() {
                           }
                           handleSubmit({ preventDefault: () => { } });
                         }}
-                        className="flex-[1.4] min-w-[200px] rounded-lg bg-gradient-to-r from-orange-500 to-amber-400 text-white px-4 py-3 font-semibold shadow-[0_0_24px_rgba(249,115,22,0.22)] hover:shadow-[0_0_30px_rgba(249,115,22,0.38)] transition-all disabled:opacity-50"
+                        className="rounded-xl bg-[var(--ff-amber-500)] text-white px-6 py-3 font-bold shadow-[0_0_18px_rgba(255,122,28,0.22)] hover:bg-[var(--ff-amber-400)] hover:shadow-[0_0_24px_rgba(255,122,28,0.34)] transition-all disabled:opacity-50"
                       >
                         {isSubmitting ? 'Składanie...' : 'Złóż zamówienie'}
                       </button>

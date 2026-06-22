@@ -1,12 +1,12 @@
 /**
- * VoiceDock — canonical voice bar for FreeFlow
+ * VoiceDock — premium glass capsule for FreeFlow
  *
- * Trzy punkty sterowania (i tylko trzy):
+ * Referencja wizualna: .claude/files/freeflow-voice-dock.html
+ *
+ * Trzy punkty sterowania:
  *   dockState — z Zustand store sesji (idle|listening|speaking)
  *   level     — useRef + RAF (amplituda z Web Audio, NIE useState)
  *   transcript — z store, po strip('**'), po walidacji języka
- *
- * Sekcja 1 briefu Sonnet. Reszta: Home.css (ff-voice-dock* klasy wizualne).
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
@@ -40,7 +40,6 @@ function toDockState(raw: string): DockState {
 }
 
 // ── Strip ** + podstawowa walidacja języka ──
-// Sprawdza czy tekst zawiera głównie znaki występujące w języku polskim.
 
 function cleanTranscript(
   ...candidates: (string | null | undefined)[]
@@ -48,15 +47,40 @@ function cleanTranscript(
   for (const raw of candidates) {
     const text = (raw ?? '').replace(/\*\*/g, '').trim();
     if (!text) continue;
-    // Odrzuć surowe JSON, technical noise
     if (/^[\[{]/.test(text) || /interactionbridge|tool_call|ws_|https?:\/\//i.test(text)) continue;
     return text;
   }
   return '';
 }
 
-// ── CSS dla data-state → kolory ──
-// Brief: CSS, nie JS. Jeden raz wstrzyknięty.
+// ── Iniekcja SVG defs (clip-path + rim gradient) ──
+
+const DEFS_ID = 'ff-voice-dock-defs';
+
+function injectDockDefs() {
+  if (document.getElementById(DEFS_ID)) return;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = DEFS_ID;
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.setAttribute('style', 'position:absolute');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = `
+    <defs>
+      <clipPath id="ff-dock-clip" clipPathUnits="objectBoundingBox">
+        <path d="M0,0.5 C0,0.2 0.02,0 0.09,0 C0.2,0 0.32,0.1 0.5,0.1 C0.68,0.1 0.8,0 0.91,0 C0.98,0 1,0.2 1,0.5 C1,0.8 0.98,1 0.91,1 C0.8,1 0.68,0.9 0.5,0.9 C0.32,0.9 0.2,1 0.09,1 C0.02,1 0,0.8 0,0.5 Z"/>
+      </clipPath>
+      <linearGradient id="ff-rim-grad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#3FA9FF"/>
+        <stop offset="0.5" stop-color="#4a5159"/>
+        <stop offset="1" stop-color="#FF7A1C"/>
+      </linearGradient>
+    </defs>
+  `;
+  document.body.appendChild(svg);
+}
+
+// ── CSS dla data-state → kolory (jeden raz wstrzyknięty) ──
 
 const STATE_STYLE_ID = 'ff-voice-dock-state';
 
@@ -81,6 +105,7 @@ function injectStateCSS() {
 
 export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) {
   const dockRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const levelRef = useRef(0);
   const rafRef = useRef(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -93,18 +118,23 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
 
   const dockState: DockState = toDockState(sessionState);
 
-  // Transkrypt: słuchanie → user, reszta → asystent/user
+  // Transkrypt
   const transcript = cleanTranscript(
     dockState === 'listening' ? userTx : null,
     asstTx,
     userTx,
   );
 
+  // ── Iniekcja defs + state CSS ──
+
+  useEffect(() => {
+    injectDockDefs();
+    injectStateCSS();
+  }, []);
+
   // ── Web Audio — RMS amplitude ──
 
   useEffect(() => {
-    injectStateCSS();
-
     if (dockState === 'idle') {
       cancelAnimationFrame(rafRef.current);
       dockRef.current?.style.setProperty('--level', '0');
@@ -123,22 +153,12 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
         const buf = new Uint8Array(analyser.fftSize);
 
         if (dockState === 'listening') {
-          // Mikrofon
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-          });
-          if (aborted) {
-            stream.getTracks().forEach((t) => t.stop());
-            return;
-          }
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          if (aborted) { stream.getTracks().forEach((t) => t.stop()); return; }
           ctx.createMediaStreamSource(stream).connect(analyser);
-          cleanupStream = () =>
-            stream.getTracks().forEach((t) => t.stop());
+          cleanupStream = () => stream.getTracks().forEach((t) => t.stop());
         } else {
-          // Speaking → TTS audio element
-          const ttsEl = document.querySelector<HTMLAudioElement>(
-            'audio[data-role="tts"]',
-          );
+          const ttsEl = document.querySelector<HTMLAudioElement>('audio[data-role="tts"]');
           if (!ttsEl) return;
           ctx.createMediaElementSource(ttsEl).connect(analyser);
         }
@@ -151,14 +171,8 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
             const n = (buf[i] - 128) / 128;
             sum += n * n;
           }
-          levelRef.current = Math.min(
-            1,
-            Math.sqrt(sum / buf.length) * 3,
-          );
-          dockRef.current?.style.setProperty(
-            '--level',
-            levelRef.current.toFixed(3),
-          );
+          levelRef.current = Math.min(1, Math.sqrt(sum / buf.length) * 3);
+          dockRef.current?.style.setProperty('--level', levelRef.current.toFixed(3));
           rafRef.current = requestAnimationFrame(tick);
         };
 
@@ -185,17 +199,13 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
     setTimeout(() => dockRef.current?.classList.remove('confirm'), 600);
   }, []);
 
-  // Expose dla zewnętrznego triggera
   useEffect(() => {
     (window as any).__voiceDockConfirm = flashConfirm;
-    return () => {
-      delete (window as any).__voiceDockConfirm;
-    };
+    return () => { delete (window as any).__voiceDockConfirm; };
   }, [flashConfirm]);
 
-  // ── UI ──
+  // ── UI helpers ──
 
-  const voiceActive = dockState === 'listening';
   const hasText = inputValue.trim().length > 0;
 
   const submit = () => {
@@ -219,119 +229,124 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
       ? 'Słucham...'
       : 'Napisz lub powiedz...';
 
+  const handleInnerClick = () => {
+    inputRef.current?.focus();
+  };
+
+  // ── Render ──
+
   return (
-    <div
-      ref={dockRef}
-      className="ff-voice-dock flex items-center gap-2.5 px-3 py-2"
-      data-state={dockState}
-      data-voice-active={voiceActive ? 'true' : 'false'}
-      data-ui-role="voice-dock-bar"
-    >
-      {/* Głośnik — ff-speaker.svg (wersja uproszczona dla docka) */}
-      <div className="ff-voice-dock__speaker" aria-hidden="true">
-        <svg
-          className="ff-voice-dock__speaker-icon"
-          viewBox="0 0 32 32"
-          aria-hidden="true"
-          focusable="false"
-        >
+    <div className="ff-voice-dock-wrap">
+      {/* Live stem indicator */}
+      {dockState !== 'idle' && (
+        <div className="ff-voice-dock__live-stem" aria-hidden="true">
+          <i />
+          <div className="ff-voice-dock__live-bar" />
+        </div>
+      )}
+
+      <div
+        ref={dockRef}
+        className="ff-voice-dock"
+        data-state={dockState}
+        data-ui-role="voice-dock-bar"
+      >
+        {/* Glass backdrop */}
+        <div className="ff-voice-dock__glass" />
+
+        {/* Frost overlay */}
+        <div className="ff-voice-dock__frost" />
+
+        {/* Neon rim outline */}
+        <svg className="ff-voice-dock__skin" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="ff-rim-grad-inline" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#3FA9FF"/>
+              <stop offset="0.5" stopColor="#4a5159"/>
+              <stop offset="1" stopColor="#FF7A1C"/>
+            </linearGradient>
+          </defs>
           <path
-            className="ff-voice-dock__speaker-body"
-            d="M8.5 18.5H5.8a1.8 1.8 0 0 1-1.8-1.8v-1.4a1.8 1.8 0 0 1 1.8-1.8h2.7l5.8-4.7c.75-.6 1.87-.07 1.87.9v12.6c0 .97-1.12 1.5-1.87.9l-5.8-4.7Z"
-          />
-          <path
-            className="ff-voice-dock__speaker-wave ff-voice-dock__speaker-wave--cyan"
-            d="M20.2 11.4c1.3 1.1 2.08 2.72 2.08 4.6s-.78 3.5-2.08 4.6"
-          />
-          <path
-            className="ff-voice-dock__speaker-wave ff-voice-dock__speaker-wave--amber"
-            d="M23.7 8.6c2.18 1.78 3.54 4.42 3.54 7.4s-1.36 5.62-3.54 7.4"
+            className="ff-voice-dock__rim"
+            pathLength="1"
+            d="M0,0.5 C0,0.2 0.02,0 0.09,0 C0.2,0 0.32,0.1 0.5,0.1 C0.68,0.1 0.8,0 0.91,0 C0.98,0 1,0.2 1,0.5 C1,0.8 0.98,1 0.91,1 C0.8,1 0.68,0.9 0.5,0.9 C0.32,0.9 0.2,1 0.09,1 C0.02,1 0,0.8 0,0.5 Z"
           />
         </svg>
-      </div>
 
-      {/* Transkrypt + input */}
-      <div className="ff-voice-dock__core flex-1 min-w-0 pr-1">
-        {transcript && (
-          <p
-            className="ff-voice-dock__transcript mb-1 text-[10px] leading-tight break-words overflow-hidden"
-            style={{
-              color: 'rgba(226, 232, 240, 0.62)',
-              display: '-webkit-box',
-              WebkitLineClamp: 1,
-              WebkitBoxOrient: 'vertical',
-            }}
+        {/* Content */}
+        <div className="ff-voice-dock__content">
+          {/* Left node — mic */}
+          <button
+            type="button"
+            className="ff-voice-dock__node ff-voice-dock__node--left"
+            onClick={onMicClick}
+            aria-label={
+              dockState === 'listening'
+                ? 'Zatrzymaj nagrywanie'
+                : 'Włącz mikrofon'
+            }
+            aria-pressed={dockState === 'listening'}
           >
-            {transcript}
-          </p>
-        )}
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={inputPlaceholder}
-          className="ff-voice-dock__input w-full min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/40 focus:outline-none caret-cyan-300"
-          style={{ letterSpacing: '0.01em' }}
-        />
-      </div>
+            <span className="ff-voice-dock__rings" aria-hidden="true">
+              <span /><span /><span />
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M4 9v6h3l5 4V5L7 9H4z"/>
+              <path d="M16 8.5a4 4 0 0 1 0 7" opacity=".8"/>
+              <path d="M18.5 6a7 7 0 0 1 0 12" opacity=".5"/>
+            </svg>
+          </button>
 
-      {/* Microphone / Send toggle */}
-      {hasText ? (
-        <button
-          type="button"
-          onClick={submit}
-          className="ff-voice-dock__send shrink-0 flex items-center justify-center text-[13px] font-semibold text-white"
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: '999px',
-            background:
-              'radial-gradient(circle at 38% 30%, rgba(255,205,120,0.95), rgba(249,115,22,0.82) 42%, rgba(88,35,8,0.92) 100%)',
-            border: '1px solid rgba(255,162,82,0.48)',
-          }}
-          aria-label="Wyślij"
-        >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-            <path
-              d="M1 7.5h13M8.5 2 14 7.5 8.5 13"
-              stroke="white"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* Center — transcript + input */}
+          <div className="ff-voice-dock__inner" onClick={handleInnerClick} role="button" tabIndex={-1}>
+            {transcript && (
+              <div className="ff-voice-dock__transcript">
+                {dockState === 'listening' ? (
+                  <><span className="ff-voice-dock__label">Ty: </span>{transcript}</>
+                ) : (
+                  <><span className="ff-voice-dock__label">Amber: </span>{transcript}</>
+                )}
+              </div>
+            )}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={transcript ? '' : inputPlaceholder}
+              className="ff-voice-dock__input"
+              aria-label="Tekstowa wiadomość"
             />
-          </svg>
-        </button>
-      ) : (
-        <button
-          type="button"
-          data-ui-role="action-orb"
-          onClick={onMicClick}
-          className="ff-voice-dock__orb shrink-0 relative flex items-center justify-center"
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: '999px',
-            overflow: 'hidden',
-            background: voiceActive
-              ? 'radial-gradient(circle at 38% 32%, rgba(147,245,255,0.78), rgba(19,116,135,0.44) 42%, rgba(5,10,18,0.78) 100%)'
-              : 'radial-gradient(circle at 38% 30%, rgba(255,190,104,0.92), rgba(249,115,22,0.66) 42%, rgba(36,18,10,0.86) 100%)',
-            border: voiceActive
-              ? '1px solid rgba(103,232,249,0.34)'
-              : '1px solid rgba(255,162,82,0.42)',
-          }}
-          aria-label={voiceActive ? 'Zatrzymaj nagrywanie' : 'Włącz mikrofon'}
-          aria-pressed={voiceActive}
-        >
-          <span className="ff-voice-dock__orb-core" aria-hidden="true" />
-          {voiceActive && (
-            <span
-              className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400"
-              style={{ opacity: 1 }}
-            />
-          )}
-        </button>
-      )}
+          </div>
+
+          {/* Right node — orb / send */}
+          <div className="ff-voice-dock__node ff-voice-dock__node--right">
+            {hasText ? (
+              <button
+                type="button"
+                onClick={submit}
+                className="ff-voice-dock__send"
+                aria-label="Wyślij"
+              >
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                  <path d="M1 7.5h13M8.5 2 14 7.5 8.5 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onMicClick}
+                className="ff-voice-dock__mic-btn"
+                aria-label={dockState === 'listening' ? 'Zatrzymaj nagrywanie' : 'Włącz mikrofon'}
+                aria-pressed={dockState === 'listening'}
+              >
+                <span className="ff-voice-dock__orb" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

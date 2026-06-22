@@ -177,10 +177,10 @@ export default function CinematicRestaurantCarousel({
         if (dockRect) {
             const dockTop = dockRect.top;
             const baseBottom = viewportHeight - dockTop;
-            // Mobile: anchor card to slightly overlap VoiceDock top edge
-            // so it visually "emerges" from the dock instead of floating above it.
-            const dockOverlapOffset = isMobile ? -16 : 4;
-            const anchoredBottom = baseBottom + dockOverlapOffset;
+            // Natural gap above the VoiceDock capsule — card bottom sits just above dock,
+            // not overlapping. Mobile gets a tiny overlap for "emerge from dock" feel.
+            const gapAboveDock = isMobile ? -8 : 12;
+            const anchoredBottom = baseBottom + gapAboveDock;
             nextBottom = Math.max(8, Math.round(anchoredBottom));
         }
 
@@ -361,17 +361,21 @@ export default function CinematicRestaurantCarousel({
     const appWidth = Math.min(vpWidth, 480);
     const isMobileViewport = vpWidth <= 768;
     
-    // Cinematic large card width
-    const widthFactor = isMobileViewport ? 0.44 : 0.38; 
+    // Card width: proportional to viewport, max 240px
+    const widthFactor = isMobileViewport ? 0.44 : 0.38;
     const CARD_W = Math.max(140, Math.min(Math.floor(appWidth * widthFactor), 240));
-    
-    const compactStageHeight = Math.max(140, vpHeight - compactBounds.top - compactBounds.bottom);
-    
-    // Keep compact cards inside the measured safe zone between logo and VoiceDock.
-    // The previous mobile factor intentionally oversized cards and could overlap the hero logo.
-    const heightFactor = isMobileViewport ? 0.92 : 1.05;
-    const maxCardHeight = isMobileViewport ? Math.max(180, compactStageHeight - 8) : 650;
-    const CARD_H = Math.max(180, Math.min(Math.round(compactStageHeight * heightFactor), maxCardHeight));
+
+    // Card height: natural aspect ratio (food card = wider than tall), capped at 40% viewport
+    // Never stretch vertically — cards should feel like premium Polaroids, not banners.
+    const ASPECT_RATIO = 1.45; // width → height multiplier
+    const CARD_VH_MAX = 0.40;  // max 40% of viewport height
+    const CARD_H = Math.max(
+        180,
+        Math.min(
+            Math.round(CARD_W * ASPECT_RATIO),
+            Math.round(vpHeight * CARD_VH_MAX),
+        ),
+    );
     
     const GAP = Math.floor(CARD_W * 0.45); // tight stack — cards overlap like a deck
     
@@ -590,11 +594,11 @@ export default function CinematicRestaurantCarousel({
                                             width: '100%', height: '100%',
                                             borderRadius: 16, overflow: 'hidden', position: 'relative',
                                             border: s.isCenter
-                                                ? '1px solid rgba(249,115,22,0.4)'
+                                                ? '1px solid rgba(249,115,22,0.35)'
                                                 : '1px solid rgba(255,255,255,0.08)',
                                             boxShadow: s.isCenter
-                                                ? '0 20px 60px rgba(0,0,0,0.6), 0 0 48px rgba(249,115,22,0.18), 0 24px 60px rgba(0,0,0,0.88)'
-                                                : '0 10px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3)',
+                                                ? '0 8px 32px rgba(0,0,0,0.50), 0 0 24px rgba(249,115,22,0.12), 0 0 0 1px rgba(249,115,22,0.06) inset'
+                                                : '0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25)',
                                             transform: `perspective(900px) rotateY(${s.rotY.toFixed(2)}deg) translateZ(${s.tz.toFixed(1)}px)`,
                                             transition: isDragging ? 'transform 0.05s linear' : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1)',
                                             backfaceVisibility: 'hidden',
