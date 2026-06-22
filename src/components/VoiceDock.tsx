@@ -237,13 +237,6 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
 
   return (
     <div className="ff-voice-dock-wrap">
-      {/* Live stem indicator */}
-      {dockState !== 'idle' && (
-        <div className="ff-voice-dock__live-stem" aria-hidden="true">
-          <i />
-          <div className="ff-voice-dock__live-bar" />
-        </div>
-      )}
 
       <div
         ref={dockRef}
