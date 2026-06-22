@@ -117,9 +117,9 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
     background-image: ${props => {
       switch (props.$amberStatus) {
         case 'thinking':
-          return 'radial-gradient(farthest-corner at 70% 30%, #d8b4fe 4%, #a855f7 12% 28%, #6d28d9 50% 68%, #c084fc 78%)';
+          return 'radial-gradient(farthest-corner at 70% 30%, #FF9433 4%, #FF7A1C 12% 28%, #E8650A 50% 68%, #FFB347 78%)';
         case 'action':
-          return 'radial-gradient(farthest-corner at 70% 30%, #fed7aa 4%, #f97316 12% 28%, #b91c1c 50% 68%, #fb923c 78%)';
+          return 'radial-gradient(farthest-corner at 70% 30%, #7AD6E0 4%, #3DDCC3 12% 28%, #2BBAA5 50% 68%, #5DDCC3 78%)';
         case 'error':
           return 'radial-gradient(farthest-corner at 70% 30%, #ff4444 4%, #cc2222 12% 24%, #aa0000 50% 65%, #ff4444 75%)';
         default:

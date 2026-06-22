@@ -549,7 +549,7 @@
   position: absolute;
   inset: 0;
   clip-path: url(#ff-dock-clip);
-  background: rgba(8, 10, 14, 0.62);
+  background: rgb(8, 10, 14);
   -webkit-backdrop-filter: blur(20px) saturate(1.1) brightness(1.04);
   backdrop-filter: blur(20px) saturate(1.1) brightness(1.04);
   box-shadow:
@@ -862,17 +862,6 @@
   }
 }
 
-.freeflow::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 180px;
-  z-index: 0;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, rgba(6, 8, 12, 0.50) 50%, rgba(6, 8, 12, 0.85) 100%);
-}
 
 .logo {
   width: clamp(280px, 34vw, 440px);

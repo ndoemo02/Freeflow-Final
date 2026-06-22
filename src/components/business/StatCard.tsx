@@ -22,7 +22,7 @@ export interface StatCardProps {
 
 export default function StatCard({
     icon,
-    iconBgColor = 'var(--neon)',
+    iconBgColor = 'var(--ff-amber-500)',
     value,
     label,
     trend,

@@ -35,8 +35,8 @@ function formatTimeSafe(value, options = undefined) {
  */
 function ConversationStageTimeline({ stage }) {
     return (
-        <div className="flex items-center justify-between px-8 py-5 bg-[rgba(255,255,255,0.01)] border-b border-[var(--border)] overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--neon)]/5 to-transparent opacity-20 pointer-events-none"></div>
+        <div className="flex items-center justify-between px-8 py-5 bg-[rgba(255,255,255,0.01)] border-b border-[var(--ff-stroke)] overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--ff-amber-500)]/5 to-transparent opacity-20 pointer-events-none"></div>
             {STAGES_CONFIG.map((s, i) => {
                 const Icon = s.icon;
                 const isCompleted = stage >= s.id;
@@ -50,14 +50,14 @@ function ConversationStageTimeline({ stage }) {
                                 initial={false}
                                 animate={{
                                     scale: isCurrent ? 1.15 : 1,
-                                    borderColor: isCompleted ? 'var(--neon)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: isCompleted ? 'var(--ff-amber-500)' : 'rgba(255,255,255,0.1)',
                                     backgroundColor: isCompleted ? 'rgba(34, 211, 238, 0.1)' : 'rgba(0,0,0,0.2)'
                                 }}
-                                className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 shadow-lg ${isCompleted ? 'shadow-[var(--neon)]/10' : ''}`}
+                                className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 shadow-lg ${isCompleted ? 'shadow-[var(--ff-amber-500)]/10' : ''}`}
                             >
-                                <Icon size={18} className={isCompleted ? 'text-[var(--neon)]' : 'text-[var(--muted)]'} />
+                                <Icon size={18} className={isCompleted ? 'text-[var(--ff-amber-500)]' : 'text-[var(--ff-text-2)]'} />
                             </motion.div>
-                            <span className={`text-[10px] font-bold uppercase tracking-widest text-center max-w-[90px] leading-tight transition-colors duration-500 ${isCompleted ? 'text-[var(--fg0)]' : 'text-[var(--muted)]'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-widest text-center max-w-[90px] leading-tight transition-colors duration-500 ${isCompleted ? 'text-[var(--ff-text-1)]' : 'text-[var(--ff-text-2)]'}`}>
                                 {s.label}
                             </span>
                         </div>
@@ -69,7 +69,7 @@ function ConversationStageTimeline({ stage }) {
                                     initial={{ x: '-100%' }}
                                     animate={{ x: isCompleted ? '0%' : '-100%' }}
                                     transition={{ duration: 0.8, ease: "easeInOut" }}
-                                    className="absolute inset-0 bg-[var(--neon)] shadow-[0_0_8px_var(--neon)] opacity-80"
+                                    className="absolute inset-0 bg-[var(--ff-amber-500)] shadow-[0_0_8px_var(--ff-amber-500)] opacity-80"
                                 />
                             </div>
                         )}
@@ -257,8 +257,8 @@ export default function ConversationViewer({ adminToken }) {
         <div className="flex flex-col gap-4 fade-in h-full">
             {/* 🕒 TIMELINE TOGGLE & VIEW */}
             <div className="flex justify-end items-center mb-1 flex-shrink-0">
-                <label className="flex items-center gap-2 text-xs text-[var(--muted)] cursor-pointer hover:text-[var(--fg0)]">
-                    <input type="checkbox" checked={showTimeline} onChange={(e) => setShowTimeline(e.target.checked)} className="accent-[var(--neon)]" />
+                <label className="flex items-center gap-2 text-xs text-[var(--ff-text-2)] cursor-pointer hover:text-[var(--ff-text-1)]">
+                    <input type="checkbox" checked={showTimeline} onChange={(e) => setShowTimeline(e.target.checked)} className="accent-[var(--ff-amber-500)]" />
                     Show Timeline
                 </label>
             </div>
@@ -277,7 +277,7 @@ export default function ConversationViewer({ adminToken }) {
                                 >
                                     {/* Line Connector */}
                                     {idx < conversations.slice(0, 15).length - 1 && (
-                                        <div className="absolute top-[14px] left-[50%] w-[calc(100%+24px)] h-[2px] bg-[var(--border)] -z-10 opacity-30"></div>
+                                        <div className="absolute top-[14px] left-[50%] w-[calc(100%+24px)] h-[2px] bg-[var(--ff-stroke)] -z-10 opacity-30"></div>
                                     )}
 
                                     {/* Dot / Status Node */}
@@ -287,8 +287,8 @@ export default function ConversationViewer({ adminToken }) {
 
                                     {/* Label */}
                                         <div className="text-center">
-                                        <div className="text-[10px] font-mono text-[var(--muted)] font-bold">{formatTimeSafe(getConversationTimestamp(c), { hour: '2-digit', minute: '2-digit' })}</div>
-                                        <div className="text-[10px] text-[var(--fg0)] max-w-[80px] truncate">{c.metadata?.lastRestaurant?.name || c.sessionId || c.id.substring(0, 6)}</div>
+                                        <div className="text-[10px] font-mono text-[var(--ff-text-2)] font-bold">{formatTimeSafe(getConversationTimestamp(c), { hour: '2-digit', minute: '2-digit' })}</div>
+                                        <div className="text-[10px] text-[var(--ff-text-1)] max-w-[80px] truncate">{c.metadata?.lastRestaurant?.name || c.sessionId || c.id.substring(0, 6)}</div>
                                     </div>
 
                                     {/* Tooltip */}
@@ -299,32 +299,32 @@ export default function ConversationViewer({ adminToken }) {
                                 </div>
                             )
                         })}
-                        {conversations.length === 0 && <div className="text-xs text-[var(--muted)]">Brak historii do wyświetlenia na osi.</div>}
+                        {conversations.length === 0 && <div className="text-xs text-[var(--ff-text-2)]">Brak historii do wyświetlenia na osi.</div>}
                     </div>
                 </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
                 {/* List of Conversations */}
-                <div className="md:col-span-1 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col min-h-0">
-                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center z-10">
+                <div className="md:col-span-1 glass border border-[var(--ff-stroke)] rounded-xl overflow-hidden flex flex-col min-h-0">
+                    <div className="p-3 border-b border-[var(--ff-stroke)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--ff-text-1)] flex justify-between items-center z-10">
                         <span>Ostatnie rozmowy</span>
                         <div className="flex items-center gap-3">
                             <button onClick={clearLogs} className="group flex items-center gap-1 text-[10px] text-red-500 hover:text-red-400 transition-colors">
                                 <Trash2 size={12} className="group-hover:scale-110 transition-transform" />
                                 <span>Wyczyść wszystko</span>
                             </button>
-                            <button onClick={refreshList} className="text-[10px] text-[var(--neon)] hover:underline">Odśwież</button>
+                            <button onClick={refreshList} className="text-[10px] text-[var(--ff-amber-500)] hover:underline">Odśwież</button>
                         </div>
                     </div>
                     <div className="overflow-y-auto flex-1 tiny-scroll p-2 space-y-2">
-                        {conversations.length === 0 && <div className="text-[var(--muted)] text-center p-4 text-xs">Brak zarejestrowanych rozmów (V2).</div>}
+                        {conversations.length === 0 && <div className="text-[var(--ff-text-2)] text-center p-4 text-xs">Brak zarejestrowanych rozmów (V2).</div>}
                         {conversations.map(c => (
-                            <div key={c.id} onClick={() => setSelectedId(c.id)} className={`p-3 rounded-lg cursor-pointer border transition-all group/item ${selectedId === c.id ? 'bg-[rgba(91,124,255,0.1)] border-[var(--neon)]' : 'border-transparent hover:bg-white/5'}`}>
+                            <div key={c.id} onClick={() => setSelectedId(c.id)} className={`p-3 rounded-lg cursor-pointer border transition-all group/item ${selectedId === c.id ? 'bg-[rgba(255, 122, 28,0.1)] border-[var(--ff-amber-500)]' : 'border-transparent hover:bg-white/5'}`}>
                                 <div className="flex justify-between text-xs mb-1">
-                                    <span className="font-mono text-[var(--muted)] font-bold" title={c.id}>{c.id.substring(0, 8)}...</span>
+                                    <span className="font-mono text-[var(--ff-text-2)] font-bold" title={c.id}>{c.id.substring(0, 8)}...</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[var(--muted)]">{formatTimeSafe(getConversationTimestamp(c))}</span>
+                                        <span className="text-[var(--ff-text-2)]">{formatTimeSafe(getConversationTimestamp(c))}</span>
                                         <button
                                             onClick={(e) => deleteConversation(e, c.id)}
                                             className="text-red-500 opacity-0 group-hover/item:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
@@ -345,19 +345,19 @@ export default function ConversationViewer({ adminToken }) {
                 </div>
 
                 {/* Conversation Details Timeline */}
-                <div className="md:col-span-2 glass border border-[var(--border)] rounded-xl overflow-hidden flex flex-col relative min-h-0">
-                    <div className="p-3 border-b border-[var(--border)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--fg0)] flex justify-between items-center z-10">
+                <div className="md:col-span-2 glass border border-[var(--ff-stroke)] rounded-xl overflow-hidden flex flex-col relative min-h-0">
+                    <div className="p-3 border-b border-[var(--ff-stroke)] bg-[rgba(255,255,255,0.02)] backdrop-blur-md sticky top-0 font-bold text-sm text-[var(--ff-text-1)] flex justify-between items-center z-10">
                         <div className="flex items-center gap-2">
-                            {selectedId ? <span className="font-mono text-xs text-[var(--neon)]">{selectedId}</span> : <span>Szczegóły rozmowy</span>}
+                            {selectedId ? <span className="font-mono text-xs text-[var(--ff-amber-500)]">{selectedId}</span> : <span>Szczegóły rozmowy</span>}
                         </div>
                         <div className="flex items-center gap-2">
                             {selectedId && (
-                                <button onClick={exportConversation} className="text-[10px] glass px-2 py-1 rounded border border-[var(--border)] hover:bg-white/5 flex items-center gap-1">
+                                <button onClick={exportConversation} className="text-[10px] glass px-2 py-1 rounded border border-[var(--ff-stroke)] hover:bg-white/5 flex items-center gap-1">
                                     <span>Export JSON</span>
                                 </button>
                             )}
                             {selectedConv?.status && (
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded border ${selectedConv.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-white/10 text-[var(--muted)]'}`}>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded border ${selectedConv.status === 'active' ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-white/10 text-[var(--ff-text-2)]'}`}>
                                     {selectedConv.status.toUpperCase()}
                                 </span>
                             )}
@@ -380,9 +380,9 @@ export default function ConversationViewer({ adminToken }) {
                         )}
                     </AnimatePresence>
                     <div className="overflow-y-auto flex-1 tiny-scroll p-4 space-y-0 relative">
-                        {!selectedId && <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] text-sm">Wybierz rozmowę z listy po lewej</div>}
+                        {!selectedId && <div className="absolute inset-0 flex items-center justify-center text-[var(--ff-text-2)] text-sm">Wybierz rozmowę z listy po lewej</div>}
 
-                        {loading && <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20 backdrop-blur-sm"><div className="text-[var(--neon)] animate-pulse font-bold">Ładowanie zdarzeń...</div></div>}
+                        {loading && <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20 backdrop-blur-sm"><div className="text-[var(--ff-amber-500)] animate-pulse font-bold">Ładowanie zdarzeń...</div></div>}
 
                         {selectedId && turns.length > 0 && turns.map((turn, i) => {
                             const sourceLabel = turn.source === 'live' ? 'live' : 'deterministic';
@@ -396,12 +396,12 @@ export default function ConversationViewer({ adminToken }) {
 
                             return (
                                 <div key={turn.turnId || i} className="flex gap-4 relative group">
-                                    <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--border)] group-last:hidden opacity-30"></div>
+                                    <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--ff-stroke)] group-last:hidden opacity-30"></div>
                                     <div className={`relative z-10 w-5 h-5 rounded-full border-2 border-[#121214] flex-shrink-0 mt-0.5 shadow-lg ${turn.status === 'error' ? 'bg-red-500' : turn.source === 'live' ? 'bg-cyan-500' : 'bg-purple-500'}`}></div>
 
                                     <div className="pb-6 flex-1 min-w-0">
-                                        <div className="text-xs text-[var(--muted)] mb-2 flex items-center gap-2">
-                                            <span className="uppercase tracking-wider font-bold text-[var(--fg0)]">turn #{turn.turnIndex || i + 1}</span>
+                                        <div className="text-xs text-[var(--ff-text-2)] mb-2 flex items-center gap-2">
+                                            <span className="uppercase tracking-wider font-bold text-[var(--ff-text-1)]">turn #{turn.turnIndex || i + 1}</span>
                                             <span className="opacity-30">•</span>
                                             <span className={`uppercase tracking-wider font-bold ${sourceLabel === 'live' ? 'text-cyan-400' : 'text-purple-400'}`}>{sourceLabel}</span>
                                             <span className="opacity-30">•</span>
@@ -412,35 +412,35 @@ export default function ConversationViewer({ adminToken }) {
                                             })()}</span>
                                         </div>
 
-                                        <div className="glass-strong p-3 rounded-lg text-xs border border-[var(--border)] overflow-x-auto shadow-inner bg-black/20 space-y-2">
+                                        <div className="glass-strong p-3 rounded-lg text-xs border border-[var(--ff-stroke)] overflow-x-auto shadow-inner bg-black/20 space-y-2">
                                             {turn?.userInput?.text && (
-                                                <div className="text-blue-300">Użytkownik: <span className="text-[var(--fg0)]">"{turn.userInput.text}"</span></div>
+                                                <div className="text-blue-300">Użytkownik: <span className="text-[var(--ff-text-1)]">"{turn.userInput.text}"</span></div>
                                             )}
                                             {turn?.understanding?.intent && (
-                                                <div className="text-purple-300">Intencja: <span className="text-[var(--fg0)]">{turn.understanding.intent}</span></div>
+                                                <div className="text-purple-300">Intencja: <span className="text-[var(--ff-text-1)]">{turn.understanding.intent}</span></div>
                                             )}
                                             {entitiesResolved && (
-                                                <div className="text-[var(--muted)]">Encje: <span className="text-[var(--fg1)]">{entitiesResolved}</span></div>
+                                                <div className="text-[var(--ff-text-2)]">Encje: <span className="text-[var(--ff-text-2)]">{entitiesResolved}</span></div>
                                             )}
                                             {turn?.action?.summary && (
-                                                <div className="text-[var(--fg1)]">Akcja: <span className="text-[var(--fg0)]">{turn.action.summary}</span></div>
+                                                <div className="text-[var(--ff-text-2)]">Akcja: <span className="text-[var(--ff-text-1)]">{turn.action.summary}</span></div>
                                             )}
                                             {toolsSummary && (
-                                                <div className="text-cyan-300">Narzędzia: <span className="text-[var(--fg0)]">{toolsSummary}</span></div>
+                                                <div className="text-cyan-300">Narzędzia: <span className="text-[var(--ff-text-1)]">{toolsSummary}</span></div>
                                             )}
                                             {turn?.assistant?.text && (
-                                                <div className="text-green-300">Asystent: <span className="text-[var(--fg0)]">"{turn.assistant.text}"</span></div>
+                                                <div className="text-green-300">Asystent: <span className="text-[var(--ff-text-1)]">"{turn.assistant.text}"</span></div>
                                             )}
                                             {cartDelta && (
                                                 <div className="text-amber-300">
-                                                    Koszyk: <span className="text-[var(--fg0)]">{cartDelta.itemsDelta > 0 ? '+' : ''}{cartDelta.itemsDelta} szt.</span>
-                                                    <span className="text-[var(--muted)]"> / </span>
-                                                    <span className="text-[var(--fg0)]">{cartDelta.totalDelta > 0 ? '+' : ''}{cartDelta.totalDelta} zł</span>
+                                                    Koszyk: <span className="text-[var(--ff-text-1)]">{cartDelta.itemsDelta > 0 ? '+' : ''}{cartDelta.itemsDelta} szt.</span>
+                                                    <span className="text-[var(--ff-text-2)]"> / </span>
+                                                    <span className="text-[var(--ff-text-1)]">{cartDelta.totalDelta > 0 ? '+' : ''}{cartDelta.totalDelta} zł</span>
                                                 </div>
                                             )}
-                                            <details className="pt-1 border-t border-[var(--border)]/60">
-                                                <summary className="cursor-pointer text-[10px] text-[var(--muted)] hover:text-[var(--fg0)]">Raw telemetry (expand)</summary>
-                                                <pre className="whitespace-pre-wrap text-[var(--muted)] mt-2">{JSON.stringify(turn.raw?.payloadsExpandable || [], null, 2)}</pre>
+                                            <details className="pt-1 border-t border-[var(--ff-stroke)]/60">
+                                                <summary className="cursor-pointer text-[10px] text-[var(--ff-text-2)] hover:text-[var(--ff-text-1)]">Raw telemetry (expand)</summary>
+                                                <pre className="whitespace-pre-wrap text-[var(--ff-text-2)] mt-2">{JSON.stringify(turn.raw?.payloadsExpandable || [], null, 2)}</pre>
                                             </details>
                                         </div>
                                     </div>
@@ -451,7 +451,7 @@ export default function ConversationViewer({ adminToken }) {
                         {selectedId && turns.length === 0 && timeline.map((evt, i) => (
                             <div key={i} className="flex gap-4 relative group">
                                 {/* Vertical Line */}
-                                <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--border)] group-last:hidden opacity-30"></div>
+                                <div className="absolute left-[9px] top-3 bottom-0 w-[2px] bg-[var(--ff-stroke)] group-last:hidden opacity-30"></div>
 
                                 {/* Dot */}
                                 <div className={`relative z-10 w-5 h-5 rounded-full border-2 border-[#121214] flex-shrink-0 mt-0.5 shadow-lg
@@ -461,9 +461,9 @@ export default function ConversationViewer({ adminToken }) {
                                 ></div>
 
                                 <div className="pb-6 flex-1 min-w-0">
-                                    <div className="text-xs text-[var(--muted)] mb-1 flex items-center gap-2">
+                                    <div className="text-xs text-[var(--ff-text-2)] mb-1 flex items-center gap-2">
                                         <span className={`uppercase tracking-wider font-bold 
-                            ${evt.event_type.includes('intent') ? 'text-purple-400' : 'text-[var(--fg0)]'}
+                            ${evt.event_type.includes('intent') ? 'text-purple-400' : 'text-[var(--ff-text-1)]'}
                          `}>{evt.event_type}</span>
                                         <span className="opacity-30">•</span>
                                         <span className="font-mono opacity-50">{(() => {
@@ -476,7 +476,7 @@ export default function ConversationViewer({ adminToken }) {
 
                                     {/* Payload Viewer */}
                                     {evt.payload && Object.keys(evt.payload).length > 0 && (
-                                        <div className="glass-strong p-3 rounded-lg text-xs font-mono text-[var(--fg0)] border border-[var(--border)] overflow-x-auto shadow-inner bg-black/20">
+                                        <div className="glass-strong p-3 rounded-lg text-xs font-mono text-[var(--ff-text-1)] border border-[var(--ff-stroke)] overflow-x-auto shadow-inner bg-black/20">
                                             {evt.event_type === 'intent_processed' ? (
                                                 <div className="flex flex-col gap-1">
                                                     <div className="text-purple-300 font-bold border-b border-white/5 pb-1 mb-1">INTENCJA: {evt.payload.intent}</div>
@@ -487,7 +487,7 @@ export default function ConversationViewer({ adminToken }) {
                                             ) : evt.event_type === 'request_received' ? (
                                                 <div className="text-blue-300">Input: <span className="text-white">"{evt.payload.text}"</span></div>
                                             ) : (
-                                                <pre className="whitespace-pre-wrap text-[var(--muted)]">{JSON.stringify(evt.payload, null, 2)}</pre>
+                                                <pre className="whitespace-pre-wrap text-[var(--ff-text-2)]">{JSON.stringify(evt.payload, null, 2)}</pre>
                                             )}
                                         </div>
                                     )}
@@ -495,7 +495,7 @@ export default function ConversationViewer({ adminToken }) {
                             </div>
                         ))}
                         {selectedId && turns.length === 0 && timeline.length === 0 && !loading && (
-                            <div className="text-center text-[var(--muted)] mt-10">Brak zarejestrowanych zdarzeń w tej sesji.</div>
+                            <div className="text-center text-[var(--ff-text-2)] mt-10">Brak zarejestrowanych zdarzeń w tej sesji.</div>
                         )}
                     </div>
                 </div>

@@ -312,7 +312,7 @@ export default function AmberControlDeck({ adminToken }) {
   };
   const rollingOptions = { responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } } };
 
-  if (loading) return <div className="text-center text-[var(--muted)] animate-pulse">Ladowanie panelu...</div>;
+  if (loading) return <div className="text-center text-[var(--ff-text-2)] animate-pulse">Ladowanie panelu...</div>;
 
   const aliasEntries = Object.entries(aliases || {});
 
@@ -342,9 +342,9 @@ export default function AmberControlDeck({ adminToken }) {
     }
   };
 
-  const InputClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none";
-  const SelectClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none cursor-pointer";
-  const CardClass = "glass-strong rounded-xl p-6 border border-[var(--border)]";
+  const InputClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--ff-stroke)] text-[var(--ff-text-1)] rounded-lg text-sm focus:border-[var(--ff-amber-500)] outline-none";
+  const SelectClass = "w-full px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--ff-stroke)] text-[var(--ff-text-1)] rounded-lg text-sm focus:border-[var(--ff-amber-500)] outline-none cursor-pointer";
+  const CardClass = "glass-strong rounded-xl p-6 border border-[var(--ff-stroke)]";
   const formatUsd = (value) => `$${Number(value || 0).toFixed(4)}`;
   const formatBytes = (bytes) => {
     const safe = Number(bytes || 0);
@@ -359,34 +359,34 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Problemy z intencjami (fallback/niska pewnosc) */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold flex items-center gap-2">
+          <div className="text-[var(--ff-text-1)] font-semibold flex items-center gap-2">
             <span className="flex size-6 rounded-full bg-red-400/20 text-red-400 items-center justify-center text-xs">!</span>
             Problemy do przejrzenia
           </div>
-          <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5 transition-colors">Odswiez</button>
+          <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--ff-stroke)] text-[var(--ff-text-2)] rounded hover:bg-white/5 transition-colors">Odswiez</button>
         </div>
         <div className="overflow-y-auto max-h-60 tiny-scroll">
           <table className="w-full text-left text-sm">
-            <thead className="text-[11px] text-[var(--muted)] uppercase tracking-wider sticky top-0 bg-[var(--glass-strong)] backdrop-blur-sm z-10 pb-2">
-              <tr className="border-b border-[var(--border)]">
+            <thead className="text-[11px] text-[var(--ff-text-2)] uppercase tracking-wider sticky top-0 bg-[var(--glass-strong)] backdrop-blur-sm z-10 pb-2">
+              <tr className="border-b border-[var(--ff-stroke)]">
                 <th className="py-2">Intent</th>
                 <th className="py-2">Conf.</th>
                 <th className="py-2">Fallback</th>
                 <th className="py-2">Odpowiedz</th>
               </tr>
             </thead>
-            <tbody className="text-[12px] text-[var(--fg0)]">
+            <tbody className="text-[12px] text-[var(--ff-text-1)]">
               {(logs || []).filter(l => (l?.fallback === true) || ((l?.confidence ?? 1) < 0.6)).map((l, i) => (
-                <tr key={`p-${i}`} className="border-t border-[var(--border)] text-[var(--fg0)]/90 hover:bg-white/5">
-                  <td className="py-2 font-mono text-[var(--neon)]">{l.intent}</td>
+                <tr key={`p-${i}`} className="border-t border-[var(--ff-stroke)] text-[var(--ff-text-1)]/90 hover:bg-white/5">
+                  <td className="py-2 font-mono text-[var(--ff-amber-500)]">{l.intent}</td>
                   <td className="py-2">{l.confidence != null ? Number(l.confidence).toFixed(2) : '-'}</td>
-                  <td className="py-2">{l.fallback ? <span className="text-[var(--bad)] text-[10px] px-1.5 py-0.5 rounded border border-[var(--bad)]/30">TAK</span> : <span className="text-[var(--muted)]">-</span>}</td>
+                  <td className="py-2">{l.fallback ? <span className="text-[var(--ff-status-error)] text-[10px] px-1.5 py-0.5 rounded border border-[var(--ff-status-error)]/30">TAK</span> : <span className="text-[var(--ff-text-2)]">-</span>}</td>
                   <td className="py-2 truncate max-w-[28ch] opacity-80">{l.replySnippet}</td>
                 </tr>
               ))}
               {(logs || []).filter(l => (l?.fallback === true) || ((l?.confidence ?? 1) < 0.6)).length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-4 text-center text-[var(--muted)] italic">Wszystko wyglada dobrze. Brak problematycznych intencji.</td>
+                  <td colSpan={4} className="py-4 text-center text-[var(--ff-text-2)] italic">Wszystko wyglada dobrze. Brak problematycznych intencji.</td>
                 </tr>
               )}
             </tbody>
@@ -397,14 +397,14 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Ustawienia Systemu */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
+          <div className="text-[var(--ff-text-1)] font-semibold text-lg flex items-center gap-2">
             Ustawienia Systemu
           </div>
-          <div className="text-sm text-[var(--muted)] font-mono px-2 py-1 rounded bg-black/20 border border-[var(--border)]">Env: {config.env || '-'}</div>
+          <div className="text-sm text-[var(--ff-text-2)] font-mono px-2 py-1 rounded bg-black/20 border border-[var(--ff-stroke)]">Env: {config.env || '-'}</div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Engine TTS</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--ff-text-2)] mb-1">Engine TTS</label>
             <select
               className={SelectClass}
               value={config.tts_engine}
@@ -417,7 +417,7 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="gemini-live">Gemini Live (eksperymentalnie)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Głos TTS</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--ff-text-2)] mt-4 mb-1">Głos TTS</label>
             <select
               className={SelectClass}
               value={config.tts_voice}
@@ -436,7 +436,7 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="erinome">Gemini: Erinome (Female)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Styl językowy</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--ff-text-2)] mt-4 mb-1">Styl językowy</label>
             <select
               className={SelectClass}
               value={config.speech_style}
@@ -446,7 +446,7 @@ export default function AmberControlDeck({ adminToken }) {
               <option value="silesian">Śląska gwara (godka)</option>
             </select>
 
-            <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mt-4 mb-1">Model LIVE</label>
+            <label className="block text-xs uppercase tracking-widest text-[var(--ff-text-2)] mt-4 mb-1">Model LIVE</label>
             <select
               className={SelectClass}
               value={config.live_model}
@@ -462,14 +462,14 @@ export default function AmberControlDeck({ adminToken }) {
               onChange={(e) => saveConfig('live_model', e.target.value)}
               placeholder="Wpisz niestandardowy model Live"
             />
-            <div className="text-[10px] text-[var(--muted)]">
+            <div className="text-[10px] text-[var(--ff-text-2)]">
               Zmiana działa dla nowych sesji LIVE (zatrzymaj/uruchom LIVE ponownie).
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="space-y-2 bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-3">
-              <label className="block text-xs uppercase tracking-widest text-[var(--muted)] mb-1">Ton głosu (TTS)</label>
+            <div className="space-y-2 bg-[rgba(0,0,0,0.2)] border border-[var(--ff-stroke)] rounded-lg px-3 py-3">
+              <label className="block text-xs uppercase tracking-widest text-[var(--ff-text-2)] mb-1">Ton głosu (TTS)</label>
               <select
                 className={SelectClass}
                 value={config.tts_tone}
@@ -480,7 +480,7 @@ export default function AmberControlDeck({ adminToken }) {
                 <option value="neutralny">Neutralny</option>
               </select>
 
-              <label className="block text-xs text-[var(--muted)] mt-3">Pitch (-10 ... 10)</label>
+              <label className="block text-xs text-[var(--ff-text-2)] mt-3">Pitch (-10 ... 10)</label>
               <input
                 type="number"
                 min={-10}
@@ -490,7 +490,7 @@ export default function AmberControlDeck({ adminToken }) {
                 value={config.tts_pitch}
                 onChange={(e) => saveConfig('tts_pitch', e.target.value)}
               />
-              <label className="block text-xs text-[var(--muted)] mt-3">Tempo mówienia (0.5 ... 2.0)</label>
+              <label className="block text-xs text-[var(--ff-text-2)] mt-3">Tempo mówienia (0.5 ... 2.0)</label>
               <input
                 type="number"
                 min={0.5}
@@ -503,26 +503,26 @@ export default function AmberControlDeck({ adminToken }) {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+              <label className="flex items-center justify-between text-sm text-[var(--ff-text-1)] bg-[rgba(0,0,0,0.2)] border border-[var(--ff-stroke)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
                 <span className="flex items-center gap-2">
                   <span>Wlacz TTS</span>
                   {config.tts_enabled && <span className="flex size-2 bg-green-500 rounded-full animate-pulse"></span>}
                 </span>
-                <input type="checkbox" checked={!!config.tts_enabled} onChange={(e) => saveConfig('tts_enabled', e.target.checked)} className="accent-[var(--neon)]" />
+                <input type="checkbox" checked={!!config.tts_enabled} onChange={(e) => saveConfig('tts_enabled', e.target.checked)} className="accent-[var(--ff-amber-500)]" />
               </label>
-              <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+              <label className="flex items-center justify-between text-sm text-[var(--ff-text-1)] bg-[rgba(0,0,0,0.2)] border border-[var(--ff-stroke)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
                 <span>Cache aktywny</span>
-                <input type="checkbox" checked={!!config.cache_enabled} onChange={(e) => saveConfig('cache_enabled', e.target.checked)} className="accent-[var(--neon)]" />
+                <input type="checkbox" checked={!!config.cache_enabled} onChange={(e) => saveConfig('cache_enabled', e.target.checked)} className="accent-[var(--ff-amber-500)]" />
               </label>
-              <label className="flex items-center justify-between text-sm text-[var(--fg0)] bg-[rgba(0,0,0,0.2)] border border-[var(--border)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
+              <label className="flex items-center justify-between text-sm text-[var(--ff-text-1)] bg-[rgba(0,0,0,0.2)] border border-[var(--ff-stroke)] rounded-lg px-3 py-2 cursor-pointer hover:bg-white/5 transition-colors">
                 <span>Streaming audio</span>
-                <input type="checkbox" checked={!!config.streaming} onChange={(e) => saveConfig('streaming', e.target.checked)} className="accent-[var(--neon)]" />
+                <input type="checkbox" checked={!!config.streaming} onChange={(e) => saveConfig('streaming', e.target.checked)} className="accent-[var(--ff-amber-500)]" />
               </label>
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-[var(--border)] md:col-span-2">
-            <div className="text-[var(--fg0)] font-semibold mb-3 flex items-center gap-2">
+          <div className="mt-4 pt-4 border-t border-[var(--ff-stroke)] md:col-span-2">
+            <div className="text-[var(--ff-text-1)] font-semibold mb-3 flex items-center gap-2">
               Dodaj alias restauracji
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -541,17 +541,17 @@ export default function AmberControlDeck({ adminToken }) {
               <button
                 onClick={handleAliasSubmit}
                 disabled={aliasSaving}
-                className="px-3 py-2 rounded-lg bg-[var(--neon)] text-white hover:brightness-110 disabled:opacity-50 font-medium transition-all shadow-[0_0_15px_rgba(91,124,255,0.3)]"
+                className="px-3 py-2 rounded-lg bg-[var(--ff-amber-500)] text-white hover:brightness-110 disabled:opacity-50 font-medium transition-all shadow-[0_0_15px_rgba(255, 122, 28,0.3)]"
               >
                 {aliasSaving ? 'Zapisywanie...' : 'Zapisz alias'}
               </button>
             </div>
-            <div className="mt-4 text-sm space-y-1 max-h-32 overflow-y-auto tiny-scroll bg-[rgba(0,0,0,0.2)] rounded-lg p-2 border border-[var(--border)]">
-              {aliasEntries.length === 0 && <div className="text-[var(--muted)] text-center p-2">Brak zdefiniowanych aliasow</div>}
+            <div className="mt-4 text-sm space-y-1 max-h-32 overflow-y-auto tiny-scroll bg-[rgba(0,0,0,0.2)] rounded-lg p-2 border border-[var(--ff-stroke)]">
+              {aliasEntries.length === 0 && <div className="text-[var(--ff-text-2)] text-center p-2">Brak zdefiniowanych aliasow</div>}
               {aliasEntries.map(([alias, canonical]) => (
-                <div key={alias} className="flex justify-between gap-3 border-b border-[var(--border)] last:border-0 pb-1 mb-1">
-                  <span className="text-[var(--fg0)] font-medium">{alias}</span>
-                  <span className="text-[var(--muted)] text-right truncate">
+                <div key={alias} className="flex justify-between gap-3 border-b border-[var(--ff-stroke)] last:border-0 pb-1 mb-1">
+                  <span className="text-[var(--ff-text-1)] font-medium">{alias}</span>
+                  <span className="text-[var(--ff-text-2)] text-right truncate">
                     {Array.isArray(canonical) ? canonical.join(', ') : canonical}
                   </span>
                 </div>
@@ -563,48 +563,48 @@ export default function AmberControlDeck({ adminToken }) {
 
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-4">
-          <div className="text-[var(--fg0)] font-semibold text-lg flex items-center gap-2">
+          <div className="text-[var(--ff-text-1)] font-semibold text-lg flex items-center gap-2">
             Live Usage (Estimate)
           </div>
-          <div className="text-xs text-[var(--muted)]">
-            Model aktywny: <span className="font-mono text-[var(--fg0)]">{liveMetrics.liveModel || '-'}</span>{' '}| ustawiony: <span className="font-mono text-[var(--fg0)]">{config.live_model || '-'}</span>
+          <div className="text-xs text-[var(--ff-text-2)]">
+            Model aktywny: <span className="font-mono text-[var(--ff-text-1)]">{liveMetrics.liveModel || '-'}</span>{' '}| ustawiony: <span className="font-mono text-[var(--ff-text-1)]">{config.live_model || '-'}</span>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Sesje (today)</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.sessionsOpened || 0}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Sesje (today)</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{liveMetrics.sessionsOpened || 0}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Reconnects</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.reconnects || 0}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Reconnects</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{liveMetrics.reconnects || 0}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Tool calls</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{liveMetrics.toolCalls || 0}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Tool calls</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{liveMetrics.toolCalls || 0}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Audio sent</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{formatBytes(liveMetrics.audioBytesSent)}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Audio sent</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{formatBytes(liveMetrics.audioBytesSent)}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Cost today</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostToday)}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Cost today</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostToday)}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Cost month</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostMonth)}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Cost month</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{formatUsd(liveMetrics.estimatedCostMonth)}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Burn / hour</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{formatUsd(liveMetrics.burnRateLastHour)}</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Burn / hour</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{formatUsd(liveMetrics.burnRateLastHour)}</div>
           </div>
-          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--border)] p-3">
-            <div className="text-[var(--muted)] text-xs uppercase tracking-wide">Avg session</div>
-            <div className="text-[var(--fg0)] font-semibold text-lg">{Number(liveMetrics.avgSessionDurationSec || 0).toFixed(1)}s</div>
+          <div className="bg-[rgba(0,0,0,0.2)] rounded-lg border border-[var(--ff-stroke)] p-3">
+            <div className="text-[var(--ff-text-2)] text-xs uppercase tracking-wide">Avg session</div>
+            <div className="text-[var(--ff-text-1)] font-semibold text-lg">{Number(liveMetrics.avgSessionDurationSec || 0).toFixed(1)}s</div>
           </div>
         </div>
-        <div className="mt-3 text-[11px] text-[var(--muted)]">
+        <div className="mt-3 text-[11px] text-[var(--ff-text-2)]">
           Operational estimate only (internal panel). Not a Google Cloud billing source of truth.
         </div>
       </div>
@@ -612,11 +612,11 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Live log + Rolling */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className={CardClass}>
-          <div className="text-[var(--fg0)] font-semibold mb-3">Ostatnie interakcje Amber</div>
+          <div className="text-[var(--ff-text-1)] font-semibold mb-3">Ostatnie interakcje Amber</div>
           <div className="overflow-y-auto max-h-80 tiny-scroll">
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-[var(--glass-strong)] backdrop-blur-sm z-10">
-                <tr className="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr className="text-[11px] text-[var(--ff-text-2)] border-b border-[var(--ff-stroke)]">
                   <th className="py-2 pl-2">Intent</th>
                   <th className="py-2">Confidence</th>
                   <th className="py-2">Czas</th>
@@ -626,10 +626,10 @@ export default function AmberControlDeck({ adminToken }) {
               <tbody className="text-[12px]">
                 {logs.map((l, i) => {
                   const ms = l.durationMs || 0;
-                  const color = ms <= 2000 ? 'text-[var(--good)]' : ms <= 5000 ? 'text-[var(--warn)]' : 'text-[var(--bad)]';
+                  const color = ms <= 2000 ? 'text-[var(--ff-status-ready)]' : ms <= 5000 ? 'text-[var(--ff-status-pending)]' : 'text-[var(--ff-status-error)]';
                   return (
-                    <tr key={i} className="border-t border-[var(--border)] text-[var(--fg0)]/90 hover:bg-white/5 transition-colors">
-                      <td className="py-2 pl-2 font-mono text-[var(--neon)]">{l.intent}</td>
+                    <tr key={i} className="border-t border-[var(--ff-stroke)] text-[var(--ff-text-1)]/90 hover:bg-white/5 transition-colors">
+                      <td className="py-2 pl-2 font-mono text-[var(--ff-amber-500)]">{l.intent}</td>
                       <td className="py-2">{l.confidence != null ? Number(l.confidence).toFixed(2) : '-'}</td>
                       <td className={`py-2 ${color}`}>{(ms / 1000).toFixed(1)}s</td>
                       <td className="py-2 pr-2 truncate max-w-[24ch] opacity-80">{l.replySnippet}</td>
@@ -642,8 +642,8 @@ export default function AmberControlDeck({ adminToken }) {
         </div>
         <div className={CardClass}>
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[var(--fg0)] font-semibold">Wydajnosc (ostatnie 20)</div>
-            <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--border)] text-[var(--muted)] rounded hover:bg-white/5">Odswiez</button>
+            <div className="text-[var(--ff-text-1)] font-semibold">Wydajnosc (ostatnie 20)</div>
+            <button onClick={fetchData} className="px-2 py-1 text-xs glass border border-[var(--ff-stroke)] text-[var(--ff-text-2)] rounded hover:bg-white/5">Odswiez</button>
           </div>
           <div className="h-48 relative min-h-0">
             <Line data={rollingData} options={rollingOptions} />
@@ -654,17 +654,17 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Prompt editor */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold">Prompt Amber (legacy override)</div>
-          <button onClick={savePrompt} className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)]">Zapisz prompt</button>
+          <div className="text-[var(--ff-text-1)] font-semibold">Prompt Amber (legacy override)</div>
+          <button onClick={savePrompt} className="px-3 py-2 bg-[var(--ff-amber-500)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(255, 122, 28,0.3)]">Zapisz prompt</button>
         </div>
 
         {/* Presets UI */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
           {[0, 1, 2].map(i => (
-            <div key={i} className="flex items-center justify-between gap-2 bg-[rgba(255,255,255,0.03)] p-2 rounded-lg border border-[var(--border)]">
+            <div key={i} className="flex items-center justify-between gap-2 bg-[rgba(255,255,255,0.03)] p-2 rounded-lg border border-[var(--ff-stroke)]">
               <div className="flex flex-col min-w-0">
-                <span className="text-[10px] uppercase text-[var(--muted)] font-bold tracking-wider">Preset #{i + 1}</span>
-                <span className="text-[10px] text-[var(--fg0)] opacity-50 truncate" title={presets[i]}>
+                <span className="text-[10px] uppercase text-[var(--ff-text-2)] font-bold tracking-wider">Preset #{i + 1}</span>
+                <span className="text-[10px] text-[var(--ff-text-1)] opacity-50 truncate" title={presets[i]}>
                   {presets[i] ? (presets[i].substring(0, 25) + '...') : '(pusty)'}
                 </span>
               </div>
@@ -672,14 +672,14 @@ export default function AmberControlDeck({ adminToken }) {
                 <button
                   onClick={() => loadPreset(i)}
                   disabled={!presets[i]}
-                  className="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed rounded border border-[var(--border)] text-[var(--fg0)] transition-colors"
+                  className="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed rounded border border-[var(--ff-stroke)] text-[var(--ff-text-1)] transition-colors"
                   title="Wczytaj ten preset"
                 >
                   Wczytaj
                 </button>
                 <button
                   onClick={() => savePreset(i)}
-                  className="px-2 py-1 text-xs border border-[var(--border)] text-[var(--muted)] hover:border-[var(--neon)] hover:text-[var(--neon)] rounded transition-all"
+                  className="px-2 py-1 text-xs border border-[var(--ff-stroke)] text-[var(--ff-text-2)] hover:border-[var(--ff-amber-500)] hover:text-[var(--ff-amber-500)] rounded transition-all"
                   title="Zapisz obecny prompt jako ten preset"
                 >
                   Zapisz
@@ -692,7 +692,7 @@ export default function AmberControlDeck({ adminToken }) {
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none font-mono"
+          className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--ff-stroke)] text-[var(--ff-text-1)] rounded-lg text-sm focus:border-[var(--ff-amber-500)] outline-none font-mono"
           placeholder="Wklej prompt..."
         />
       </div>
@@ -700,31 +700,31 @@ export default function AmberControlDeck({ adminToken }) {
       {/* Stylization Prompt editor (NEW) */}
       <div className={CardClass}>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[var(--fg0)] font-semibold">Prompt stylizacji odpowiedzi</div>
+          <div className="text-[var(--ff-text-1)] font-semibold">Prompt stylizacji odpowiedzi</div>
           <div className="flex items-center gap-2">
             {stylizationPrompt.length > 0 && stylizationPrompt.length < 20 && (
-              <span className="text-[var(--bad)] text-xs">Min. 20 znakow</span>
+              <span className="text-[var(--ff-status-error)] text-xs">Min. 20 znakow</span>
             )}
             <button
               onClick={saveStylizationPrompt}
               disabled={stylizationSaving || stylizationPrompt.length < 20}
-              className="px-3 py-2 bg-[var(--neon)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(91,124,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="px-3 py-2 bg-[var(--ff-amber-500)] hover:brightness-110 text-white rounded-lg font-medium shadow-[0_0_15px_rgba(255, 122, 28,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {stylizationSaving ? 'Zapisywanie...' : 'Zapisz prompt'}
             </button>
           </div>
         </div>
-        <div className="text-[11px] text-[var(--muted)] mb-2 leading-relaxed">
+        <div className="text-[11px] text-[var(--ff-text-2)] mb-2 leading-relaxed">
           Ten prompt jest używany do stylizacji odpowiedzi konwersacyjnych (np. potwierdzenia, pytania).
           <strong> NIE</strong> stylizuje: find_nearby, menu, confirm_order, ani list numerowanych.
         </div>
         <textarea
           value={stylizationPrompt}
           onChange={(e) => setStylizationPrompt(e.target.value)}
-          className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--border)] text-[var(--fg0)] rounded-lg text-sm focus:border-[var(--neon)] outline-none font-mono"
+          className="w-full h-40 px-3 py-2 bg-[rgba(0,0,0,0.3)] border border-[var(--ff-stroke)] text-[var(--ff-text-1)] rounded-lg text-sm focus:border-[var(--ff-amber-500)] outline-none font-mono"
           placeholder="Jestes Amber - asystentka FreeFlow. Przeksztalc tekst w krotka, naturalna wypowiedz..."
         />
-        <div className="text-right text-[10px] text-[var(--muted)] mt-1">
+        <div className="text-right text-[10px] text-[var(--ff-text-2)] mt-1">
           {stylizationPrompt.length} znakow
         </div>
       </div>

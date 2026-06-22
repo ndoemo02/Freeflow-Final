@@ -159,21 +159,21 @@ export default function BusinessClientPanel() {
             <section className="business-panel__kpis">
                 <StatCard
                     icon={<IconReceipt />}
-                    iconBgColor="var(--good)"
+                    iconBgColor="var(--ff-status-ready)"
                     value={kpis?.ordersToday || 0}
                     label="Zamówień dziś"
                     trend={kpis?.trends.orders}
                 />
                 <StatCard
                     icon={<IconDollar />}
-                    iconBgColor="var(--neon)"
+                    iconBgColor="var(--ff-amber-500)"
                     value={kpis?.revenueTodayFormatted || '0 zł'}
                     label="Przychód dziś"
                     trend={kpis?.trends.revenue}
                 />
                 <StatCard
                     icon={<IconClock />}
-                    iconBgColor="var(--warn)"
+                    iconBgColor="var(--ff-status-pending)"
                     value={`${kpis?.avgFulfillmentTime || 0} min`}
                     label="Śr. czas realizacji"
                     trend={kpis?.trends.avgTime}

@@ -237,7 +237,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({ isOnline }) => {
                         directions: directionsResponse,
                         suppressMarkers: false, // Show markers for start/end
                         polylineOptions: {
-                            strokeColor: "#a855f7", // Purple/Accent color
+                            strokeColor: "#FF7A1C", // Purple/Accent color
                             strokeOpacity: 0.6,
                             strokeWeight: 5
                         }

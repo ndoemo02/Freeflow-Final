@@ -322,7 +322,7 @@ export function getStatusDisplay(status: OrderStatus): { label: string; tone: St
 export function getChannelDisplay(channel: OrderChannel): { label: string; icon: string; color: string } {
     switch (channel) {
         case 'restaurant':
-            return { label: 'Restauracja', icon: '🍽️', color: '#3b82f6' };
+            return { label: 'Restauracja', icon: '🍽️', color: '#3DDCC3' };
         case 'hotel':
             return { label: 'Hotel', icon: '🏨', color: '#8b5cf6' };
         case 'delivery':

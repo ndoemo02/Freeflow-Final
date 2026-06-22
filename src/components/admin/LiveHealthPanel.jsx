@@ -6,21 +6,21 @@ function cardStyle(warn) {
     padding: '14px 16px',
     borderRadius: 12,
     background: warn ? 'rgba(255,70,70,0.08)' : 'rgba(255,255,255,0.04)',
-    border: warn ? '1px solid rgba(255,70,70,0.3)' : '1px solid var(--border)',
+    border: warn ? '1px solid rgba(255,70,70,0.3)' : '1px solid var(--ff-stroke)',
     minWidth: 140,
   };
 }
 
 function labelStyle(warn) {
-  return { fontSize: 11, color: warn ? '#ff6b6b' : 'var(--fg2)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' };
+  return { fontSize: 11, color: warn ? '#ff6b6b' : 'var(--ff-text-3)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' };
 }
 
 function valueStyle(warn) {
-  return { fontSize: 22, fontWeight: 700, color: warn ? '#ff6b6b' : 'var(--fg0)' };
+  return { fontSize: 22, fontWeight: 700, color: warn ? '#ff6b6b' : 'var(--ff-text-1)' };
 }
 
 function subStyle() {
-  return { fontSize: 11, color: 'var(--fg2)', marginTop: 3 };
+  return { fontSize: 11, color: 'var(--ff-text-3)', marginTop: 3 };
 }
 
 function readLocalCognitiveLoad() {
@@ -68,9 +68,9 @@ export default function LiveHealthPanel({ adminToken }) {
     return () => clearInterval(timerRef.current);
   }, [adminToken]);
 
-  if (!adminToken) return <div className="text-[var(--fg2)] text-sm p-4">Brak tokena admina.</div>;
+  if (!adminToken) return <div className="text-[var(--ff-text-3)] text-sm p-4">Brak tokena admina.</div>;
   if (error) return <div className="text-red-400 text-sm p-4">Błąd: {error}</div>;
-  if (!health) return <div className="text-[var(--fg2)] text-sm p-4">Ładowanie metryk health...</div>;
+  if (!health) return <div className="text-[var(--ff-text-3)] text-sm p-4">Ładowanie metryk health...</div>;
 
   const tc = health.truthConsistency || {};
   const cl = cognitiveLoad;
@@ -88,7 +88,7 @@ export default function LiveHealthPanel({ adminToken }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Sekcja 1: Cognitive Load */}
       <div>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg1)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--ff-text-2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Obciążenie poznawcze (Cognitive Load)
         </h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -127,7 +127,7 @@ export default function LiveHealthPanel({ adminToken }) {
 
       {/* Sekcja 2: Truth Consistency */}
       <div>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg1)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--ff-text-2)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           Spójność prawdy (Truth Consistency)
         </h3>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -160,7 +160,7 @@ export default function LiveHealthPanel({ adminToken }) {
       </div>
 
       {/* Meta */}
-      <div style={{ fontSize: 11, color: 'var(--fg2)', textAlign: 'right', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+      <div style={{ fontSize: 11, color: 'var(--ff-text-3)', textAlign: 'right', borderTop: '1px solid var(--ff-stroke)', paddingTop: 8 }}>
         Ostatnia aktualizacja: {meta.lastUpdatedAt ? new Date(meta.lastUpdatedAt).toLocaleTimeString('pl-PL') : '—'}
         {meta.lastSessionId ? ` · sesja: ${meta.lastSessionId.slice(-12)}` : ''}
       </div>

@@ -28,14 +28,14 @@ export default function MenuViewer() {
                 className="fixed top-24 bottom-24 left-6 z-[60] w-[360px] flex flex-col pointer-events-none"
             >
                 <div
-                    className="glass-strong w-full h-full overflow-hidden rounded-2xl border border-[var(--border)] flex flex-col shadow-2xl pointer-events-auto relative"
+                    className="glass-strong w-full h-full overflow-hidden rounded-2xl border border-[var(--ff-stroke)] flex flex-col shadow-2xl pointer-events-auto relative"
                     onClick={e => e.stopPropagation()}
                 >
                     {/* Header */}
                     <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/40 backdrop-blur-md sticky top-0 z-10">
                         <div>
                             <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                                <span className="text-[var(--neon)]">{icon}</span> {title}
+                                <span className="text-[var(--ff-amber-500)]">{icon}</span> {title}
                             </h2>
                             <p className="text-[10px] text-white/50 uppercase tracking-widest font-medium">{subtitle}</p>
                         </div>
@@ -55,14 +55,14 @@ export default function MenuViewer() {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: i * 0.05 }}
-                                className="flex justify-between items-start p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-[var(--neon)] hover:neon-ring transition-all cursor-pointer group"
+                                className="flex justify-between items-start p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-[var(--ff-amber-500)] hover:neon-ring transition-all cursor-pointer group"
                                 onClick={() => {
                                     // Opcjonalnie: obsługa kliknięcia (np. wybór restauracji)
                                     // Na razie tylko wizualizacja
                                 }}
                             >
                                 <div className="flex-1 min-w-0 pr-3">
-                                    <div className="font-semibold text-sm text-[var(--fg0)] group-hover:text-[var(--neon)] transition-colors truncate">
+                                    <div className="font-semibold text-sm text-[var(--ff-text-1)] group-hover:text-[var(--ff-amber-500)] transition-colors truncate">
                                         {item.name}
                                     </div>
 
@@ -70,12 +70,12 @@ export default function MenuViewer() {
                                     {isMenu && (
                                         <>
                                             {item.category && (
-                                                <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mt-0.5 bg-white/5 inline-block px-1.5 py-0.5 rounded">
+                                                <div className="text-[10px] text-[var(--ff-text-2)] uppercase tracking-wider mt-0.5 bg-white/5 inline-block px-1.5 py-0.5 rounded">
                                                     {item.category}
                                                 </div>
                                             )}
                                             {item.description && (
-                                                <div className="text-xs text-[var(--muted)] mt-1 line-clamp-2 leading-relaxed opacity-80">
+                                                <div className="text-xs text-[var(--ff-text-2)] mt-1 line-clamp-2 leading-relaxed opacity-80">
                                                     {item.description}
                                                 </div>
                                             )}
@@ -86,11 +86,11 @@ export default function MenuViewer() {
                                     {isRestaurants && (
                                         <>
                                             {item.cuisine_type && (
-                                                <div className="text-[10px] text-[var(--neon)] uppercase tracking-wider mt-0.5 bg-[var(--neon)]/10 inline-block px-1.5 py-0.5 rounded border border-[var(--neon)]/20">
+                                                <div className="text-[10px] text-[var(--ff-amber-500)] uppercase tracking-wider mt-0.5 bg-[var(--ff-amber-500)]/10 inline-block px-1.5 py-0.5 rounded border border-[var(--ff-amber-500)]/20">
                                                     {item.cuisine_type}
                                                 </div>
                                             )}
-                                            <div className="text-xs text-[var(--muted)] mt-1 opacity-80 flex flex-col gap-0.5">
+                                            <div className="text-xs text-[var(--ff-text-2)] mt-1 opacity-80 flex flex-col gap-0.5">
                                                 {item.city && <span>🏙️ {item.city}</span>}
                                                 {item.street && <span>📍 {item.street}</span>}
                                                 {item.opening_hours && <span className="text-[10px] text-white/40">🕒 {item.opening_hours}</span>}
@@ -102,7 +102,7 @@ export default function MenuViewer() {
                                 <div className="flex flex-col items-end gap-2">
                                     {/* Cena tylko dla Menu */}
                                     {isMenu && (
-                                        <div className="font-mono text-[var(--neon)] font-bold whitespace-nowrap text-sm bg-[var(--neon)]/10 px-2 py-1 rounded-lg border border-[var(--neon)]/20">
+                                        <div className="font-mono text-[var(--ff-amber-500)] font-bold whitespace-nowrap text-sm bg-[var(--ff-amber-500)]/10 px-2 py-1 rounded-lg border border-[var(--ff-amber-500)]/20">
                                             {Number(item.price_pln || item.price || 0).toFixed(2)} zł
                                         </div>
                                     )}
@@ -114,7 +114,7 @@ export default function MenuViewer() {
                                         </div>
                                     )}
 
-                                    <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[var(--neon)] opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-[var(--ff-amber-500)] opacity-0 group-hover:opacity-100 transition-opacity">
                                         →
                                     </div>
                                 </div>

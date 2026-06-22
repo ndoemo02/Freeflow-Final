@@ -69,7 +69,7 @@ function StackCard({ item, stackOffset, isRecommended, onClick, hasFocused }: St
             <div
                 className="relative h-full overflow-hidden px-3.5 py-2.5"
                 style={{
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: '20px',
                     background: isFocused
                         ? 'linear-gradient(155deg, rgba(6,182,212,0.22) 0%, rgba(6,182,212,0.05) 45%, rgba(5,8,16,0.98) 100%)'
                         : isRecommended
@@ -85,8 +85,8 @@ function StackCard({ item, stackOffset, isRecommended, onClick, hasFocused }: St
                             ? '0 0 0 1px rgba(6,182,212,0.30) inset, 0 18px 36px rgba(0,0,0,0.52), 0 0 24px rgba(6,182,212,0.12)'
                             : '0 0 0 1px rgba(6,182,212,0.20) inset, 0 14px 28px rgba(0,0,0,0.38)'
                         : '0 8px 16px rgba(0,0,0,0.18)',
-                    backdropFilter: isFocused ? 'blur(var(--blur-md)) saturate(1.08)' : 'none',
-                    WebkitBackdropFilter: isFocused ? 'blur(var(--blur-md)) saturate(1.08)' : 'none',
+                    backdropFilter: isFocused ? 'blur(var(--ff-blur)) saturate(1.08)' : 'none',
+                    WebkitBackdropFilter: isFocused ? 'blur(var(--ff-blur)) saturate(1.08)' : 'none',
                 }}
             >
                 {isFocused && (
@@ -108,7 +108,7 @@ function StackCard({ item, stackOffset, isRecommended, onClick, hasFocused }: St
                             <div className="flex items-center gap-2">
                                 <span
                                     className="text-[10px] uppercase tracking-[0.16em] text-cyan-100"
-                                    style={{ borderRadius: 'var(--radius-pill)', padding: '2px 8px', background: 'rgba(6,182,212,0.15)' }}
+                                    style={{ borderRadius: 'var(--ff-radius-chip)', padding: '2px 8px', background: 'rgba(6,182,212,0.15)' }}
                                 >
                                     {getCuisine(item)}
                                 </span>
@@ -214,7 +214,7 @@ export function IslandStackView({
                     onClick={onCtaPress}
                     className="text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
                     style={{
-                        borderRadius: 'var(--radius-pill)',
+                        borderRadius: 'var(--ff-radius-chip)',
                         padding: '5px 12px',
                         background: 'rgba(0,0,0,0.45)',
                         border: '1px solid rgba(255,255,255,0.10)',

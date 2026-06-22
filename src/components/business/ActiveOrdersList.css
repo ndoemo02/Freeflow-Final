@@ -5,10 +5,10 @@
 .orders-list {
     border-radius: 1rem;
     padding: 1.5rem;
-    background: var(--glass);
-    border: 1px solid var(--border);
-    backdrop-filter: blur(var(--blur-md));
-    -webkit-backdrop-filter: blur(var(--blur-md));
+    background: var(--ff-glass);
+    border: 1px solid var(--ff-stroke);
+    backdrop-filter: blur(var(--ff-blur));
+    -webkit-backdrop-filter: blur(var(--ff-blur));
 }
 
 .orders-list__header {
@@ -21,14 +21,14 @@
 .orders-list__title {
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--fg0);
+    color: var(--ff-text-1);
     margin: 0;
 }
 
 .orders-list__view-all {
     background: none;
     border: none;
-    color: var(--neon);
+    color: var(--ff-amber-500);
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -43,14 +43,14 @@
 .orders-list__empty {
     text-align: center;
     padding: 2rem;
-    color: var(--fg1);
+    color: var(--ff-text-2);
 }
 
 .orders-list__empty-icon {
     font-size: 1.25rem;
     display: block;
     margin-bottom: 0.5rem;
-    color: var(--fg2);
+    color: var(--ff-text-3);
 }
 
 .orders-list__items {
@@ -60,33 +60,33 @@
 }
 
 .order-item {
-    background: var(--glass);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--border);
+    background: var(--ff-glass);
+    border: 1px solid var(--ff-stroke);
+    border-left: 3px solid var(--ff-stroke);
     border-radius: 0.75rem;
     padding: 1rem;
     transition: background 0.2s, border-color 0.2s;
 }
 
 .order-item:hover {
-    background: var(--glass2);
-    border-color: color-mix(in srgb, var(--orange) 30%, var(--border));
+    background: var(--ff-glass-strong);
+    border-color: color-mix(in srgb, var(--ff-amber-500) 30%, var(--ff-stroke));
 }
 
 .order-item--new {
-    border-left-color: var(--neon);
+    border-left-color: var(--ff-amber-500);
 }
 
 .order-item--preparing {
-    border-left-color: var(--orange);
+    border-left-color: var(--ff-amber-500);
 }
 
 .order-item--ready {
-    border-left-color: var(--good);
+    border-left-color: var(--ff-status-ready);
 }
 
 .order-item--cancelled {
-    border-left-color: var(--bad);
+    border-left-color: var(--ff-status-error);
 }
 
 .order-item__main {
@@ -105,7 +105,7 @@
 .order-item__number {
     font-weight: 700;
     font-size: 1rem;
-    color: var(--fg0);
+    color: var(--ff-text-1);
 }
 
 .order-item__channel {
@@ -125,44 +125,44 @@
     font-weight: 600;
     padding: 0.25rem 0.625rem;
     border-radius: 999px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--ff-stroke);
     line-height: 1.1;
 }
 
 .order-item__status--new {
-    color: var(--neon);
-    background: color-mix(in srgb, var(--neon) 15%, transparent);
-    border-color: color-mix(in srgb, var(--neon) 35%, var(--border));
+    color: var(--ff-amber-500);
+    background: color-mix(in srgb, var(--ff-amber-500) 15%, transparent);
+    border-color: color-mix(in srgb, var(--ff-amber-500) 35%, var(--ff-stroke));
 }
 
 .order-item__status--preparing {
-    color: var(--orange);
-    background: color-mix(in srgb, var(--orange) 15%, transparent);
-    border-color: color-mix(in srgb, var(--orange) 35%, var(--border));
+    color: var(--ff-amber-500);
+    background: color-mix(in srgb, var(--ff-amber-500) 15%, transparent);
+    border-color: color-mix(in srgb, var(--ff-amber-500) 35%, var(--ff-stroke));
 }
 
 .order-item__status--ready {
-    color: var(--good);
-    background: color-mix(in srgb, var(--good) 15%, transparent);
-    border-color: color-mix(in srgb, var(--good) 35%, var(--border));
+    color: var(--ff-status-ready);
+    background: color-mix(in srgb, var(--ff-status-ready) 15%, transparent);
+    border-color: color-mix(in srgb, var(--ff-status-ready) 35%, var(--ff-stroke));
 }
 
 .order-item__status--delivered {
-    color: var(--fg1);
-    background: color-mix(in srgb, var(--fg1) 14%, transparent);
-    border-color: color-mix(in srgb, var(--fg1) 30%, var(--border));
+    color: var(--ff-text-2);
+    background: color-mix(in srgb, var(--ff-text-2) 14%, transparent);
+    border-color: color-mix(in srgb, var(--ff-text-2) 30%, var(--ff-stroke));
 }
 
 .order-item__status--cancelled,
 .order-item__status--neutral {
-    color: var(--bad);
-    background: color-mix(in srgb, var(--bad) 14%, transparent);
-    border-color: color-mix(in srgb, var(--bad) 30%, var(--border));
+    color: var(--ff-status-error);
+    background: color-mix(in srgb, var(--ff-status-error) 14%, transparent);
+    border-color: color-mix(in srgb, var(--ff-status-error) 30%, var(--ff-stroke));
 }
 
 .order-item__time {
     font-size: 0.75rem;
-    color: var(--fg2);
+    color: var(--ff-text-3);
     font-variant-numeric: tabular-nums;
 }
 
@@ -176,17 +176,17 @@
 .order-item__chip {
     font-size: 0.75rem;
     line-height: 1.1;
-    color: var(--fg1);
-    background: color-mix(in srgb, var(--glass2) 72%, transparent);
-    border: 1px solid var(--border);
+    color: var(--ff-text-2);
+    background: color-mix(in srgb, var(--ff-glass-strong) 72%, transparent);
+    border: 1px solid var(--ff-stroke);
     border-radius: 999px;
     padding: 0.25rem 0.5rem;
     font-variant-numeric: tabular-nums;
 }
 
 .order-item__chip--more {
-    color: var(--orange);
-    border-color: color-mix(in srgb, var(--orange) 35%, var(--border));
+    color: var(--ff-amber-500);
+    border-color: color-mix(in srgb, var(--ff-amber-500) 35%, var(--ff-stroke));
 }
 
 .order-item__details {
@@ -195,14 +195,14 @@
     align-items: center;
     gap: 1rem;
     font-size: 0.8125rem;
-    color: var(--fg1);
-    border-top: 1px solid var(--border);
+    color: var(--ff-text-2);
+    border-top: 1px solid var(--ff-stroke);
     padding-top: 0.75rem;
 }
 
 .order-item__location {
     font-weight: 500;
-    color: var(--fg0);
+    color: var(--ff-text-1);
 }
 
 .order-item__items {
@@ -210,6 +210,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--fg2);
+    color: var(--ff-text-3);
     font-variant-numeric: tabular-nums;
 }

@@ -314,7 +314,7 @@ export default function BusinessPanel() {
       <div
         className="min-h-screen flex flex-col"
         style={{
-          background: 'var(--op-surface)',
+          background: 'var(--ff-bg-0)',
           color: BP.textPrimary,
           isolation: 'isolate',
         }}
@@ -324,8 +324,8 @@ export default function BusinessPanel() {
           className="shrink-0 sticky top-0 z-20 flex items-center gap-3 px-4 py-3"
           style={{
             background: 'rgba(13,16,32,0.98)',
-            backdropFilter: 'blur(var(--blur-sm))',
-            WebkitBackdropFilter: 'blur(var(--blur-sm))',
+            backdropFilter: 'blur(var(--ff-blur))',
+            WebkitBackdropFilter: 'blur(var(--ff-blur))',
             borderBottom: `1px solid ${BP.divider}`,
           }}
         >
@@ -336,7 +336,7 @@ export default function BusinessPanel() {
               width: 26, height: 26, borderRadius: '6px',
               background: 'linear-gradient(135deg, rgba(249,115,22,0.22), rgba(249,115,22,0.08))',
               border: '1px solid rgba(249,115,22,0.24)',
-              color: 'var(--ff-orange, #f97316)',
+              color: 'var(--ff-amber-500)',
             }}
           >
             FF
@@ -407,7 +407,7 @@ export default function BusinessPanel() {
               key={label}
               className="flex items-center gap-2 px-3 py-2"
               style={{
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--ff-radius-btn)',
                 background: BP.cardBg,
                 border: BP.cardBorder,
               }}
@@ -492,7 +492,7 @@ export default function BusinessPanel() {
             <div
               className="text-[12px] py-8 text-center"
               style={{
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: 'var(--ff-radius-btn)',
                 color: BP.textLow,
                 background: 'rgba(255,255,255,0.02)',
                 border: `1px solid rgba(255,255,255,0.06)`,
@@ -645,7 +645,7 @@ export default function BusinessPanel() {
           <div className="space-y-3 text-[12px]">
             <div>
               <span style={{ color: BP.textLow }}>ID</span>
-              <p className="font-mono text-[11px] mt-0.5 px-2 py-1" style={{ borderRadius: 'var(--radius-sm)', background: BP.cardBg, border: BP.cardBorder, color: BP.textMid }}>{selectedOrder.id}</p>
+              <p className="font-mono text-[11px] mt-0.5 px-2 py-1" style={{ borderRadius: 'var(--ff-radius-btn)', background: BP.cardBg, border: BP.cardBorder, color: BP.textMid }}>{selectedOrder.id}</p>
             </div>
             <div className="flex items-center justify-between">
               <div>
@@ -693,7 +693,7 @@ function OrderRow({ order: o, onDetails, onAction, compact = false }) {
   return (
     <div
       style={{
-        borderRadius: 'var(--radius-sm)',
+        borderRadius: 'var(--ff-radius-btn)',
         overflow: 'hidden',
         background: BP.cardBg,
         border: BP.cardBorder,

@@ -67,12 +67,12 @@ export default function DebugPanel() {
                     padding: '12px 24px',
                     borderRadius: '8px',
                     background: '#000',
-                    color: '#00ffc8',
-                    border: '2px solid #00ffc8',
+                    color: 'var(--ff-amber-500)',
+                    border: '2px solid var(--ff-amber-500)',
                     zIndex: 9999,
                     cursor: 'pointer',
                     fontWeight: 'bold',
-                    boxShadow: '0 0 10px #00ffc8'
+                    boxShadow: '0 0 10px var(--ff-amber-500)'
                 }}
                 title="Open Debug Panel"
             >
@@ -115,7 +115,7 @@ export default function DebugPanel() {
                     userSelect: 'none'
                 }}
             >
-                <div style={{ fontWeight: 'bold', color: '#00ffc8' }}>DEBUG CLI v1.1</div>
+                <div style={{ fontWeight: 'bold', color: 'var(--ff-amber-500)' }}>DEBUG CLI v1.1</div>
                 <button
                     onMouseDown={(e) => e.stopPropagation()}
                     onClick={() => setIsOpen(false)}
@@ -143,7 +143,7 @@ export default function DebugPanel() {
                         </div>
                         <pre style={{
                             fontSize: '11px',
-                            color: '#00ffc8',
+                            color: 'var(--ff-amber-500)',
                             background: '#111',
                             padding: '10px',
                             borderRadius: '5px',
@@ -193,7 +193,7 @@ export default function DebugPanel() {
                                 navigator.clipboard.writeText(text);
                                 alert('Copied to clipboard!');
                             }}
-                            style={{ padding: '10px', background: '#00ffc8', color: '#000', border: 'none', fontWeight: 'bold', cursor: 'pointer', borderRadius: '4px' }}
+                            style={{ padding: '10px', background: 'var(--ff-amber-500)', color: '#000', border: 'none', fontWeight: 'bold', cursor: 'pointer', borderRadius: '4px' }}
                         >
                             Copy to Clipboard
                         </button>
@@ -311,7 +311,7 @@ function TabButton({ active, onClick, children }: any) {
                 padding: '10px',
                 background: active ? '#222' : 'transparent',
                 border: 'none',
-                borderBottom: active ? '2px solid #00ffc8' : '1px solid transparent',
+                borderBottom: active ? '2px solid var(--ff-amber-500)' : '1px solid transparent',
                 color: active ? '#fff' : '#888',
                 cursor: 'pointer',
                 fontWeight: active ? 'bold' : 'normal'
@@ -325,7 +325,7 @@ function TabButton({ active, onClick, children }: any) {
 function ControlGroup({ title, children }: any) {
     return (
         <div style={{ border: '1px solid #333', padding: '12px', borderRadius: '6px', background: 'rgba(255,255,255,0.03)' }}>
-            <div style={{ fontSize: '11px', color: '#00ffc8', marginBottom: '10px', textTransform: 'uppercase', fontWeight: 'bold' }}>{title}</div>
+            <div style={{ fontSize: '11px', color: 'var(--ff-amber-500)', marginBottom: '10px', textTransform: 'uppercase', fontWeight: 'bold' }}>{title}</div>
             {children}
         </div>
     )
@@ -340,9 +340,9 @@ function Slider({ label, value, min, max, step, onChange }: any) {
                 min={min} max={max} step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                style={{ flex: 1, marginRight: '10px', accentColor: '#00ffc8' }}
+                style={{ flex: 1, marginRight: '10px', accentColor: 'var(--ff-amber-500)' }}
             />
-            <div style={{ width: '30px', fontSize: '11px', textAlign: 'right', color: '#00ffc8' }}>{Math.round(value * 10) / 10}</div>
+            <div style={{ width: '30px', fontSize: '11px', textAlign: 'right', color: 'var(--ff-amber-500)' }}>{Math.round(value * 10) / 10}</div>
         </div>
     )
 }
@@ -356,7 +356,7 @@ function SliderCompact({ label, value, min, max, step, onChange }: any) {
                 min={min} max={max} step={step}
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}
-                style={{ flex: 1, minWidth: '0', accentColor: '#00ffc8' }}
+                style={{ flex: 1, minWidth: '0', accentColor: 'var(--ff-amber-500)' }}
             />
         </div>
     )

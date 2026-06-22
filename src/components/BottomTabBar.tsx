@@ -139,7 +139,7 @@ export default function BottomTabBar() {
           background: 'rgba(10, 10, 14, 0.88)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--ff-stroke)',
           boxShadow: '0 -4px 32px rgba(0,0,0,0.4), 0 2px 0 rgba(255,255,255,0.03)',
           opacity: dimmed ? 0.45 : 1,
         }}
@@ -195,7 +195,7 @@ export default function BottomTabBar() {
           bottom: `calc(env(safe-area-inset-bottom) + 24px)`,
           width: 52,
           height: 52,
-          borderRadius: 'var(--radius-pill)',
+          borderRadius: 'var(--ff-radius-chip)',
           background: fabActive
             ? 'linear-gradient(135deg, rgba(239,68,68,0.95), rgba(220,38,38,0.95))'
             : 'linear-gradient(135deg, rgba(249,115,22,0.9), rgba(234,88,12,0.95))',

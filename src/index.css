@@ -1,3 +1,5 @@
+@import './styles/freeflow-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,115 +15,30 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FREEFLOW DESIGN TOKENS
-   Consolidated CSS variables for consistent styling across the application
+   FREEFLOW DESIGN TOKENS — patrz styles/freeflow-tokens.css
    ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  /* === Brand Colors === */
-  --ff-orange: #f97316;
-  --ff-purple: #a855f7;
-  --ff-cyan: #06b6d4;
-  --ff-neon-green: #00ffc8;
-
-  /* === Surface Colors (Dark Theme) === */
-  --bg0: #070A12;
-  --bg1: #0B1222;
-  --fg0: #EAF0FF;
-  --fg1: #9AA7C2;
-  --fg2: #5A6882;
-  --muted: #9AA7C2;
-
-  /* === Glass & Borders === */
-  --border: rgba(255, 255, 255, 0.10);
-  --glass: rgba(255, 255, 255, 0.06);
-  --glass2: rgba(255, 255, 255, 0.09);
-  --shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
-
-  /* === Accent Colors === */
-  --orange: #F97316;
-  --neon: #5B7CFF;
-  --neon2: #38BDF8;
-
-  /* === Semantic Colors === */
-  --good: #22C55E;
-  --warn: #F59E0B;
-  --bad: #EF4444;
-
-  /* === Radius Scale === */
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 28px;
-  --radius-pill: 999px;
-
-  /* === Blur Scale === */
-  --blur-sm: 8px;
-  --blur-md: 12px;
-  --blur-lg: 20px;
-
-  /* === Animation Timing === */
-  --anim-fast: 0.15s;
-  --anim-normal: 0.3s;
-  --anim-slow: 0.6s;
-
-  /* === Service Domain Colors === */
-  --domain-food: #f97316;
-  --domain-taxi: #f59e0b;
-  --domain-hotel: #3b82f6;
-  --domain-orders: #22c55e;
-
-  /* === Operational Surfaces === */
-  --kds-bg: #0a0a10;
-  --kds-card: #12121a;
-  --op-surface: #0d1020;
-
-  /* === Consumer Voice Dock === */
-  --ff-voice-panel: rgba(11, 14, 24, 0.88);
-  --ff-voice-border: rgba(255, 255, 255, 0.10);
-  --ff-voice-accent: #67e8f9;
-  --ff-voice-shadow: 0 14px 34px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255,255,255,0.05) inset;
-
-  /* === Restaurant Menu Surface === */
-  --ff-menu-bg: #050810;
-  --ff-menu-panel: rgba(11, 14, 24, 0.88);
-  --ff-menu-panel-strong: rgba(14, 17, 28, 0.96);
-  --ff-menu-row: rgba(255, 255, 255, 0.025);
-  --ff-menu-row-hover: rgba(255, 255, 255, 0.055);
-  --ff-menu-row-active: rgba(249, 115, 22, 0.105);
-  --ff-menu-border: rgba(255, 255, 255, 0.10);
-  --ff-menu-border-strong: rgba(249, 115, 22, 0.42);
-  --ff-food: #f97316;
-  --ff-food-soft: rgba(249, 115, 22, 0.16);
-  --ff-food-text: #ffb173;
-  --ff-radius-panel: 16px;
-  --ff-radius-row: 12px;
-  --ff-radius-thumb: 10px;
-  --ff-shadow-panel: 0 14px 34px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255,255,255,0.05) inset;
-}
-
+/* Light theme overrides (dark-first: only when dark class is absent) */
 html:not(.dark) {
-  --bg0: #F6F8FF;
-  --bg1: #EEF2FF;
-  --fg0: #0A1020;
-  --fg1: #54607A;
-  --fg2: #6E7A96;
-  --muted: #54607A;
-  --border: rgba(10, 16, 32, 0.12);
-  --glass: rgba(255, 255, 255, 0.65);
-  --glass2: rgba(255, 255, 255, 0.78);
-  --shadow: 0 14px 30px rgba(10, 16, 32, 0.10);
-  --neon: #2F5BFF;
-  --neon2: #0891B2;
-  --orange: #F97316;
+  --ff-bg-0: #F6F8FF;
+  --ff-bg-1: #EEF2FF;
+  --ff-text-1: #0A1020;
+  --ff-text-2: #54607A;
+  --ff-text-3: #6E7A96;
+  --ff-stroke: rgba(10, 16, 32, 0.12);
+  --ff-glass: rgba(255, 255, 255, 0.65);
+  --ff-glass-strong: rgba(255, 255, 255, 0.78);
+  --ff-amber-500: #F97316;
+  --ff-gold-400: #F59E0B;
 }
 
 body.admin-theme {
-  color: var(--fg0);
+  color: var(--ff-text-1);
   background:
-    radial-gradient(1100px 700px at 20% 10%, rgba(91, 124, 255, 0.18), transparent 60%),
-    radial-gradient(900px 600px at 85% 20%, rgba(56, 189, 248, 0.16), transparent 55%),
-    radial-gradient(700px 500px at 55% 85%, rgba(139, 92, 246, 0.12), transparent 60%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+    radial-gradient(1100px 700px at 20% 10%, rgba(255, 122, 28, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 85% 20%, rgba(61, 220, 195, 0.10), transparent 55%),
+    radial-gradient(700px 500px at 55% 85%, rgba(255, 122, 28, 0.06), transparent 60%),
+    linear-gradient(180deg, var(--ff-bg-0), var(--ff-bg-1));
   min-height: 100vh;
 }
 
@@ -135,8 +52,8 @@ body.admin-theme {
    - No box-shadow glow; tight elevation shadows only
    ────────────────────────────────────────────────────────────────────────── */
 body.business-theme {
-  background: var(--op-surface);
-  color: var(--fg0);
+  background: var(--ff-bg-0);
+  color: var(--ff-text-1);
   min-height: 100vh;
 }
 
@@ -160,33 +77,33 @@ html:not(.dark) .grid-overlay {
 }
 
 .glass {
-  background: var(--glass);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--ff-glass);
+  border: 1px solid var(--ff-stroke);
+  box-shadow: var(--ff-shadow-card);
+  backdrop-filter: blur(var(--ff-blur));
+  -webkit-backdrop-filter: blur(var(--ff-blur));
 }
 
 .glass-strong {
-  background: var(--glass2);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--ff-glass-strong);
+  border: 1px solid var(--ff-stroke);
+  box-shadow: var(--ff-shadow-card);
+  backdrop-filter: blur(var(--ff-blur));
+  -webkit-backdrop-filter: blur(var(--ff-blur));
 }
 
 .neon-ring {
   box-shadow:
-    0 0 0 1px rgba(91, 124, 255, 0.25),
+    0 0 0 1px rgba(255, 122, 28, 0.25),
     0 12px 28px rgba(0, 0, 0, 0.28),
-    0 0 26px rgba(91, 124, 255, 0.10);
+    0 0 26px rgba(255, 122, 28, 0.10);
 }
 
 html:not(.dark) .neon-ring {
   box-shadow:
-    0 0 0 1px rgba(47, 91, 255, 0.18),
+    0 0 0 1px rgba(249, 115, 22, 0.18),
     0 16px 30px rgba(10, 16, 32, 0.10),
-    0 0 20px rgba(47, 91, 255, 0.10);
+    0 0 20px rgba(249, 115, 22, 0.10);
 }
 
 .fade-in {
@@ -207,7 +124,7 @@ html:not(.dark) .neon-ring {
 
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(91, 124, 255, 0.25), 0 0 0 4px rgba(91, 124, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.25), 0 0 0 4px rgba(255, 122, 28, 0.18);
 }
 
 .tiny-scroll::-webkit-scrollbar {
@@ -284,10 +201,10 @@ html:not(.dark) .neon-ring {
   width: 100%;
   height: 100%;
   fill: none;
-  stroke: #00ffc8;
+  stroke: #3DDCC3;
   stroke-width: 3;
   stroke-dasharray: 20;
-  filter: drop-shadow(0 0 6px #00ffc8);
+  filter: drop-shadow(0 0 6px #3DDCC3);
   animation: waveflow 2.5s infinite ease-in-out;
 }
 
@@ -378,7 +295,7 @@ html:not(.dark) .neon-ring {
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(135deg, rgba(255, 106, 0, 0.1) 0%, rgba(255, 106, 0, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(255, 122, 28, 0.1) 0%, rgba(255, 122, 28, 0.05) 100%);
   backdrop-filter: blur(10px);
 }
 
@@ -407,8 +324,8 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-menu-drawer__close-btn:hover {
-  background: rgba(255, 106, 0, 0.2);
-  border-color: rgba(255, 106, 0, 0.4);
+  background: rgba(255, 122, 28, 0.2);
+  border-color: rgba(255, 122, 28, 0.4);
   transform: scale(1.05);
 }
 
@@ -440,7 +357,7 @@ html:not(.dark) .neon-ring {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 106, 0, 0.1) 0%, rgba(255, 106, 0, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(255, 122, 28, 0.1) 0%, rgba(255, 122, 28, 0.05) 100%);
   opacity: 0;
   transition: opacity 0.2s ease;
   border-radius: 0.75rem;
@@ -458,25 +375,25 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-menu-drawer__link--brand {
-  background: linear-gradient(135deg, rgba(255, 106, 0, 0.15) 0%, rgba(255, 106, 0, 0.08) 100%);
-  color: #ff6a00;
-  border: 1px solid rgba(255, 106, 0, 0.3);
-  box-shadow: 0 2px 8px rgba(255, 106, 0, 0.2);
+  background: linear-gradient(135deg, rgba(255, 122, 28, 0.15) 0%, rgba(255, 122, 28, 0.08) 100%);
+  color: var(--ff-amber-500);
+  border: 1px solid rgba(255, 122, 28, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 122, 28, 0.2);
 }
 
 .ff-menu-drawer__link--brand:hover {
-  background: linear-gradient(135deg, rgba(255, 106, 0, 0.25) 0%, rgba(255, 106, 0, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(255, 122, 28, 0.25) 0%, rgba(255, 122, 28, 0.15) 100%);
   transform: translateX(4px) scale(1.02);
-  box-shadow: 0 6px 16px rgba(255, 106, 0, 0.3);
+  box-shadow: 0 6px 16px rgba(255, 122, 28, 0.3);
 }
 
 .ff-menu-drawer__auth-btn {
   display: block;
   width: 100%;
   padding: 0.75rem 1rem;
-  background: rgba(255, 106, 0, 0.1);
-  color: #ff6a00;
-  border: 1px solid rgba(255, 106, 0, 0.2);
+  background: rgba(255, 122, 28, 0.1);
+  color: var(--ff-amber-500);
+  border: 1px solid rgba(255, 122, 28, 0.2);
   border-radius: 0.5rem;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -484,7 +401,7 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-menu-drawer__auth-btn:hover {
-  background: rgba(255, 106, 0, 0.2);
+  background: rgba(255, 122, 28, 0.2);
 }
 
 /* AuthModal styles */
@@ -536,8 +453,8 @@ html:not(.dark) .neon-ring {
 
 .ff-input:focus {
   outline: none;
-  border-color: #ff6a00;
-  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.2);
+  border-color: var(--ff-amber-500);
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.2);
 }
 
 .ff-input-transparent {
@@ -555,8 +472,8 @@ html:not(.dark) .neon-ring {
 
 .ff-input-transparent:focus {
   outline: none;
-  border-color: #ff6a00;
-  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.2);
+  border-color: var(--ff-amber-500);
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.2);
 }
 
 .ff-input-large {
@@ -584,8 +501,8 @@ html:not(.dark) .neon-ring {
 
 .ff-input-large:focus {
   outline: none;
-  border-color: #ff6a00;
-  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.2);
+  border-color: var(--ff-amber-500);
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.2);
 }
 
 /* Custom scrollbar styles */
@@ -625,7 +542,7 @@ html:not(.dark) .neon-ring {
   left: 0;
   right: 0;
   background: rgba(0, 0, 0, 0.95);
-  border: 1px solid rgba(255, 106, 0, 0.3);
+  border: 1px solid rgba(255, 122, 28, 0.3);
   border-radius: 0.5rem;
   margin-top: 0.25rem;
   z-index: 50;
@@ -652,7 +569,7 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-suggestion-item:hover {
-  background: rgba(255, 106, 0, 0.1);
+  background: rgba(255, 122, 28, 0.1);
   color: white;
 }
 
@@ -663,7 +580,7 @@ html:not(.dark) .neon-ring {
 .ff-input-transparent.typing::after {
   content: '|';
   animation: blink 1s infinite;
-  color: #ff6a00;
+  color: var(--ff-amber-500);
 }
 
 @keyframes blink {
@@ -689,16 +606,16 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-btn--primary {
-  background: #ff6a00;
+  background: var(--ff-amber-500);
   color: white;
 }
 
 .ff-btn--primary:hover {
-  background: #e55a00;
+  background: var(--ff-amber-600);
 }
 
 .ff-btn--primary:disabled {
-  background: rgba(255, 106, 0, 0.5);
+  background: rgba(255, 122, 28, 0.5);
   cursor: not-allowed;
 }
 
@@ -712,7 +629,7 @@ html:not(.dark) .neon-ring {
 .ff-auth-link {
   background: none;
   border: none;
-  color: #ff6a00;
+  color: var(--ff-amber-500);
   text-decoration: underline;
   cursor: pointer;
   font-size: 0.875rem;
@@ -720,7 +637,7 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-auth-link:hover {
-  color: #e55a00;
+  color: var(--ff-amber-600);
 }
 
 /* Expandable Menu Sections */
@@ -760,9 +677,9 @@ html:not(.dark) .neon-ring {
 }
 
 .ff-menu-expand-btn:hover {
-  background: rgba(255, 106, 0, 0.2);
-  border-color: rgba(255, 106, 0, 0.4);
-  color: #ff6a00;
+  background: rgba(255, 122, 28, 0.2);
+  border-color: rgba(255, 122, 28, 0.4);
+  color: var(--ff-amber-500);
   transform: scale(1.1);
 }
 
@@ -771,7 +688,7 @@ html:not(.dark) .neon-ring {
   margin-left: 1.5rem;
   margin-top: 0.5rem;
   padding-left: 1rem;
-  border-left: 2px solid rgba(255, 106, 0, 0.3);
+  border-left: 2px solid rgba(255, 122, 28, 0.3);
   background: rgba(255, 255, 255, 0.02);
   border-radius: 0 0.5rem 0.5rem 0;
 }
@@ -797,7 +714,7 @@ html:not(.dark) .neon-ring {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 106, 0, 0.08) 0%, rgba(255, 106, 0, 0.04) 100%);
+  background: linear-gradient(135deg, rgba(255, 122, 28, 0.08) 0%, rgba(255, 122, 28, 0.04) 100%);
   opacity: 0;
   transition: opacity 0.2s ease;
   border-radius: 0.5rem;
@@ -833,13 +750,13 @@ html:not(.dark) .neon-ring {
 /* Logo focus styles - remove blue outline */
 .ff-logo:focus {
   outline: none !important;
-  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.3) !important;
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.3) !important;
   border-radius: 8px;
 }
 
 .ff-logo:focus-visible {
   outline: none !important;
-  box-shadow: 0 0 0 2px rgba(255, 106, 0, 0.3) !important;
+  box-shadow: 0 0 0 2px rgba(255, 122, 28, 0.3) !important;
   border-radius: 8px;
 }
 

@@ -11,7 +11,7 @@ export default function ResultsList({ results }) {
       {results.map((r, i) => (
         <div
           key={i}
-          className={`result-card transition transform hover:scale-[1.01] hover:shadow-glass ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} duration-300 ease-out`}
+          className={`result-card transition transform hover:scale-[1.01] hover:shadow-ff-card ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'} duration-300 ease-out`}
           style={{ transitionDelay: `${i * 40}ms` }}
         >
           <div className="result-title">{r.name || r.title || "Bez nazwy"}</div>

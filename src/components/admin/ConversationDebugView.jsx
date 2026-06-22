@@ -90,33 +90,33 @@ export default function ConversationDebugView({ event, expanded = false }) {
     const chunks = tts_chunks || [];
 
     return (
-        <div className="border border-[var(--border)] rounded-lg overflow-hidden bg-[rgba(0,0,0,0.2)]">
+        <div className="border border-[var(--ff-stroke)] rounded-lg overflow-hidden bg-[rgba(0,0,0,0.2)]">
             {/* Header - always visible */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-[rgba(255,255,255,0.02)] transition-colors"
             >
                 <div className="flex items-center gap-3">
-                    <span className="text-[var(--muted)] text-xs">{formattedTime}</span>
-                    <span className="font-mono text-sm text-[var(--fg0)]">{intent || 'unknown'}</span>
+                    <span className="text-[var(--ff-text-2)] text-xs">{formattedTime}</span>
+                    <span className="font-mono text-sm text-[var(--ff-text-1)]">{intent || 'unknown'}</span>
                     {intent_confidence && (
                         <span className={`text-xs px-2 py-0.5 rounded-full ${confidenceColor} text-white`}>
                             {(intent_confidence * 100).toFixed(0)}%
                         </span>
                     )}
                     {surface_key && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-[rgba(255,255,255,0.1)] text-[var(--muted)]">
+                        <span className="text-xs px-2 py-0.5 rounded bg-[rgba(255,255,255,0.1)] text-[var(--ff-text-2)]">
                             {surface_key}
                         </span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
                     {timings?.durationMs && (
-                        <span className="text-xs text-[var(--muted)]">
+                        <span className="text-xs text-[var(--ff-text-2)]">
                             {timings.durationMs}ms
                         </span>
                     )}
-                    <span className="text-[var(--muted)]">
+                    <span className="text-[var(--ff-text-2)]">
                         {isExpanded ? '▼' : '▶'}
                     </span>
                 </div>
@@ -137,7 +137,7 @@ export default function ConversationDebugView({ event, expanded = false }) {
                                     <span className="w-6 text-center">{stage.icon}</span>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs text-[var(--muted)] uppercase tracking-wider">
+                                            <span className="text-xs text-[var(--ff-text-2)] uppercase tracking-wider">
                                                 {stage.label}
                                             </span>
                                             {stage.badge && (
@@ -146,11 +146,11 @@ export default function ConversationDebugView({ event, expanded = false }) {
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-sm text-[var(--fg0)] break-words mt-0.5">
+                                        <p className="text-sm text-[var(--ff-text-1)] break-words mt-0.5">
                                             {stage.value}
                                         </p>
                                         {stage.subtext && (
-                                            <p className="text-xs text-[var(--muted)] mt-0.5">
+                                            <p className="text-xs text-[var(--ff-text-2)] mt-0.5">
                                                 {stage.subtext}
                                             </p>
                                         )}
@@ -162,10 +162,10 @@ export default function ConversationDebugView({ event, expanded = false }) {
                     {/* Surface facts */}
                     {surface_facts && Object.keys(surface_facts).length > 0 && (
                         <div className="p-2 rounded bg-[rgba(255,255,255,0.03)]">
-                            <span className="text-xs text-[var(--muted)] uppercase tracking-wider">
+                            <span className="text-xs text-[var(--ff-text-2)] uppercase tracking-wider">
                                 Surface Facts
                             </span>
-                            <pre className="text-xs text-[var(--fg0)] mt-1 overflow-x-auto">
+                            <pre className="text-xs text-[var(--ff-text-1)] mt-1 overflow-x-auto">
                                 {JSON.stringify(surface_facts, null, 2)}
                             </pre>
                         </div>
@@ -174,7 +174,7 @@ export default function ConversationDebugView({ event, expanded = false }) {
                     {/* TTS Chunks */}
                     {chunks.length > 0 && (
                         <div className="p-2 rounded bg-[rgba(255,255,255,0.03)]">
-                            <span className="text-xs text-[var(--muted)] uppercase tracking-wider">
+                            <span className="text-xs text-[var(--ff-text-2)] uppercase tracking-wider">
                                 TTS Chunks ({chunks.length})
                             </span>
                             <div className="mt-2 space-y-1">
@@ -183,10 +183,10 @@ export default function ConversationDebugView({ event, expanded = false }) {
                                         key={idx}
                                         className="flex items-center gap-2 text-xs"
                                     >
-                                        <span className="text-[var(--muted)] w-6 text-right">{idx + 1}.</span>
-                                        <span className="text-[var(--fg0)] flex-1">{chunk.text || chunk}</span>
+                                        <span className="text-[var(--ff-text-2)] w-6 text-right">{idx + 1}.</span>
+                                        <span className="text-[var(--ff-text-1)] flex-1">{chunk.text || chunk}</span>
                                         {chunk.pauseAfter > 0 && (
-                                            <span className="text-[var(--muted)]">+{chunk.pauseAfter}ms</span>
+                                            <span className="text-[var(--ff-text-2)]">+{chunk.pauseAfter}ms</span>
                                         )}
                                     </div>
                                 ))}
@@ -196,7 +196,7 @@ export default function ConversationDebugView({ event, expanded = false }) {
 
                     {/* Timings breakdown */}
                     {timings && (
-                        <div className="flex gap-4 text-xs text-[var(--muted)]">
+                        <div className="flex gap-4 text-xs text-[var(--ff-text-2)]">
                             {timings.nluMs && <span>NLU: {timings.nluMs}ms</span>}
                             {timings.dbMs && <span>DB: {timings.dbMs}ms</span>}
                             {timings.fsmMs && <span>FSM: {timings.fsmMs}ms</span>}
@@ -218,7 +218,7 @@ export default function ConversationDebugView({ event, expanded = false }) {
 export function ConversationDebugList({ events = [], title = "Pipeline Debug" }) {
     if (!events || events.length === 0) {
         return (
-            <div className="text-center py-8 text-[var(--muted)]">
+            <div className="text-center py-8 text-[var(--ff-text-2)]">
                 Brak danych do wyświetlenia
             </div>
         );
@@ -227,7 +227,7 @@ export function ConversationDebugList({ events = [], title = "Pipeline Debug" })
     return (
         <div className="space-y-2">
             {title && (
-                <h3 className="text-sm font-medium text-[var(--fg0)] mb-3">{title}</h3>
+                <h3 className="text-sm font-medium text-[var(--ff-text-1)] mb-3">{title}</h3>
             )}
             {events.map((event, idx) => (
                 <ConversationDebugView

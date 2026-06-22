@@ -10,7 +10,7 @@
 .channel-card__title {
     font-size: 1.125rem;
     font-weight: 700;
-    color: var(--fg0);
+    color: var(--ff-text-1);
     margin: 0 0 1.5rem 0;
 }
 
@@ -37,7 +37,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: var(--muted);
+    color: var(--ff-text-2);
 }
 
 .channel-bar__icon {
@@ -46,12 +46,12 @@
 
 .channel-bar__percentage {
     font-weight: 600;
-    color: var(--fg0);
+    color: var(--ff-text-1);
 }
 
 .channel-bar__track {
     height: 0.5rem;
-    background: var(--glass);
+    background: var(--ff-glass);
     border-radius: 0.25rem;
     overflow: hidden;
 }
@@ -68,7 +68,7 @@
     gap: 0.5rem;
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--ff-stroke);
     text-align: center;
 }
 
@@ -80,6 +80,6 @@
 
 .channel-count__label {
     font-size: 0.75rem;
-    color: var(--muted);
+    color: var(--ff-text-2);
     margin: 0.25rem 0 0 0;
 }

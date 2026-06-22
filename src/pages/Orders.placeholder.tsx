@@ -3,7 +3,7 @@ import PanelHeader from '../components/PanelHeader'
 
 export default function OrdersPlaceholder() {
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg0)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--ff-bg-0)' }}>
       <PanelHeader title="Zamówienia" showMenuButton />
       <div className="flex flex-col items-center justify-center gap-3 pt-32 text-white/30">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">

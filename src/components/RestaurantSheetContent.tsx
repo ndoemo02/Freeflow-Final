@@ -95,7 +95,7 @@ function FloatingRestaurantFocusCard({
             <div
                 className="relative h-full overflow-hidden px-3.5 py-2.5"
                 style={{
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: '20px',
                     background: isFocused
                         ? 'linear-gradient(155deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, rgba(5,8,16,0.98) 100%)'
                         : isRecommended
@@ -109,8 +109,8 @@ function FloatingRestaurantFocusCard({
                     boxShadow: isFocused
                         ? '0 0 0 1px rgba(255,255,255,0.08) inset, 0 16px 36px rgba(0,0,0,0.45)'
                         : '0 8px 16px rgba(0,0,0,0.22)',
-                    backdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
-                    WebkitBackdropFilter: 'blur(var(--blur-md)) saturate(1.08)',
+                    backdropFilter: 'blur(var(--ff-blur)) saturate(1.08)',
+                    WebkitBackdropFilter: 'blur(var(--ff-blur)) saturate(1.08)',
                 }}
             >
                 {isRecommended && !isFocused && (
@@ -126,7 +126,7 @@ function FloatingRestaurantFocusCard({
                         style={{
                             width: 44,
                             height: 44,
-                            borderRadius: 'var(--radius-sm)',
+                            borderRadius: 'var(--ff-radius-btn)',
                             border: isFocused ? '1px solid rgba(6,182,212,0.28)' : '1px solid rgba(255,255,255,0.06)',
                         }}
                     >
@@ -141,7 +141,7 @@ function FloatingRestaurantFocusCard({
                             <span
                                 className="shrink-0 text-[10px] font-medium"
                                 style={{
-                                    borderRadius: 'var(--radius-pill)',
+                                    borderRadius: 'var(--ff-radius-chip)',
                                     padding: '2px 8px',
                                     background: isFocused ? 'rgba(6,182,212,0.18)' : 'rgba(255,255,255,0.07)',
                                     color: isFocused ? 'rgba(207,250,254,0.95)' : 'rgba(255,255,255,0.55)',
@@ -200,7 +200,7 @@ function FloatingRestaurantListCard({
                 className="relative overflow-hidden px-3 py-2"
                 style={{
                     minHeight: '80px',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: '20px',
                     background: isActive
                         ? 'linear-gradient(155deg, rgba(6,182,212,0.20) 0%, rgba(6,182,212,0.05) 45%, rgba(5,8,16,0.96) 100%)'
                         : isRecommended
@@ -229,7 +229,7 @@ function FloatingRestaurantListCard({
                         style={{
                             width: 40,
                             height: 40,
-                            borderRadius: 'var(--radius-sm)',
+                            borderRadius: 'var(--ff-radius-btn)',
                             border: isActive ? '1px solid rgba(6,182,212,0.25)' : '1px solid rgba(255,255,255,0.06)',
                         }}
                     >
@@ -249,7 +249,7 @@ function FloatingRestaurantListCard({
                             <div
                                 className="shrink-0 text-[10px] font-medium"
                                 style={{
-                                    borderRadius: 'var(--radius-pill)',
+                                    borderRadius: 'var(--ff-radius-chip)',
                                     padding: '2px 7px',
                                     background: isActive ? 'rgba(6,182,212,0.16)' : 'rgba(255,255,255,0.07)',
                                     color: isActive ? 'rgba(207,250,254,0.90)' : 'rgba(255,255,255,0.55)',
@@ -520,7 +520,7 @@ export default function RestaurantSheetContent({
                             onClick={handleCtaPress}
                             className="shrink-0 text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
                             style={{
-                                borderRadius: 'var(--radius-pill)',
+                                borderRadius: 'var(--ff-radius-chip)',
                                 padding: '5px 12px',
                                 background: 'rgba(0,0,0,0.45)',
                                 border: '1px solid rgba(255,255,255,0.10)',
@@ -632,7 +632,7 @@ export default function RestaurantSheetContent({
                             onClick={handleCtaPress}
                             className="text-[11px] font-medium text-white/75 backdrop-blur-md transition-all hover:text-white active:scale-95"
                             style={{
-                                borderRadius: 'var(--radius-pill)',
+                                borderRadius: 'var(--ff-radius-chip)',
                                 padding: '5px 12px',
                                 background: 'rgba(0,0,0,0.45)',
                                 border: '1px solid rgba(255,255,255,0.10)',

@@ -22,7 +22,7 @@ export default function PanelHeader({ title, subtitle = null, showBackButton = t
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 shrink-0"
-      style={{ borderBottom: '1px solid var(--border)' }}
+      style={{ borderBottom: '1px solid var(--ff-stroke)' }}
     >
       {/* Back */}
       {showBackButton && (
@@ -34,9 +34,9 @@ export default function PanelHeader({ title, subtitle = null, showBackButton = t
           className="flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0"
           style={{
             width: 32, height: 32,
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border)',
-            background: 'var(--glass)',
+            borderRadius: 'var(--ff-radius-btn)',
+            border: '1px solid var(--ff-stroke)',
+            background: 'var(--ff-glass)',
           }}
           title="Zamknij panel (ESC)"
           aria-label="Wróć"
@@ -60,9 +60,9 @@ export default function PanelHeader({ title, subtitle = null, showBackButton = t
           className="flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0"
           style={{
             width: 32, height: 32,
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border)',
-            background: 'var(--glass)',
+            borderRadius: 'var(--ff-radius-btn)',
+            border: '1px solid var(--ff-stroke)',
+            background: 'var(--ff-glass)',
           }}
           aria-label="Menu"
         >
