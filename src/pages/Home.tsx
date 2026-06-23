@@ -482,7 +482,7 @@ export default function Home() {
 
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
-        <div className="fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+        <div className="voice-dock-rail-safe fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <IntentChips />
           <VoiceDock
             onMicClick={handleMicClick}

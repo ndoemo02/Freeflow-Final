@@ -412,8 +412,27 @@ export default function MenuFlowView({
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             setActiveChip(key);
+            const section = sections.find(s => s.key === key);
+            if (section?.items[0]?._uiId) {
+                setFocusedId(section.items[0]._uiId);
+            }
         }
-    }, []);
+    }, [sections]);
+
+    /* ── sync focusedId when active chip changes from scroll (IntersectionObserver) ── */
+    useEffect(() => {
+        if (!activeChip || !sections.length) return;
+        if (Date.now() - manualFocusAt.current < 600) return;
+
+        const focusItem = normalizedItems.find(i => i._uiId === focusedId);
+        if (focusItem && focusItem.category === activeChip) return;
+
+        const section = sections.find(s => s.key === activeChip);
+        if (section?.items[0]?._uiId) {
+            manualFocusAt.current = Date.now();
+            setFocusedId(section.items[0]._uiId);
+        }
+    }, [activeChip, focusedId, sections, normalizedItems]);
 
     /* ── focused item + display data (computed at component level for focus panel) ── */
     const focusedItem = useMemo(
@@ -632,6 +651,7 @@ export default function MenuFlowView({
                                     manualFocusAt.current = Date.now();
                                     setFocusedId(item._uiId);
                                     setHighlightedId(item._uiId);
+                                    setActiveChip(section.key);
                                     const el = itemRefs.current.get(item._uiId);
                                     if (el) revealMenuRow(el);
                                 };
