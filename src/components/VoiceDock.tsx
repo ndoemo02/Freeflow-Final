@@ -14,7 +14,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 
 // ── Typy ──
 
-type DockState = 'idle' | 'listening' | 'speaking';
+type DockState = 'idle' | 'listening' | 'speaking' | 'thinking';
 
 interface VoiceDockProps {
   onMicClick?: () => void;
@@ -28,6 +28,7 @@ function toDockState(raw: string): DockState {
     case 'listening':
       return 'listening';
     case 'processing':
+      return 'thinking';
     case 'results_ready':
     case 'restaurant_selected':
     case 'item_selected':
@@ -89,9 +90,10 @@ function injectStateCSS() {
   const style = document.createElement('style');
   style.id = STATE_STYLE_ID;
   style.textContent = `
-    .ff-voice-dock[data-state="idle"]      { --left: 0; --right: 0; }
-    .ff-voice-dock[data-state="listening"] { --left: 1; --right: 0; }
-    .ff-voice-dock[data-state="speaking"]  { --left: 0; --right: 1; }
+    .ff-voice-dock[data-state="idle"]      { --left: 0; --right: 0; --thinking: 0; }
+    .ff-voice-dock[data-state="listening"] { --left: 1; --right: 0; --thinking: 0; }
+    .ff-voice-dock[data-state="speaking"]  { --left: 0; --right: 1; --thinking: 0; }
+    .ff-voice-dock[data-state="thinking"]  { --left: 0; --right: 0; --thinking: 1; }
 
     .ff-voice-dock.confirm {
       --ff-dock-confirm: 1;
@@ -257,6 +259,11 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
               <stop offset="0" stopColor="#3FA9FF"/>
               <stop offset="0.5" stopColor="#4a5159"/>
               <stop offset="1" stopColor="#FF7A1C"/>
+            </linearGradient>
+            <linearGradient id="ff-rim-grad-thinking" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#a855f7"/>
+              <stop offset="0.5" stopColor="#7c3aed"/>
+              <stop offset="1" stopColor="#c084fc"/>
             </linearGradient>
           </defs>
           <path

@@ -280,7 +280,7 @@ export default function MenuFlowView({
     const chips = useMemo(() => sections.map(s => ({ key: s.key, label: s.label })), [sections]);
     const showChips = chips.length > 1;
 
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 500px)';
+    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 120px)';
 
     /* ── topmost-visible focus picker ──
      *
@@ -553,10 +553,12 @@ export default function MenuFlowView({
                             />
                         )}
                         <div className="mf-card__banner-overlay" />
-                        <div className="mf-card__status-chip" aria-label="Amber poleca to danie">
-                            <span className="mf-card__status-dot" aria-hidden="true" />
-                            Amber poleca
-                        </div>
+                        {focusedItem._uiId === recommendedId && (
+                            <div className="mf-card__status-chip" aria-label="Amber poleca to danie">
+                                <span className="mf-card__status-dot" aria-hidden="true" />
+                                Amber poleca
+                            </div>
+                        )}
                         {focusedDisplay.price && (
                             <span className="mf-card__price-pill">{focusedDisplay.price}</span>
                         )}
