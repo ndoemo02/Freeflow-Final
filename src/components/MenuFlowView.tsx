@@ -333,10 +333,18 @@ export default function MenuFlowView({
         }
     }, []);
 
+    const scrollHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         scrollElRef.current = event.currentTarget;
         if (debounceRef.current !== null) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(commitFocus, 60);
+
+        window.dispatchEvent(new CustomEvent('freeflow:menu:scrolling'));
+        if (scrollHideTimerRef.current !== null) clearTimeout(scrollHideTimerRef.current);
+        scrollHideTimerRef.current = setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('freeflow:menu:scrollstopped'));
+        }, 900);
     }, [commitFocus]);
 
     /* initial focus + cleanup */
@@ -348,6 +356,7 @@ export default function MenuFlowView({
         }
         return () => {
             if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+            if (scrollHideTimerRef.current !== null) clearTimeout(scrollHideTimerRef.current);
         };
     }, [normalizedItems, commitFocus]);
 

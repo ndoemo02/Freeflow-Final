@@ -372,6 +372,19 @@ export default function Home() {
     return () => window.removeEventListener('freeflow:orderItem', handler);
   }, [handleTextSubmit]);
 
+  // VoiceDock scroll-hide
+  const dockWrapperRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const hide = () => { dockWrapperRef.current?.setAttribute('data-dock-hidden', 'true'); };
+    const show = () => { dockWrapperRef.current?.removeAttribute('data-dock-hidden'); };
+    window.addEventListener('freeflow:menu:scrolling', hide);
+    window.addEventListener('freeflow:menu:scrollstopped', show);
+    return () => {
+      window.removeEventListener('freeflow:menu:scrolling', hide);
+      window.removeEventListener('freeflow:menu:scrollstopped', show);
+    };
+  }, []);
+
   // --- Render ---
   return (
     <div className="home-page freeflow relative h-[100dvh] min-h-[100dvh] overflow-x-hidden overflow-y-hidden overscroll-y-none text-slate-100">
@@ -482,7 +495,7 @@ export default function Home() {
 
       {/* Voice Command Center (Input) - widoczne gdy viewMode === 'bar' */}
       {viewMode === 'bar' && (
-        <div className="voice-dock-rail-safe fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
+        <div ref={dockWrapperRef} className="voice-dock-rail-safe fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <IntentChips />
           <VoiceDock
             onMicClick={handleMicClick}

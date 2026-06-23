@@ -523,7 +523,7 @@
   position: absolute;
   inset: 0;
   clip-path: url(#ff-dock-clip);
-  background: rgba(12, 16, 20, 0.30);
+  background: rgba(16, 12, 9, 0.38);
   -webkit-backdrop-filter: blur(20px) saturate(1.1) brightness(1.04);
   backdrop-filter: blur(20px) saturate(1.1) brightness(1.04);
   box-shadow:
@@ -537,7 +537,7 @@
 .ff-voice-dock[data-state="listening"] .ff-voice-dock__glass,
 .ff-voice-dock[data-state="speaking"] .ff-voice-dock__glass,
 .ff-voice-dock[data-state="thinking"] .ff-voice-dock__glass {
-  background: rgba(12, 16, 20, 0.38);
+  background: rgba(20, 15, 11, 0.46);
 }
 
 /* Frost overlay — "zamrożone szkło" */
@@ -801,6 +801,18 @@
 /* ── VoiceDock container left offset for Switch/pająk ── */
 .voice-dock-rail-safe {
   padding-left: clamp(48px, 10vw, 72px) !important;
+}
+
+/* ── VoiceDock scroll-hide ── */
+.voice-dock-rail-safe {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  will-change: transform, opacity;
+}
+
+.voice-dock-rail-safe[data-dock-hidden="true"] {
+  opacity: 0;
+  transform: translateY(calc(100% + 16px));
+  pointer-events: none;
 }
 
 /* ── Reduced motion ── */
@@ -1279,7 +1291,7 @@
   border-radius: 24px 24px 0 0;
   overflow: hidden;
   z-index: 48;
-  background: rgba(7, 10, 18, 0.96);
+  background: rgba(14, 11, 9, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -1290,7 +1302,7 @@
   border-radius: 0;
   overflow: hidden;
   z-index: 55;
-  background: rgba(7, 10, 18, 0.98);
+  background: rgba(14, 11, 9, 0.98);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   will-change: transform, height;
@@ -1472,7 +1484,7 @@
   padding: 7px 0 5px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: linear-gradient(180deg, rgba(5, 8, 16, 0.96) 0%, rgba(5, 8, 16, 0.74) 100%);
+  background: linear-gradient(180deg, rgba(14, 11, 9, 0.96) 0%, rgba(14, 11, 9, 0.74) 100%);
 }
 
 .menu-flow-sticky-header__label {
@@ -1501,9 +1513,9 @@
   margin: 2px 0;
   padding: 9px 10px;
   cursor: pointer;
-  background: var(--ff-menu-row, rgba(255, 255, 255, 0.025));
-  border: 1px solid transparent;
-  border-left: 2px solid transparent;
+  background: rgba(18, 14, 11, 0.5);
+  border: 1px solid rgba(255, 177, 115, 0.06);
+  border-left: 2px solid rgba(255, 177, 115, 0.04);
   border-radius: var(--ff-radius-row, 12px);
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
@@ -1513,8 +1525,8 @@
 }
 
 .mf-row:hover {
-  background: var(--ff-menu-row-hover, rgba(255, 255, 255, 0.055));
-  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(26, 20, 16, 0.6);
+  border-color: rgba(255, 177, 115, 0.12);
 }
 
 .mf-row--recommended {
@@ -1523,10 +1535,10 @@
 
 .mf-row--is-focused {
   background:
-    linear-gradient(90deg, rgba(45, 212, 191, 0.05), rgba(56, 189, 248, 0.015) 42%, rgba(255, 255, 255, 0.015));
-  border-color: rgba(45, 212, 191, 0.08);
-  border-left-color: rgba(45, 212, 191, 0.35);
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.05), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+    linear-gradient(90deg, rgba(45, 212, 191, 0.04), rgba(249, 115, 22, 0.02) 42%, rgba(255, 255, 255, 0.01));
+  border-color: rgba(45, 212, 191, 0.06);
+  border-left-color: rgba(45, 212, 191, 0.30);
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.04), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
 }
 
 .mf-row--is-focused .mf-row__name {
@@ -1620,8 +1632,8 @@
   border: 1px solid rgba(249, 115, 22, 0.10);
   background:
     radial-gradient(100px 76px at 4% 2%, rgba(249, 115, 22, 0.07), transparent 65%),
-    radial-gradient(90px 68px at 98% 4%, rgba(56, 189, 248, 0.04), transparent 66%),
-    linear-gradient(156deg, rgba(24, 18, 15, 0.95) 0%, rgba(10, 13, 22, 0.97) 44%, rgba(6, 9, 17, 0.99) 100%);
+    radial-gradient(90px 68px at 98% 4%, rgba(249, 115, 22, 0.03), transparent 66%),
+    linear-gradient(156deg, rgba(26, 19, 14, 0.95) 0%, rgba(18, 14, 12, 0.97) 44%, rgba(12, 10, 8, 0.99) 100%);
   box-shadow:
     0 14px 32px rgba(0, 0, 0, 0.38),
     0 0 0 1px rgba(255, 177, 115, 0.04) inset,
@@ -1644,12 +1656,12 @@
 .mf-focus-panel::before {
   inset: 0;
   border-radius: inherit;
-  opacity: 0.50;
+  opacity: 0.45;
   background:
     linear-gradient(90deg, rgba(249, 115, 22, 0.35), rgba(255, 177, 115, 0.12), transparent 34%) top left / 44% 1px no-repeat,
     linear-gradient(180deg, rgba(249, 115, 22, 0.22), rgba(255, 177, 115, 0.06), transparent 50%) top left / 1px 42% no-repeat,
-    linear-gradient(270deg, rgba(56, 189, 248, 0.18), rgba(249, 115, 22, 0.08), transparent 38%) bottom right / 42% 1px no-repeat,
-    linear-gradient(0deg, rgba(56, 189, 248, 0.14), rgba(249, 115, 22, 0.06), transparent 55%) bottom right / 1px 38% no-repeat;
+    linear-gradient(270deg, rgba(249, 115, 22, 0.12), rgba(255, 177, 115, 0.06), transparent 38%) bottom right / 42% 1px no-repeat,
+    linear-gradient(0deg, rgba(249, 115, 22, 0.08), rgba(255, 177, 115, 0.04), transparent 55%) bottom right / 1px 38% no-repeat;
   filter: drop-shadow(0 0 1px rgba(249, 115, 22, 0.04));
   animation: mf-edge-breathe 9s ease-in-out infinite;
 }
@@ -1658,10 +1670,10 @@
   inset: 0;
   border-radius: inherit;
   z-index: 0;
-  opacity: 0.18;
+  opacity: 0.14;
   background:
     radial-gradient(130px 34px at 12% 0%, rgba(249, 115, 22, 0.08), transparent 72%),
-    radial-gradient(110px 28px at 92% 100%, rgba(56, 189, 248, 0.04), transparent 75%);
+    radial-gradient(110px 28px at 92% 100%, rgba(249, 115, 22, 0.03), transparent 75%);
   filter: blur(0.4px);
 }
 
