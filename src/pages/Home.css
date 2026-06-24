@@ -617,13 +617,16 @@
   padding: 0;
 }
 
-.ff-voice-dock__node--left svg {
-  width: 28px;
-  height: 28px;
+.ff-voice-dock__speaker-icon {
+  width: 32px;
+  height: 32px;
   position: relative;
   z-index: 2;
-  stroke: color-mix(in srgb, #3FA9FF calc(40% + var(--left) * 60%), #6b7177);
-  fill: none;
+  opacity: calc(0.58 + var(--left) * 0.42);
+  filter: drop-shadow(0 0 calc(var(--left) * 6px) rgba(63, 169, 255, 0.55));
+  transition: opacity 0.25s, filter 0.25s;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Left node glow (cyan) */
@@ -836,9 +839,9 @@
     height: 46px;
   }
 
-  .ff-voice-dock__node--left svg {
-    width: 24px;
-    height: 24px;
+  .ff-voice-dock__speaker-icon {
+    width: 26px;
+    height: 26px;
   }
 
   .ff-voice-dock__mic-btn {

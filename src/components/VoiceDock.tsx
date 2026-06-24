@@ -290,11 +290,14 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
             <span className="ff-voice-dock__rings" aria-hidden="true">
               <span /><span /><span />
             </span>
-            <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M4 9v6h3l5 4V5L7 9H4z"/>
-              <path d="M16 8.5a4 4 0 0 1 0 7" opacity=".8"/>
-              <path d="M18.5 6a7 7 0 0 1 0 12" opacity=".5"/>
-            </svg>
+            <img
+              src="/logo/ff-speaker.svg"
+              alt=""
+              aria-hidden="true"
+              className="ff-voice-dock__speaker-icon"
+              width="32"
+              height="32"
+            />
           </button>
 
           {/* Center — transcript + input */}
