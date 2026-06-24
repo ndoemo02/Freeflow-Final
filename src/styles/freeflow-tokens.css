@@ -1,18 +1,25 @@
 /* ============================================================
-   FreeFlow Design Tokens — v1
+   FreeFlow Design Tokens — v2
    Źródło prawdy: scena Discovery (neon amber + teal na ciepłym szkle)
    Import w src/styles/ przed Tailwindem: @import './freeflow-tokens.css';
+   Komponenty używają TYLKO tokenów semantycznych (--ff-action / --ff-price / --ff-voice / --ff-bg).
+   Zero surowych hex w komponentach.
    ============================================================ */
 
 :root {
-  /* ---------- KOLOR: marka ---------- */
-  --ff-amber-500: #FF7A1C;   /* logo script, akcent główny */
-  --ff-amber-400: #FF9433;   /* hover / gradient end */
-  --ff-amber-600: #E8650A;   /* pressed */
-  --ff-gold-400:  #F6B73C;   /* ceny, rating ★ — zawsze ten, nigdy amber */
+  /* ---------- KOLOR: paleta bazowa ---------- */
+  --ff-amber-500: #FF7A1C;
+  --ff-amber-400: #FF9433;
+  --ff-amber-600: #E8650A;
+  --ff-gold-400:  #F6B73C;
+  --ff-teal-400:  #3DDCC3;
+  --ff-teal-300:  #7AD6E0;
 
-  --ff-teal-400:  #3DDCC3;   /* systemowy feedback: wybrane, dock confirm, intent tagi */
-  --ff-teal-300:  #7AD6E0;   /* teal wtórny: ikony, linki w docku */
+  /* ---------- KOLOR: semantyczne (używaj tylko tych w komponentach) ---------- */
+  --ff-action:  var(--ff-amber-500);   /* akcja użytkownika: Dodaj, CTA, aktywna kategoria */
+  --ff-price:   var(--ff-gold-400);    /* wyłącznie ceny, tabular-nums */
+  --ff-voice:   var(--ff-teal-400);    /* głos Amber + system: orb, intent tagi, potwierdzenia */
+  --ff-bg:      var(--ff-bg-0);        /* tło główne */
 
   /* ---------- KOLOR: powierzchnie (scena = ciepła czerń, nie fiolet!) ---------- */
   --ff-bg-0:      #0B0908;   /* tło sceny pod zdjęciem; zamiast "galaktyki" w panelach */

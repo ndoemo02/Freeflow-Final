@@ -5,7 +5,7 @@
    DARK THEME + STARFIELD GLASS — spójny z prototypem
    Paleta: bg0=#070A12, sidebar=rgba(8,14,30,0.82)+blur(32px)
    Glass: rgba(12,18,40,0.55)+blur(24px)+inset highlight
-   Brand: --ff-orange=#FF7A1C
+   Brand: --ff-orange=var(--ff-action)
    ═══════════════════════════════════════════════ */
 
 .client-panel {
@@ -57,7 +57,7 @@
     border-radius: 8px;
     background: linear-gradient(135deg, rgba(249,115,22,0.25), rgba(249,115,22,0.10));
     border: 1px solid rgba(249,115,22,0.30);
-    color: #FF7A1C;
+    color: var(--ff-action);
     font-size: 11px;
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
@@ -137,7 +137,7 @@
     border-radius: 14px;
     background: linear-gradient(135deg, rgba(249,115,22,0.28), rgba(249,115,22,0.10));
     border: 1px solid rgba(249,115,22,0.25);
-    color: #FF7A1C;
+    color: var(--ff-action);
     flex-shrink: 0;
 }
 .cp-hero-body { flex: 1; min-width: 0; }
@@ -235,7 +235,7 @@
 .cp-orders-empty-label { font-size: 0.875rem; color: rgba(255,255,255,0.35); }
 .cp-orders-empty-cta {
     font-size: 0.8125rem;
-    color: #FF7A1C;
+    color: var(--ff-action);
     font-weight: 500;
     opacity: 0.8;
     transition: opacity 0.15s;
@@ -265,7 +265,7 @@
     border-radius: 12px;
     background: rgba(249,115,22,0.10);
     border: 1px solid rgba(249,115,22,0.18);
-    color: #FF7A1C;
+    color: var(--ff-action);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
 }
@@ -414,7 +414,7 @@
 }
 
 .bottom-nav-btn.active {
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 /* Layout */
@@ -769,7 +769,7 @@
 }
 
 .service-card.orange {
-    background: linear-gradient(135deg, #FF7A1C, #FF5A4E);
+    background: linear-gradient(135deg, var(--ff-action), #FF5A4E);
 }
 
 .service-card.yellow {
@@ -777,7 +777,7 @@
 }
 
 .service-card.blue {
-    background: linear-gradient(135deg, #3DDCC3, #FF7A1C);
+    background: linear-gradient(135deg, var(--ff-voice), var(--ff-action));
 }
 
 .service-card.green {
@@ -922,7 +922,7 @@
 }
 
 .trend.gold {
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 .stat-value {
@@ -991,7 +991,7 @@
 
 .status-badge.blue {
     background: rgba(96, 165, 250, 0.2);
-    color: #3DDCC3;
+    color: var(--ff-voice);
 }
 
 .order-info {
@@ -1054,7 +1054,7 @@
 
 .progress-labels .current {
     font-weight: 500;
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 .progress-labels .pending {
@@ -1068,7 +1068,7 @@
 }
 
 .order-eta i {
-    color: #FF7A1C;
+    color: var(--ff-action);
     margin-right: 0.25rem;
 }
 
@@ -1111,7 +1111,7 @@
 }
 
 .card-header button {
-    color: #FF7A1C;
+    color: var(--ff-action);
     font-size: 0.75rem;
     font-weight: 500;
     background: none;
@@ -1148,7 +1148,7 @@
 }
 
 .order-icon.orange i {
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 .order-icon.yellow {
@@ -1164,7 +1164,7 @@
 }
 
 .order-icon.blue i {
-    color: #3DDCC3;
+    color: var(--ff-voice);
 }
 
 .order-details {
@@ -1213,7 +1213,7 @@
 }
 
 .promo-banner.orange {
-    background: linear-gradient(90deg, #facc15, #FF7A1C);
+    background: linear-gradient(90deg, #facc15, var(--ff-action));
 }
 
 .promo-title {
@@ -1539,7 +1539,7 @@
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #FF7A1C;
+    border-color: var(--ff-action);
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
 
@@ -1585,7 +1585,7 @@
 }
 
 .toggle input:checked+.slider {
-    background: #FF7A1C;
+    background: var(--ff-action);
 }
 
 .toggle input:checked+.slider::after {
@@ -1740,7 +1740,7 @@
 
 .input-with-dot input:focus {
     outline: none;
-    border-color: #FF7A1C;
+    border-color: var(--ff-action);
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
 
@@ -1761,11 +1761,11 @@
 }
 
 .vehicle-btn:hover {
-    border-color: #FF7A1C;
+    border-color: var(--ff-action);
 }
 
 .vehicle-btn.active {
-    border: 2px solid #FF7A1C;
+    border: 2px solid var(--ff-action);
     background: rgba(249, 115, 22, 0.1);
 }
 
@@ -1776,7 +1776,7 @@
 }
 
 .vehicle-btn.active i {
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 .vehicle-btn p {
@@ -2165,7 +2165,7 @@
 }
 
 .order-icon-lg.orange i {
-    color: #FF7A1C;
+    color: var(--ff-action);
 }
 
 .order-icon-lg.yellow {
@@ -2181,7 +2181,7 @@
 }
 
 .order-icon-lg.blue i {
-    color: #3DDCC3;
+    color: var(--ff-voice);
 }
 
 .order-icon-lg i {
@@ -2350,7 +2350,7 @@
 }
 
 .credit-card.purple {
-    background: linear-gradient(135deg, #7c3aed, #FF7A1C);
+    background: linear-gradient(135deg, #7c3aed, var(--ff-action));
 }
 
 .credit-card.dark {
@@ -2480,7 +2480,7 @@
 }
 
 .payment-icon.blue i {
-    color: #3DDCC3;
+    color: var(--ff-voice);
 }
 
 .payment-icon.green {
@@ -2559,7 +2559,7 @@
 }
 
 .billing-header button {
-    color: #FF7A1C;
+    color: var(--ff-action);
     font-size: 0.75rem;
     font-weight: 500;
     background: none;
@@ -2633,7 +2633,7 @@
     right: 0;
     width: 1.75rem;
     height: 1.75rem;
-    background: #FF7A1C;
+    background: var(--ff-action);
     color: white;
     border: none;
     border-radius: 50%;
@@ -2965,7 +2965,7 @@
 
 /* Legacy utility color overrides — mapped to dark palette */
 .text-purple-500 {
-    color: #FF7A1C;
+    color: var(--ff-action);
     /* brand orange zamiast purple */
 }
 
@@ -2974,7 +2974,7 @@
 }
 
 .text-blue-500 {
-    color: #3DDCC3;
+    color: var(--ff-voice);
 }
 
 /* Scrollbar — dark theme */
@@ -3044,7 +3044,7 @@
 }
 
 .service-card.orange .service-icon i {
-    color: #FF7A1C !important;
+    color: var(--ff-action) !important;
     text-shadow: 0 0 12px rgba(251, 146, 60, 0.8) !important;
 }
 
@@ -3062,7 +3062,7 @@
 }
 
 .service-card.blue .service-icon i {
-    color: #3DDCC3 !important;
+    color: var(--ff-voice) !important;
     text-shadow: 0 0 12px rgba(96, 165, 250, 0.8) !important;
 }
 

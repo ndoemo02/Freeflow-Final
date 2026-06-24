@@ -49,7 +49,7 @@ export function StateIsland() {
         color = 'bg-blue-500/20 text-blue-300 border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]';
     } else if (isChoosingRestaurant) {
         label = 'Wybór restauracji';
-        color = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+        color = 'border-[rgba(61,220,195,0.35)] text-[var(--ff-voice)] bg-[rgba(61,220,195,0.10)]';
     } else if (isIdle) {
         label = 'Odkrywanie';
         color = 'bg-gray-500/20 text-gray-300 border-gray-500/30';

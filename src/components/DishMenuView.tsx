@@ -307,14 +307,15 @@ export default function DishMenuView({
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       {heroPrice && (
-                        <span className="rounded-full bg-orange-500/20 px-3 py-1 text-xs font-semibold text-orange-400">
+                        <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ff-price)' }}>
                           {heroPrice}
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => onAddToCart(focusedItem)}
-                        className="rounded-full bg-orange-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-500/25 transition-transform active:scale-95"
+                        className="rounded-full px-5 py-2 text-sm font-semibold transition-transform active:scale-95"
+                        style={{ background: 'var(--ff-action)', color: 'var(--ff-on-amber)' }}
                       >
                         + Dodaj
                       </button>
@@ -337,9 +338,10 @@ export default function DishMenuView({
                     onClick={() => scrollToSection(chip.key)}
                     className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                       isActive
-                        ? 'bg-orange-500 border border-orange-500 text-white'
+                        ? 'border text-white'
                         : 'border border-white/10 text-white/60 hover:bg-white/[0.06]'
                     }`}
+                    style={isActive ? { background: 'var(--ff-action)', borderColor: 'var(--ff-action)', color: 'var(--ff-on-amber)' } : undefined}
                     layout
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   >
@@ -423,7 +425,7 @@ export default function DishMenuView({
                           {/* price pill */}
                           {price && (
                             <div className="flex shrink-0 items-center">
-                              <span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-400">
+                              <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--ff-price)' }}>
                                 {price}
                               </span>
                             </div>

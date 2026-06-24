@@ -88,7 +88,7 @@ function NavItem({ iconName, label, route, onClick, isDanger = false, badge, req
       {badge > 0 && (
         <span
           className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-          style={{ background: "rgba(249,115,22,0.18)", color: "#FF7A1C" }}
+          style={{ background: "rgba(255,122,28,0.18)", color: "var(--ff-action)" }}
         >
           {badge}
         </span>

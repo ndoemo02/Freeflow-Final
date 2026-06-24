@@ -15,17 +15,17 @@
 }
 
 [data-amber-status="listening"] .orb-container {
-  filter: drop-shadow(0 0 7px #3DDCC399) drop-shadow(0 0 5px #7AD6E066);
+  filter: drop-shadow(0 0 7px rgba(61, 220, 195, 0.60)) drop-shadow(0 0 5px rgba(122, 214, 224, 0.40));
 }
 
 [data-amber-status="thinking"] .orb-container {
-  filter: drop-shadow(0 0 8px #FF7A1C99) drop-shadow(0 0 5px #7AD6E066);
+  filter: drop-shadow(0 0 8px rgba(255, 122, 28, 0.60)) drop-shadow(0 0 5px rgba(122, 214, 224, 0.40));
 }
 
 [data-amber-status="ok"] .orb-container,
 [data-amber-status="speaking"] .orb-container,
 [data-amber-status="presenting"] .orb-container {
-  filter: drop-shadow(0 0 7px #FF7A1C99) drop-shadow(0 0 5px #b91c1c66);
+  filter: drop-shadow(0 0 7px rgba(255, 122, 28, 0.60)) drop-shadow(0 0 5px rgba(185, 28, 28, 0.40));
 }
 
 [data-amber-status="error"] .orb-container {
@@ -77,17 +77,17 @@
 }
 
 [data-amber-status="listening"] .orb-inner {
-  background: #3DDCC3;
+  background: var(--ff-voice);
 }
 
 [data-amber-status="thinking"] .orb-inner {
-  background: #FF7A1C;
+  background: var(--ff-action);
 }
 
 [data-amber-status="ok"] .orb-inner,
 [data-amber-status="speaking"] .orb-inner,
 [data-amber-status="presenting"] .orb-inner {
-  background: #FF7A1C;
+  background: var(--ff-action);
 }
 
 [data-amber-status="error"] .orb-inner {
@@ -118,7 +118,7 @@
 }
 
 [data-amber-status="listening"] .orb-inner:nth-child(2) {
-  background: #7AD6E0;
+  background: var(--ff-teal-300);
 }
 
 [data-amber-status="thinking"] .orb-inner:nth-child(2) {
@@ -132,7 +132,7 @@
 }
 
 [data-amber-status="error"] .orb-inner:nth-child(2) {
-  background: #FF7A1C;
+  background: var(--ff-action);
 }
 
 @keyframes rotate {

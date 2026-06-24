@@ -53,20 +53,9 @@ export default function ResultCarousel({ items, type, onItemClick }: ResultCarou
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
-                            <div className={`
-                                h-full flex flex-col justify-between overflow-hidden relative
-                                rounded-[32px] backdrop-blur-2xl bg-[#0F0F16]/80 border border-white/10 
-                                transition-all duration-300 shadow-xl
-                                ${type === 'restaurant'
-                                    ? 'hover:shadow-[0_0_30px_rgba(0,240,255,0.2)] hover:border-cyan-500/30'
-                                    : 'hover:shadow-[0_0_30px_rgba(255,0,170,0.2)] hover:border-fuchsia-500/30'}
-                            `}>
+                            <div className="h-full flex flex-col justify-between overflow-hidden relative rounded-[32px] backdrop-blur-2xl bg-[#0F0F16]/80 border border-white/[0.08] transition-all duration-300 shadow-xl hover:border-white/[0.14]">
                                 {/* Top Image Area (Placeholder Gradient) */}
-                                <div className={`
-                                    h-40 w-full relative p-4 flex flex-col justify-between
-                                    bg-gradient-to-br 
-                                    ${type === 'restaurant' ? 'from-cyan-900/40 via-[#0a0a1a] to-[#0a0a1a]' : 'from-fuchsia-900/40 via-[#0a0a1a] to-[#0a0a1a]'}
-                                `}>
+                                <div className="h-40 w-full relative p-4 flex flex-col justify-between bg-gradient-to-br from-[#1a110a]/80 via-[#0a0a0a] to-[#0a0a0a]">
                                     {/* Rating Badge */}
                                     <div className="self-end px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-1">
                                         <span className="text-yellow-400 text-xs">★</span>
@@ -84,9 +73,7 @@ export default function ResultCarousel({ items, type, onItemClick }: ResultCarou
                                 {/* Content Content */}
                                 <div className="p-5 pt-2 flex flex-col flex-1 gap-2">
                                     {/* Category / Subtitle */}
-                                    <div className={`text-[10px] font-bold tracking-wider uppercase
-                                        ${type === 'restaurant' ? 'text-cyan-400' : 'text-fuchsia-400'}
-                                    `}>
+                                    <div className="text-[10px] font-bold tracking-wider uppercase text-white/40">
                                         {type === 'restaurant' ? (item.cuisine_type || 'RESTAURACJA') : (item.category || 'DANIE')}
                                     </div>
 
@@ -113,12 +100,7 @@ export default function ResultCarousel({ items, type, onItemClick }: ResultCarou
                                     </div>
 
                                     {/* Select Button */}
-                                    <button className={`
-                                        w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02] active:scale-95
-                                        ${type === 'restaurant'
-                                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/30'
-                                            : 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-lg shadow-fuchsia-900/30'}
-                                    `}>
+                                    <button className="w-full py-3 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02] active:scale-95 bg-[var(--ff-action)] text-[var(--ff-on-amber)]">
                                         Wybierz
                                         <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                                     </button>

@@ -201,10 +201,10 @@ html:not(.dark) .neon-ring {
   width: 100%;
   height: 100%;
   fill: none;
-  stroke: #3DDCC3;
+  stroke: var(--ff-voice);
   stroke-width: 3;
   stroke-dasharray: 20;
-  filter: drop-shadow(0 0 6px #3DDCC3);
+  filter: drop-shadow(0 0 6px var(--ff-voice));
   animation: waveflow 2.5s infinite ease-in-out;
 }
 

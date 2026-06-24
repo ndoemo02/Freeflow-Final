@@ -45,7 +45,7 @@
   color: #e8eefc;
 }
 
-.ff-btn--primary { background: #ff6a00; color: #0b1222; }
+.ff-btn--primary { background: var(--ff-action); color: var(--ff-on-amber); }
 .ff-btn--secondary { background: rgba(255,255,255,.16); }
 
 /* === CATEGORIES (pills) === */
@@ -65,9 +65,9 @@
 }
 
 .ff-pill[data-active="true"] {
-  background: #ff6a00;
-  color: #0b1222;
-  border-color: #ff6a00;
+  background: var(--ff-action);
+  color: var(--ff-on-amber);
+  border-color: var(--ff-action);
 }
 
 /* === BOTTOM NAV === */
@@ -94,8 +94,8 @@
 }
 
 .ff-bottom-item[data-active="true"] {
-  background: rgba(255, 106, 0, .20);
-  border: 1px solid rgba(255, 106, 0, .35);
+  background: rgba(255, 122, 28, 0.20);
+  border: 1px solid rgba(255, 122, 28, 0.35);
 }
 
 /* dodajemy oddech pod całą aplikację */

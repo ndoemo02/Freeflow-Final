@@ -999,10 +999,10 @@
   width: 100%;
   height: 100%;
   fill: none;
-  stroke: #3DDCC3;
+  stroke: var(--ff-voice);
   stroke-width: 3;
   stroke-dasharray: 20;
-  filter: drop-shadow(0 0 6px #3DDCC3);
+  filter: drop-shadow(0 0 6px var(--ff-voice));
   animation: wave 2.5s infinite linear;
 }
 
@@ -1855,7 +1855,7 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--ff-on-amber);
-  background: var(--ff-amber-500);
+  background: var(--ff-action);
   border: 1px solid rgba(255, 177, 115, 0.25);
   letter-spacing: 0;
   cursor: pointer;
@@ -1865,7 +1865,6 @@
 .mf-card__add-btn:hover,
 .mf-card:hover .mf-card__add-btn {
   background: var(--ff-amber-400);
-  box-shadow: 0 0 18px rgba(255, 122, 28, 0.30);
 }
 
 /* shared badges */
@@ -1896,9 +1895,9 @@
   border-radius: 999px;
   font-size: 10px;
   font-weight: 600;
-  color: rgba(165, 243, 252, 0.95);
-  background: rgba(6, 182, 212, 0.18);
-  border: 1px solid rgba(6, 182, 212, 0.30);
+  color: rgba(61, 220, 195, 0.92);
+  background: rgba(61, 220, 195, 0.12);
+  border: 1px solid rgba(61, 220, 195, 0.25);
   letter-spacing: 0.02em;
   transition: all 0.15s ease;
 }

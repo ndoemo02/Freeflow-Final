@@ -188,7 +188,7 @@
     0% {
         transform: scale(0.9);
         box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6);
-        background-color: #FF7A1C;
+        background-color: var(--ff-action);
     }
 
     70% {
@@ -200,7 +200,7 @@
     100% {
         transform: scale(0.9);
         box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
-        background-color: #FF7A1C;
+        background-color: var(--ff-action);
     }
 }
 
@@ -229,7 +229,7 @@
     display: block;
     width: 3px;
     height: 15px;
-    background-color: #FF7A1C;
+    background-color: var(--ff-action);
     border-radius: 3px;
     animation: dynamic-wave 1.2s ease-in-out infinite;
     transform-origin: center;
@@ -610,7 +610,7 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background-color: #FF7A1C;
+    background-color: var(--ff-action);
     display: inline-block;
     animation: mega-typing-bounce 1.4s infinite ease-in-out both;
     filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.6));
