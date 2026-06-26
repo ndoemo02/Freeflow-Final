@@ -206,7 +206,7 @@ export default function LoadingScreen({ onComplete }) {
                   className="inline-block text-orange-400 opacity-0 transform -translate-x-20"
                   style={{
                     letterSpacing: '-0.05em',
-                    animation: `slideInLeft 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
+                    animation: `slideInLeft 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
                     animationDelay: `${2.5 + index * 0.2}s` // Opóźnienie po rozpoczęciu mowy Amber (1s opóźnienie + 1.5s)
                   }}
                 >
@@ -222,7 +222,7 @@ export default function LoadingScreen({ onComplete }) {
             <span
               className="inline-block text-white opacity-0 transform translate-x-20"
               style={{
-                animation: 'slideInRight 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 5.5s forwards' // Po 5.5s - gdy Amber kończy mówić (1s opóźnienie + 4.5s)
+                animation: 'slideInRight 0.8s cubic-bezier(0.22, 1, 0.36, 1) 5.5s forwards' // Po 5.5s - gdy Amber kończy mówić (1s opóźnienie + 4.5s)
               }}
             >
               Flow

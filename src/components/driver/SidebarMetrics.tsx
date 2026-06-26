@@ -48,9 +48,9 @@ export const SidebarMetrics: React.FC = () => {
                 trend="neutral"
             />
 
-            <div className="mt-4 p-4 bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border border-indigo-500/20 rounded-2xl">
-                <div className="text-indigo-300 text-xs font-bold mb-1">PRO TIP</div>
-                <p className="text-indigo-100/70 text-sm leading-relaxed">
+            <div className="mt-4 p-4 bg-[var(--ff-glass)] border border-[var(--ff-stroke-selected)] rounded-2xl">
+                <div className="text-[var(--ff-voice)] text-xs font-bold mb-1">PRO TIP</div>
+                <p className="text-[var(--ff-text-2)] text-sm leading-relaxed">
                     Head towards <span className="text-white font-medium">Market Square</span>. Demand forecast shows +45% surge in 15 mins.
                 </p>
             </div>

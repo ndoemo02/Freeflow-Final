@@ -2,7 +2,7 @@ import React from 'react';
 
 const COLORS = {
   ready: 'bg-green-500',
-  thinking: 'bg-purple-500',
+  thinking: 'bg-[var(--ff-voice)]',
   idle: 'bg-yellow-400',
   error: 'bg-red-500',
 };

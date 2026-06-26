@@ -86,7 +86,7 @@ export default function FreeFunSection() {
 
   return (
     <div className="w-full max-w-5xl mx-auto p-6 text-white">
-      <h2 className="text-2xl font-bold mb-4 text-indigo-400 flex items-center gap-2">
+      <h2 className="text-2xl font-bold mb-4 text-[var(--ff-action)] flex items-center gap-2">
         🌆 FreeFun — Darmowe wydarzenia w okolicy
       </h2>
 
@@ -97,12 +97,12 @@ export default function FreeFunSection() {
           value={city}
           onChange={(e) => setCity(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !loading && fetchEvents()}
-          className="bg-neutral-900 border border-neutral-700 p-2 rounded-lg text-sm flex-1 min-w-[160px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-neutral-900 border border-neutral-700 p-2 rounded-lg text-sm flex-1 min-w-[160px] text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[var(--ff-action)]"
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="bg-neutral-900 border border-neutral-700 p-2 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-neutral-900 border border-neutral-700 p-2 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-[var(--ff-action)]"
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
@@ -111,7 +111,7 @@ export default function FreeFunSection() {
         <button
           onClick={fetchEvents}
           disabled={loading}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          className="px-4 py-2 bg-[var(--ff-action)] hover:bg-[var(--ff-amber-400)] disabled:opacity-40 disabled:cursor-not-allowed text-[var(--ff-on-amber)] rounded-lg transition-colors"
         >
           {loading ? "Ładowanie..." : "Szukaj"}
         </button>
@@ -152,9 +152,9 @@ export default function FreeFunSection() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 hover:border-indigo-500 transition-all duration-300 hover:shadow-[0_0_10px_rgba(99,102,241,0.5)] rounded-lg overflow-hidden">
+                <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 border border-neutral-700 hover:border-[var(--ff-stroke-selected)] transition-all duration-300 hover:shadow-[var(--ff-glow-teal)] rounded-lg overflow-hidden">
                   <div className="p-4 space-y-2">
-                    <h3 className="text-lg font-semibold text-indigo-300">{ev.title}</h3>
+                    <h3 className="text-lg font-semibold text-[var(--ff-text-1)]">{ev.title}</h3>
                     <p className="text-sm text-neutral-300 line-clamp-3">{ev.description}</p>
                     <p className="text-xs text-neutral-500">
                       🗓️ {new Date(ev.date).toLocaleString("pl-PL", {
@@ -173,7 +173,7 @@ export default function FreeFunSection() {
                         href={ev.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-block mt-2 text-xs text-indigo-400 hover:underline"
+                        className="inline-block mt-2 text-xs text-[var(--ff-action)] hover:underline"
                       >
                         🔗 Zobacz szczegóły
                       </a>

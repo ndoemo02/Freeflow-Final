@@ -21,7 +21,7 @@ const fabItems = [
   { 
     icon: <Package size={20} />, 
     label: "Zamówienia", 
-    color: "from-purple-500 to-pink-400",
+    color: "from-amber-500 to-orange-400",
     delay: 0.2
   },
   { 

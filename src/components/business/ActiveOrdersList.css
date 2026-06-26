@@ -62,7 +62,6 @@
 .order-item {
     background: var(--ff-glass);
     border: 1px solid var(--ff-stroke);
-    border-left: 3px solid var(--ff-stroke);
     border-radius: 0.75rem;
     padding: 1rem;
     transition: background 0.2s, border-color 0.2s;

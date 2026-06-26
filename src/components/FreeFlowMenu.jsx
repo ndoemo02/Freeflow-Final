@@ -45,8 +45,8 @@ const menuItems = [
     label: "Zamówienia", 
     route: "/orders",
     type: "orders",
-    color: "text-purple-400",
-    hoverColor: "hover:text-purple-300"
+    color: "text-[var(--ff-action)]",
+    hoverColor: "hover:text-[var(--ff-amber-400)]"
   },
   { 
     icon: <Settings size={20} />, 

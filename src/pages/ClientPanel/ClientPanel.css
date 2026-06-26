@@ -1,6 +1,4 @@
 /* Client Panel Styles — FreeFlow Dark Theme + Starfield */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 /* ═══════════════════════════════════════════════
    DARK THEME + STARFIELD GLASS — spójny z prototypem
    Paleta: bg0=#070A12, sidebar=rgba(8,14,30,0.82)+blur(32px)
@@ -9,7 +7,7 @@
    ═══════════════════════════════════════════════ */
 
 .client-panel {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ff-font-ui);
     min-height: 100vh;
     background-color: #000000;
     background-image: url('/deep_space_wallpaper.png');

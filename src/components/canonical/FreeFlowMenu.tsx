@@ -51,8 +51,8 @@ const menuItems = [
         label: "Zamówienia",
         route: "/orders",
         type: "orders",
-        color: "from-purple-500 to-pink-400",
-        glowColor: "shadow-purple-500/50"
+        color: "from-amber-500 to-orange-400",
+        glowColor: "shadow-amber-500/50"
     },
     {
         id: "settings",

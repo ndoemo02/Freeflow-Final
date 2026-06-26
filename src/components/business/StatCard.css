@@ -8,7 +8,7 @@
     padding: 1.25rem 1.5rem;
     background: var(--ff-glass);
     border: 1px solid var(--ff-stroke);
-    border-left: 3px solid var(--ff-amber-500);
+    box-shadow: inset 3px 0 0 var(--ff-amber-500);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

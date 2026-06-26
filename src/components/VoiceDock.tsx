@@ -229,7 +229,9 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
   const inputPlaceholder =
     dockState === 'listening'
       ? 'Słucham...'
-      : 'Napisz lub powiedz...';
+      : dockState === 'thinking'
+      ? 'Amber myśli...'
+      : 'Powiedz co chcesz zamówić...';
 
   const handleInnerClick = () => {
     inputRef.current?.focus();

@@ -70,7 +70,7 @@
   --ff-dur-base:   260ms;   /* pojawianie kart, chipów */
   --ff-dur-reorder: 420ms;  /* animowany reorder kart — NIE reset */
   --ff-ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
-  --ff-ease-spring: cubic-bezier(0.34, 1.45, 0.42, 1); /* clamped overshoot */
+  --ff-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);    /* expo-out — no overshoot */
 }
 
 /* Dostępność: szanuj reduced motion bez wyłączania feedbacku */

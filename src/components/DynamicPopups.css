@@ -114,27 +114,26 @@
   transform: translateY(0);
 }
 
-/* Typy popupów */
+/* Typy popupów — status przez border całościowy, nie side-tab */
 .dynamic-popup.info {
-  border-left: 4px solid #00E0FF;
+  border-color: rgba(0, 224, 255, 0.35);
 }
 
 .dynamic-popup.success {
-  border-left: 4px solid #10B981;
+  border-color: rgba(61, 220, 195, 0.35);
 }
 
 .dynamic-popup.warning {
-  border-left: 4px solid #F59E0B;
+  border-color: rgba(246, 183, 60, 0.35);
 }
 
 .dynamic-popup.error {
-  border-left: 4px solid #EF4444;
+  border-color: rgba(255, 90, 78, 0.35);
 }
 
 /* Style dla użytkownika (lewa strona) */
 .dynamic-popup.user {
-  border-left: 4px solid #3B82F6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.07);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
@@ -144,8 +143,7 @@
 
 /* Style dla Amber (prawa strona) */
 .dynamic-popup.amber {
-  border-left: 4px solid #00E0FF;
-  background: rgba(0, 224, 255, 0.1);
+  background: rgba(0, 224, 255, 0.07);
   border: 1px solid rgba(0, 224, 255, 0.2);
 }
 

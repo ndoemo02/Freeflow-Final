@@ -138,7 +138,7 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
           return '0 0 15px rgba(0, 255, 119, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)';
       }
     }};
-    transition: all 0.3s cubic-bezier(.65, 1.35, .5, 1);
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
     z-index: 2;
   }

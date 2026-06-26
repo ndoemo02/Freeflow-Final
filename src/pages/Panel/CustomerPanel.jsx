@@ -1120,20 +1120,20 @@ function SettingsTab({ profile, loyaltyPoints, notifications, setNotifications }
       </div>
 
       {/* Loyalty Program */}
-      <div className="rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-pink-500/10 p-6">
+      <div className="rounded-xl border border-[var(--ff-stroke-selected)] bg-[var(--ff-fill-selected)] p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-white mb-1">Program Lojalnościowy</h3>
             <p className="text-sm text-slate-300">Zbieraj punkty za każde zamówienie</p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-purple-400">{loyaltyPoints}</div>
+            <div className="text-3xl font-bold text-[var(--ff-price)]">{loyaltyPoints}</div>
             <div className="text-xs text-slate-400">punktów</div>
           </div>
         </div>
         <div className="w-full bg-black/30 rounded-full h-2 mb-2">
           <div
-            className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500"
+            className="bg-gradient-to-r from-[var(--ff-teal-400)] to-[var(--ff-amber-500)] h-2 rounded-full transition-all duration-500"
             style={{ width: `${Math.min((loyaltyPoints % 100), 100)}%` }}
           />
         </div>
@@ -1330,9 +1330,9 @@ function StatsCards({ orders }) {
       title: "Łączna kwota",
       value: `${totalSpent.toFixed(2)} zł`,
       icon: "💰",
-      gradient: "from-purple-500/25 to-purple-500/10",
-      borderColor: "border-purple-500/30",
-      glowColor: "rgba(168, 85, 247, 0.3)"
+      gradient: "from-[var(--ff-amber-500)]/20 to-[var(--ff-amber-500)]/5",
+      borderColor: "border-[var(--ff-stroke-selected)]",
+      glowColor: "rgba(255, 122, 28, 0.25)"
     },
     {
       title: "W trakcie",
