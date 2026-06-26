@@ -22,7 +22,7 @@ export default function Header() {
       <div className="mx-auto max-w-6xl px-4 h-14 flex items-center justify-between">
         <a href="/" className="text-xl font-extrabold select-none">
           <span className="text-orange-500">Free</span>
-          <span className="text-purple-400">Flow</span>
+          <span className="text-[var(--ff-voice)]">Flow</span>
         </a>
 
         <div className="flex items-center gap-3">
@@ -39,7 +39,7 @@ export default function Header() {
           </div>
 
           <button
-            className="rounded-xl bg-orange-500 hover:bg-orange-400 text-slate-900 font-semibold px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400/70"
+            className="rounded-xl bg-[var(--ff-action)] hover:bg-[var(--ff-amber-400)] text-[var(--ff-bg)] font-semibold px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[var(--ff-action)]/70"
             aria-label="Koszyk"
             type="button"
           >
