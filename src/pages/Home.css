@@ -1644,7 +1644,7 @@
   backdrop-filter: blur(16px) saturate(1.08);
   -webkit-backdrop-filter: blur(16px) saturate(1.08);
   isolation: isolate;
-  transition: border-radius 0.2s var(--ff-ease-out);
+  transition: margin 0.2s ease-out, border-radius 0.2s ease-out;
 }
 
 /* ── FOCUSED CARD (legacy inline — kept for compatibility) ── */
@@ -1739,7 +1739,7 @@
   align-items: flex-start;
   justify-content: flex-end;
   padding: 10px;
-  transition: opacity 0.2s var(--ff-ease-out);
+  transition: height 0.2s ease-out, padding 0.2s ease-out;
 }
 
 .mf-card__banner-img {
@@ -1779,7 +1779,7 @@
 /* body */
 .mf-card__body {
   padding: 9px 13px 2px;
-  transition: opacity 0.2s var(--ff-ease-out);
+  transition: padding 0.2s ease-out;
 }
 
 .mf-card__status-chip {
@@ -1845,7 +1845,7 @@
   padding: 7px 13px 10px;
   border-top: 0;
   background: transparent;
-  transition: opacity 0.2s var(--ff-ease-out);
+  transition: padding 0.2s ease-out;
 }
 
 .mf-card__add-btn {
