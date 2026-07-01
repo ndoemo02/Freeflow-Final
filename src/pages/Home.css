@@ -1533,7 +1533,8 @@
 }
 
 .mf-row--recommended {
-  border-left-color: rgba(249, 115, 22, 0.24);
+  border-color: rgba(61, 220, 195, 0.28);
+  background: rgba(20, 32, 30, 0.42);
 }
 
 .mf-row--is-focused {
@@ -1542,6 +1543,13 @@
   border-color: rgba(45, 212, 191, 0.06);
   border-left-color: rgba(45, 212, 191, 0.30);
   box-shadow: 0 0 8px rgba(45, 212, 191, 0.04), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+}
+
+/* recommended wins when both states overlap (auto-reveal focuses the recommended row) */
+.mf-row--recommended.mf-row--is-focused {
+  border-color: rgba(61, 220, 195, 0.32);
+  background: rgba(20, 32, 30, 0.46);
+  box-shadow: 0 0 8px rgba(61, 220, 195, 0.10), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
 }
 
 .mf-row--is-focused .mf-row__name {
@@ -1625,6 +1633,35 @@
   border: 1px solid rgba(246, 183, 60, 0.16);
 }
 
+/* "Amber wybiera" mini equalizer — voice-tag on recommended row */
+.mf-row__voice-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  height: 12px;
+}
+
+.mf-row__voice-tag span {
+  display: block;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--ff-voice);
+  opacity: 0.85;
+  transform-origin: center;
+  animation: mf-voice-tag-wave 1.1s ease-in-out infinite;
+}
+
+.mf-row__voice-tag span:nth-child(1) { animation-delay: 0s; }
+.mf-row__voice-tag span:nth-child(2) { animation-delay: 0.15s; }
+.mf-row__voice-tag span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes mf-voice-tag-wave {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
 /* ── FIXED FOCUS PANEL (anchored above scroll list) ── */
 .mf-focus-panel {
   flex-shrink: 0;
@@ -1645,6 +1682,48 @@
   -webkit-backdrop-filter: blur(16px) saturate(1.08);
   isolation: isolate;
   transition: margin 0.2s ease-out, border-radius 0.2s ease-out;
+}
+
+/* recommended state — sole sanctioned ambient glow (data-voice moment) */
+.mf-focus-panel--recommended {
+  border-color: rgba(61, 220, 195, 0.22);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(61, 220, 195, 0.10) inset,
+    0 1px 0 rgba(255,255,255,0.03) inset,
+    0 0 20px rgba(61, 220, 195, 0.12);
+}
+
+/* nitka — thread connecting hero to the recommended row below */
+.mf-voice-thread {
+  flex-shrink: 0;
+  height: 10px;
+  margin: -4px auto 0;
+  width: 2px;
+  display: flex;
+  justify-content: center;
+}
+
+.mf-voice-thread span {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: linear-gradient(to bottom, var(--ff-voice), transparent);
+  animation: mf-thread-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mf-thread-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mf-voice-thread span,
+  .mf-card__status-dot,
+  .mf-row__voice-tag span {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 
 /* ── FOCUSED CARD (legacy inline — kept for compatibility) ── */
@@ -1794,14 +1873,14 @@
   min-height: 22px;
   padding: 3px 9px;
   border-radius: var(--radius-pill, 999px);
-  color: rgba(255, 213, 178, 0.92);
+  color: var(--ff-voice);
   background:
-    linear-gradient(135deg, rgba(5, 8, 16, 0.78), rgba(22, 17, 13, 0.70)),
-    linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(56, 189, 248, 0.08));
-  border: 1px solid rgba(255, 177, 115, 0.20);
+    linear-gradient(135deg, rgba(5, 8, 16, 0.82), rgba(10, 20, 18, 0.74)),
+    rgba(61, 220, 195, 0.10);
+  border: 1px solid rgba(61, 220, 195, 0.35);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.065) inset, 0 4px 14px rgba(0,0,0,0.18);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.065) inset, 0 0 12px rgba(61, 220, 195, 0.18);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1812,8 +1891,14 @@
   width: 5px;
   height: 5px;
   border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.58);
+  background: var(--ff-voice);
+  box-shadow: 0 0 8px rgba(61, 220, 195, 0.60);
+  animation: mf-voice-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mf-voice-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 .mf-card__name {

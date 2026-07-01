@@ -19,7 +19,7 @@ body {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Light theme overrides (dark-first: only when dark class is absent) */
-html:not(.dark) {
+html.light-theme {
   --ff-bg-0: #F6F8FF;
   --ff-bg-1: #EEF2FF;
   --ff-text-1: #0A1020;
@@ -71,7 +71,7 @@ body.business-theme {
   z-index: 0;
 }
 
-html:not(.dark) .grid-overlay {
+html.light-theme .grid-overlay {
   opacity: 0.25;
   mix-blend-mode: multiply;
 }
@@ -99,7 +99,7 @@ html:not(.dark) .grid-overlay {
     0 0 26px rgba(255, 122, 28, 0.10);
 }
 
-html:not(.dark) .neon-ring {
+html.light-theme .neon-ring {
   box-shadow:
     0 0 0 1px rgba(249, 115, 22, 0.18),
     0 16px 30px rgba(10, 16, 32, 0.10),

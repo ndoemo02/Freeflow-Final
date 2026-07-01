@@ -561,7 +561,8 @@ export default function MenuFlowView({
 
             {/* fixed focus panel — expanded view of currently focused item */}
             {focusedItem && focusedDisplay && (
-                <div className="mf-focus-panel">
+                <>
+                <div className={`mf-focus-panel ${focusedItem._uiId === recommendedId ? 'mf-focus-panel--recommended' : ''}`}>
                     <motion.div
                         className="mf-card__banner"
                         style={{ background: focusedDisplay.bannerGradient }}
@@ -625,6 +626,12 @@ export default function MenuFlowView({
                         </button>
                     </div>
                 </div>
+                {focusedItem._uiId === recommendedId && (
+                    <div className="mf-voice-thread" aria-hidden="true" data-voice="true">
+                        <span />
+                    </div>
+                )}
+                </>
             )}
 
             {/* sectioned list */}
@@ -709,9 +716,14 @@ export default function MenuFlowView({
                                                     : item?.ingredients || ''}
                                             </div>
                                         </div>
-                                        {price && (
+                                        {(price || isRecommended) && (
                                             <div className="mf-row__right">
-                                                <div className="mf-row__price">{price}</div>
+                                                {isRecommended && (
+                                                    <span className="mf-row__voice-tag" aria-label="Amber wybiera" data-voice="true">
+                                                        <span /><span /><span />
+                                                    </span>
+                                                )}
+                                                {price && <div className="mf-row__price">{price}</div>}
                                             </div>
                                         )}
                                     </motion.button>
