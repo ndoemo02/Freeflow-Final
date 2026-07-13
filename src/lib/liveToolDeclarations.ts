@@ -15,12 +15,13 @@ const A = Type.ARRAY;
 export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   {
     name: 'find_nearby',
-    description: 'Find nearby restaurants using optional location and cuisine filters.',
+    description: 'Find nearby restaurants. Use query for a concrete dish, ingredient, drink, or menu need; use cuisine only for a cuisine type. The backend verifies matches against real menus.',
     parameters: {
       type: O,
       properties: {
         location: { type: S },
         cuisine: { type: S },
+        query: { type: S },
         lat: { type: N },
         lng: { type: N },
       },
@@ -183,7 +184,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'search_menu_items',
-    description: 'Search for a specific dish by name in the current restaurant menu. Use when menu is large and the dish name isnt in the initial list. Returns matching items with full details.',
+    description: 'Search a dish, drink, dessert, sauce, or add-on in the current restaurant menu. If the cart has items, the backend always scopes this search to the cart restaurant. Use this before claiming availability; do not search another restaurant for a cart companion unless the user explicitly asks to switch.',
     parameters: {
       type: O,
       properties: {

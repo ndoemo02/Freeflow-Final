@@ -12,6 +12,7 @@ import {
 import { startPCM16Stream } from '../lib/audioStream';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
+import { composeLiveSystemInstruction } from '../lib/liveSystemInstruction';
 import {
   useGeminiFunctionRelay,
   type GeminiFunctionCall,
@@ -248,6 +249,21 @@ async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
   } catch {
     return fallback;
   }
+}
+
+async function fetchLiveAccessToken(model: string): Promise<string> {
+  const response = await fetch(getApiUrl('/api/voice/live/token'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+  const payload = await response.json().catch(() => null);
+  const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
+  if (!response.ok || !token) {
+    const code = typeof payload?.error === 'string' ? payload.error : 'live_token_unavailable';
+    throw new Error(code);
+  }
+  return token;
 }
 
 export interface UseGeminiLiveSessionOptions {
@@ -809,12 +825,6 @@ export function useGeminiLiveSession({
       return;
     }
 
-    const apiKey = import.meta.env.VITE_GEMINI_LIVE_API_KEY as string | undefined;
-    if (!apiKey) {
-      setError('VITE_GEMINI_LIVE_API_KEY not configured');
-      return;
-    }
-
     const runtimeConfig = await fetchLiveRuntimeConfig();
     const activeModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
     if (!activeModel) {
@@ -866,26 +876,28 @@ export function useGeminiLiveSession({
     const hasGpsRule = (s: string) =>
       /\b(lokalizacj|GPS|współrzędn|miasto.*pytaj|pytaj.*miasto)\b/i.test(s);
 
-    let activeInstruction = runtimeConfig.amberPrompt || defaultInstruction;
+    let customStylePrompt = runtimeConfig.amberPrompt;
     if (!runtimeConfig.amberPrompt && !runtimeConfig.fetched) {
       try {
         const stored = localStorage.getItem('amber_live_prompt');
         if (stored && stored.trim().length > 40) {
-          activeInstruction = stored.trim();
+          customStylePrompt = stored.trim();
         }
       } catch { /* noop */ }
     }
-    // Safety net: if the active instruction (from admin panel or localStorage)
-    // does not contain GPS rule, prepend it. Admin prompts saved before
-    // 2026-05-09 may lack this critical guard.
-    if (!hasGpsRule(activeInstruction)) {
-      activeInstruction = GPS_SAFETY_PREFIX + ' ' + activeInstruction;
-    }
-    // LIVE_HARD_GUARDS removed — backend enforces all rules deterministically
+    const activeInstruction = composeLiveSystemInstruction({
+      baseInstruction: defaultInstruction,
+      customStylePrompt,
+      gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
+    });
 
     try {
       cleanupRuntime(true);
-      const ai = new GoogleGenAI({ apiKey });
+      const ephemeralToken = await fetchLiveAccessToken(activeModel);
+      const ai = new GoogleGenAI({
+        apiKey: ephemeralToken,
+        httpOptions: { apiVersion: 'v1alpha' },
+      });
       const player = playerRef.current;
 
       let frameCount = 0;
