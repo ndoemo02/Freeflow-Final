@@ -157,7 +157,7 @@ function getAdminToken(): string {
     }
 }
 
-function getHeaders() {
+function getHeaders(): Record<string, string> {
     const token = getAdminToken();
     return token
         ? {

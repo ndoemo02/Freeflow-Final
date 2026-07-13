@@ -19,6 +19,8 @@ interface BrainEvent {
     type: string;
     channel?: string;
     payload?: Record<string, any>;
+    chips?: any[];
+    confidence?: string;
 }
 
 interface BrainMeta {

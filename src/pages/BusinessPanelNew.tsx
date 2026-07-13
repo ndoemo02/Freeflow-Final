@@ -5,15 +5,10 @@ import { OwnerRestaurantSelector } from '../components/OwnerRestaurantSelector';
 import { useOwnerRestaurant } from '../hooks/useOwnerRestaurant';
 import { KDSOrder } from '../lib/kdsApi';
 import { formatDemoOrderLabel } from '../lib/demoLabels';
+import { formatKdsElapsedTime, getKdsElapsedMs } from '../lib/kdsTime';
 import '../components/panels/KitchenDisplay.css'; // Dodany CSS prototypu
 
 type StationFilter = 'all' | 'kuchnia' | 'grill' | 'zimne' | 'bar' | 'desery' | 'wydawka';
-
-function formatDuration(ms: number): string {
-    const minutes = Math.floor(ms / 1000 / 60);
-    const seconds = Math.floor((ms / 1000) % 60);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-}
 
 function OrderCard({
     order,
@@ -30,11 +25,13 @@ function OrderCard({
     handleToggleItem: (id: string, index: number) => void;
     activeStation: string;
 }) {
-    const [elapsedTime, setElapsedTime] = useState(0);
+    const [elapsedTime, setElapsedTime] = useState(() => getKdsElapsedMs(order.created_at));
 
     useEffect(() => {
+        const updateElapsedTime = () => setElapsedTime(getKdsElapsedMs(order.created_at));
+        updateElapsedTime();
         const interval = setInterval(() => {
-            setElapsedTime(Date.now() - new Date(order.created_at).getTime());
+            updateElapsedTime();
         }, 1000);
         return () => clearInterval(interval);
     }, [order.created_at]);
@@ -84,7 +81,7 @@ function OrderCard({
                     </div>
                 </div>
                 <div className={`kds-order-card__timer ${cardStatusClass}`}>
-                    {formatDuration(elapsedTime)}
+                    {formatKdsElapsedTime(elapsedTime)}
                 </div>
             </div>
 

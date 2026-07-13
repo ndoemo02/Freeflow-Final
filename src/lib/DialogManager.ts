@@ -389,7 +389,7 @@ if (prev.restaurantId || isFoodItem) {
 
   // jeśli user pyta ogólnie o menu — pokaż listę top pozycji
   if (wantsMenuList) {
-    const items = await searchMenuItems(prev.restaurantId, "");
+    const items = await searchMenuItems(prev.restaurantId!, "");
     if (items.length > 0) {
       // weź top 3–5 i zbuduj podpowiedzi
       const top = items.slice(0, 5);
@@ -414,7 +414,7 @@ if (prev.restaurantId || isFoodItem) {
 // jeśli user mówi konkretnie o produkcie – szukamy itemu i od razu proponujemy
 if (isFoodItem) {
   console.log("🔍 Searching menu for:", normalized, "in restaurant:", prev.restaurantId);
-  const items = await searchMenuItems(prev.restaurantId, normalized);
+  const items = await searchMenuItems(prev.restaurantId!, normalized);
   console.log("📋 Menu search results:", items);
   if (items.length > 0) {
     // Znajdź najlepsze dopasowanie zamiast brać pierwszą pozycję

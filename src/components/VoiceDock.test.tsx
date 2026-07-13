@@ -13,7 +13,7 @@ describe('VoiceDock', () => {
   it('renders dock with input placeholder by default', () => {
     render(<VoiceDock />);
     expect(
-      screen.getByPlaceholderText(/napisz lub powiedz/i),
+      screen.getByPlaceholderText(/powiedz co chcesz zamówić/i),
     ).toBeInTheDocument();
   });
 

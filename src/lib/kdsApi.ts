@@ -23,6 +23,7 @@ export type BackendOrderStatus =
     | 'preparing'   // Being prepared
     | 'ready'       // Ready for pickup/delivery
     | 'delivered'   // Completed
+    | 'completed'   // Completed (legacy/backend alias)
     | 'cancelled';  // Cancelled
 
 /**
@@ -186,8 +187,6 @@ export function getChannelDisplay(channel: OrderChannel): {
             return { name: 'Room Service', short: 'HOTEL', icon: 'fa-bed', cssClass: 'channel-hotel' };
         case 'delivery':
             return { name: 'Dostawa', short: 'DOST', icon: 'fa-motorcycle', cssClass: 'channel-delivery' };
-        default:
-            return { name: channel, short: channel.toUpperCase(), icon: 'fa-box', cssClass: '' };
     }
 }
 

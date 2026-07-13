@@ -10,10 +10,10 @@ export const useOrders = (options = {}) => {
     onError = null,
   } = options;
 
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(/** @type {any[]} */ ([]));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [currentOrder, setCurrentOrder] = useState(null);
+  const [error, setError] = useState(/** @type {string | null} */ (null));
+  const [currentOrder, setCurrentOrder] = useState(/** @type {any} */ (null));
 
   const normalizeQuantity = (item) => {
     const raw = item?.quantity ?? item?.qty ?? 1;

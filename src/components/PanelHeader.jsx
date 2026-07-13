@@ -15,7 +15,7 @@ const IconMenu = () => (
   </svg>
 )
 
-export default function PanelHeader({ title, subtitle = null, showBackButton = true, showMenuButton = true }) {
+export default function PanelHeader({ title, subtitle = '', showBackButton = true, showMenuButton = true }) {
   const navigate = useNavigate();
   const openDrawer = useUI((s) => s.openDrawer);
 

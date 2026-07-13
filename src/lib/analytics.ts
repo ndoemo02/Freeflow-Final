@@ -76,12 +76,12 @@ export async function getAnalyticsKPI(period: string = '7'): Promise<AnalyticsDa
       if (typeof o?.total === 'number') return o.total;
       return 0;
     };
-    const totalRevenue = currentOrders?.reduce((sum, order) => sum + valueOf(order), 0) || 0;
+    const totalRevenue = currentOrders?.reduce((sum: number, order: any) => sum + valueOf(order), 0) || 0;
     const totalOrders = currentOrders?.length || 0;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     // Oblicz metryki dla poprzedniego okresu
-    const prevRevenue = prevOrders?.reduce((sum, order) => sum + valueOf(order), 0) || 0;
+    const prevRevenue = prevOrders?.reduce((sum: number, order: any) => sum + valueOf(order), 0) || 0;
     const prevOrdersCount = prevOrders?.length || 0;
     const prevAvgOrder = prevOrdersCount > 0 ? prevRevenue / prevOrdersCount : 0;
 
@@ -141,7 +141,7 @@ export async function getOrdersChartData(period: string = '7'): Promise<OrdersCh
       dailyOrders[dateKey] = 0;
     }
 
-    orders?.forEach(order => {
+    orders?.forEach((order: any) => {
       const dateKey = order.created_at.split('T')[0];
       if (dailyOrders.hasOwnProperty(dateKey)) {
         dailyOrders[dateKey]++;
@@ -189,7 +189,7 @@ export async function getHourlyDistribution(): Promise<HourlyDistribution> {
       'Inne': 0
     };
 
-    orders?.forEach(order => {
+    orders?.forEach((order: any) => {
       const hour = new Date(order.created_at).getHours();
       
       if (hour >= 11 && hour < 14) {
@@ -239,7 +239,7 @@ export async function getTopDishes(): Promise<TopDish[]> {
     // Parsuj JSON items i zlicz dania
     const dishCounts: { [key: string]: { name: string; count: number } } = {};
 
-    orders?.forEach(order => {
+    orders?.forEach((order: any) => {
       try {
         const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
         if (Array.isArray(items)) {
@@ -301,7 +301,7 @@ export async function getTopRestaurants(): Promise<TopRestaurant[]> {
     // Grupuj po restauracjach
     const restaurantRevenue: { [key: string]: { name: string; city: string; revenue: number } } = {};
 
-    orders?.forEach(order => {
+    orders?.forEach((order: any) => {
       const restaurant = order.restaurants as any;
       if (restaurant) {
         const key = restaurant.name;

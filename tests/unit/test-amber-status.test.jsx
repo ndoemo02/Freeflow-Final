@@ -20,7 +20,7 @@ describe('AmberStatus Component', () => {
     
     const statusIndicator = screen.getByTitle(/Status: Myśli/i);
     expect(statusIndicator).toBeInTheDocument();
-    expect(statusIndicator).toHaveClass('bg-purple-500', 'animate-pulse');
+    expect(statusIndicator).toHaveClass('bg-[var(--ff-voice)]', 'animate-pulse');
   });
 
   it('should render error state correctly', () => {
@@ -73,4 +73,3 @@ describe('AmberStatus Component', () => {
     expect(screen.getByText('Amber:')).toBeInTheDocument();
   });
 });
-
