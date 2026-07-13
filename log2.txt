@@ -1,5 +1,0 @@
-﻿dd10c00 feat: apply deep space wallpaper and glassmorphism to client panels
-1b303cc fix(session): add 1500ms cooldown after conversationClosed to prevent duplicate confirms
-c2fa50a feat(admin): stylization prompt editor - new textarea section with GET/POST /api/admin/config/stylization
-7aeb635 feat(TTS): Enable backend audio (Gemini/Vertex) with WebSpeech fallback - admin panel controlled
-6a2fc90 Merge remove-tts: Smart Assistant Phase 1 - ActionDispatcher integration

@@ -39,3 +39,33 @@ src/graphify-out/
 
 # Archived local experiments / dev labs
 legacy/
+
+# Local AI-agent configuration (workspace-specific)
+.agents/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.impeccable/
+SKILL.md
+
+# Generated analysis and one-off repair helpers
+graphify-out/cache/
+graphify-out/.delta_info.json
+src/**/graphify-out/
+.graphify_ast_delta_fix.json
+_ast_extract_fix.py
+_merge_fix.py
+
+# Local diagnostics and test output
+.preview.*
+browser-logs.json
+debug.log
+diff.txt
+format-logs.txt
+frontend_test_output*.txt
+log.txt
+log2.txt
+status.txt
+ts_errors.txt
+screenshot.mjs
