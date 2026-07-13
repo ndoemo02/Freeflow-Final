@@ -3,9 +3,40 @@
  * Eksport danych do CSV, Excel, PDF
  */
 
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import { autoTable } from 'jspdf-autotable';
+
+async function buildExcelBuffer(data, sheetName) {
+  const excelModule = await import('exceljs');
+  const ExcelJS = excelModule.default || excelModule;
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(sheetName);
+  const headers = Object.keys(data[0] || {});
+
+  worksheet.columns = headers.map(header => ({
+    header,
+    key: header,
+    width: Math.min(40, Math.max(12, header.length + 2)),
+  }));
+  worksheet.addRows(data.map(row => Object.fromEntries(
+    headers.map(header => {
+      const value = row[header];
+      return [header, value && typeof value === 'object' ? JSON.stringify(value) : value ?? ''];
+    })
+  )));
+  worksheet.getRow(1).font = { bold: true };
+
+  return workbook.xlsx.writeBuffer();
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /**
  * Export data to CSV
@@ -47,16 +78,17 @@ export function exportToCSV(data, filename = 'export.csv') {
 /**
  * Export data to Excel
  */
-export function exportToExcel(data, filename = 'export.xlsx', sheetName = 'Data') {
+export async function exportToExcel(data, filename = 'export.xlsx', sheetName = 'Data') {
   if (!data || data.length === 0) {
     alert('Brak danych do eksportu');
     return;
   }
 
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, filename);
+  const excelBuffer = await buildExcelBuffer(data, sheetName);
+  downloadBlob(
+    new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    filename
+  );
 }
 
 /**
@@ -146,7 +178,7 @@ export function exportTableToPDF(data, columns, filename = 'table.pdf', title = 
   const headers = columns.map(col => col.label || col.key);
 
   // Add table
-  pdf.autoTable({
+  autoTable(pdf, {
     head: [headers],
     body: tableData,
     startY: 30,
@@ -198,10 +230,7 @@ export async function exportMultipleFormats(data, options = {}) {
 
   // Add Excel
   if (options.includeExcel) {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
-    const excelBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+    const excelBuffer = await buildExcelBuffer(data, 'Data');
     zip.file('data.xlsx', excelBuffer);
   }
 
