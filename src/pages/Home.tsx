@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useConversationStore } from "../store/useConversationStore";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useUIPanels } from "../hooks/useUIPanels";
@@ -45,6 +46,8 @@ export default function Home() {
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
   const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
+  const location = useLocation();
+  const navigate = useNavigate();
   const clearHomeContext = useConversationStore(state => state.clearHomeContext);
   const uiMode = useConversationStore(state => state.uiMode);
   const currentRestaurant = useConversationStore(state => state.currentRestaurant);
@@ -65,6 +68,7 @@ export default function Home() {
     sessionId,
   });
   const lastProcessedResponseRef = useRef<any>(null);
+  const lastPanelRestaurantRef = useRef<string | null>(null);
   const liveUiState = useLiveUiSessionStore((state) => state.sessionState);
   const liveUiStatusText = useLiveUiSessionStore((state) => state.statusText);
   const liveUserTranscript = useLiveUiSessionStore((state) => state.lastUserTranscript);
@@ -235,6 +239,20 @@ export default function Home() {
     stop(); // Stop TTS before sending
     await sendMessage(sanitized);
   }, [liveSessionActive, sendMessage, stop]);
+
+  const panelRestaurant = (location.state as {
+    openRestaurant?: { id?: string; name?: string };
+  } | null)?.openRestaurant;
+
+  useEffect(() => {
+    const restaurantName = String(panelRestaurant?.name || '').trim();
+    const restaurantKey = String(panelRestaurant?.id || restaurantName).trim();
+    if (!restaurantName || !restaurantKey || lastPanelRestaurantRef.current === restaurantKey) return;
+
+    lastPanelRestaurantRef.current = restaurantKey;
+    navigate(location.pathname, { replace: true, state: null });
+    void handleTextSubmit(`Pokaż menu ${restaurantName}`);
+  }, [handleTextSubmit, location.pathname, navigate, panelRestaurant?.id, panelRestaurant?.name]);
 
   const handleLiveToggle = useCallback(() => {
     if (logoLiveActive) {

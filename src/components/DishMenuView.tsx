@@ -85,6 +85,7 @@ function getCategoryGradient(category: string): string {
 
 function getLocalFallbackImage(category: string, name: string): string | null {
   const text = (`${category} ${name}`).toLowerCase();
+  const itemName = String(name || '').toLowerCase();
   if (text.includes('burger')) return '/images/assets/gen/burger.png';
   if (text.includes('pizza')) return '/images/assets/gen/pizza.png';
   if (text.includes('bowl')) return '/images/assets/gen/bowl.png';
@@ -93,7 +94,7 @@ function getLocalFallbackImage(category: string, name: string): string | null {
   if (text.includes('makaron') || text.includes('pasta') || text.includes('spaghetti')) return '/images/assets/gen/pasta.png';
   if (text.includes('sałatk') || text.includes('salatk')) return '/images/assets/gen/salad.png';
   if (text.includes('pomidorow') || text.includes('krem z pomidor')) return '/images/assets/gen/zupa_pomidorowa.png';
-  if (text.includes('deser') || text.includes('lod') || text.includes('ciast') || text.includes('tiramisu')) return '/images/assets/gen/dessert.png';
+  if (itemName.includes('sernik') || itemName.includes('lod') || itemName.includes('ciast') || itemName.includes('tiramisu')) return '/images/assets/gen/dessert.png';
   if (text.includes('kaw') || text.includes('coffee') || text.includes('latte') || text.includes('espresso')) return '/images/assets/gen/kawa.png';
   if (text.includes('sushi') || text.includes('maki') || text.includes('nigiri')) return '/images/assets/gen/sushi.png';
   if (text.includes('ryba') || text.includes('łoso') || text.includes('loso') || text.includes('pstrąg')) return '/images/assets/gen/ryba.png';

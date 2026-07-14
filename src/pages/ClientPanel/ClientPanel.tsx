@@ -137,6 +137,12 @@ function getSectionFromSearch(search: string): SectionName | null {
     return PANEL_SECTIONS.has(value as SectionName) ? (value as SectionName) : null;
 }
 
+const fetchActiveRestaurants = () => supabase
+    .from('restaurants')
+    .select('*')
+    .eq('is_active', true)
+    .limit(20);
+
 export default function ClientPanel() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -182,10 +188,7 @@ export default function ClientPanel() {
     useEffect(() => {
         const fetchRestaurants = async () => {
             setLoadingRestaurants(true);
-            const { data, error } = await supabase
-                .from('restaurants')
-                .select('*')
-                .limit(20);
+            const { data, error } = await fetchActiveRestaurants();
 
             if (error) setFetchError(error.message);
             if (data) setRestaurants(data);
@@ -809,7 +812,7 @@ export default function ClientPanel() {
                                         <ErrorFallback message={fetchError} onRetry={() => {
                                             setFetchError(null);
                                             setLoadingRestaurants(true);
-                                            supabase.from('restaurants').select('*').limit(20)
+                                            fetchActiveRestaurants()
                                                 .then(({ data, error }: { data: any, error: any }) => {
                                                     if (error) setFetchError(error.message);
                                                     if (data) setRestaurants(data);
@@ -823,7 +826,7 @@ export default function ClientPanel() {
                                     <div className="col-span-full">
                                         <ErrorFallback message="Brak dostępnych restauracji w tej chwili." onRetry={() => {
                                             setLoadingRestaurants(true);
-                                            supabase.from('restaurants').select('*').limit(20)
+                                            fetchActiveRestaurants()
                                                 .then(({ data, error }: { data: any, error: any }) => {
                                                     if (error) setFetchError(error.message);
                                                     if (data) setRestaurants(data);
@@ -833,7 +836,20 @@ export default function ClientPanel() {
                                     </div>
                                 ) : (
                                     restaurants.map((r, i) => (
-                                        <div key={r.id || i} className="restaurant-card">
+                                        <button
+                                            key={r.id || i}
+                                            type="button"
+                                            className="restaurant-card"
+                                            onClick={() => navigate(ROUTES.HOME, {
+                                                state: {
+                                                    openRestaurant: {
+                                                        id: r.id,
+                                                        name: r.name,
+                                                    },
+                                                },
+                                            })}
+                                            aria-label={`Pokaż menu restauracji ${r.name}`}
+                                        >
                                             {/* Placeholder image if not present */}
                                             <img src={r.image_url || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'} alt={r.name} />
                                             <div className="restaurant-info">
@@ -847,7 +863,7 @@ export default function ClientPanel() {
                                                     <span className="free">Dostawa gratis</span>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </button>
                                     ))
                                 )}
                             </div>

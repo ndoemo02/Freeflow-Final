@@ -95,6 +95,7 @@ export default function CustomerPanel() {
       const { data: restaurantsData, error: restaurantsError } = await supabase
         .from('restaurants')
         .select('id,name,city,address,cuisine_type')
+        .eq('is_active', true)
         .order('name');
 
       if (restaurantsError) AmberLogger.error(restaurantsError);
