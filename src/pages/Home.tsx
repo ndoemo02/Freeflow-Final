@@ -62,6 +62,7 @@ export default function Home() {
     isActive: liveSessionActive,
     start: startLiveSession,
     stop: stopLiveSession,
+    error: liveSessionError,
   } = useGeminiLiveSession({
     wsRef: socketRef,
     enabled: liveModeEnabled,
@@ -83,22 +84,18 @@ export default function Home() {
   usePostOrderReset();
 
   // --- Amber Status ---
-  // green = ready/listening, purple = thinking/tool work, cyan = response/action, red = real error only.
-  const amberStatus: 'ready' | 'thinking' | 'action' | 'error' = error
+  const amberStatus: 'ready' | 'listening' | 'thinking' | 'speaking' | 'error' = (error || liveSessionError || liveUiState === 'error')
     ? 'error'
-    : (isThinking || liveUiState === 'processing')
+    : (isThinking || liveUiState === 'processing' || (logoLiveRequested && !liveSessionActive))
       ? 'thinking'
-      : (
-          liveUiState === 'results_ready'
-          || liveUiState === 'restaurant_selected'
-          || liveUiState === 'item_selected'
-          || liveUiState === 'cart_ready'
-        )
-        ? 'action'
-        : 'ready';
+      : (isSpeaking || liveUiState === 'speaking')
+        ? 'speaking'
+        : (isListening || (liveSessionActive && liveUiState === 'listening'))
+          ? 'listening'
+          : 'ready';
   const logoScenePhase = deriveLogoScenePhase({
     uiMode,
-    isListening: isListening || logoLiveRequested,
+    isListening,
     isThinking,
     liveSessionActive: logoLiveActive,
     liveUiState: logoLiveActive ? liveUiState : undefined,
@@ -261,10 +258,27 @@ export default function Home() {
       return;
     }
     setLogoLiveRequested(true);
-    void Promise.resolve(startLiveSession()).catch(() => {
-      setLogoLiveRequested(false);
-    });
+    void startLiveSession()
+      .then((started) => {
+        if (!started) setLogoLiveRequested(false);
+      })
+      .catch(() => setLogoLiveRequested(false));
   }, [logoLiveActive, startLiveSession, stopLiveSession]);
+
+  const handleDockMicClick = useCallback(() => {
+    // If Live failed, the dock remains a usable fallback: one click clears the
+    // failed Live runtime and starts the classic speech-recognition path.
+    if (liveModeEnabled && (liveSessionError || liveUiState === 'error')) {
+      stopLiveSession();
+      handleMicClick();
+      return;
+    }
+    if (liveModeEnabled) {
+      handleLiveToggle();
+      return;
+    }
+    handleMicClick();
+  }, [handleLiveToggle, handleMicClick, liveModeEnabled, liveSessionError, liveUiState, stopLiveSession]);
 
   useEffect(() => {
     if (liveSessionActive) {
@@ -516,8 +530,12 @@ export default function Home() {
         <div ref={dockWrapperRef} className="voice-dock-rail-safe fixed bottom-0 left-0 right-0 z-[120] px-4 pb-4 w-full max-w-7xl mx-auto flex flex-col items-center pointer-events-auto">
           <IntentChips />
           <VoiceDock
-            onMicClick={handleMicClick}
+            onMicClick={handleDockMicClick}
             onTextSubmit={handleTextSubmit}
+            isListening={isListening || (liveSessionActive && liveUiState === 'listening')}
+            isThinking={isThinking || liveUiState === 'processing' || (logoLiveRequested && !liveSessionActive)}
+            isSpeaking={isSpeaking || liveUiState === 'speaking'}
+            error={error || liveSessionError || (liveUiState === 'error' ? liveUiStatusText : null)}
           />
         </div>
       )}

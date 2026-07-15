@@ -11,10 +11,15 @@ beforeEach(() => {
 
 describe('VoiceDock', () => {
   it('renders dock with input placeholder by default', () => {
-    render(<VoiceDock />);
+    const { container } = render(<VoiceDock />);
     expect(
       screen.getByPlaceholderText(/powiedz co chcesz zamówić/i),
     ).toBeInTheDocument();
+    expect(screen.getByText('Gotowa')).toBeInTheDocument();
+    expect(container.querySelector('.ff-voice-dock__speaker-icon')).toHaveAttribute(
+      'src',
+      '/logo/layers/logo-speaker.png',
+    );
   });
 
   it('shows listening placeholder when session state is listening', () => {
@@ -85,5 +90,17 @@ describe('VoiceDock', () => {
     useLiveUiSessionStore.getState().setListening();
     rerender(<VoiceDock />);
     expect(dock).toHaveAttribute('data-state', 'listening');
+  });
+
+  it('shows a solid processing state with an explicit label', () => {
+    const { container } = render(<VoiceDock isThinking />);
+    expect(container.querySelector('.ff-voice-dock')).toHaveAttribute('data-state', 'thinking');
+    expect(screen.getByText('Amber pracuje')).toBeInTheDocument();
+  });
+
+  it('shows the fallback state only for an actual error', () => {
+    const { container } = render(<VoiceDock error="live_token_unavailable" />);
+    expect(container.querySelector('.ff-voice-dock')).toHaveAttribute('data-state', 'error');
+    expect(screen.getByText(/awaria.*tryb zapasowy/i)).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ type Props = {
   onToggle?: (checked: boolean) => void
   initial?: boolean
   amberReady?: boolean
-  amberStatus?: 'ready' | 'thinking' | 'action' | 'error'
+  amberStatus?: 'ready' | 'listening' | 'thinking' | 'speaking' | 'error'
 }
 
 export default function Switch({ onToggle, initial = false, amberReady = true, amberStatus }: Props) {
@@ -69,7 +69,19 @@ export default function Switch({ onToggle, initial = false, amberReady = true, a
         />
 
         {/* Kulka na górze */}
-        <div className="switch-knob" ref={knobRef} data-ui-role="status-dot" />
+        <div
+          className="switch-knob"
+          ref={knobRef}
+          data-ui-role="status-dot"
+          role="status"
+          aria-label={
+            status === 'error' ? 'Awaria, aktywny tryb zapasowy'
+              : status === 'thinking' ? 'Amber pracuje'
+                : status === 'speaking' ? 'Amber odpowiada'
+                  : status === 'listening' ? 'Amber słucha'
+                    : 'Amber gotowa'
+          }
+        />
 
         {/* Pasek */}
         <div className="switch-track" data-ui-role="status-rail-track" />
@@ -83,7 +95,7 @@ export default function Switch({ onToggle, initial = false, amberReady = true, a
   )
 }
 
-const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thinking' | 'action' | 'error' }>`
+const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'listening' | 'thinking' | 'speaking' | 'error' }>`
   position: fixed;
   left: clamp(12px, 3vw, 20px);
   bottom: clamp(1rem, 3vh, 1.5rem);
@@ -117,9 +129,11 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
     background-image: ${props => {
       switch (props.$amberStatus) {
         case 'thinking':
-          return 'radial-gradient(farthest-corner at 70% 30%, #FF9433 4%, #FF7A1C 12% 28%, #E8650A 50% 68%, #FFB347 78%)';
-        case 'action':
-          return 'radial-gradient(farthest-corner at 70% 30%, #7AD6E0 4%, #3DDCC3 12% 28%, #2BBAA5 50% 68%, #5DDCC3 78%)';
+          return 'radial-gradient(farthest-corner at 70% 30%, #ff6969 4%, #e22b2b 12% 28%, #a80000 50% 68%, #ff4d4d 78%)';
+        case 'speaking':
+          return 'radial-gradient(farthest-corner at 70% 30%, #FFB347 4%, #FF7A1C 12% 28%, #B84408 50% 68%, #FF9433 78%)';
+        case 'listening':
+          return 'radial-gradient(farthest-corner at 70% 30%, #777 4%, #414141 18% 42%, #181818 68%, #555 78%)';
         case 'error':
           return 'radial-gradient(farthest-corner at 70% 30%, #ff4444 4%, #cc2222 12% 24%, #aa0000 50% 65%, #ff4444 75%)';
         default:
@@ -129,9 +143,11 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
     box-shadow: ${props => {
       switch (props.$amberStatus) {
         case 'thinking':
-          return '0 0 16px rgba(168, 85, 247, 0.72), inset 0 0 8px 2px rgb(255 255 255 / .38)';
-        case 'action':
-          return '0 0 16px rgba(249, 115, 22, 0.74), 0 0 8px rgba(185, 28, 28, 0.44), inset 0 0 8px 2px rgb(255 255 255 / .38)';
+          return '0 0 16px rgba(226, 43, 43, 0.72), inset 0 0 8px 2px rgb(255 255 255 / .3)';
+        case 'speaking':
+          return '0 0 16px rgba(249, 115, 22, 0.7), inset 0 0 8px 2px rgb(255 255 255 / .32)';
+        case 'listening':
+          return '0 0 6px rgba(255, 255, 255, 0.12), inset 0 0 8px 2px rgb(255 255 255 / .16)';
         case 'error':
           return '0 0 15px rgba(255, 68, 68, 0.6), inset 0 0 8px 2px rgb(255 255 255 / .4)';
         default:
@@ -141,6 +157,12 @@ const Wrapper = styled.div<{ $amberReady: boolean; $amberStatus: 'ready' | 'thin
     transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
     z-index: 2;
+    animation: ${props => props.$amberStatus === 'error' ? 'ff-status-failure 0.85s ease-in-out infinite' : 'none'};
+  }
+
+  @keyframes ff-status-failure {
+    0%, 100% { opacity: 0.45; transform: scale(0.92); }
+    50% { opacity: 1; transform: scale(1.08); }
   }
   
   .switch-input:hover ~ .switch-knob {

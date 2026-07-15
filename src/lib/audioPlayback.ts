@@ -12,6 +12,8 @@ export class AudioPlayer {
   private nextTime = 0;
   private sources: AudioBufferSourceNode[] = [];
 
+  constructor(private readonly onPlayingChange?: (isPlaying: boolean) => void) {}
+
   private ensureCtx(): AudioContext {
     if (!this.ctx || this.ctx.state === 'closed') {
       this.ctx = new AudioContext({ sampleRate: OUTPUT_SAMPLE_RATE });
@@ -48,7 +50,9 @@ export class AudioPlayer {
     src.onended = () => {
       const idx = this.sources.indexOf(src);
       if (idx !== -1) this.sources.splice(idx, 1);
+      if (this.sources.length === 0) this.onPlayingChange?.(false);
     };
+    if (this.sources.length === 0) this.onPlayingChange?.(true);
     this.sources.push(src);
   }
 
@@ -65,11 +69,13 @@ export class AudioPlayer {
 
   /** Stop all queued playback immediately. */
   stop(): void {
+    const wasPlaying = this.sources.length > 0;
     for (const src of this.sources) {
       try { src.stop(); } catch { /* already stopped */ }
     }
     this.sources = [];
     this.nextTime = 0;
+    if (wasPlaying) this.onPlayingChange?.(false);
   }
 
   /** Stop and release AudioContext. */

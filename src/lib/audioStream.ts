@@ -49,16 +49,25 @@ function float32ToPcm16(float32: Float32Array): ArrayBuffer {
 export async function startPCM16Stream(
   onChunk: (pcm16: ArrayBuffer) => void,
 ): Promise<() => void> {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      sampleRate: TARGET_SAMPLE_RATE,
-      channelCount: 1,
-      echoCancellation: true,
-      noiseSuppression: true,
-    },
-  });
-
+  // Create/resume the context before the first await so it remains associated
+  // with the user's Run Live click (required by browser autoplay policies).
   const ctx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+  const resumePromise = ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        sampleRate: TARGET_SAMPLE_RATE,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+    });
+    await resumePromise;
+  } catch (error) {
+    await ctx.close().catch(() => {});
+    throw error;
+  }
   const source = ctx.createMediaStreamSource(stream);
 
   let cleanup: () => void;

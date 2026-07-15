@@ -2,10 +2,12 @@ export type LiveUiSessionState =
   | 'idle'
   | 'listening'
   | 'processing'
+  | 'speaking'
   | 'results_ready'
   | 'restaurant_selected'
   | 'item_selected'
   | 'cart_ready'
+  | 'error'
   | 'paused';
 
 export type LiveToolResultInput = {

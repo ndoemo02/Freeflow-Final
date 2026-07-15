@@ -540,6 +540,10 @@
   background: rgba(20, 15, 11, 0.46);
 }
 
+.ff-voice-dock[data-state="error"] .ff-voice-dock__glass {
+  background: rgba(34, 7, 7, 0.5);
+}
+
 /* Frost overlay — "zamrożone szkło" */
 .ff-voice-dock__frost {
   position: absolute;
@@ -583,10 +587,14 @@
 
 /* Thinking state — purple rim, dimmer than active states */
 .ff-voice-dock[data-state="thinking"] .ff-voice-dock__rim {
-  opacity: 0.55;
-  stroke-dasharray: 0.06 0.96;
-  animation: ff-rim-chase 3.2s linear infinite;
-  stroke: url(#ff-rim-grad-thinking);
+  opacity: 0.72;
+  stroke: #e22b2b;
+}
+
+.ff-voice-dock[data-state="error"] .ff-voice-dock__rim {
+  opacity: 0.9;
+  stroke: #ff3434;
+  animation: ff-error-pulse 0.85s ease-in-out infinite;
 }
 
 /* ── Content (flex row inside capsule) ── */
@@ -741,6 +749,48 @@
   cursor: text;
 }
 
+.ff-voice-dock__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 15px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ff-voice-dock__status-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: #00cc66;
+  box-shadow: 0 0 7px rgba(0, 204, 102, 0.65);
+}
+
+.ff-voice-dock[data-state="listening"] .ff-voice-dock__status-dot {
+  background: #555;
+  box-shadow: none;
+}
+
+.ff-voice-dock[data-state="thinking"] .ff-voice-dock__status-dot {
+  background: #e22b2b;
+  box-shadow: 0 0 8px rgba(226, 43, 43, 0.7);
+}
+
+.ff-voice-dock[data-state="speaking"] .ff-voice-dock__status-dot {
+  background: #ff7a1c;
+  box-shadow: 0 0 8px rgba(255, 122, 28, 0.7);
+}
+
+.ff-voice-dock[data-state="error"] .ff-voice-dock__status-dot {
+  background: #ff3434;
+  animation: ff-error-pulse 0.85s ease-in-out infinite;
+}
+
 .ff-voice-dock__transcript {
   color: #cfd6da;
   font-size: 14px;
@@ -801,6 +851,11 @@
   to   { opacity: 0; }
 }
 
+@keyframes ff-error-pulse {
+  0%, 100% { opacity: 0.42; }
+  50% { opacity: 1; }
+}
+
 /* ── VoiceDock container left offset for Switch/pająk ── */
 .voice-dock-rail-safe {
   padding-left: clamp(48px, 10vw, 72px) !important;
@@ -822,7 +877,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ff-voice-dock__rim,
-  .ff-voice-dock__rings span {
+  .ff-voice-dock__rings span,
+  .ff-voice-dock__status-dot {
     animation: none !important;
   }
 }

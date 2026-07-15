@@ -273,7 +273,7 @@ export interface UseGeminiLiveSessionOptions {
 }
 
 export interface UseGeminiLiveSessionResult {
-  start: () => Promise<void>;
+  start: () => Promise<boolean>;
   stop: () => void;
   isActive: boolean;
   error: string | null;
@@ -692,7 +692,14 @@ export function useGeminiLiveSession({
 
   const sessionRef = useRef<Session | null>(null);
   const stopMicRef = useRef<(() => void) | null>(null);
-  const playerRef = useRef(new AudioPlayer());
+  const playerRef = useRef(new AudioPlayer((isPlaying) => {
+    const liveUi = useLiveUiSessionStore.getState();
+    if (isPlaying) {
+      liveUi.setSpeaking('Amber odpowiada...');
+    } else if (activeRef.current) {
+      liveUi.setListening('Słucham...');
+    }
+  }));
 
   const activeRef = useRef(false);
   const startInFlightRef = useRef(false);
@@ -786,9 +793,9 @@ export function useGeminiLiveSession({
     }
     sessionRef.current = null;
 
-    playerRef.current.stop();
     activeRef.current = false;
     setIsActive(false);
+    playerRef.current.stop();
   }, [clearStallWatchdog]);
 
   const stop = useCallback(() => {
@@ -817,22 +824,15 @@ export function useGeminiLiveSession({
   }, [cleanupRuntime, clearReconnectTimer, clearStallWatchdog]);
 
   const start = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled) return false;
 
     // Fix #2: singleton guard â€” check sessionRef too
     if (sessionRef.current || activeRef.current || startInFlightRef.current) {
       // session already active â€“ skip start');
-      return;
+      return activeRef.current;
     }
 
-    const runtimeConfig = await fetchLiveRuntimeConfig();
-    const activeModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
-    if (!activeModel) {
-      setError('LIVE model not configured');
-      return;
-    }
-
-    const sid = sessionIdRef.current ?? 'unknown';
+    startInFlightRef.current = true;
     latestUserTranscriptRef.current = null;
     autoNearbyRecoveryInFlightRef.current = false;
     autoNearbyRecoveryLastTsRef.current = 0;
@@ -840,8 +840,7 @@ export function useGeminiLiveSession({
     desiredActiveRef.current = true;
     setError(null);
     setReconnectHalted(false);
-    startInFlightRef.current = true;
-    useLiveUiSessionStore.getState().setProcessing('Lacze z sesja LIVE...');
+    useLiveUiSessionStore.getState().setProcessing('Łączę z sesją Live...');
     const scheduleReconnect = () => {
       if (!desiredActiveRef.current || stopInFlightRef.current) return;
       if (reconnectTimerRef.current) return;
@@ -868,46 +867,79 @@ export function useGeminiLiveSession({
     // 1) system_config.amber_prompt (global from admin panel)
     // 2) speech_style-derived default instruction
     // 3) localStorage fallback only when backend config is unavailable
-    const defaultInstruction = runtimeConfig.speechStyle === 'silesian'
-      ? SYSTEM_INSTRUCTION_SILESIAN
-      : SYSTEM_INSTRUCTION_STANDARD;
-    const GPS_SAFETY_PREFIX =
-      'ZASADA #1: NIGDY nie pytaj o miasto, lokalizację ani adres. Backend ma GPS.';
-    const hasGpsRule = (s: string) =>
-      /\b(lokalizacj|GPS|współrzędn|miasto.*pytaj|pytaj.*miasto)\b/i.test(s);
-
-    let customStylePrompt = runtimeConfig.amberPrompt;
-    if (!runtimeConfig.amberPrompt && !runtimeConfig.fetched) {
-      try {
-        const stored = localStorage.getItem('amber_live_prompt');
-        if (stored && stored.trim().length > 40) {
-          customStylePrompt = stored.trim();
-        }
-      } catch { /* noop */ }
-    }
-    const activeInstruction = composeLiveSystemInstruction({
-      baseInstruction: defaultInstruction,
-      customStylePrompt,
-      gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
-    });
-
     try {
       cleanupRuntime(true);
-      const ephemeralToken = await fetchLiveAccessToken(activeModel);
-      const ai = new GoogleGenAI({
-        apiKey: ephemeralToken,
-        httpOptions: { apiVersion: 'v1alpha' },
-      });
-      const player = playerRef.current;
 
-      let frameCount = 0;
-      let lastAudioFrameAt = 0;
       let firstAudioFrameAt = 0;
       let lastTranscriptAt = 0;
       let lastToolCallAt = 0;
       let turnId: string | null = null;
       let assistantTranscriptBuffer = '';
       const perfTimings: PerfTiming[] = [];
+
+      // Acquire and resume audio immediately from the click gesture. Fetching
+      // config/token first can leave Chrome's AudioContext suspended until the
+      // user clicks the dock a second time.
+      const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
+        if (!sessionRef.current || !activeRef.current) return;
+        const now = Date.now();
+        if (!firstAudioFrameAt) {
+          firstAudioFrameAt = now;
+          assistantTranscriptBuffer = '';
+          turnId = generateTurnId(sessionIdRef.current || 'unknown');
+          logBridge('user_input_received', { turn_id: turnId, session_id: sessionIdRef.current, source: 'live_audio' });
+        }
+
+        try {
+          sessionRef.current.sendRealtimeInput({
+            audio: {
+              data: arrayBufferToBase64(pcm16),
+              mimeType: MIC_MIME,
+            },
+          });
+        } catch {
+          // noop
+        }
+      });
+      stopMicRef.current = stopMic;
+      if (!desiredActiveRef.current) {
+        cleanupRuntime(true);
+        return false;
+      }
+
+      const runtimeConfig = await fetchLiveRuntimeConfig();
+      const activeModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
+      if (!activeModel) throw new Error('LIVE model not configured');
+      const sid = sessionIdRef.current ?? 'unknown';
+      const defaultInstruction = runtimeConfig.speechStyle === 'silesian'
+        ? SYSTEM_INSTRUCTION_SILESIAN
+        : SYSTEM_INSTRUCTION_STANDARD;
+      const GPS_SAFETY_PREFIX =
+        'ZASADA #1: NIGDY nie pytaj o miasto, lokalizację ani adres. Backend ma GPS.';
+      const hasGpsRule = (s: string) =>
+        /\b(lokalizacj|GPS|współrzędn|miasto.*pytaj|pytaj.*miasto)\b/i.test(s);
+      let customStylePrompt = runtimeConfig.amberPrompt;
+      if (!runtimeConfig.amberPrompt && !runtimeConfig.fetched) {
+        try {
+          const stored = localStorage.getItem('amber_live_prompt');
+          if (stored && stored.trim().length > 40) customStylePrompt = stored.trim();
+        } catch { /* noop */ }
+      }
+      const activeInstruction = composeLiveSystemInstruction({
+        baseInstruction: defaultInstruction,
+        customStylePrompt,
+        gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
+      });
+      const ephemeralToken = await fetchLiveAccessToken(activeModel);
+      if (!desiredActiveRef.current) {
+        cleanupRuntime(true);
+        return false;
+      }
+      const ai = new GoogleGenAI({
+        apiKey: ephemeralToken,
+        httpOptions: { apiVersion: 'v1alpha' },
+      });
+      const player = playerRef.current;
       let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
       const emitAssistantSpeechPart = (rawTextPart: unknown): string => {
@@ -945,31 +977,6 @@ export function useGeminiLiveSession({
         lastTranscriptAt = 0;
         lastToolCallAt = 0;
       };
-
-      const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
-        if (!sessionRef.current || !activeRef.current) return;
-        frameCount += 1;
-        const now = Date.now();
-        lastAudioFrameAt = now;
-        if (!firstAudioFrameAt) {
-          firstAudioFrameAt = now;
-          assistantTranscriptBuffer = '';
-          turnId = generateTurnId(sessionIdRef.current || 'unknown');
-          logBridge('user_input_received', { turn_id: turnId, session_id: sessionIdRef.current, source: 'live_audio' });
-        }
-
-        try {
-          sessionRef.current.sendRealtimeInput({
-            audio: {
-              data: arrayBufferToBase64(pcm16),
-              mimeType: MIC_MIME,
-            },
-          });
-        } catch {
-          // noop
-        }
-      });
-      stopMicRef.current = stopMic;
 
       const handleMessage = (msg: LiveServerMessage) => {
         const possibleTranscript =
@@ -1201,7 +1208,7 @@ export function useGeminiLiveSession({
           onerror: (e: ErrorEvent) => {
             const message = e.message || 'gemini_live_error';
             setError(message);
-            useLiveUiSessionStore.getState().setPaused(`Wstrzymano LIVE: ${message}`);
+            useLiveUiSessionStore.getState().setError(`Awaria Live: ${message}`);
             cleanupRuntime(false);
             scheduleReconnect();
           },
@@ -1233,13 +1240,15 @@ export function useGeminiLiveSession({
       sessionRef.current = session;
       activeRef.current = true;
       setIsActive(true);
-      useLiveUiSessionStore.getState().setListening('Slucham...');
+      useLiveUiSessionStore.getState().setListening('Słucham...');
+      return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'failed_to_start';
       setError(msg);
-      useLiveUiSessionStore.getState().setPaused(`Wstrzymano LIVE: ${msg}`);
+      useLiveUiSessionStore.getState().setError(`Awaria Live: ${msg}`);
       cleanupRuntime(false);
       scheduleReconnect();
+      return false;
     } finally {
       startInFlightRef.current = false;
     }

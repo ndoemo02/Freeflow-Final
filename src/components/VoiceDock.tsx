@@ -14,11 +14,15 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 
 // ── Typy ──
 
-type DockState = 'idle' | 'listening' | 'speaking' | 'thinking';
+type DockState = 'idle' | 'listening' | 'speaking' | 'thinking' | 'error';
 
 interface VoiceDockProps {
   onMicClick?: () => void;
   onTextSubmit?: (value: string) => void;
+  isListening?: boolean;
+  isThinking?: boolean;
+  isSpeaking?: boolean;
+  error?: string | null;
 }
 
 // ── Poola stanów ──
@@ -29,12 +33,16 @@ function toDockState(raw: string): DockState {
       return 'listening';
     case 'processing':
       return 'thinking';
+    case 'speaking':
+      return 'speaking';
+    case 'error':
+      return 'error';
     case 'results_ready':
     case 'restaurant_selected':
     case 'item_selected':
     case 'cart_ready':
     case 'paused':
-      return 'speaking';
+      return 'idle';
     default:
       return 'idle';
   }
@@ -94,6 +102,7 @@ function injectStateCSS() {
     .ff-voice-dock[data-state="listening"] { --left: 1; --right: 0; --thinking: 0; }
     .ff-voice-dock[data-state="speaking"]  { --left: 0; --right: 1; --thinking: 0; }
     .ff-voice-dock[data-state="thinking"]  { --left: 0; --right: 0; --thinking: 1; }
+    .ff-voice-dock[data-state="error"]     { --left: 0; --right: 0; --thinking: 1; }
 
     .ff-voice-dock.confirm {
       --ff-dock-confirm: 1;
@@ -105,7 +114,14 @@ function injectStateCSS() {
 
 // ── Komponent ──
 
-export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) {
+export default function VoiceDock({
+  onMicClick,
+  onTextSubmit,
+  isListening = false,
+  isThinking = false,
+  isSpeaking = false,
+  error = null,
+}: VoiceDockProps) {
   const dockRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const levelRef = useRef(0);
@@ -118,7 +134,24 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
   const userTx = useLiveUiSessionStore((s) => s.lastUserTranscript);
   const asstTx = useLiveUiSessionStore((s) => s.lastAssistantTranscript);
 
-  const dockState: DockState = toDockState(sessionState);
+  const dockState: DockState = error
+    ? 'error'
+    : isThinking
+      ? 'thinking'
+      : isSpeaking
+        ? 'speaking'
+        : isListening
+          ? 'listening'
+          : toDockState(sessionState);
+  const statusLabel = dockState === 'error'
+    ? 'Awaria · tryb zapasowy'
+    : dockState === 'thinking'
+      ? 'Amber pracuje'
+      : dockState === 'speaking'
+        ? 'Amber odpowiada'
+        : dockState === 'listening'
+          ? 'Mów · słucham'
+          : 'Gotowa';
 
   // Transkrypt
   const transcript = cleanTranscript(
@@ -293,7 +326,7 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
               <span /><span /><span />
             </span>
             <img
-              src="/logo/ff-speaker.svg"
+              src="/logo/layers/logo-speaker.png"
               alt=""
               aria-hidden="true"
               className="ff-voice-dock__speaker-icon"
@@ -304,6 +337,10 @@ export default function VoiceDock({ onMicClick, onTextSubmit }: VoiceDockProps) 
 
           {/* Center — transcript + input */}
           <div className="ff-voice-dock__inner" onClick={handleInnerClick} role="button" tabIndex={-1}>
+            <div className="ff-voice-dock__status" role="status" aria-live="polite">
+              <span className="ff-voice-dock__status-dot" aria-hidden="true" />
+              <span>{statusLabel}</span>
+            </div>
             {transcript && (
               <div className="ff-voice-dock__transcript">
                 {dockState === 'listening' ? (

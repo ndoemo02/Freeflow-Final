@@ -30,6 +30,8 @@ interface LiveUiSessionStore {
   ) => void;
   setListening: (statusText?: string) => void;
   setProcessing: (statusText?: string, toolName?: string | null) => void;
+  setSpeaking: (statusText?: string) => void;
+  setError: (statusText?: string) => void;
   setPaused: (statusText?: string) => void;
   setIdle: (statusText?: string) => void;
   setTranscript: (role: TranscriptRole, text: string | null | undefined) => void;
@@ -150,6 +152,22 @@ export const useLiveUiSessionStore = create<LiveUiSessionStore>((set, get) => ({
       return;
     }
     set({ lastAssistantTranscript: compact });
+  },
+
+  setSpeaking: (statusText = 'Amber odpowiada...') => {
+    get().setSessionState('speaking', {
+      statusText,
+      isLiveActive: true,
+      isPaused: false,
+    });
+  },
+
+  setError: (statusText = 'Tryb Live jest chwilowo niedostępny.') => {
+    get().setSessionState('error', {
+      statusText,
+      isLiveActive: false,
+      isPaused: true,
+    });
   },
 
   applyToolResult: (toolName, response) => {

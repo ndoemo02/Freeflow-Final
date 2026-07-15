@@ -46,6 +46,19 @@ describe('useLiveUiSessionStore', () => {
     expect(current.statusText).toContain('Koszyk');
   });
 
+  it('separates speaking from a real fallback error', () => {
+    const store = useLiveUiSessionStore.getState();
+    store.setSpeaking();
+    expect(useLiveUiSessionStore.getState().sessionState).toBe('speaking');
+    expect(useLiveUiSessionStore.getState().isLiveActive).toBe(true);
+
+    store.setError('Awaria Live');
+    const current = useLiveUiSessionStore.getState();
+    expect(current.sessionState).toBe('error');
+    expect(current.isLiveActive).toBe(false);
+    expect(current.statusText).toBe('Awaria Live');
+  });
+
   it('keeps model input separate from user transcript and marks mismatch as low confidence', () => {
     const store = useLiveUiSessionStore.getState();
     store.setTranscript('user', 'Stereo Radio liebe du');

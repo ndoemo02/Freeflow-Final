@@ -39,7 +39,7 @@ export function deriveLogoScenePhase({
   if (uiMode === 'restaurant' || uiMode === 'checkout') return 'compact';
   if (effectiveLiveUiState && RESULT_LIVE_STATES.has(effectiveLiveUiState)) return 'results';
   if (isListening || effectiveLiveUiState === 'listening') return 'intent';
-  if (isThinking || effectiveLiveUiState === 'processing') return 'compact';
+  if (isThinking || effectiveLiveUiState === 'processing' || effectiveLiveUiState === 'speaking') return 'compact';
   return 'idle';
 }
 
