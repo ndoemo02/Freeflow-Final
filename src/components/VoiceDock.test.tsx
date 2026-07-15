@@ -18,7 +18,7 @@ describe('VoiceDock', () => {
     expect(screen.getByText('Gotowa')).toBeInTheDocument();
     expect(container.querySelector('.ff-voice-dock__speaker-icon')).toHaveAttribute(
       'src',
-      '/logo/layers/logo-speaker.png',
+      '/logo/Logo%20Affinity/ff-speaker-2x.png',
     );
   });
 

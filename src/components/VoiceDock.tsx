@@ -326,7 +326,7 @@ export default function VoiceDock({
               <span /><span /><span />
             </span>
             <img
-              src="/logo/layers/logo-speaker.png"
+              src="/logo/Logo%20Affinity/ff-speaker-2x.png"
               alt=""
               aria-hidden="true"
               className="ff-voice-dock__speaker-icon"
