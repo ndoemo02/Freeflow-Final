@@ -1,15 +1,41 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import LaunchSequence from "./components/LaunchSequence";
 import "@fontsource/satisfy/400.css";
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
+import { useState } from "react";
+import {
+  getLaunchSequenceDecision,
+  markLaunchSequenceSeen,
+} from "./lib/launchSequence";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+function FreeFlowBootstrap() {
+  const [launchDecision] = useState(getLaunchSequenceDecision);
+  const [launchComplete, setLaunchComplete] = useState(!launchDecision.shouldShow);
+
+  const completeLaunch = () => {
+    if (launchDecision.shouldPersist) {
+      markLaunchSequenceSeen();
+    }
+    setLaunchComplete(true);
+  };
+
+  if (!launchComplete) {
+    return <LaunchSequence onComplete={completeLaunch} />;
+  }
+
+  return (
     <BrowserRouter>
       <App />
     </BrowserRouter>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <FreeFlowBootstrap />
   </React.StrictMode>
 );
 

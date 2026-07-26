@@ -6,6 +6,7 @@ import { liveSessionCache } from './useGeminiLiveSession';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
+import { getActiveDemoContextPayload } from '../lib/demoContext';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
@@ -441,7 +442,8 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
         shouldReconnectRef.current = true;
         let disposed = false;
-        let sessionInitSent = false;
+        let sessionContextSent = false;
+        let sessionGpsSent = false;
         const effectSessionId = sessionId;
         let gpsInitRetryTimer: ReturnType<typeof setTimeout> | null = null;
         let gpsInitRetryCount = 0;
@@ -455,15 +457,26 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
         };
 
         const sendSessionInitWithRetry = (socket: WebSocket) => {
-            if (disposed || sessionInitSent) return;
+            if (disposed) return;
             clearGpsInitRetry();
 
+            if (!sessionContextSent && socket.readyState === WebSocket.OPEN) {
+                sessionContextSent = true;
+                socket.send(JSON.stringify({
+                    type: 'session_init',
+                    demo_context: getActiveDemoContextPayload(),
+                }));
+            }
+
+            if (sessionGpsSent) return;
+
             void getGPSCoords().then((coords) => {
-                if (disposed || sessionInitSent || socket.readyState !== WebSocket.OPEN) return;
+                if (disposed || sessionGpsSent || socket.readyState !== WebSocket.OPEN) return;
                 if (coords) {
-                    sessionInitSent = true;
+                    sessionGpsSent = true;
                     socket.send(JSON.stringify({
                         type: 'session_init',
+                        demo_context: getActiveDemoContextPayload(),
                         lat: coords.lat,
                         lng: coords.lng,
                     }));
@@ -518,7 +531,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             }
 
             // Reset session_init guard on reconnect, aby GPS został wysłany ponownie
-            if (reason === 'reconnect') sessionInitSent = false;
+            if (reason === 'reconnect') {
+                sessionContextSent = false;
+                sessionGpsSent = false;
+            }
 
             const nonce = ++connectNonceRef.current;
             // connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);
@@ -572,10 +588,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 if (parsed?.type === 'live_ready') {
                     liveUiStore.setListening('Słucham...');
                     gpsInitRetryCount = 0;
-                    // Zawsze wysyłaj GPS przy live_ready — SessionResumption reconnect
-                    // nie przechodzi przez connectSocket('reconnect'), więc guard
-                    // sessionInitSent nie jest resetowany. Bez tego Gemini gubi GPS.
-                    sessionInitSent = false;
+                    // Always resend deterministic demo context on live_ready.
+                    // Session resumption can reuse the socket path without the
+                    // regular reconnect branch. GPS keeps its independent guard.
+                    sessionContextSent = false;
                     sendSessionInitWithRetry(socket);
                     return;
                 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mockedStore = vi.hoisted(() => ({
     value: {} as any,
@@ -13,11 +13,19 @@ vi.mock('../store/useConversationStore', () => {
 });
 
 vi.mock('./ContextualIsland', () => ({
-    default: ({ highlightedId, setHighlightedId, title }: any) => (
+    default: ({
+        highlightedId,
+        setHighlightedId,
+        title,
+        presentationMode,
+        onRequestFullMenu,
+    }: any) => (
         <div>
             <span data-testid="highlighted-id">{highlightedId || 'none'}</span>
             <span data-testid="restaurant-title">{title}</span>
+            <span data-testid="presentation-mode">{presentationMode}</span>
             <button type="button" onClick={() => setHighlightedId('1__dish-b')}>Focus dish B</button>
+            <button type="button" onClick={onRequestFullMenu}>Full menu</button>
         </div>
     ),
 }));
@@ -34,6 +42,10 @@ function responseWithFocus(id: string) {
 }
 
 describe('MenuIsland structured focus precedence', () => {
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('consumes backend focus once, preserves a manual click, and accepts a new response focus', async () => {
         const firstResponse = responseWithFocus('dish-a');
         mockedStore.value = {
@@ -86,5 +98,66 @@ describe('MenuIsland structured focus precedence', () => {
         render(<MenuIsland />);
 
         expect(screen.getByTestId('restaurant-title')).toHaveTextContent('Menu: Rezydencja Luxury Hotel');
+    });
+
+    it('opens focused search results in discovery and lets the user expand the full menu', () => {
+        mockedStore.value = {
+            conversationPhase: 'ordering',
+            uiMode: 'restaurant',
+            menuItems: MENU,
+            currentRestaurant: { id: 'restaurant-1', name: 'Restaurant' },
+            suggestedRestaurants: [],
+            lastFullResponse: {
+                intent: 'search_menu_items',
+                meta: {
+                    menuPresentationMode: 'discovery',
+                    focusedMenuItemId: 'dish-a',
+                },
+            },
+            sessionId: 'test-session',
+            closeMenuContext: vi.fn(),
+        };
+
+        render(<MenuIsland />);
+
+        expect(screen.getByTestId('presentation-mode')).toHaveTextContent('discovery');
+        fireEvent.click(screen.getByRole('button', { name: /full menu/i }));
+        expect(screen.getByTestId('presentation-mode')).toHaveTextContent('full');
+    });
+
+    it('tracks the dish named in a streaming Live response after a short stability window', async () => {
+        vi.useFakeTimers();
+        mockedStore.value = {
+            conversationPhase: 'ordering',
+            uiMode: 'restaurant',
+            menuItems: MENU,
+            currentRestaurant: { id: 'restaurant-1', name: 'Restaurant' },
+            suggestedRestaurants: [],
+            lastFullResponse: responseWithFocus('dish-a'),
+            sessionId: 'test-session',
+            closeMenuContext: vi.fn(),
+        };
+
+        render(<MenuIsland />);
+        await act(async () => {
+            await Promise.resolve();
+        });
+
+        act(() => {
+            window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
+                detail: {
+                    sessionId: 'test-session',
+                    text: 'Dish B',
+                    transcript: 'Polecam Dish B',
+                },
+            }));
+            vi.advanceTimersByTime(179);
+        });
+        expect(screen.getByTestId('highlighted-id')).toHaveTextContent('dish-a');
+
+        act(() => {
+            vi.advanceTimersByTime(1);
+        });
+        expect(screen.getByTestId('highlighted-id')).toHaveTextContent('dish-b');
     });
 });

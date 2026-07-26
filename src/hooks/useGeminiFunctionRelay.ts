@@ -23,6 +23,7 @@ import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { postBridgeTelemetry } from '../lib/interactionBridge';
+import { getActiveDemoContextPayload } from '../lib/demoContext';
 
 const RELAY_TIMEOUT_MS = 15000;
 const GPS_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -238,6 +239,7 @@ async function relayViaHttp(
 
     const body: Record<string, unknown> = {
         session_id: effectiveSessionId,
+        demo_context: getActiveDemoContextPayload(),
         tool: functionCall.name,
         args: enrichedArgs,
         request_id: functionCall.id || `httprelay_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,

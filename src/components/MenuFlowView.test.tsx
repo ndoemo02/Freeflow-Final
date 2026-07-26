@@ -177,4 +177,36 @@ describe('MenuFlowView', () => {
 
         expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'rollo-l' }));
     });
+
+    it('keeps discovery focused on one dish and exposes an explicit full-menu action', () => {
+        const onRequestFullMenu = vi.fn();
+
+        render(
+            <MenuFlowView
+                normalizedItems={[
+                    { _uiId: 'item-a', id: 'item-a', name: 'First Dish', category: 'Main', section_order: 1 },
+                    { _uiId: 'item-b', id: 'item-b', name: 'Second Dish', category: 'Dessert', section_order: 2 },
+                ]}
+                highlightedId="item-a"
+                setHighlightedId={vi.fn()}
+                recommendedId="item-a"
+                autoRevealRequest={null}
+                presentationMode="discovery"
+                onRequestFullMenu={onRequestFullMenu}
+                headerTitle="Menu"
+                resultSummary={null}
+                currentIndex={0}
+                onSelect={vi.fn()}
+                goTo={vi.fn()}
+                snap="expanded"
+                setSnap={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText('First Dish')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /second dish/i })).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: /zobacz pełne menu/i }));
+        expect(onRequestFullMenu).toHaveBeenCalledTimes(1);
+    });
 });

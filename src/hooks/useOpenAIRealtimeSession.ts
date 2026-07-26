@@ -13,6 +13,7 @@ import {
   type LiveProviderFailure,
 } from './useGeminiLiveSession';
 import { useGeminiFunctionRelay, type GeminiFunctionCall } from './useGeminiFunctionRelay';
+import { getActiveDemoContextPayload } from '../lib/demoContext';
 
 const OPENAI_AMBER_VOICE_STYLE = [
   'Speak exclusively in Polish.',
@@ -288,6 +289,8 @@ export function useOpenAIRealtimeSession({
     useLiveUiSessionStore.getState().setProcessing('Łączę z zapasowym OpenAI Live...');
 
     try {
+      // Resolve the deterministic scenario before requesting microphone access.
+      const activeDemoContext = getActiveDemoContextPayload();
       const runtime = await fetchLiveRuntimeConfig();
       const baseInstruction = runtime.speechStyle === 'silesian'
         ? SYSTEM_INSTRUCTION_SILESIAN
@@ -295,6 +298,7 @@ export function useOpenAIRealtimeSession({
       const instructions = composeLiveSystemInstruction({
         baseInstruction,
         customStylePrompt: [runtime.amberPrompt, OPENAI_AMBER_VOICE_STYLE].filter(Boolean).join(' '),
+        demoContext: activeDemoContext,
       });
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -356,6 +360,7 @@ export function useOpenAIRealtimeSession({
         body: JSON.stringify({
           instructions,
           session_id: sessionIdRef.current,
+          demo_context: activeDemoContext,
         }),
       });
       const sessionData = await response.json().catch(() => ({}));

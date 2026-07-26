@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
+import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { repairMojibakeText } from '../lib/textSanitizer';
 import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
@@ -297,6 +298,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         session_id: sessionId,
+                        demo_context: getActiveDemoContextPayload(),
                         input: trimmed,
                         text: trimmed,
                         includeTTS: false,

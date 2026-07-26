@@ -18,6 +18,7 @@ function brainResponse(body: Record<string, unknown>) {
 
 describe('useConversationStore restaurant selection', () => {
     beforeEach(() => {
+        localStorage.clear();
         useConversationStore.setState({
             sessionId: 'test-session',
             isThinking: false,
@@ -63,6 +64,11 @@ describe('useConversationStore restaurant selection', () => {
             type: 'select_restaurant',
             restaurant_id: REZYDENCJA.id,
             restaurant_name: REZYDENCJA.name,
+        });
+        expect(request.demo_context).toEqual({
+            scenario_id: 'piekary-local',
+            preferred_locale: 'pl',
+            source: 'default',
         });
         expect(useConversationStore.getState().currentRestaurant?.id).toBe(REZYDENCJA.id);
         expect(useConversationStore.getState().selectedRestaurantPreviewId).toBe(REZYDENCJA.id);

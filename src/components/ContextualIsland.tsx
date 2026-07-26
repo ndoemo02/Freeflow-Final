@@ -4,6 +4,7 @@ import MenuFlowView from './MenuFlowView';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
 import { SheetSnap } from './sheet/sheetTypes';
 import { getMenuItemUiId } from '../lib/menuFocusContract';
+import type { MenuPresentationMode } from '../lib/menuPresentationContract';
 
 interface ContextualIslandProps {
     items: any[];
@@ -15,6 +16,8 @@ interface ContextualIslandProps {
     onClose?: () => void;
     recommendedId?: string | null;
     autoRevealRequest?: { id: string; seq: number } | null;
+    presentationMode?: MenuPresentationMode;
+    onRequestFullMenu?: () => void;
     title?: string;
     subtitle?: string | null;
     restaurantDistance?: number | null;
@@ -48,6 +51,8 @@ export default function ContextualIsland({
     onClose,
     recommendedId,
     autoRevealRequest,
+    presentationMode = 'full',
+    onRequestFullMenu,
     title,
     subtitle,
     restaurantDistance,
@@ -82,10 +87,16 @@ export default function ContextualIsland({
     }, [normalizedItems, setHighlightedId]);
 
     const sheetProps = {
-        initialSnap: (type === 'menu' ? 'fullscreen' : 'peek') as SheetSnap,
+        initialSnap: (
+            type === 'menu'
+                ? (presentationMode === 'discovery' ? 'expanded' : 'fullscreen')
+                : 'peek'
+        ) as SheetSnap,
         lockScrollOn: 'open' as const,
         position,
-        className: type === 'menu' ? 'z-10 menu-contextual-island' : 'z-10',
+        className: type === 'menu'
+            ? `z-10 menu-contextual-island menu-contextual-island--${presentationMode}`
+            : 'z-10',
         placementClassName: 'bottom-0',
         snapClassNames: {
             closed: 'contextual-island-sheet--closed',
@@ -122,7 +133,7 @@ export default function ContextualIsland({
                     onClick={onClose}
                 />
             )}
-            <BottomSheetContainer {...sheetProps}>
+            <BottomSheetContainer key={`menu-${presentationMode}`} {...sheetProps}>
                 {({ snap, setSnap }) => (
                     <MenuFlowView
                         normalizedItems={normalizedItems}
@@ -130,6 +141,8 @@ export default function ContextualIsland({
                         setHighlightedId={setHighlightedId}
                         recommendedId={recommendedId}
                         autoRevealRequest={autoRevealRequest}
+                        presentationMode={presentationMode}
+                        onRequestFullMenu={onRequestFullMenu}
                         headerTitle={headerTitle}
                         resultSummary={resultSummary}
                         currentIndex={currentIndex}

@@ -29,6 +29,7 @@ import { getApiUrl } from '../lib/config';
 import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { generateTurnId, logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
+import { getActiveDemoContextPayload } from '../lib/demoContext';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -172,7 +173,8 @@ const BASE_SYSTEM_INSTRUCTION = [
   // TRYBY
   'DISCOVERY (brak restauracji): NATYCHMIAST wywołaj find_nearby. 1 wynik → pokaż menu. Wiele → podaj 2-3 opcje. Zero → szukaj szerzej.',
   'MENU (restauracja znana): wywołaj show_menu. Proponuj tylko pozycje faktycznie w menu — nigdy nie wymyślaj dań.',
-  // ORDER: natychmiast dodaj do koszyka. Nie pytaj "czy na pewno". Po dodaniu zapytaj czy coś jeszcze.
+  'PYTANIA O DANIE: „czy X to Y?”, „co to jest?”, pytania o skład, alergeny, cenę i dostępność są informacyjne. Odpowiedz na podstawie aktualnego menu. Nie dodawaj nic do koszyka, dopóki użytkownik wyraźnie nie powie „dodaj”, „zamawiam”, „poproszę” albo nie poda konkretnej ilości w turze zamówienia.',
+  // ORDER: after explicit purchase intent, add immediately. Do not ask for redundant confirmation.
   'EDYCJA KOSZYKA: wykonuj od razu — update_cart_item_quantity, remove_item_from_cart, replace_cart_item.',
   'DUŻE MENU: jeśli użytkownik prosi o danie którego nie widzisz w bieżącej liście — NATYCHMIAST wywołaj search_menu_items z nazwą dania. Menu może mieć więcej pozycji niż pokazano. search_menu_items szuka w całej karcie restauracji.',
 
@@ -256,11 +258,19 @@ export async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
   }
 }
 
-async function fetchLiveAccessToken(model: string): Promise<string> {
+async function fetchLiveAccessToken(
+  model: string,
+  sessionId: string,
+  demoContext: ReturnType<typeof getActiveDemoContextPayload>,
+): Promise<string> {
   const response = await fetch(getApiUrl('/api/voice/live/token'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model }),
+    body: JSON.stringify({
+      model,
+      session_id: sessionId,
+      demo_context: demoContext,
+    }),
   });
   const payload = await response.json().catch(() => null);
   const token = typeof payload?.token === 'string' ? payload.token.trim() : '';
@@ -829,6 +839,8 @@ export function useGeminiLiveSession({
     }
 
     startInFlightRef.current = true;
+    // Resolve the deterministic scenario before requesting microphone access.
+    const activeDemoContext = getActiveDemoContextPayload();
     latestUserTranscriptRef.current = null;
     autoNearbyRecoveryInFlightRef.current = false;
     autoNearbyRecoveryLastTsRef.current = 0;
@@ -931,11 +943,12 @@ export function useGeminiLiveSession({
         baseInstruction: defaultInstruction,
         customStylePrompt,
         gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
+        demoContext: activeDemoContext,
       });
       const modelSpecificConfig = activeModel.startsWith('gemini-3.1-')
         ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } }
         : {};
-      const ephemeralToken = await fetchLiveAccessToken(activeModel);
+      const ephemeralToken = await fetchLiveAccessToken(activeModel, sid, activeDemoContext);
       if (!desiredActiveRef.current) {
         cleanupRuntime(true);
         return false;

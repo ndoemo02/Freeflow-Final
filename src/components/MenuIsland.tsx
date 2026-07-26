@@ -3,6 +3,7 @@ import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
 import { findLastMentionedMenuItemId, isCartConfirmationText } from '../lib/assistantFocusMatcher';
 import { getMenuItemStableId, getMenuItemUiId, resolveStructuredFocusedMenuItemId } from '../lib/menuFocusContract';
+import { resolveMenuPresentationMode } from '../lib/menuPresentationContract';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
@@ -66,13 +67,21 @@ export default function MenuIsland() {
     }, [currentRestaurant, lastFullResponse, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
     const [autoRevealRequest, setAutoRevealRequest] = useState<{ id: string; seq: number } | null>(null);
+    const [fullMenuRequested, setFullMenuRequested] = useState(false);
     const lastAssistantMenuFocusAtRef = useRef(0);
+    const highlightedIdRef = useRef<string | null>(null);
     const menuBackStatePushedRef = useRef(false);
     const autoRevealSeqRef = useRef(0);
     const consumedStructuredFocusResponseRef = useRef<any>(null);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
     const recommendedId = useMemo(() => pickRecommendedMenuId(menuItems || [], lastFullResponse), [menuItems, lastFullResponse]);
+    const responsePresentationMode = useMemo(
+        () => resolveMenuPresentationMode(lastFullResponse),
+        [lastFullResponse],
+    );
+    const presentationMode = fullMenuRequested ? 'full' : responsePresentationMode;
+    const restaurantIdentity = normalizeId(enrichedRestaurant?.id || enrichedRestaurant?.name);
     const closeMenuContext = useCallback(() => {
         useConversationStore.getState().closeMenuContext();
     }, []);
@@ -81,6 +90,14 @@ export default function MenuIsland() {
         const renderVisible = isVisible && !!menuItems?.length;
         console.log(`[LIVE_MENU] renderVisible=${renderVisible}`);
     }, [isVisible, menuItems?.length]);
+
+    useEffect(() => {
+        highlightedIdRef.current = highlightedId;
+    }, [highlightedId]);
+
+    useEffect(() => {
+        setFullMenuRequested(false);
+    }, [restaurantIdentity]);
 
     useEffect(() => {
         const onCartUpdated = (event: Event) => {
@@ -121,7 +138,7 @@ export default function MenuIsland() {
     useEffect(() => {
         if (!isVisible) return;
 
-        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        let focusTimer: ReturnType<typeof setTimeout> | null = null;
         let pendingMatchId: string | null = null;
 
         const onAssistantSpeechPart = (rawEvent: Event) => {
@@ -130,29 +147,35 @@ export default function MenuIsland() {
             const currentSessionId = useConversationStore.getState().sessionId;
             if (eventSessionId && currentSessionId && eventSessionId !== currentSessionId) return;
 
-            const speechText = String(event?.detail?.transcript || event?.detail?.text || '').trim();
-            if (!speechText) return;
+            const currentPart = String(event?.detail?.text || '').trim();
+            const cumulativeTranscript = String(event?.detail?.transcript || '').trim();
+            const speechText = cumulativeTranscript || currentPart;
+            if (!speechText && !currentPart) return;
 
             const currentItems = useConversationStore.getState().menuItems;
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
 
             if (isCartConfirmationText(speechText)) return;
 
-            const matchedId = findLastMentionedMenuItemId(speechText, currentItems);
+            const matchedId = findLastMentionedMenuItemId(currentPart, currentItems)
+                || findLastMentionedMenuItemId(speechText, currentItems);
             if (!matchedId) return;
+            if (normalizeId(highlightedIdRef.current) === normalizeId(matchedId)) return;
 
-            // Debounce: wait 600ms after last speech part before committing highlight.
-            // This prevents flickering while Amber is mid-sentence.
+            // A complete TTS sentence can commit immediately. Streaming Live parts
+            // get a short stability window so token fragments do not flash the card.
             pendingMatchId = matchedId;
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
+            if (focusTimer) clearTimeout(focusTimer);
+            const delay = rawEvent.type === 'freeflow:assistant-focus-text' ? 0 : 180;
+            focusTimer = setTimeout(() => {
                 if (pendingMatchId) {
                     lastAssistantMenuFocusAtRef.current = Date.now();
+                    highlightedIdRef.current = pendingMatchId;
                     setHighlightedId(pendingMatchId);
                     pendingMatchId = null;
                 }
-                debounceTimer = null;
-            }, 600);
+                focusTimer = null;
+            }, delay);
         };
 
         window.addEventListener('freeflow:assistant-focus-text', onAssistantSpeechPart as EventListener);
@@ -160,7 +183,7 @@ export default function MenuIsland() {
         return () => {
             window.removeEventListener('freeflow:assistant-focus-text', onAssistantSpeechPart as EventListener);
             window.removeEventListener('freeflow:live-assistant-part', onAssistantSpeechPart as EventListener);
-            if (debounceTimer) clearTimeout(debounceTimer);
+            if (focusTimer) clearTimeout(focusTimer);
         };
     }, [isVisible]);
 
@@ -264,6 +287,8 @@ export default function MenuIsland() {
             setHighlightedId={setHighlightedId}
             recommendedId={recommendedId}
             autoRevealRequest={autoRevealRequest}
+            presentationMode={presentationMode}
+            onRequestFullMenu={() => setFullMenuRequested(true)}
             title={enrichedRestaurant?.name ? `Menu: ${enrichedRestaurant.name}` : 'Menu restauracji'}
             subtitle={enrichedRestaurant?.city || enrichedRestaurant?.address || 'Pozycje aktualnie widoczne dla tej restauracji'}
             restaurantDistance={enrichedRestaurant?.distance ?? null}

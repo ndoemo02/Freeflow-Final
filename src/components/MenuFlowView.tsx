@@ -10,6 +10,7 @@ import { useCart } from '../state/CartContext';
 import { useConversationStore } from '../store/useConversationStore';
 import { useIslandFullList } from '../hooks/useIslandFullList';
 import VoiceContextLabel from './VoiceContextLabel';
+import type { MenuPresentationMode } from '../lib/menuPresentationContract';
 
 /* ───────── types ───────── */
 interface Section {
@@ -31,6 +32,8 @@ interface MenuFlowViewProps {
     setHighlightedId: (id: string | null) => void;
     recommendedId?: string | null;
     autoRevealRequest?: { id: string; seq: number } | null;
+    presentationMode?: MenuPresentationMode;
+    onRequestFullMenu?: () => void;
     headerTitle: string;
     resultSummary: string | null;
     currentIndex: number;
@@ -243,6 +246,8 @@ export default function MenuFlowView({
     setHighlightedId,
     recommendedId,
     autoRevealRequest,
+    presentationMode = 'full',
+    onRequestFullMenu,
     headerTitle,
     resultSummary,
     currentIndex,
@@ -258,6 +263,7 @@ export default function MenuFlowView({
     const { itemCount, setIsOpen, restaurant: cartRestaurant } = useCart();
     const storeCurrentRestaurant = useConversationStore((s) => s.currentRestaurant);
     const pendingOrder = useConversationStore((s) => s.pendingOrder);
+    const isFullMenu = presentationMode === 'full';
 
     const cartRestaurantName: string | undefined =
         typeof cartRestaurant === 'string' ? cartRestaurant : (cartRestaurant as any)?.name;
@@ -295,7 +301,7 @@ export default function MenuFlowView({
     /* ── fullscreen class toggle: hide header + hide hero logo ── */
     const isFullscreen = snap === 'fullscreen';
     const isExpandedOrFs = snap === 'expanded' || isFullscreen;
-    useIslandFullList(isExpandedOrFs);
+    useIslandFullList(isFullMenu && isExpandedOrFs);
     useEffect(() => {
         const root = document.querySelector('.freeflow');
         if (!root) return;
@@ -322,9 +328,16 @@ export default function MenuFlowView({
 
     /* ── menu stays expanded or fullscreen — block snap collapse from swipe gesture ── */
     const menuSetSnap = useCallback((next: SheetSnap) => {
+        if (!isFullMenu) {
+            if (next === 'fullscreen') {
+                onRequestFullMenu?.();
+                setSnap('fullscreen');
+            }
+            return;
+        }
         if (next === 'fullscreen' || next === 'expanded') setSnap(next);
         // ignore peek/closed — menu stays at least expanded
-    }, [setSnap]);
+    }, [isFullMenu, onRequestFullMenu, setSnap]);
 
     const gestures = useIslandGestures({
         snap,
@@ -340,7 +353,7 @@ export default function MenuFlowView({
 
     /* ── chips list ── */
     const chips = useMemo(() => sections.map(s => ({ key: s.key, label: s.label })), [sections]);
-    const showChips = chips.length > 1;
+    const showChips = isFullMenu && chips.length > 1;
 
     const expandedSafeBottom = 'var(--ff-voice-dock-reserved-height, calc(env(safe-area-inset-bottom) + 104px))';
 
@@ -590,7 +603,7 @@ export default function MenuFlowView({
 
     return (
         /* ── ALWAYS EXPANDED: sectioned list ── */
-        <div className="flex h-full min-h-0 flex-1 flex-col text-white">
+        <div className={`menu-flow-view flex h-full min-h-0 flex-1 flex-col text-white ${isFullMenu ? 'menu-flow-view--full' : 'menu-flow-view--discovery'}`}>
             {/* header */}
             <div className={`menu-flow-header shrink-0 ${snap === 'fullscreen' ? 'menu-fullscreen-header' : ''}`}>
                 {snap === 'fullscreen' ? (
@@ -770,7 +783,23 @@ export default function MenuFlowView({
                 </>
             )}
 
+            {!isFullMenu && (
+                <div className="menu-discovery-actions">
+                    <button
+                        type="button"
+                        className="menu-discovery-actions__full-menu"
+                        onClick={onRequestFullMenu}
+                    >
+                        Zobacz pełne menu
+                    </button>
+                    <span className="menu-discovery-actions__hint">
+                        Pełna karta, kategorie i rozmiary
+                    </span>
+                </div>
+            )}
+
             {/* sectioned list */}
+            {isFullMenu && (
             <SheetScrollable
                 className="list-scroll tiny-scroll min-h-0 flex-1 px-[10px]"
                 style={{ paddingBottom: expandedSafeBottom }}
@@ -881,6 +910,7 @@ export default function MenuFlowView({
                     ))}
                 </div>
             </SheetScrollable>
+            )}
         </div>
     );
 }
