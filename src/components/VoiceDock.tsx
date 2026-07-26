@@ -10,6 +10,7 @@
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { Mic } from 'lucide-react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 
 // ── Typy ──
@@ -65,6 +66,14 @@ function cleanTranscript(
 // ── Iniekcja SVG defs (clip-path + rim gradient) ──
 
 const DEFS_ID = 'ff-voice-dock-defs';
+export const DOCK_PATH = 'M0,0.5 C0,0.19 0.02,0 0.09,0 C0.2,0 0.32,0.035 0.5,0.035 C0.68,0.035 0.8,0 0.91,0 C0.98,0 1,0.19 1,0.5 C1,0.81 0.98,1 0.91,1 C0.8,1 0.68,0.965 0.5,0.965 C0.32,0.965 0.2,1 0.09,1 C0.02,1 0,0.81 0,0.5 Z';
+
+const WAVE_PRESETS = [
+  { duration: '1.72s', delay: '-0.18s', blur: '0px', travel: '1.18' },
+  { duration: '2.31s', delay: '-1.07s', blur: '0.5px', travel: '1.32' },
+  { duration: '2.83s', delay: '-0.64s', blur: '1.2px', travel: '1.48' },
+  { duration: '3.37s', delay: '-2.12s', blur: '2px', travel: '1.62' },
+] as const;
 
 function injectDockDefs() {
   if (document.getElementById(DEFS_ID)) return;
@@ -77,7 +86,7 @@ function injectDockDefs() {
   svg.innerHTML = `
     <defs>
       <clipPath id="ff-dock-clip" clipPathUnits="objectBoundingBox">
-        <path d="M0,0.5 C0,0.2 0.02,0 0.09,0 C0.2,0 0.32,0.1 0.5,0.1 C0.68,0.1 0.8,0 0.91,0 C0.98,0 1,0.2 1,0.5 C1,0.8 0.98,1 0.91,1 C0.8,1 0.68,0.9 0.5,0.9 C0.32,0.9 0.2,1 0.09,1 C0.02,1 0,0.8 0,0.5 Z"/>
+        <path d="${DOCK_PATH}"/>
       </clipPath>
       <linearGradient id="ff-rim-grad" x1="0" y1="0" x2="1" y2="0">
         <stop offset="0" stop-color="#3FA9FF"/>
@@ -124,9 +133,6 @@ export default function VoiceDock({
 }: VoiceDockProps) {
   const dockRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const levelRef = useRef(0);
-  const rafRef = useRef(0);
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const [inputValue, setInputValue] = useState('');
 
   // Store — trzy punkty
@@ -148,9 +154,9 @@ export default function VoiceDock({
     : dockState === 'thinking'
       ? 'Amber pracuje'
       : dockState === 'speaking'
-        ? 'Amber odpowiada'
-        : dockState === 'listening'
-          ? 'Mów · słucham'
+      ? 'Amber odpowiada'
+      : dockState === 'listening'
+          ? 'Nasłuch aktywny'
           : 'Gotowa';
 
   // Transkrypt
@@ -166,66 +172,6 @@ export default function VoiceDock({
     injectDockDefs();
     injectStateCSS();
   }, []);
-
-  // ── Web Audio — RMS amplitude ──
-
-  useEffect(() => {
-    if (dockState === 'idle') {
-      cancelAnimationFrame(rafRef.current);
-      dockRef.current?.style.setProperty('--level', '0');
-      return;
-    }
-
-    let aborted = false;
-    let cleanupStream: (() => void) | null = null;
-
-    (async () => {
-      try {
-        const ctx = new AudioContext();
-        audioCtxRef.current = ctx;
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        const buf = new Uint8Array(analyser.fftSize);
-
-        if (dockState === 'listening') {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          if (aborted) { stream.getTracks().forEach((t) => t.stop()); return; }
-          ctx.createMediaStreamSource(stream).connect(analyser);
-          cleanupStream = () => stream.getTracks().forEach((t) => t.stop());
-        } else {
-          const ttsEl = document.querySelector<HTMLAudioElement>('audio[data-role="tts"]');
-          if (!ttsEl) return;
-          ctx.createMediaElementSource(ttsEl).connect(analyser);
-        }
-
-        const tick = () => {
-          if (aborted) return;
-          analyser.getByteTimeDomainData(buf);
-          let sum = 0;
-          for (let i = 0; i < buf.length; i++) {
-            const n = (buf[i] - 128) / 128;
-            sum += n * n;
-          }
-          levelRef.current = Math.min(1, Math.sqrt(sum / buf.length) * 3);
-          dockRef.current?.style.setProperty('--level', levelRef.current.toFixed(3));
-          rafRef.current = requestAnimationFrame(tick);
-        };
-
-        tick();
-      } catch (e) {
-        console.warn('[VoiceDock] Web Audio setup:', e);
-      }
-    })();
-
-    return () => {
-      aborted = true;
-      cancelAnimationFrame(rafRef.current);
-      dockRef.current?.style.setProperty('--level', '0');
-      audioCtxRef.current?.close();
-      audioCtxRef.current = null;
-      cleanupStream?.();
-    };
-  }, [dockState]);
 
   // ── Flash potwierdzenia (teal, 600ms) ──
 
@@ -261,10 +207,14 @@ export default function VoiceDock({
 
   const inputPlaceholder =
     dockState === 'listening'
-      ? 'Słucham...'
+      ? 'Mów naturalnie…'
       : dockState === 'thinking'
-      ? 'Amber myśli...'
-      : 'Powiedz co chcesz zamówić...';
+        ? 'Szukam najlepszego dopasowania…'
+        : dockState === 'speaking'
+          ? 'Możesz wejść w słowo…'
+          : dockState === 'error'
+            ? 'Spróbuj ponownie lub wpisz wiadomość…'
+            : 'Szybki lunch? Obiad na mieście? Kolacja dla dwojga?';
 
   const handleInnerClick = () => {
     inputRef.current?.focus();
@@ -280,6 +230,7 @@ export default function VoiceDock({
         className="ff-voice-dock"
         data-state={dockState}
         data-ui-role="voice-dock-bar"
+        style={{ '--level': dockState === 'listening' || dockState === 'speaking' ? 0.72 : dockState === 'thinking' ? 0.42 : 0 } as React.CSSProperties}
       >
         {/* Glass backdrop */}
         <div className="ff-voice-dock__glass" />
@@ -304,7 +255,7 @@ export default function VoiceDock({
           <path
             className="ff-voice-dock__rim"
             pathLength="1"
-            d="M0,0.5 C0,0.2 0.02,0 0.09,0 C0.2,0 0.32,0.1 0.5,0.1 C0.68,0.1 0.8,0 0.91,0 C0.98,0 1,0.2 1,0.5 C1,0.8 0.98,1 0.91,1 C0.8,1 0.68,0.9 0.5,0.9 C0.32,0.9 0.2,1 0.09,1 C0.02,1 0,0.8 0,0.5 Z"
+            d={DOCK_PATH}
           />
         </svg>
 
@@ -322,8 +273,18 @@ export default function VoiceDock({
             }
             aria-pressed={dockState === 'listening'}
           >
-            <span className="ff-voice-dock__rings" aria-hidden="true">
-              <span /><span /><span />
+            <span className="ff-voice-dock__rings" aria-hidden="true" data-wave-count={WAVE_PRESETS.length}>
+              {WAVE_PRESETS.map((wave, index) => (
+                <span
+                  key={index}
+                  style={{
+                    '--wave-duration': wave.duration,
+                    '--wave-delay': wave.delay,
+                    '--wave-blur': wave.blur,
+                    '--wave-travel': wave.travel,
+                  } as React.CSSProperties}
+                />
+              ))}
             </span>
             <img
               src="/logo/Logo%20Affinity/ff-speaker-2x.png"
@@ -384,6 +345,7 @@ export default function VoiceDock({
                 aria-pressed={dockState === 'listening'}
               >
                 <span className="ff-voice-dock__orb" aria-hidden="true" />
+                <Mic className="ff-voice-dock__mic-icon" aria-hidden="true" strokeWidth={1.7} />
               </button>
             )}
           </div>

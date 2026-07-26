@@ -139,6 +139,8 @@ export default function CinematicRestaurantCarousel({
     const dragVelocityRef = useRef(0);
     const dragAxisRef = useRef<'x' | 'y' | null>(null);
     const wasDraggedRef = useRef(false);
+    const activePointerIdRef = useRef<number | null>(null);
+    const pointerDownCardIndexRef = useRef<number | null>(null);
     const sheetStartXRef = useRef(0);
     const sheetStartYRef = useRef(0);
     const hasLoggedInitialLayoutRef = useRef(false);
@@ -150,36 +152,25 @@ export default function CinematicRestaurantCarousel({
     const recalcCompactBounds = useCallback(() => {
         const viewportHeight = getStableViewportHeight();
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        const logoZone = document.querySelector('.hero-stack') as HTMLElement | null;
-        const logoContainer = document.querySelector('.logo-container') as HTMLElement | null;
-        const logoImage = document.querySelector('.hero-stack .logo') as HTMLElement | null;
-        const dockLayer = document.querySelector('[data-ui-role="voice-dock-layer"]') as HTMLElement | null;
+        const header = document.querySelector('[data-ui-role="home-header"]') as HTMLElement | null;
         const dockBar = document.querySelector('[data-ui-role="voice-dock-bar"]') as HTMLElement | null;
-        const dock = dockLayer || dockBar;
-        const dockRect = dock?.getBoundingClientRect();
+        const headerRect = header?.getBoundingClientRect();
+        const dockRect = dockBar?.getBoundingClientRect();
 
-        let nextTop = Math.round(viewportHeight * 0.38);
+        let nextTop = headerRect
+            ? Math.round(headerRect.bottom + (isMobile ? 10 : 16))
+            : Math.round(viewportHeight * 0.12);
         let nextBottom = Math.round(viewportHeight * 0.16);
-        let logoTopFloor = nextTop;
-
-        const logoBottomCandidates: number[] = [];
-        // Only use the actual logo image to avoid artificial padding from containers
-        if (logoImage) logoBottomCandidates.push(logoImage.getBoundingClientRect().bottom);
-        const hasLogoAnchors = logoBottomCandidates.length > 0;
+        const headerTopFloor = nextTop;
+        const hasHeaderAnchor = !!headerRect;
         const hasDockAnchor = !!dockRect;
-        if (logoBottomCandidates.length > 0) {
-            const logoBottom = Math.max(...logoBottomCandidates);
-            // Keep clear space below the logo droplet so card never touches/covers it.
-            logoTopFloor = Math.round(logoBottom + 14);
-            nextTop = logoTopFloor;
-        }
 
         if (dockRect) {
             const dockTop = dockRect.top;
             const baseBottom = viewportHeight - dockTop;
             // Natural gap above the VoiceDock capsule — card bottom sits just above dock,
             // not overlapping. Mobile gets a tiny overlap for "emerge from dock" feel.
-            const gapAboveDock = isMobile ? -8 : 12;
+            const gapAboveDock = isMobile ? -12 : 6;
             const anchoredBottom = baseBottom + gapAboveDock;
             nextBottom = Math.max(8, Math.round(anchoredBottom));
         }
@@ -189,7 +180,7 @@ export default function CinematicRestaurantCarousel({
         if (available < minStageHeight) {
             const deficit = minStageHeight - available;
             nextBottom = Math.max(8, nextBottom - deficit);
-            nextTop = Math.max(logoTopFloor, nextTop);
+            nextTop = Math.max(headerTopFloor, nextTop);
         }
 
         setCompactBounds((prev) => {
@@ -198,7 +189,7 @@ export default function CinematicRestaurantCarousel({
         });
 
         const stageHeight = Math.max(0, viewportHeight - nextTop - nextBottom);
-        const hasStableAnchors = hasLogoAnchors && hasDockAnchor && stageHeight > 0;
+        const hasStableAnchors = hasHeaderAnchor && hasDockAnchor && stageHeight > 0;
         if (hasStableAnchors) {
             setLayoutReady(true);
         }
@@ -238,44 +229,19 @@ export default function CinematicRestaurantCarousel({
         const vv = window.visualViewport;
         vv?.addEventListener('resize', onResize);
         vv?.addEventListener('scroll', onResize);
-        let warmupFrames = 0;
-        let warmupRaf = 0;
-        const warmupMeasure = () => {
-            window.requestAnimationFrame(recalcCompactBounds);
-            warmupFrames += 1;
-            // 60 frames (~1 sec) to ensure we capture the end of the 0.6s CSS transition
-            if (warmupFrames < 60) {
-                warmupRaf = window.requestAnimationFrame(warmupMeasure);
-            }
-        };
-        warmupRaf = window.requestAnimationFrame(warmupMeasure);
-
-        const observer = new MutationObserver(() => {
-            window.requestAnimationFrame(recalcCompactBounds);
-        });
-        const geometryObserver = new MutationObserver(() => {
-            window.requestAnimationFrame(recalcCompactBounds);
-        });
-        const homeRoot = document.querySelector('.home-page.freeflow');
-        const dockLayer = document.querySelector('[data-ui-role="voice-dock-layer"]');
+        const header = document.querySelector('[data-ui-role="home-header"]');
         const dockBar = document.querySelector('[data-ui-role="voice-dock-bar"]');
-        const logoContainer = document.querySelector('.logo-container');
-        const logoImage = document.querySelector('.hero-stack .logo');
-        if (homeRoot) {
-            observer.observe(homeRoot, { attributes: true, attributeFilter: ['class'] });
-        }
-        [dockLayer, dockBar, logoContainer, logoImage].forEach((node) => {
-            if (!node) return;
-            geometryObserver.observe(node, { attributes: true, attributeFilter: ['style', 'class'] });
-        });
+        const geometryObserver = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(() => window.requestAnimationFrame(recalcCompactBounds))
+            : null;
+        if (header) geometryObserver?.observe(header);
+        if (dockBar) geometryObserver?.observe(dockBar);
 
         return () => {
             window.removeEventListener('resize', onResize);
             vv?.removeEventListener('resize', onResize);
             vv?.removeEventListener('scroll', onResize);
-            window.cancelAnimationFrame(warmupRaf);
-            observer.disconnect();
-            geometryObserver.disconnect();
+            geometryObserver?.disconnect();
         };
     }, [recalcCompactBounds]);
 
@@ -295,20 +261,10 @@ export default function CinematicRestaurantCarousel({
         dragAxisRef.current = null;
         dragVelocityRef.current = 0;
 
-        let warmupFrames = 0;
-        let warmupRaf = 0;
-        const warmupMeasure = () => {
-            recalcCompactBounds();
-            warmupFrames += 1;
-            // 60 frames (~1 sec) to ensure we capture the end of the CSS transition
-            if (warmupFrames < 60) {
-                warmupRaf = window.requestAnimationFrame(warmupMeasure);
-            }
-        };
-        warmupRaf = window.requestAnimationFrame(warmupMeasure);
+        const measureRaf = window.requestAnimationFrame(recalcCompactBounds);
 
         return () => {
-            window.cancelAnimationFrame(warmupRaf);
+            window.cancelAnimationFrame(measureRaf);
         };
     }, [listOpen, recalcCompactBounds]);
 
@@ -358,17 +314,21 @@ export default function CinematicRestaurantCarousel({
         }
     }, [currentIndex, items, onPreviewChange]);
 
-    const appWidth = Math.min(vpWidth, 480);
+    const appWidth = Math.min(vpWidth, 560);
     const isMobileViewport = vpWidth <= 768;
-    
-    // Card width: proportional to viewport, max 240px
-    const widthFactor = isMobileViewport ? 0.44 : 0.38;
-    const CARD_W = Math.max(140, Math.min(Math.floor(appWidth * widthFactor), 240));
+
+    const CARD_W = Math.round(
+        vpWidth <= 430
+            ? Math.max(168, Math.min(206, 184 + (vpWidth - 375) * 0.4))
+            : vpWidth <= 768
+                ? Math.min(224, 206 + (vpWidth - 430) * 0.0533)
+                : Math.min(260, 224 + (vpWidth - 768) * 0.11),
+    );
 
     // Card height: natural aspect ratio (food card = wider than tall), capped at 40% viewport
     // Never stretch vertically — cards should feel like premium Polaroids, not banners.
     const ASPECT_RATIO = 1.45; // width → height multiplier
-    const CARD_VH_MAX = 0.40;  // max 40% of viewport height
+    const CARD_VH_MAX = 0.42;
     const CARD_H = Math.max(
         180,
         Math.min(
@@ -388,6 +348,10 @@ export default function CinematicRestaurantCarousel({
 
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
         e.currentTarget.setPointerCapture(e.pointerId);
+        activePointerIdRef.current = e.pointerId;
+        const card = (e.target as HTMLElement).closest<HTMLElement>('[data-restaurant-card-index]');
+        const rawCardIndex = card?.dataset.restaurantCardIndex;
+        pointerDownCardIndexRef.current = rawCardIndex == null ? null : Number(rawCardIndex);
         dragStartXRef.current = e.clientX;
         dragStartYRef.current = e.clientY;
         dragLastXRef.current = e.clientX;
@@ -400,7 +364,7 @@ export default function CinematicRestaurantCarousel({
     }, []);
 
     const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-        if (!isDragging) return;
+        if (activePointerIdRef.current !== e.pointerId) return;
         const dx = e.clientX - dragStartXRef.current;
         const dy = e.clientY - dragStartYRef.current;
         
@@ -421,20 +385,37 @@ export default function CinematicRestaurantCarousel({
         dragLastXRef.current = e.clientX;
         dragLastTRef.current = now;
         setDragOffset(dx);
-    }, [isDragging]);
+    }, []);
 
     const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-        if (!isDragging) return;
+        if (activePointerIdRef.current !== e.pointerId) return;
 
         const dx = e.clientX - dragStartXRef.current;
         const dy = e.clientY - dragStartYRef.current;
         const axis = dragAxisRef.current;
+        const cardIndex = pointerDownCardIndexRef.current;
+        const clickThreshold = e.pointerType === 'touch' ? 8 : 14;
+        const isGesture = wasDraggedRef.current
+            || Math.abs(dx) > clickThreshold
+            || Math.abs(dy) > clickThreshold;
+
+        activePointerIdRef.current = null;
+        pointerDownCardIndexRef.current = null;
 
         if ((axis === 'y' || axis === null) && dy < -60 && Math.abs(dy) > Math.abs(dx)) {
             setDragOffset(0);
             setIsDragging(false);
             dragAxisRef.current = null;
             setListOpen(true);
+            return;
+        }
+
+        if (!isGesture && cardIndex != null && items[cardIndex]) {
+            setCurrentIndex(cardIndex);
+            setDragOffset(0);
+            setIsDragging(false);
+            dragAxisRef.current = null;
+            onSelect(items[cardIndex]);
             return;
         }
 
@@ -451,30 +432,22 @@ export default function CinematicRestaurantCarousel({
         setDragOffset(0);
         setIsDragging(false);
         dragAxisRef.current = null;
-    }, [isDragging, dragOffset, currentIndex, items.length, GAP, isMobileViewport]);
+    }, [dragOffset, currentIndex, items, GAP, onSelect]);
 
     const handlePointerCancel = useCallback(() => {
+        activePointerIdRef.current = null;
+        pointerDownCardIndexRef.current = null;
         setDragOffset(0);
         setIsDragging(false);
         dragAxisRef.current = null;
     }, []);
 
-    const handleCardClick = useCallback((index: number) => {
-        if (wasDraggedRef.current) return;
-        if (Math.abs(dragOffset) > 8) return;
-        if (isMobileViewport) {
-            // Mobile: first tap focuses the card, second tap (center) opens menu
-            if (index !== currentIndex) {
-                setCurrentIndex(index);
-            } else {
-                onSelect(items[index]);
-            }
-        } else {
-            // Desktop: one click = open restaurant directly
-            setCurrentIndex(index);
-            onSelect(items[index]);
-        }
-    }, [dragOffset, currentIndex, items, onSelect, isMobileViewport]);
+    const handleCardKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>, index: number) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        setCurrentIndex(index);
+        onSelect(items[index]);
+    }, [items, onSelect]);
 
     const handleListItemClick = useCallback((index: number) => {
         setListOpen(false);
@@ -521,6 +494,16 @@ export default function CinematicRestaurantCarousel({
                     display: listOpen ? 'none' : 'flex',
                 }}
             >
+                <button
+                    type="button"
+                    className="restaurant-carousel__expand"
+                    onClick={() => setListOpen(true)}
+                    aria-label="Pokaż pełną listę restauracji"
+                >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 14l5-5 5 5M5 19h14" />
+                    </svg>
+                </button>
                 <div className="flex-1 w-full flex items-end justify-end min-h-0 relative overflow-visible pointer-events-auto">
                     <div
                         style={{
@@ -533,11 +516,11 @@ export default function CinematicRestaurantCarousel({
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
                         onPointerCancel={handlePointerCancel}
-                        onPointerLeave={handlePointerCancel}
                         onLostPointerCapture={handlePointerCancel}
                     >
                         {!isMobileViewport && currentIndex > 0 && !isDragging && (
                             <button
+                                onPointerDown={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.max(0, i - 1)); }}
                                 style={{
                                     position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
@@ -551,6 +534,7 @@ export default function CinematicRestaurantCarousel({
 
                         {!isMobileViewport && currentIndex < items.length - 1 && !isDragging && (
                             <button
+                                onPointerDown={(e) => e.stopPropagation()}
                                 onClick={(e) => { e.stopPropagation(); setCurrentIndex(i => Math.min(items.length - 1, i + 1)); }}
                                 style={{
                                     position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
@@ -571,7 +555,11 @@ export default function CinematicRestaurantCarousel({
                             return (
                                 <div
                                     key={`${item.id}-${i}`}
-                                    onClick={() => handleCardClick(i)}
+                                    data-restaurant-card-index={i}
+                                    role="button"
+                                    tabIndex={s.isCenter ? 0 : -1}
+                                    aria-label={`Otwórz menu restauracji ${item.name}`}
+                                    onKeyDown={(event) => handleCardKeyDown(event, i)}
                                     style={{
                                         position: 'absolute',
                                         width: CARD_W, height: CARD_H,
@@ -583,7 +571,7 @@ export default function CinematicRestaurantCarousel({
                                             ? 'transform 0.05s linear'
                                             : 'transform 0.5s cubic-bezier(0.2,0.8,0.2,1), opacity 0.4s ease, filter 0.4s ease',
                                         cursor: 'pointer',
-                                        willChange: 'transform, opacity',
+                                        willChange: isDragging ? 'transform' : 'auto',
                                         backfaceVisibility: 'hidden',
                                         WebkitBackfaceVisibility: 'hidden',
                                         isolation: 'isolate',
@@ -671,22 +659,30 @@ export default function CinematicRestaurantCarousel({
                             onClick={closeList}
                         />
                         <motion.div
-                            className="fixed right-0 z-[45] flex flex-col"
+                            className="fixed z-[45] flex flex-col"
                             style={{
                                 background: 'linear-gradient(170deg, rgba(18,14,9,0.96) 0%, rgba(10,8,5,0.94) 100%)',
                                 border: '1px solid rgba(255,255,255,0.12)',
                                 height: '82vh',
                                 maxHeight: '82vh',
                                 bottom: 'calc(env(safe-area-inset-bottom) + 6px)',
+                                left: isMobileViewport ? 12 : 'auto',
+                                right: isMobileViewport ? 12 : 0,
                                 backdropFilter: 'blur(12px) saturate(130%)',
                                 boxShadow: '-8px 0 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(249,115,22,0.07) inset',
                                 overflow: 'hidden',
                             }}
-                            initial={{ y: '100%', width: Math.max(260, Math.round(vpWidth * 0.68)), borderRadius: '20px 0 0 0' }}
+                            initial={{
+                                y: '100%',
+                                width: isMobileViewport ? Math.max(280, vpWidth - 24) : Math.max(320, Math.min(720, Math.round(vpWidth * 0.68))),
+                                borderRadius: isMobileViewport ? '20px' : '20px 0 0 0',
+                            }}
                             animate={{
                                 y: 0,
-                                width: isFullWidth ? vpWidth : Math.max(260, Math.round(vpWidth * 0.68)),
-                                borderRadius: isFullWidth ? '0px' : '20px 0 0 0',
+                                width: isMobileViewport
+                                    ? Math.max(280, vpWidth - 24)
+                                    : (isFullWidth ? vpWidth : Math.max(320, Math.min(720, Math.round(vpWidth * 0.68)))),
+                                borderRadius: isMobileViewport ? '20px' : (isFullWidth ? '0px' : '20px 0 0 0'),
                             }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 32, stiffness: 280 }}
@@ -707,15 +703,18 @@ export default function CinematicRestaurantCarousel({
                             </div>
                             <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch', paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' } as React.CSSProperties}>
                                 {items.map((item, i) => (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={`${item.id}-list-${i}`}
                                         onClick={() => handleListItemClick(i)}
                                         style={{
                                             display: 'flex', alignItems: 'center', gap: 11,
                                             padding: '9px 16px', cursor: 'pointer',
+                                            width: '100%', color: 'inherit', textAlign: 'left',
                                             borderBottom: '1px solid rgba(255,255,255,0.035)',
                                             background: i === currentIndex ? 'rgba(249,115,22,0.07)' : 'transparent',
                                             borderLeft: i === currentIndex ? '2px solid rgba(249,115,22,0.45)' : '2px solid transparent',
+                                            borderTop: 0, borderRight: 0,
                                         }}
                                     >
                                         <div style={{ width: 42, height: 42, borderRadius: 9, flexShrink: 0, background: getGradient(item.name), overflow: 'hidden' }}>
@@ -733,19 +732,22 @@ export default function CinematicRestaurantCarousel({
                                             <div style={{ fontSize: 9, color: 'var(--ff-amber-500)' }}>Ocena {item.rating || '4.5'}</div>
                                             <div style={{ fontSize: 8, color: 'rgba(100,220,120,0.6)' }}>{formatDist(item)}</div>
                                         </div>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
-                            <div
+                            <button
+                                type="button"
                                 onClick={closeList}
+                                aria-label="Zamknij listę restauracji"
                                 style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: '100%', background: 'transparent', border: 0,
                                     padding: 11, cursor: 'pointer', color: 'rgba(255,255,255,0.28)', fontSize: 10,
                                     gap: 4, borderTop: '1px solid rgba(255,255,255,0.05)', flexShrink: 0,
                                 }}
                             >
                                 zamknij liste
-                            </div>
+                            </button>
                         </motion.div>
                     </>
                 )}

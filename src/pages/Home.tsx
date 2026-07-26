@@ -18,7 +18,7 @@ import { useUIPanels } from "../hooks/useUIPanels";
 import { useTTS } from "../hooks/useTTS";
 import { useActionDispatcher } from "../hooks/useActionDispatcher";
 import { useLiveEvents } from "../hooks/useLiveEvents";
-import { useGeminiLiveSession } from "../hooks/useGeminiLiveSession";
+import { useLiveVoiceSession } from "../hooks/useLiveVoiceSession";
 import { deriveUIHints } from "../lib/brainUiUtils";
 import UIPanelRouter from "../components/UIPanelRouter";
 import VoiceDock from "../components/VoiceDock";
@@ -27,7 +27,8 @@ import IntentChips from "../components/IntentChips";
 import Cart from "../components/Cart";
 import MenuDrawer from "../ui/MenuDrawer";
 import Switch from "../components/Switch";
-import { StateIsland, SuggestedRestaurantsCarousel } from "../components/ConversationUI";
+import { SuggestedRestaurantsCarousel } from "../components/ConversationUI";
+import VoiceContextLabel from "../components/VoiceContextLabel";
 import MenuIsland from "../components/MenuIsland";
 import { useUI } from "../state/ui";
 import { useCart } from "../state/CartContext";
@@ -37,6 +38,7 @@ import "./Home.css";
 import { usePostOrderReset } from '../hooks/usePostOrderReset';
 import { generateTurnId, logBridge } from '../lib/interactionBridge';
 import { deriveLogoScenePhase } from '../lib/logoSceneContract';
+import { deriveVoiceContext } from '../lib/voiceContext';
 
 // --- UI View Mode Types ---
 type ViewMode = 'tiles' | 'bar';
@@ -45,7 +47,7 @@ export default function Home() {
   // --- Hooks ---
   // Using lastFullResponse to access strict data contract including 'tts' object
   // startNewConversation: Manual conversation reset (optional UI feature)
-  const { sessionId, sendMessage, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
+  const { sessionId, sendMessage, selectRestaurantFromUi, isThinking, lastFullResponse, lastResponse, resetSession: startNewConversation, error } = useConversationStore();
   const location = useLocation();
   const navigate = useNavigate();
   const clearHomeContext = useConversationStore(state => state.clearHomeContext);
@@ -63,7 +65,7 @@ export default function Home() {
     start: startLiveSession,
     stop: stopLiveSession,
     error: liveSessionError,
-  } = useGeminiLiveSession({
+  } = useLiveVoiceSession({
     wsRef: socketRef,
     enabled: liveModeEnabled,
     sessionId,
@@ -99,6 +101,10 @@ export default function Home() {
     isThinking,
     liveSessionActive: logoLiveActive,
     liveUiState: logoLiveActive ? liveUiState : undefined,
+    hasSuggestedRestaurants: !!suggestedRestaurants?.length,
+  });
+  const voiceContext = deriveVoiceContext({
+    uiMode,
     hasSuggestedRestaurants: !!suggestedRestaurants?.length,
   });
 
@@ -305,17 +311,18 @@ export default function Home() {
     return () => window.removeEventListener('freeflow:voice:trigger', handler);
   }, [handleMicClick]);
 
-  // Handle restaurant selection from carousel "Wybierz" button
+  // Handle deterministic restaurant selection from the carousel/list.
+  // This path carries the restaurant ID and intentionally bypasses text NLU.
   useEffect(() => {
     const handler = (e: Event) => {
       const r = (e as CustomEvent).detail;
-      if (r?.name) {
-        handleTextSubmit(`Wybieram ${r.name}`);
+      if (r?.id && r?.name) {
+        void selectRestaurantFromUi(r);
       }
     };
     window.addEventListener('freeflow:selectRestaurant', handler);
     return () => window.removeEventListener('freeflow:selectRestaurant', handler);
-  }, [handleTextSubmit]);
+  }, [selectRestaurantFromUi]);
 
   useEffect(() => {
     if (!liveModeEnabled) return;
@@ -424,22 +431,15 @@ export default function Home() {
       {/* Background provided by App.tsx (RestaurantBackground) */}
 
       {/* Header */}
-      <header className="home-header fixed top-0 left-0 right-0 pt-1.5 px-3 pb-1 flex justify-between items-start z-50 pointer-events-none">
-        <div
-          className="header-logo-slot"
-          data-ui-role="header-logo-target"
-          aria-hidden="true"
-        />
-        <div className="home-header__left flex flex-col gap-0.5 pointer-events-auto">
-          <div className="flex items-center gap-2 pl-0.5 mt-0">
-            <StateIsland />
-          </div>
+      {uiMode !== 'restaurant' && <header className="home-header fixed top-0 left-0 right-0 z-50 pointer-events-none" data-ui-role="home-header">
+        <div className="home-header__left pointer-events-auto">
+          <VoiceContextLabel context={voiceContext} />
         </div>
-        <div className="flex gap-4 pointer-events-auto">
+        <div className="home-header__actions pointer-events-auto">
           {cartItemsCount > 0 && (
             <button
               onClick={() => setIsOpen(true)}
-              className="relative p-2 bg-white/10 rounded-full hover:bg-white/20 transition"
+              className="home-header__action relative"
               aria-label={`Otwórz koszyk (${cartItemsCount})`}
             >
               <i className="fas fa-shopping-cart text-white" />
@@ -452,11 +452,11 @@ export default function Home() {
             </button>
           )}
           {/* Drawer remains the global navigation entry point */}
-          <button onClick={openDrawer} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
+          <button onClick={openDrawer} className="home-header__action" aria-label="Otwórz menu">
             <i className="fas fa-bars text-white" />
           </button>
         </div>
-      </header>
+      </header>}
 
       {/* Main Content Area */}
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen min-h-[100dvh] p-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+96px)] w-full max-w-7xl mx-auto">

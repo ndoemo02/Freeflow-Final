@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 
 /**
  * ConversationDebugView
@@ -38,12 +38,13 @@ export default function ConversationDebugView({ event, expanded = false }) {
         : '—';
 
     // Confidence badge color
-    const confidenceColor = useMemo(() => {
-        if (!intent_confidence) return 'bg-gray-600';
-        if (intent_confidence >= 0.8) return 'bg-green-600';
-        if (intent_confidence >= 0.5) return 'bg-yellow-600';
-        return 'bg-red-600';
-    }, [intent_confidence]);
+    const confidenceColor = !intent_confidence
+        ? 'bg-gray-600'
+        : intent_confidence >= 0.8
+            ? 'bg-green-600'
+            : intent_confidence >= 0.5
+                ? 'bg-yellow-600'
+                : 'bg-red-600';
 
     // Pipeline stages
     const stages = [

@@ -13,7 +13,7 @@ interface LogoSceneInput {
 
 export interface LogoMotionPlan {
   transitionMs: number;
-  retractDrip: boolean;
+  visible: boolean;
   wobblePx: number;
   pulse: boolean;
 }
@@ -47,7 +47,7 @@ export function getLogoMotionPlan(phase: LogoScenePhase, reduceMotion: boolean):
   if (reduceMotion) {
     return {
       transitionMs: 0,
-      retractDrip: false,
+      visible: phase === 'idle' || phase === 'intent',
       wobblePx: 0,
       pulse: false,
     };
@@ -56,7 +56,7 @@ export function getLogoMotionPlan(phase: LogoScenePhase, reduceMotion: boolean):
   if (phase === 'intent') {
     return {
       transitionMs: 680,
-      retractDrip: true,
+      visible: true,
       wobblePx: 3,
       pulse: false,
     };
@@ -64,16 +64,16 @@ export function getLogoMotionPlan(phase: LogoScenePhase, reduceMotion: boolean):
 
   if (phase === 'compact' || phase === 'results') {
     return {
-      transitionMs: 620,
-      retractDrip: true,
-      wobblePx: 2,
-      pulse: true,
+      transitionMs: 220,
+      visible: false,
+      wobblePx: 0,
+      pulse: false,
     };
   }
 
   return {
     transitionMs: 560,
-    retractDrip: false,
+    visible: true,
     wobblePx: 0,
     pulse: false,
   };

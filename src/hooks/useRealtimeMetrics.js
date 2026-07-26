@@ -14,7 +14,7 @@ export function useRealtimeMetrics() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const WS_URL = process.env.REACT_APP_WS_URL || window.location.origin.replace('http', 'ws');
+    const WS_URL = import.meta.env.VITE_WS_URL || window.location.origin.replace('http', 'ws');
     const socket = io(WS_URL, {
       transports: ['websocket'],
       reconnection: true,

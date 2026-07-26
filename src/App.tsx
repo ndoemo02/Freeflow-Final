@@ -12,7 +12,6 @@ import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
 import AdminPanel from "./pages/AdminPanel";
 import DriverPanel from "./pages/DriverPanel";
-import UiLab from "./pages/UiLab";
 import AuthModal from "./components/AuthModal";
 import MenuDrawer from "./ui/MenuDrawer";
 import { ThemeProvider } from "./state/ThemeContext";
@@ -22,9 +21,11 @@ import Settings from "./pages/Settings";
 import DevOverlay from "./components/DevOverlay";
 import BottomTabBar from "./components/BottomTabBar";
 import { ttsManager } from "./tts/ttsManager";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
 import { canAccessWorkspacePanels } from "./lib/accessControl";
+
+const UiLab = lazy(() => import("./pages/UiLab"));
 
 // Operational surfaces suppress the consumer restaurant wallpaper (RestaurantBackground).
 // Rules use startsWith so sub-routes are covered automatically.
@@ -37,11 +38,10 @@ import { canAccessWorkspacePanels } from "./lib/accessControl";
 // NOT suppressed (keep wallpaper):
 //   /               → Home (consumer)
 //   /ui-lab         → dev only, consumer-style
-//   /b3p            → B3P custom map
 //
 // Note: /panel/client (ClientPanel) has its own CSS background-image and does not
 // rely on RestaurantBackground, so suppressing it there is harmless.
-const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings', '/b3p'];
+const SUPPRESS_WALLPAPER_PREFIXES = ['/business', '/panel/', '/settings'];
 
 function OrdersRouteRedirect() {
   useEffect(() => {
@@ -98,7 +98,14 @@ function AppContent() {
       <main className="relative z-10">
         <Routes>
           <Route path={ROUTES.HOME} element={<Home />} />
-          <Route path={ROUTES.UI_LAB} element={<UiLab />} />
+          <Route
+            path={ROUTES.UI_LAB}
+            element={(
+              <Suspense fallback={null}>
+                <UiLab />
+              </Suspense>
+            )}
+          />
           <Route
             path={ROUTES.BUSINESS_READONLY}
             element={(
@@ -145,7 +152,6 @@ function AppContent() {
           <Route path={ROUTES.PANEL_CLIENT} element={<ClientPanel />} />
           <Route path={ROUTES.SETTINGS} element={<Settings />} />
           <Route path={ROUTES.ORDERS} element={<OrdersRouteRedirect />} />
-          <Route path={ROUTES.B3P} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.PROFILE} element={<Navigate to={`${ROUTES.PANEL_CLIENT}?section=profile`} replace />} />
           {ROUTE_ALIASES.map((alias) => (
             <Route key={alias.from} path={alias.from} element={<Navigate to={alias.to} replace />} />

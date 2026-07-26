@@ -5,6 +5,12 @@ export function getMenuItemStableId(item: any): string | null {
     return value ? value : null;
 }
 
+export function getMenuItemUiId(item: any, index: number): string {
+    const stableId = getMenuItemStableId(item)
+        ?? String(item?.name ?? item?.base_name ?? 'item');
+    return `${index}__${stableId}`;
+}
+
 export function resolveStructuredFocusedMenuItemId(response: any, items: any[]): string | null {
     if (!Array.isArray(items) || items.length === 0) return null;
 

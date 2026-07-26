@@ -58,6 +58,12 @@ _ast_extract_fix.py
 _merge_fix.py
 
 # Local diagnostics and test output
+.playwright-cli/
+.playwright-mcp/
+test-results/
+playwright-report/
+preview/
+step*_*.png
 .preview.*
 browser-logs.json
 debug.log
@@ -69,3 +75,10 @@ log2.txt
 status.txt
 ts_errors.txt
 screenshot.mjs
+
+# Local editor/agent scratch files
+.augment/
+.CURSOR_DEV_NOTE
+cursor.json
+desktop.ini
+classic-ui-app-design/

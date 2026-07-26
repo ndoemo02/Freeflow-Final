@@ -12,6 +12,8 @@ describe('composeLiveSystemInstruction', () => {
     expect(instruction).toContain('BASE: korzystaj z narzędzi.');
     expect(instruction).toContain('Mów ciepło i lokalnie.');
     expect(instruction).toContain('PRAWDA MENU');
+    expect(instruction).toContain('nie ogólnym chatbotem');
+    expect(instruction).toContain('query "pizza"');
     expect(instruction).toContain('Nie wymyślaj produktu');
     expect(instruction).toContain('restauracji przypisanej do koszyka');
     expect(instruction).toContain('Nie proponuj osobnego zamówienia z innego lokalu');

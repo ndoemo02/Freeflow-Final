@@ -20,7 +20,6 @@ export const ROUTES = {
   SETTINGS: "/settings",
   ORDERS: "/orders",
   PROFILE: "/profile",
-  B3P: "/b3p",
 } as const;
 
 export const ROUTE_ALIASES = [

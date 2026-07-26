@@ -3,7 +3,7 @@ import RestaurantSheetContent from './RestaurantSheetContent';
 import MenuFlowView from './MenuFlowView';
 import BottomSheetContainer from './sheet/BottomSheetContainer';
 import { SheetSnap } from './sheet/sheetTypes';
-import { getMenuItemStableId } from '../lib/menuFocusContract';
+import { getMenuItemUiId } from '../lib/menuFocusContract';
 
 interface ContextualIslandProps {
     items: any[];
@@ -20,9 +20,6 @@ interface ContextualIslandProps {
     restaurantDistance?: number | null;
     restaurant?: any;
 }
-
-const getItemId = (item: any, index = 0) =>
-    `${index}__${String(item?.id || item?.menuItemId || item?.menu_item_id || item?.name || 'item')}`;
 
 function getResultsLabel(count: number) {
     if (count === 1) return '1 miejsce';
@@ -56,10 +53,10 @@ export default function ContextualIsland({
     restaurantDistance,
     restaurant: restaurantProp,
 }: ContextualIslandProps) {
-    const normalizedItems = useMemo(() => items.map((item, index) => {
-        const stableId = getMenuItemStableId(item);
-        return { ...item, _uiId: stableId ?? getItemId(item, index) };
-    }), [items]);
+    const normalizedItems = useMemo(() => items.map((item, index) => ({
+        ...item,
+        _uiId: getMenuItemUiId(item, index),
+    })), [items]);
 
     if (!normalizedItems.length) return null;
 
@@ -88,7 +85,7 @@ export default function ContextualIsland({
         initialSnap: (type === 'menu' ? 'fullscreen' : 'peek') as SheetSnap,
         lockScrollOn: 'open' as const,
         position,
-        className: 'z-10',
+        className: type === 'menu' ? 'z-10 menu-contextual-island' : 'z-10',
         placementClassName: 'bottom-0',
         snapClassNames: {
             closed: 'contextual-island-sheet--closed',

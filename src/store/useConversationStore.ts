@@ -4,6 +4,71 @@ import { repairMojibakeText } from '../lib/textSanitizer';
 import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 
+interface SelectRestaurantUiAction {
+    type: 'select_restaurant';
+    restaurant_id: string;
+    restaurant_name: string;
+}
+
+interface SendMessageOptions {
+    uiAction?: SelectRestaurantUiAction;
+    historyText?: string;
+}
+
+function normalizeEntityId(value: unknown): string {
+    return String(value ?? '').trim();
+}
+
+function getMenuRestaurantIds(items: any[] | null): string[] {
+    if (!Array.isArray(items)) return [];
+    return Array.from(new Set(items
+        .map((item) => normalizeEntityId(item?.restaurant_id ?? item?.restaurantId ?? item?.restaurant?.id ?? item?.restaurants?.id))
+        .filter(Boolean)));
+}
+
+function reconcileMenuRestaurant({
+    menuItems,
+    responseRestaurant,
+    responseRestaurants,
+    suggestedRestaurants,
+    previousRestaurant,
+}: {
+    menuItems: any[] | null;
+    responseRestaurant: any | null;
+    responseRestaurants: any[] | null;
+    suggestedRestaurants: any[] | null;
+    previousRestaurant: any | null;
+}) {
+    const menuRestaurantIds = getMenuRestaurantIds(menuItems);
+    if (menuRestaurantIds.length > 1) {
+        throw new Error('Niespójna odpowiedź menu: pozycje należą do wielu restauracji.');
+    }
+
+    if (menuRestaurantIds.length === 0) {
+        return responseRestaurant || previousRestaurant || null;
+    }
+
+    const menuRestaurantId = menuRestaurantIds[0];
+    const candidates = [
+        responseRestaurant,
+        ...(responseRestaurants || []),
+        ...(suggestedRestaurants || []),
+        previousRestaurant,
+    ];
+    const exactRestaurant = candidates.find((candidate) =>
+        normalizeEntityId(candidate?.id ?? candidate?.restaurant_id) === menuRestaurantId,
+    );
+    if (exactRestaurant) return exactRestaurant;
+
+    const firstMenuItem = menuItems?.[0];
+    const embeddedRestaurant = firstMenuItem?.restaurant || firstMenuItem?.restaurants;
+    return {
+        ...(embeddedRestaurant && typeof embeddedRestaurant === 'object' ? embeddedRestaurant : {}),
+        id: menuRestaurantId,
+        name: embeddedRestaurant?.name || firstMenuItem?.restaurant_name || undefined,
+    };
+}
+
 interface ConversationState {
     sessionId: string;
     isThinking: boolean;
@@ -28,7 +93,8 @@ interface ConversationState {
     lastIntent: string | null;
     lastSource: string | null;
     setSessionId: (id: string) => void;
-    sendMessage: (text: string) => Promise<void>;
+    sendMessage: (text: string, options?: SendMessageOptions) => Promise<void>;
+    selectRestaurantFromUi: (restaurant: any) => Promise<void>;
     resetSession: () => void;
     closeMenuContext: () => void;
     clearHomeContext: () => void;
@@ -71,6 +137,26 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     lastSource: null,
 
     setSelectedRestaurantPreviewId: (id) => set({ selectedRestaurantPreviewId: id }),
+
+    selectRestaurantFromUi: async (restaurant) => {
+        const restaurantId = normalizeEntityId(restaurant?.id ?? restaurant?.restaurant_id);
+        const restaurantName = String(restaurant?.name ?? restaurant?.display_name ?? '').trim();
+        if (!restaurantId || !restaurantName || get().isThinking) return;
+
+        const previousPreviewId = get().selectedRestaurantPreviewId;
+        set({ selectedRestaurantPreviewId: restaurantId });
+        await get().sendMessage(restaurantName, {
+            historyText: `Wybieram ${restaurantName}`,
+            uiAction: {
+                type: 'select_restaurant',
+                restaurant_id: restaurantId,
+                restaurant_name: restaurantName,
+            },
+        });
+        if (get().error) {
+            set({ selectedRestaurantPreviewId: previousPreviewId });
+        }
+    },
 
     setSessionId: (id) => {
         localStorage.setItem('amber-session-id', id);
@@ -171,15 +257,16 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
         }));
     },
 
-    sendMessage: async (text: string) => {
+    sendMessage: async (text: string, options: SendMessageOptions = {}) => {
         const { sessionId, conversationHistory } = get();
         const trimmed = text.trim();
         if (!trimmed) return;
+        const historyText = options.historyText?.trim() || trimmed;
 
         set({
             isThinking: true,
             error: null,
-            conversationHistory: [...conversationHistory, { role: 'user', content: trimmed }]
+            conversationHistory: [...conversationHistory, { role: 'user', content: historyText }]
         });
 
         try {
@@ -213,7 +300,10 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                         input: trimmed,
                         text: trimmed,
                         includeTTS: false,
-                        meta: { channel: 'web' },
+                        meta: {
+                            channel: 'web',
+                            ...(options.uiAction ? { ui_action: options.uiAction } : {}),
+                        },
                         ...(coords ? { lat: coords.lat, lng: coords.lng } : {})
                     }),
                     signal: fetchController.signal
@@ -223,7 +313,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }
 
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Brain error');
+            if (!response.ok || data.ok === false) throw new Error(data.error || 'Brain error');
+
+            const responseSessionId = String(data.session_id || data.newSessionId || '').trim();
+            if (responseSessionId && responseSessionId !== sessionId) {
+                get().setSessionId(responseSessionId);
+            }
 
             const rawReply = repairMojibakeText(data.reply || data.text || '');
             // Show fallback only when there is no reply AND no visible UI content (restaurants/menu).
@@ -265,6 +360,17 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }
 
             const isIdle = newPhase === 'idle';
+            const responseRestaurant = ctx.currentRestaurant || data.currentRestaurant || null;
+            const stateBeforeApply = get();
+            const reconciledRestaurant = (isIdle && hasContext) || isFindNearby
+                ? null
+                : reconcileMenuRestaurant({
+                    menuItems: menuFromResponse,
+                    responseRestaurant,
+                    responseRestaurants: restaurantsFromResponse,
+                    suggestedRestaurants: stateBeforeApply.suggestedRestaurants,
+                    previousRestaurant: stateBeforeApply.currentRestaurant,
+                });
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
             console.debug('[UI_STATE] listVisible:', isIdle && !!restaurantsFromResponse?.length, 'resultsCount:', restaurantsFromResponse?.length ?? 0, 'focusedRestaurant:', isFindNearby ? null : get().selectedRestaurantPreviewId, 'mode:', newPhase);
             console.debug(`[UI_MODE] mode=${nextUiMode}`);
@@ -311,7 +417,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 lastFullResponse: data,
                 uiMode: nextUiMode,
                 conversationPhase: newPhase,
-                currentRestaurant: (isIdle && hasContext) ? null : (isFindNearby ? null : (ctx.currentRestaurant || data.currentRestaurant || get().currentRestaurant)),
+                currentRestaurant: reconciledRestaurant,
                 pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
                 cart: (data.meta && 'cart' in data.meta) ? data.meta.cart : (ctx.cart ?? s.cart),
                 cartSyncKey: ((data.meta && 'cart' in data.meta) || ctx.cart != null) ? s.cartSyncKey + 1 : s.cartSyncKey,
@@ -321,7 +427,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
                 suggestedRestaurants: (restaurantsFromResponse && restaurantsFromResponse.length > 0) ? restaurantsFromResponse : (isIdle ? null : s.suggestedRestaurants),
-                selectedRestaurantPreviewId: restaurantsFromResponse?.[0]?.id || (isIdle ? null : s.selectedRestaurantPreviewId),
+                selectedRestaurantPreviewId: isFindNearby
+                    ? normalizeEntityId(restaurantsFromResponse?.[0]?.id) || null
+                    : normalizeEntityId(reconciledRestaurant?.id) || (isIdle ? null : s.selectedRestaurantPreviewId),
                 menuItems: menuFromResponse || (isIdle ? null : s.menuItems),
                 lastIntent: data.intent || null,
                 lastSource: data.meta?.source || null,

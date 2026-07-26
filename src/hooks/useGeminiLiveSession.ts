@@ -5,6 +5,7 @@ import {
   GoogleGenAI,
   Modality,
   StartSensitivity,
+  ThinkingLevel,
   TurnCoverage,
   type Session,
   type LiveServerMessage,
@@ -13,6 +14,11 @@ import { startPCM16Stream } from '../lib/audioStream';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
 import { composeLiveSystemInstruction } from '../lib/liveSystemInstruction';
+import {
+  extractFoodDiscoveryQuery,
+  looksLikeFoodDiscoveryFailure,
+  looksLikeFoodDiscoveryIntent,
+} from '../lib/liveDiscoveryRecovery';
 import {
   useGeminiFunctionRelay,
   type GeminiFunctionCall,
@@ -32,8 +38,7 @@ const LIVE_MODEL_CHANGED_EVENT = 'freeflow:live-model-changed';
 
 const MIC_MIME = 'audio/pcm;rate=16000';
 const RECONNECT_DELAYS_MS = [1000, 2000, 5000] as const;
-const AUTO_RECOVERY_GPS_KEY = 'ff_last_gps';
-const AUTO_RECOVERY_GPS_TTL_MS = 30 * 60 * 1000;
+const RECONNECT_STABLE_RESET_MS = 15_000;
 const AUTO_RECOVERY_COOLDOWN_MS = 7000;
 const LIVE_STALL_WARNING_MS = 9000;
 const SESSION_RESUMPTION_HANDLE_KEY = 'ff_live_resumption_handle';
@@ -187,10 +192,10 @@ const BASE_SYSTEM_INSTRUCTION = [
 const SILESIAN_STYLE_INSTRUCTION =
   'STYL ŚLĄSKI: godosz po śląsku naturalnie i swojsko. "ja" = tak, "niy" = nie, "kaj" = gdzie, "wiela" = ile, "bydzie" = będzie, "yno" = tylko. Używaj 1-2 zwrotów śląskich na wypowiedź.';
 
-const SYSTEM_INSTRUCTION_STANDARD = BASE_SYSTEM_INSTRUCTION;
-const SYSTEM_INSTRUCTION_SILESIAN = `${BASE_SYSTEM_INSTRUCTION} ${SILESIAN_STYLE_INSTRUCTION}`;
+export const SYSTEM_INSTRUCTION_STANDARD = BASE_SYSTEM_INSTRUCTION;
+export const SYSTEM_INSTRUCTION_SILESIAN = `${BASE_SYSTEM_INSTRUCTION} ${SILESIAN_STYLE_INSTRUCTION}`;
 
-type LiveRuntimeConfig = {
+export type LiveRuntimeConfig = {
   fetched: boolean;
   liveModel: string;
   liveVoice: string;
@@ -211,7 +216,7 @@ function normalizeSpeechStyle(value: unknown): 'standard' | 'silesian' {
   return 'standard';
 }
 
-async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
+export async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
   const localLiveModelOverride = (() => {
     try {
       const v = String(localStorage.getItem(LIVE_MODEL_OVERRIDE_KEY) || '').trim();
@@ -270,6 +275,15 @@ export interface UseGeminiLiveSessionOptions {
   wsRef: React.MutableRefObject<WebSocket | null>;
   enabled?: boolean;
   sessionId?: string;
+  onTerminalFailure?: (failure: LiveProviderFailure) => void;
+}
+
+export type LiveProviderFailureKind = 'microphone' | 'provider';
+
+export interface LiveProviderFailure {
+  kind: LiveProviderFailureKind;
+  provider: 'gemini' | 'openai';
+  code: string;
 }
 
 export interface UseGeminiLiveSessionResult {
@@ -297,36 +311,6 @@ function normalizeSpeechToken(value: unknown): string {
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function readRecentGpsHint(): { lat: number; lng: number } | null {
-  try {
-    const raw = localStorage.getItem(AUTO_RECOVERY_GPS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { lat?: unknown; lng?: unknown; ts?: unknown };
-    const lat = Number(parsed?.lat);
-    const lng = Number(parsed?.lng);
-    const ts = Number(parsed?.ts);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(ts)) return null;
-    if (Date.now() - ts > AUTO_RECOVERY_GPS_TTL_MS) return null;
-    return { lat, lng };
-  } catch {
-    return null;
-  }
-}
-
-function looksLikeLocationRequest(text: string): boolean {
-  const normalized = normalizeSpeechToken(text);
-  if (!normalized) return false;
-  const mentionsLocation = /\b(miasto|kod pocztowy|lokalizacj|gdzie mieszkasz|gdzie jestes)\b/.test(normalized);
-  const asksForInput = /\b(podaj|potrzebuje|musze znac|zebym mogla|zeby moc|zebym mogla zamowic)\b/.test(normalized);
-  return mentionsLocation && asksForInput;
-}
-
-function looksLikeDiscoveryUserIntent(text: string): boolean {
-  const normalized = normalizeSpeechToken(text);
-  if (!normalized) return false;
-  return /\b(w poblizu|poblizu|blisko|obok|nearby|w okolicy|zamow|zamowic|restaurac|jedzeni|kuchni|pizza|kebab|pierog|sushi|lawasz)\b/.test(normalized);
 }
 
 function buildMenuSpeechHints(items: any[]): { highlights: string[]; proteins: string[]; sizes: string[] } {
@@ -422,7 +406,7 @@ function buildMenuCategoryVariants(items: any[]): { category: string; count: num
     .slice(0, 12);
 }
 
-function compactToolResponse(
+export function compactToolResponse(
   toolName: string,
   response: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -547,7 +531,7 @@ function compactToolResponse(
   return compact;
 }
 
-function applyToolResultToStore(
+export function applyToolResultToStore(
     toolName: string,
     response: Record<string, unknown>,
 ): void {
@@ -685,6 +669,7 @@ export function useGeminiLiveSession({
   wsRef,
   enabled = true,
   sessionId: propSessionId,
+  onTerminalFailure,
 }: UseGeminiLiveSessionOptions): UseGeminiLiveSessionResult {
   const [isActive, setIsActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -707,6 +692,7 @@ export function useGeminiLiveSession({
   const desiredActiveRef = useRef(false);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectStableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modelSwitchRestartRef = useRef(false);
   const latestUserTranscriptRef = useRef<string | null>(null);
   const autoNearbyRecoveryInFlightRef = useRef(false);
@@ -719,6 +705,8 @@ export function useGeminiLiveSession({
   // Fix #4: stable ref so start() closure always sees current sessionId
   const sessionIdRef = useRef(propSessionId);
   useEffect(() => { sessionIdRef.current = propSessionId; }, [propSessionId]);
+  const onTerminalFailureRef = useRef(onTerminalFailure);
+  useEffect(() => { onTerminalFailureRef.current = onTerminalFailure; }, [onTerminalFailure]);
 
   const { relay } = useGeminiFunctionRelay({
     wsRef,
@@ -767,6 +755,13 @@ export function useGeminiLiveSession({
     }
   }, []);
 
+  const clearReconnectStableTimer = useCallback(() => {
+    if (reconnectStableTimerRef.current) {
+      clearTimeout(reconnectStableTimerRef.current);
+      reconnectStableTimerRef.current = null;
+    }
+  }, []);
+
   const clearStallWatchdog = useCallback(() => {
     if (stallWatchdogRef.current) {
       clearTimeout(stallWatchdogRef.current);
@@ -784,6 +779,7 @@ export function useGeminiLiveSession({
   }, [clearStallWatchdog]);
 
   const cleanupRuntime = useCallback((closeSession: boolean) => {
+    clearReconnectStableTimer();
     clearStallWatchdog();
     stopMicRef.current?.();
     stopMicRef.current = null;
@@ -796,7 +792,7 @@ export function useGeminiLiveSession({
     activeRef.current = false;
     setIsActive(false);
     playerRef.current.stop();
-  }, [clearStallWatchdog]);
+  }, [clearReconnectStableTimer, clearStallWatchdog]);
 
   const stop = useCallback(() => {
     if (stopInFlightRef.current) return;
@@ -850,6 +846,12 @@ export function useGeminiLiveSession({
         desiredActiveRef.current = false;
         setReconnectHalted(true);
         setError('Live reconnect halted');
+        useLiveUiSessionStore.getState().setProcessing('Gemini Live jest niedostępne. Uruchamiam tryb zapasowy...');
+        onTerminalFailureRef.current?.({
+          kind: 'provider',
+          provider: 'gemini',
+          code: 'gemini_reconnect_halted',
+        });
         console.warn('[LIVE] RECONNECT HALTED');
         return;
       }
@@ -930,6 +932,9 @@ export function useGeminiLiveSession({
         customStylePrompt,
         gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
       });
+      const modelSpecificConfig = activeModel.startsWith('gemini-3.1-')
+        ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } }
+        : {};
       const ephemeralToken = await fetchLiveAccessToken(activeModel);
       if (!desiredActiveRef.current) {
         cleanupRuntime(true);
@@ -958,6 +963,46 @@ export function useGeminiLiveSession({
           },
         }));
         return textPart;
+      };
+
+      const tryAutoNearbyRecovery = (assistantText: string, forceAfterMissedTool = false): void => {
+        const userTranscript = latestUserTranscriptRef.current || '';
+        const now = Date.now();
+        const canAutoRecover =
+          (forceAfterMissedTool || looksLikeFoodDiscoveryFailure(assistantText))
+          && looksLikeFoodDiscoveryIntent(userTranscript)
+          && !autoNearbyRecoveryInFlightRef.current
+          && (now - autoNearbyRecoveryLastTsRef.current) > AUTO_RECOVERY_COOLDOWN_MS;
+
+        if (!canAutoRecover) return;
+
+        autoNearbyRecoveryInFlightRef.current = true;
+        autoNearbyRecoveryLastTsRef.current = now;
+        player.stop();
+        useLiveUiSessionStore.getState().setProcessing('Sprawdzam miejsca w pobliżu...');
+        const query = extractFoodDiscoveryQuery(userTranscript);
+        void relay({
+          id: `auto_find_nearby_${now}`,
+          name: 'find_nearby',
+          args: query ? { query } : {},
+          turnId: turnId ?? undefined,
+        })
+          .then((result) => {
+            const responseForUi = (result.response ?? {}) as Record<string, unknown>;
+            applyToolResultToStore(result.name, responseForUi);
+            logBridge('ui_update_applied', {
+              turn_id: turnId,
+              session_id: sessionIdRef.current,
+              tool: result.name,
+              source: 'auto_recovery',
+            });
+          })
+          .catch(() => {
+            // auto-recovery relay failed — regular provider flow remains available
+          })
+          .finally(() => {
+            autoNearbyRecoveryInFlightRef.current = false;
+          });
       };
 
       const flushPerf = () => {
@@ -1009,6 +1054,9 @@ export function useGeminiLiveSession({
           || (msg as any)?.serverContent?.outputTranscript?.transcript
           || null;
         const emittedOutputTranscript = emitAssistantSpeechPart(possibleAssistantTranscript);
+        if (emittedOutputTranscript) {
+          tryAutoNearbyRecovery(assistantTranscriptBuffer);
+        }
 
         if (msg.toolCall?.functionCalls?.length) {
           lastToolCallAt = Date.now();
@@ -1101,33 +1149,7 @@ export function useGeminiLiveSession({
             const rawTextPart = String((part as any)?.text || '');
             const textPart = emittedOutputTranscript ? rawTextPart.trim() : emitAssistantSpeechPart(rawTextPart);
             if (textPart) {
-              const userTranscript = latestUserTranscriptRef.current || '';
-              const hasRecentGps = !!readRecentGpsHint();
-              const now = Date.now();
-              const canAutoRecover =
-                hasRecentGps
-                && looksLikeLocationRequest(textPart)
-                && looksLikeDiscoveryUserIntent(userTranscript)
-                && !autoNearbyRecoveryInFlightRef.current
-                && (now - autoNearbyRecoveryLastTsRef.current) > AUTO_RECOVERY_COOLDOWN_MS;
-
-              if (canAutoRecover) {
-                autoNearbyRecoveryInFlightRef.current = true;
-                autoNearbyRecoveryLastTsRef.current = now;
-                useLiveUiSessionStore.getState().setProcessing('Sprawdzam miejsca w poblizu...');
-                void relay({
-                  id: `auto_find_nearby_${now}`,
-                  name: 'find_nearby',
-                  args: {},
-                  turnId: turnId ?? undefined,
-                })
-                  .catch(() => {
-                    // auto-recovery relay failed — silent
-                  })
-                  .finally(() => {
-                    autoNearbyRecoveryInFlightRef.current = false;
-                  });
-              }
+              tryAutoNearbyRecovery(assistantTranscriptBuffer || textPart);
             }
             const blob = (part as { inlineData?: { data?: string; mimeType?: string } }).inlineData;
             if (blob?.data && blob.mimeType?.startsWith('audio/')) {
@@ -1149,6 +1171,13 @@ export function useGeminiLiveSession({
           player.stop();
         }
 
+        if ((msg as any)?.serverContent?.turnComplete && !lastToolCallAt) {
+          const currentRestaurantId = useConversationStore.getState().currentRestaurant?.id;
+          if (!currentRestaurantId) {
+            tryAutoNearbyRecovery(assistantTranscriptBuffer, true);
+          }
+        }
+
         const sru = (msg as any).serverContent?.sessionResumptionUpdate;
         if (sru?.resumable && sru.newHandle) {
           sessionResumptionHandleRef.current = sru.newHandle;
@@ -1168,7 +1197,10 @@ export function useGeminiLiveSession({
         config: {
           responseModalities: [Modality.AUDIO],
           systemInstruction: activeInstruction,
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
           realtimeInputConfig: LIVE_VAD_CONFIG,
+          ...modelSpecificConfig,
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: { voiceName: runtimeConfig.liveVoice || 'Aoede' },
@@ -1181,8 +1213,14 @@ export function useGeminiLiveSession({
         },
         callbacks: {
           onopen: () => {
-            reconnectAttemptRef.current = 0;
             clearReconnectTimer();
+            clearReconnectStableTimer();
+            reconnectStableTimerRef.current = setTimeout(() => {
+              if (activeRef.current && desiredActiveRef.current) {
+                reconnectAttemptRef.current = 0;
+              }
+              reconnectStableTimerRef.current = null;
+            }, RECONNECT_STABLE_RESET_MS);
             clearStallWatchdog();
             setReconnectHalted(false);
             useLiveUiSessionStore.getState().setListening('Slucham...');
@@ -1207,12 +1245,23 @@ export function useGeminiLiveSession({
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
             const message = e.message || 'gemini_live_error';
+            console.error('[GEMINI_LIVE_ERROR]', {
+              message,
+              type: e.type || 'error',
+              model: activeModel,
+            });
             setError(message);
-            useLiveUiSessionStore.getState().setError(`Awaria Live: ${message}`);
+            useLiveUiSessionStore.getState().setProcessing('Wznawiam połączenie Gemini Live...');
             cleanupRuntime(false);
             scheduleReconnect();
           },
           onclose: (event?: { code?: number; reason?: string }) => {
+            console.warn('[GEMINI_LIVE_CLOSE]', {
+              code: event?.code ?? null,
+              reason: event?.reason || null,
+              model: activeModel,
+              reconnectAttempt: reconnectAttemptRef.current,
+            });
             // Save state snapshot before cleanup
             const s = useConversationStore.getState();
             liveSessionCache.set(sid, {
@@ -1244,9 +1293,26 @@ export function useGeminiLiveSession({
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'failed_to_start';
+      const errorName = err instanceof Error ? err.name : '';
+      const microphoneFailure =
+        errorName === 'NotAllowedError'
+        || errorName === 'SecurityError'
+        || errorName === 'NotFoundError'
+        || /permission|microphone|audio input device/i.test(msg);
       setError(msg);
-      useLiveUiSessionStore.getState().setError(`Awaria Live: ${msg}`);
       cleanupRuntime(false);
+      if (microphoneFailure) {
+        desiredActiveRef.current = false;
+        const code = errorName === 'NotFoundError' ? 'microphone_unavailable' : 'microphone_permission_denied';
+        useLiveUiSessionStore.getState().setError(
+          code === 'microphone_unavailable'
+            ? 'Nie znaleziono mikrofonu.'
+            : 'Zezwól aplikacji na dostęp do mikrofonu.',
+        );
+        onTerminalFailureRef.current?.({ kind: 'microphone', provider: 'gemini', code });
+        return false;
+      }
+      useLiveUiSessionStore.getState().setProcessing('Wznawiam połączenie Gemini Live...');
       scheduleReconnect();
       return false;
     } finally {

@@ -9,6 +9,7 @@ import { useUI } from '../state/ui';
 import { useCart } from '../state/CartContext';
 import { useConversationStore } from '../store/useConversationStore';
 import { useIslandFullList } from '../hooks/useIslandFullList';
+import VoiceContextLabel from './VoiceContextLabel';
 
 /* ───────── types ───────── */
 interface Section {
@@ -16,6 +17,12 @@ interface Section {
     label: string;
     order: number;
     items: any[];
+}
+
+interface MenuVariantGroup {
+    key: string;
+    displayItem: any;
+    variants: any[];
 }
 
 interface MenuFlowViewProps {
@@ -126,6 +133,48 @@ function buildSections(items: any[]): Section[] {
         .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label, 'pl'));
 }
 
+function getSizeGroupKey(item: any): string | null {
+    if (String(item?.variant_type || '').toLowerCase() !== 'size') return null;
+    const family = String(item?.item_family || item?.base_name || '').trim();
+    if (!family) return null;
+    return `${String(item?.category || 'Inne')}::${family}`;
+}
+
+function buildVariantGroups(items: any[]): MenuVariantGroup[] {
+    const groups = new Map<string, MenuVariantGroup>();
+
+    for (const item of items) {
+        const sizeGroupKey = getSizeGroupKey(item);
+        const key = sizeGroupKey || `single::${item?._uiId}`;
+        const existing = groups.get(key);
+        if (existing) {
+            existing.variants.push(item);
+            continue;
+        }
+
+        groups.set(key, {
+            key,
+            displayItem: {
+                ...item,
+                name: sizeGroupKey ? (item.base_name || item.name) : item.name,
+                _variantGroupKey: key,
+            },
+            variants: [item],
+        });
+    }
+
+    return Array.from(groups.values()).map((group) => ({
+        ...group,
+        variants: [...group.variants].sort((a, b) => (
+            Number(a?.price_pln ?? a?.price ?? 0) - Number(b?.price_pln ?? b?.price ?? 0)
+        )),
+    }));
+}
+
+function getVariantLabel(item: any): string {
+    return String(item?.variant_name || item?.size_or_variant || '').trim();
+}
+
 function getBadges(item: any): string[] {
     const badges: string[] = [];
     // Top-level boolean flags
@@ -222,15 +271,26 @@ export default function MenuFlowView({
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
     const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const variantGroups = useMemo(() => buildVariantGroups(normalizedItems), [normalizedItems]);
+    const displayItems = useMemo(
+        () => variantGroups.map((group) => ({
+            ...group.displayItem,
+            _variants: group.variants,
+        })),
+        [variantGroups],
+    );
+    const [selectedVariantByGroup, setSelectedVariantByGroup] = useState<Record<string, string>>({});
     const [focusedId, setFocusedId] = useState<string | null>(() => {
         // Use display-order first item, not raw array order (backend order ≠ display order)
-        const secs = buildSections(normalizedItems);
-        return secs[0]?.items[0]?._uiId ?? normalizedItems[0]?._uiId ?? null;
+        const initialItems = buildVariantGroups(normalizedItems).map((group) => group.displayItem);
+        const secs = buildSections(initialItems);
+        return secs[0]?.items[0]?._uiId ?? initialItems[0]?._uiId ?? null;
     });
     const [activeChip, setActiveChip] = useState<string | null>(null);
     const manualFocusAt = useRef<number>(Date.now()); // grace period after click/voice/IO commit
     const menuEnteredAt = useRef<number>(Date.now()); // tracks last menu entry for highlightedId guard
     const lastAutoRevealSeqRef = useRef<number | null>(null);
+    const programmaticScrollUntilRef = useRef(0);
 
     /* ── fullscreen class toggle: hide header + hide hero logo ── */
     const isFullscreen = snap === 'fullscreen';
@@ -247,13 +307,14 @@ export default function MenuFlowView({
 
     /* ── reset scroll + focus to first item when menu items change (new restaurant) ── */
     useEffect(() => {
-        if (!normalizedItems.length) return;
+        if (!displayItems.length) return;
         // Use display-sorted first item (buildSections sorts by section_order)
-        const secs = buildSections(normalizedItems);
-        const firstId = secs[0]?.items[0]?._uiId ?? normalizedItems[0]._uiId;
+        const secs = buildSections(displayItems);
+        const firstId = secs[0]?.items[0]?._uiId ?? displayItems[0]._uiId;
         menuEnteredAt.current = Date.now();
         manualFocusAt.current = Date.now();
         setFocusedId(firstId);
+        setSelectedVariantByGroup({});
         setActiveChip(null);
         const scrollEl = scrollContainerRef.current?.closest('.list-scroll') as HTMLElement | null;
         if (scrollEl) scrollEl.scrollTop = 0;
@@ -275,13 +336,13 @@ export default function MenuFlowView({
     });
 
     /* ── sections from data ── */
-    const sections = useMemo(() => buildSections(normalizedItems), [normalizedItems]);
+    const sections = useMemo(() => buildSections(displayItems), [displayItems]);
 
     /* ── chips list ── */
     const chips = useMemo(() => sections.map(s => ({ key: s.key, label: s.label })), [sections]);
     const showChips = chips.length > 1;
 
-    const expandedSafeBottom = 'calc(env(safe-area-inset-bottom) + 120px)';
+    const expandedSafeBottom = 'var(--ff-voice-dock-reserved-height, calc(env(safe-area-inset-bottom) + 104px))';
 
     /* ── topmost-visible focus picker ──
      *
@@ -295,6 +356,7 @@ export default function MenuFlowView({
     const commitFocus = useCallback(() => {
         const scrollEl = scrollElRef.current;
         if (!scrollEl) return;
+        if (Date.now() < programmaticScrollUntilRef.current) return;
         if (Date.now() - manualFocusAt.current < 300) return;
 
         const containerTop = scrollEl.getBoundingClientRect().top;
@@ -314,9 +376,14 @@ export default function MenuFlowView({
         }
     }, []);
 
+    const markProgrammaticScroll = useCallback(() => {
+        programmaticScrollUntilRef.current = Date.now() + 900;
+    }, []);
+
     const revealMenuRow = useCallback((el: HTMLElement) => {
         const scrollEl = scrollElRef.current || (el.closest('.list-scroll') as HTMLElement | null);
         if (!scrollEl) {
+            markProgrammaticScroll();
             el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             return;
         }
@@ -325,21 +392,20 @@ export default function MenuFlowView({
         const rowRect = el.getBoundingClientRect();
         const stickyOffset = 36;
         const safeTop = scrollRect.top + stickyOffset;
-        const safeBottom = scrollRect.bottom - 12;
-
-        if (rowRect.top < safeTop) {
-            scrollEl.scrollBy({ top: rowRect.top - safeTop, behavior: 'smooth' });
-        } else if (rowRect.bottom > safeBottom) {
-            scrollEl.scrollBy({ top: rowRect.bottom - safeBottom, behavior: 'smooth' });
-        }
-    }, []);
+        const delta = rowRect.top - safeTop;
+        if (Math.abs(delta) < 1) return;
+        markProgrammaticScroll();
+        scrollEl.scrollBy({ top: delta, behavior: 'smooth' });
+    }, [markProgrammaticScroll]);
 
     const scrollHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleListScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
         scrollElRef.current = event.currentTarget;
-        if (debounceRef.current !== null) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(commitFocus, 60);
+        if (Date.now() >= programmaticScrollUntilRef.current) {
+            if (debounceRef.current !== null) clearTimeout(debounceRef.current);
+            debounceRef.current = setTimeout(commitFocus, 60);
+        }
 
         window.dispatchEvent(new CustomEvent('freeflow:menu:scrolling'));
         if (scrollHideTimerRef.current !== null) clearTimeout(scrollHideTimerRef.current);
@@ -361,13 +427,26 @@ export default function MenuFlowView({
         };
     }, [normalizedItems, commitFocus]);
 
-    const resolveUiId = useCallback((rawId: string | null | undefined): string | null => {
+    const resolveRawUiId = useCallback((rawId: string | null | undefined): string | null => {
         if (!rawId) return null;
         const exact = normalizedItems.find((i: any) => i._uiId === rawId);
         if (exact) return exact._uiId;
         const suffix = normalizedItems.find((i: any) => i._uiId.endsWith(`__${rawId}`));
         return suffix?._uiId || null;
     }, [normalizedItems]);
+    const resolveUiId = useCallback((rawId: string | null | undefined): string | null => {
+        const rawUiId = resolveRawUiId(rawId);
+        if (!rawUiId) return null;
+        const group = displayItems.find((item: any) => (
+            item._uiId === rawUiId
+            || item._variants?.some((variant: any) => variant._uiId === rawUiId)
+        ));
+        return group?._uiId || rawUiId;
+    }, [displayItems, resolveRawUiId]);
+    const resolvedRecommendedId = useMemo(
+        () => resolveUiId(recommendedId),
+        [recommendedId, resolveUiId],
+    );
 
     /* ── voice-driven focus: highlight bez konfliktu ze scrollem ── */
     useEffect(() => {
@@ -377,6 +456,14 @@ export default function MenuFlowView({
         // while _uiId now has "index__" prefix. Try exact match first, then suffix match.
         const matchedUiId = resolveUiId(highlightedId);
         if (!matchedUiId) return;
+        const rawVariantUiId = resolveRawUiId(highlightedId);
+        if (rawVariantUiId) {
+            setSelectedVariantByGroup((current) => (
+                current[matchedUiId] === rawVariantUiId
+                    ? current
+                    : { ...current, [matchedUiId]: rawVariantUiId }
+            ));
+        }
         manualFocusAt.current = Date.now();
         setFocusedId((prev) => (prev === matchedUiId ? prev : matchedUiId));
 
@@ -390,7 +477,7 @@ export default function MenuFlowView({
                 revealMenuRow(el);
             }
         }
-    }, [highlightedId, autoRevealRequest, revealMenuRow, resolveUiId]);
+    }, [highlightedId, autoRevealRequest, revealMenuRow, resolveRawUiId, resolveUiId]);
 
     /* ── sticky header intersection for active chip ── */
     useEffect(() => {
@@ -420,21 +507,24 @@ export default function MenuFlowView({
     const scrollToSection = useCallback((key: string) => {
         const el = sectionRefs.current.get(key);
         if (el) {
+            markProgrammaticScroll();
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             setActiveChip(key);
             const section = sections.find(s => s.key === key);
             if (section?.items[0]?._uiId) {
+                manualFocusAt.current = Date.now();
                 setFocusedId(section.items[0]._uiId);
+                setHighlightedId(section.items[0]._uiId);
             }
         }
-    }, [sections]);
+    }, [markProgrammaticScroll, sections, setHighlightedId]);
 
     /* ── sync focusedId when active chip changes from scroll (IntersectionObserver) ── */
     useEffect(() => {
         if (!activeChip || !sections.length) return;
         if (Date.now() - manualFocusAt.current < 600) return;
 
-        const focusItem = normalizedItems.find(i => i._uiId === focusedId);
+        const focusItem = displayItems.find(i => i._uiId === focusedId);
         if (focusItem && focusItem.category === activeChip) return;
 
         const section = sections.find(s => s.key === activeChip);
@@ -442,12 +532,28 @@ export default function MenuFlowView({
             manualFocusAt.current = Date.now();
             setFocusedId(section.items[0]._uiId);
         }
-    }, [activeChip, focusedId, sections, normalizedItems]);
+    }, [activeChip, focusedId, sections, displayItems]);
 
     /* ── focused item + display data (computed at component level for focus panel) ── */
+    const focusedGroup = useMemo(
+        () => displayItems.find((i: any) => i._uiId === focusedId) || null,
+        [displayItems, focusedId],
+    );
+    const focusedVariants = useMemo(
+        () => (Array.isArray(focusedGroup?._variants) ? focusedGroup._variants : []),
+        [focusedGroup],
+    );
+    const focusedOrderItem = useMemo(
+        () => focusedVariants.find((item: any) => item._uiId === selectedVariantByGroup[focusedId || ''])
+            || focusedVariants[0]
+            || focusedGroup,
+        [focusedGroup, focusedId, focusedVariants, selectedVariantByGroup],
+    );
     const focusedItem = useMemo(
-        () => normalizedItems.find((i: any) => i._uiId === focusedId) || null,
-        [normalizedItems, focusedId],
+        () => focusedOrderItem
+            ? { ...focusedOrderItem, name: focusedGroup?.name || focusedOrderItem.name }
+            : null,
+        [focusedGroup, focusedOrderItem],
     );
 
     const focusedDisplay = useMemo(() => {
@@ -486,23 +592,24 @@ export default function MenuFlowView({
         /* ── ALWAYS EXPANDED: sectioned list ── */
         <div className="flex h-full min-h-0 flex-1 flex-col text-white">
             {/* header */}
-            <div className={`shrink-0 ${snap === 'fullscreen' ? 'menu-fullscreen-header px-4 pb-2' : 'px-3 pt-1 pb-1'}`}>
+            <div className={`menu-flow-header shrink-0 ${snap === 'fullscreen' ? 'menu-fullscreen-header' : ''}`}>
                 {snap === 'fullscreen' ? (
                     /* Fullscreen: hamburger + restaurant name + cart + avatar */
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="menu-flow-header__top">
+                        <VoiceContextLabel context="menu" className="menu-flow-header__context" />
                         <button
                             onClick={openDrawer}
-                            className="p-2 -ml-1 bg-white/10 rounded-full hover:bg-white/20 transition"
+                            className="menu-flow-header__hamburger home-header__action"
                             aria-label="Otwórz menu"
                         >
                             <i className="fas fa-bars text-white" />
                         </button>
-                        <div className="min-w-0 flex-1 text-center">
+                        <div className="menu-flow-header__restaurant min-w-0 text-center">
                             <div className="text-[18px] sm:text-[20px] font-extrabold text-white leading-[1.15] truncate tracking-tight">
                                 {restaurantDisplayName}
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="menu-flow-header__actions flex items-center gap-2">
                             {itemCount > 0 && (
                                 <button
                                     onClick={() => setIsOpen(true)}
@@ -563,7 +670,7 @@ export default function MenuFlowView({
             {/* fixed focus panel — expanded view of currently focused item */}
             {focusedItem && focusedDisplay && (
                 <>
-                <div className={`mf-focus-panel ${focusedItem._uiId === recommendedId ? 'mf-focus-panel--recommended' : ''}`}>
+                <div className={`mf-focus-panel ${focusedId === resolvedRecommendedId ? 'mf-focus-panel--recommended' : ''}`}>
                     <motion.div
                         className="mf-card__banner"
                         style={{ background: focusedDisplay.bannerGradient }}
@@ -583,7 +690,7 @@ export default function MenuFlowView({
                             />
                         )}
                         <div className="mf-card__banner-overlay" />
-                        {focusedItem._uiId === recommendedId && (
+                        {focusedId === resolvedRecommendedId && (
                             <div className="mf-card__status-chip" aria-label="Amber poleca to danie">
                                 <span className="mf-card__status-dot" aria-hidden="true" />
                                 Amber poleca
@@ -607,6 +714,33 @@ export default function MenuFlowView({
                             </div>
                         )}
                     </motion.div>
+                    {focusedVariants.length > 1 && (
+                        <div className="mf-card__variants" aria-label="Wybierz rozmiar">
+                            {focusedVariants.map((variant: any) => {
+                                const selected = variant._uiId === focusedOrderItem?._uiId;
+                                return (
+                                    <button
+                                        type="button"
+                                        key={variant._uiId}
+                                        className={`mf-card__variant ${selected ? 'mf-card__variant--selected' : ''}`}
+                                        aria-pressed={selected}
+                                        aria-label={`Rozmiar ${getVariantLabel(variant)}, ${formatPrice(variant)}`}
+                                        onClick={() => {
+                                            if (!focusedId) return;
+                                            setSelectedVariantByGroup((current) => ({
+                                                ...current,
+                                                [focusedId]: variant._uiId,
+                                            }));
+                                            setHighlightedId(variant._uiId);
+                                        }}
+                                    >
+                                        <span>{getVariantLabel(variant)}</span>
+                                        <span>{formatPrice(variant)}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                     <div className="mf-card__footer">
                         {/* badges: left side — diet flags */}
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -619,15 +753,16 @@ export default function MenuFlowView({
                             className="mf-card__add-btn shrink-0"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setHighlightedId(focusedItem._uiId);
-                                onSelect(focusedItem);
+                                if (!focusedOrderItem) return;
+                                setHighlightedId(focusedOrderItem._uiId);
+                                onSelect(focusedOrderItem);
                             }}
                         >
                             + Dodaj
                         </button>
                     </div>
                 </div>
-                {focusedItem._uiId === recommendedId && (
+                {focusedId === resolvedRecommendedId && (
                     <div className="mf-voice-thread" aria-hidden="true" data-voice="true">
                         <span />
                     </div>
@@ -640,7 +775,11 @@ export default function MenuFlowView({
                 className="list-scroll tiny-scroll min-h-0 flex-1 px-[10px]"
                 style={{ paddingBottom: expandedSafeBottom }}
                 onScroll={handleListScroll}
-                onTouchStart={gestures.handleSwipeStart}
+                onWheel={() => { programmaticScrollUntilRef.current = 0; }}
+                onTouchStart={(event) => {
+                    programmaticScrollUntilRef.current = 0;
+                    gestures.handleSwipeStart(event);
+                }}
                 onTouchEnd={gestures.handleSwipeEnd}
             >
                 <div ref={scrollContainerRef}>
@@ -659,15 +798,23 @@ export default function MenuFlowView({
                             {/* items — compact rows only; focus panel renders expanded view above */}
                             {section.items.map((item, itemIndex) => {
                                 const isFocused = item._uiId === focusedId;
-                                const isRecommended = item._uiId === recommendedId;
-                                const price = formatPrice(item);
+                                const isRecommended = item._uiId === resolvedRecommendedId;
+                                const variants = Array.isArray(item._variants) ? item._variants : [item];
+                                const selectedVariantId = selectedVariantByGroup[item._uiId];
+                                const rowOrderItem = variants.find((variant: any) => variant._uiId === selectedVariantId)
+                                    || variants[0]
+                                    || item;
+                                const price = formatPrice(rowOrderItem);
+                                const variantSummary = variants.length > 1
+                                    ? variants.map((variant: any) => getVariantLabel(variant)).filter(Boolean).join(' / ')
+                                    : null;
                                 const bannerGradient = getCategoryGradient(item.category || section.key);
 
                                 const handleClick = (event: React.MouseEvent) => {
                                     event.stopPropagation();
                                     manualFocusAt.current = Date.now();
                                     setFocusedId(item._uiId);
-                                    setHighlightedId(item._uiId);
+                                    setHighlightedId(rowOrderItem._uiId);
                                     setActiveChip(section.key);
                                     const el = itemRefs.current.get(item._uiId);
                                     if (el) revealMenuRow(el);
@@ -712,9 +859,9 @@ export default function MenuFlowView({
                                         <div className="mf-row__info">
                                             <div className="mf-row__name">{item?.name || 'Pozycja menu'}</div>
                                             <div className="mf-row__meta">
-                                                {item?.description
+                                                {variantSummary || (item?.description
                                                     ? item.description.slice(0, 55) + (item.description.length > 55 ? '…' : '')
-                                                    : item?.ingredients || ''}
+                                                    : item?.ingredients || '')}
                                             </div>
                                         </div>
                                         {(price || isRecommended) && (

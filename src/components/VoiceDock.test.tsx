@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import VoiceDock from './VoiceDock';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 
@@ -13,7 +13,7 @@ describe('VoiceDock', () => {
   it('renders dock with input placeholder by default', () => {
     const { container } = render(<VoiceDock />);
     expect(
-      screen.getByPlaceholderText(/powiedz co chcesz zamówić/i),
+      screen.getByPlaceholderText(/szybki lunch.*obiad na mieście.*kolacja dla dwojga/i),
     ).toBeInTheDocument();
     expect(screen.getByText('Gotowa')).toBeInTheDocument();
     expect(container.querySelector('.ff-voice-dock__speaker-icon')).toHaveAttribute(
@@ -25,7 +25,22 @@ describe('VoiceDock', () => {
   it('shows listening placeholder when session state is listening', () => {
     useLiveUiSessionStore.getState().setListening();
     render(<VoiceDock />);
-    expect(screen.getByPlaceholderText(/słucham/i)).toBeInTheDocument();
+    expect(screen.getByText(/nasłuch aktywny/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/mów naturalnie/i)).toBeInTheDocument();
+  });
+
+  it('uses four deterministic waves without requesting a second microphone stream', () => {
+    const getUserMedia = vi.fn();
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: { getUserMedia },
+    });
+    useLiveUiSessionStore.getState().setListening();
+    const { container } = render(<VoiceDock />);
+
+    expect(container.querySelectorAll('.ff-voice-dock__rings > span')).toHaveLength(4);
+    expect(container.querySelector('.ff-voice-dock__rings')).toHaveAttribute('data-wave-count', '4');
+    expect(getUserMedia).not.toHaveBeenCalled();
   });
 
   it('shows user transcript when listening', () => {

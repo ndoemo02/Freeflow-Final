@@ -35,17 +35,22 @@ describe('logoSceneContract', () => {
   it('returns static motion when reduced motion is requested', () => {
     expect(getLogoMotionPlan('intent', true)).toEqual({
       transitionMs: 0,
-      retractDrip: false,
+      visible: true,
       wobblePx: 0,
       pulse: false,
     });
   });
 
-  it('uses subtle wobble and drip retraction for the voice intent transition', () => {
+  it('uses a subtle wobble while voice intent is active', () => {
     expect(getLogoMotionPlan('intent', false)).toMatchObject({
-      retractDrip: true,
+      visible: true,
       wobblePx: 3,
       pulse: false,
     });
+  });
+
+  it('hides the hero instead of compacting it into the header', () => {
+    expect(getLogoMotionPlan('compact', false)).toMatchObject({ visible: false, pulse: false });
+    expect(getLogoMotionPlan('results', false)).toMatchObject({ visible: false, pulse: false });
   });
 });

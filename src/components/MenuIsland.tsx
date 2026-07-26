@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useConversationStore } from '../store/useConversationStore';
 import ContextualIsland from './ContextualIsland';
 import { findLastMentionedMenuItemId, isCartConfirmationText } from '../lib/assistantFocusMatcher';
-import { getMenuItemStableId, resolveStructuredFocusedMenuItemId } from '../lib/menuFocusContract';
+import { getMenuItemStableId, getMenuItemUiId, resolveStructuredFocusedMenuItemId } from '../lib/menuFocusContract';
 
 const MENU_PHASES = ['restaurant_selected', 'ordering'];
 
@@ -43,24 +43,33 @@ export default function MenuIsland() {
 
     // Enrich currentRestaurant with full data (photo_gallery etc.) from suggestedRestaurants
     const enrichedRestaurant = useMemo(() => {
-        if (!currentRestaurant) return null;
-        const currentId = normalizeId(currentRestaurant?.id);
-        const currentName = normalizeText(currentRestaurant?.name || '');
+        const responseRestaurant = lastFullResponse?.context?.currentRestaurant
+            || lastFullResponse?.currentRestaurant
+            || null;
+        const activeRestaurant = responseRestaurant || currentRestaurant;
+        if (!activeRestaurant) return null;
+        const currentId = normalizeId(activeRestaurant?.id);
+        const currentName = normalizeText(activeRestaurant?.name || '');
         const full = Array.isArray(suggestedRestaurants)
-            ? suggestedRestaurants.find((r: any) => {
-                const candidateId = normalizeId(r?.id);
-                if (candidateId && currentId && candidateId === currentId) return true;
-                const candidateName = normalizeText(r?.display_name || r?.name || '');
-                return !!(candidateName && currentName && candidateName === currentName);
-            })
+            ? (
+                (currentName
+                    ? suggestedRestaurants.find((r: any) => (
+                        normalizeText(r?.display_name || r?.name || '') === currentName
+                    ))
+                    : null)
+                || (currentId
+                    ? suggestedRestaurants.find((r: any) => normalizeId(r?.id) === currentId)
+                    : null)
+            )
             : null;
-        return full || currentRestaurant;
-    }, [currentRestaurant, suggestedRestaurants]);
+        return full || activeRestaurant;
+    }, [currentRestaurant, lastFullResponse, suggestedRestaurants]);
     const [highlightedId, setHighlightedId] = useState<string | null>(null);
     const [autoRevealRequest, setAutoRevealRequest] = useState<{ id: string; seq: number } | null>(null);
     const lastAssistantMenuFocusAtRef = useRef(0);
     const menuBackStatePushedRef = useRef(false);
     const autoRevealSeqRef = useRef(0);
+    const consumedStructuredFocusResponseRef = useRef<any>(null);
 
     const isVisible = uiMode === 'restaurant' || MENU_PHASES.includes(conversationPhase);
     const recommendedId = useMemo(() => pickRecommendedMenuId(menuItems || [], lastFullResponse), [menuItems, lastFullResponse]);
@@ -78,16 +87,6 @@ export default function MenuIsland() {
             const detail = (event as CustomEvent)?.detail || {};
             const lastAddedRaw = String(detail?.lastAdded || '').trim();
             if (!lastAddedRaw || !Array.isArray(menuItems) || menuItems.length === 0) {
-                return;
-            }
-            const structuredFocusedId = resolveStructuredFocusedMenuItemId(
-                useConversationStore.getState().lastFullResponse,
-                menuItems,
-            );
-            if (structuredFocusedId) {
-                if (normalizeId(highlightedId) !== structuredFocusedId) {
-                    setHighlightedId(structuredFocusedId);
-                }
                 return;
             }
             if (Date.now() - lastAssistantMenuFocusAtRef.current < 5000) {
@@ -115,7 +114,7 @@ export default function MenuIsland() {
         return () => {
             window.removeEventListener('freeflow:cartUpdated', onCartUpdated as EventListener);
         };
-    }, [highlightedId, menuItems]);
+    }, [menuItems]);
 
     // Live speech-to-dish synchronization:
     // When Amber discusses a dish by name, highlight it in the menu view.
@@ -136,15 +135,6 @@ export default function MenuIsland() {
 
             const currentItems = useConversationStore.getState().menuItems;
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
-
-            const structuredFocusedId = resolveStructuredFocusedMenuItemId(
-                useConversationStore.getState().lastFullResponse,
-                currentItems,
-            );
-            if (structuredFocusedId) {
-                setHighlightedId((current) => normalizeId(current) === structuredFocusedId ? current : structuredFocusedId);
-                return;
-            }
 
             if (isCartConfirmationText(speechText)) return;
 
@@ -178,12 +168,16 @@ export default function MenuIsland() {
         if (!menuItems?.length) {
             setHighlightedId(null);
             setAutoRevealRequest(null);
+            consumedStructuredFocusResponseRef.current = null;
             return;
         }
 
         // Menu Deep Dive: backend explicitly identified a focused item — always honor it
         const backendFocusedId = resolveStructuredFocusedMenuItemId(lastFullResponse, menuItems);
-        if (backendFocusedId) {
+        const isNewStructuredFocusResponse = !!lastFullResponse
+            && consumedStructuredFocusResponseRef.current !== lastFullResponse;
+        if (backendFocusedId && isNewStructuredFocusResponse) {
+            consumedStructuredFocusResponseRef.current = lastFullResponse;
             if (normalizeId(highlightedId) !== backendFocusedId) {
                 setHighlightedId(backendFocusedId);
                 setAutoRevealRequest({ id: backendFocusedId, seq: ++autoRevealSeqRef.current });
@@ -192,7 +186,11 @@ export default function MenuIsland() {
         }
 
         const hasCurrentSelection = highlightedId
-            ? menuItems.some((item) => normalizeId(getMenuItemStableId(item)) === normalizeId(highlightedId))
+            ? menuItems.some((item, index) => {
+                const selectedId = normalizeId(highlightedId);
+                return normalizeId(getMenuItemStableId(item)) === selectedId
+                    || getMenuItemUiId(item, index) === selectedId;
+            })
             : false;
 
         if (hasCurrentSelection) return;
