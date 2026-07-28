@@ -156,6 +156,10 @@ export default function MenuIsland() {
             if (!Array.isArray(currentItems) || currentItems.length === 0) return;
 
             if (isCartConfirmationText(speechText)) return;
+            const currentResponse = useConversationStore.getState().lastFullResponse;
+            if (resolveStructuredFocusedMenuItemId(currentResponse, currentItems)) {
+                return;
+            }
 
             const matchedId = findLastMentionedMenuItemId(currentPart, currentItems)
                 || findLastMentionedMenuItemId(speechText, currentItems);
@@ -169,6 +173,13 @@ export default function MenuIsland() {
             const delay = rawEvent.type === 'freeflow:assistant-focus-text' ? 0 : 180;
             focusTimer = setTimeout(() => {
                 if (pendingMatchId) {
+                    const latestState = useConversationStore.getState();
+                    const latestItems = Array.isArray(latestState.menuItems) ? latestState.menuItems : [];
+                    if (resolveStructuredFocusedMenuItemId(latestState.lastFullResponse, latestItems)) {
+                        pendingMatchId = null;
+                        focusTimer = null;
+                        return;
+                    }
                     lastAssistantMenuFocusAtRef.current = Date.now();
                     highlightedIdRef.current = pendingMatchId;
                     setHighlightedId(pendingMatchId);
@@ -201,10 +212,9 @@ export default function MenuIsland() {
             && consumedStructuredFocusResponseRef.current !== lastFullResponse;
         if (backendFocusedId && isNewStructuredFocusResponse) {
             consumedStructuredFocusResponseRef.current = lastFullResponse;
-            if (normalizeId(highlightedId) !== backendFocusedId) {
-                setHighlightedId(backendFocusedId);
-                setAutoRevealRequest({ id: backendFocusedId, seq: ++autoRevealSeqRef.current });
-            }
+            highlightedIdRef.current = backendFocusedId;
+            setHighlightedId(backendFocusedId);
+            setAutoRevealRequest({ id: backendFocusedId, seq: ++autoRevealSeqRef.current });
             return;
         }
 
