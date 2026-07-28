@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import VoiceDock from './VoiceDock';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
@@ -102,8 +102,10 @@ describe('VoiceDock', () => {
     const dock = container.querySelector('.ff-voice-dock');
     expect(dock).toHaveAttribute('data-state', 'idle');
 
-    useLiveUiSessionStore.getState().setListening();
-    rerender(<VoiceDock />);
+    act(() => {
+      useLiveUiSessionStore.getState().setListening();
+      rerender(<VoiceDock />);
+    });
     expect(dock).toHaveAttribute('data-state', 'listening');
   });
 

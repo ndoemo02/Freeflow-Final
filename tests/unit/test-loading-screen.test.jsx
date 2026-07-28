@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
+import { act } from 'react';
 import LoadingScreen from '../../src/components/LoadingScreen';
 
 // Mock timers
@@ -57,13 +57,16 @@ describe('LoadingScreen Component', () => {
     expect(mockOnComplete).not.toHaveBeenCalled();
   });
 
-  it('should handle missing onComplete prop gracefully', () => {
+  it('should handle missing onComplete prop gracefully', async () => {
     expect(() => {
       render(<LoadingScreen />);
     }).not.toThrow();
     
     // Fast-forward through animation
-    vi.advanceTimersByTime(9000);
+    await act(async () => {
+      vi.advanceTimersByTime(9000);
+      vi.runAllTimers();
+    });
     
     // Should not crash even without onComplete
     expect(true).toBe(true);
