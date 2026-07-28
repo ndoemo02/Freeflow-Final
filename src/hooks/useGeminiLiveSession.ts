@@ -705,6 +705,7 @@ export function useGeminiLiveSession({
   const reconnectStableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modelSwitchRestartRef = useRef(false);
   const latestUserTranscriptRef = useRef<string | null>(null);
+  const latestUserTranscriptTurnIdRef = useRef<string | null>(null);
   const autoNearbyRecoveryInFlightRef = useRef(false);
   const autoNearbyRecoveryLastTsRef = useRef(0);
   const lastToolResponseSentAtRef = useRef<number | null>(null);
@@ -724,7 +725,14 @@ export function useGeminiLiveSession({
     takeLatestTranscript: () => {
       const value = latestUserTranscriptRef.current;
       latestUserTranscriptRef.current = null;
+      latestUserTranscriptTurnIdRef.current = null;
       return value;
+    },
+    getTranscriptForTurn: (requestedTurnId) => {
+      if (!requestedTurnId || latestUserTranscriptTurnIdRef.current !== requestedTurnId) {
+        return null;
+      }
+      return latestUserTranscriptRef.current;
     },
     getSessionId: () => sessionIdRef.current,
     // Recover restaurant ID even after manual cart clear.
@@ -814,6 +822,7 @@ export function useGeminiLiveSession({
       clearReconnectTimer();
       setReconnectHalted(false);
       latestUserTranscriptRef.current = null;
+      latestUserTranscriptTurnIdRef.current = null;
       autoNearbyRecoveryInFlightRef.current = false;
       autoNearbyRecoveryLastTsRef.current = 0;
       lastToolResponseSentAtRef.current = null;
@@ -842,6 +851,7 @@ export function useGeminiLiveSession({
     // Resolve the deterministic scenario before requesting microphone access.
     const activeDemoContext = getActiveDemoContextPayload();
     latestUserTranscriptRef.current = null;
+    latestUserTranscriptTurnIdRef.current = null;
     autoNearbyRecoveryInFlightRef.current = false;
     autoNearbyRecoveryLastTsRef.current = 0;
     lastToolResponseSentAtRef.current = null;
@@ -1053,6 +1063,7 @@ export function useGeminiLiveSession({
           lastTranscriptAt = now;
           const normalizedTranscript = possibleTranscript.trim();
           latestUserTranscriptRef.current = normalizedTranscript;
+          latestUserTranscriptTurnIdRef.current = turnId;
           logBridge('transcript_received', { turn_id: turnId, session_id: sessionIdRef.current, text: normalizedTranscript.slice(0, 80) });
           const liveUiStore = useLiveUiSessionStore.getState();
           liveUiStore.setTranscript('user', normalizedTranscript);

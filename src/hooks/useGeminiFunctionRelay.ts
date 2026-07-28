@@ -24,6 +24,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { postBridgeTelemetry } from '../lib/interactionBridge';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
+import { awaitTurnTranscriptEvidence } from '../lib/liveTranscriptEvidence';
 
 const RELAY_TIMEOUT_MS = 15000;
 const GPS_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -188,6 +189,8 @@ export interface UseGeminiFunctionRelayOptions {
     getLatestTranscript?: () => string | null;
     /** Optional provider that returns and clears latest transcript */
     takeLatestTranscript?: () => string | null;
+    /** Same-turn transcript provider. It must never return text from another turn. */
+    getTranscriptForTurn?: (turnId?: string) => string | null;
     /** Session ID — required for HTTP fallback when WS is unavailable (Vercel mode) */
     getSessionId?: () => string | undefined;
     /** Current restaurant ID from store — enriches add_item_to_cart args so backend never loses scope */
@@ -315,6 +318,7 @@ export function useGeminiFunctionRelay({
     wsRef,
     getLatestTranscript,
     takeLatestTranscript,
+    getTranscriptForTurn,
     getSessionId,
     getCurrentRestaurantId,
 }: UseGeminiFunctionRelayOptions): UseGeminiFunctionRelayResult {
@@ -385,15 +389,25 @@ export function useGeminiFunctionRelay({
         }, { once: true });
     }, [wsRef]);
 
-    const relay = useCallback((functionCall: GeminiFunctionCall): Promise<GeminiFunctionResponse> => {
+    const relay = useCallback(async (functionCall: GeminiFunctionCall): Promise<GeminiFunctionResponse> => {
         const liveUiStore = useLiveUiSessionStore.getState();
+        const readTranscript = (turnId?: string): string | null => {
+            if (getTranscriptForTurn && turnId) {
+                return getTranscriptForTurn(turnId);
+            }
+            return takeLatestTranscript?.() || getLatestTranscript?.() || null;
+        };
+        const transcript = await awaitTurnTranscriptEvidence({
+            toolName: functionCall.name,
+            turnId: functionCall.turnId,
+            read: readTranscript,
+        });
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             // HTTP fallback — Vercel serverless nie wspiera WebSocket
             const sid = getSessionId?.();
-            const transcript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
             const currentRestaurantId = getCurrentRestaurantId?.();
-            return relayViaHttp(functionCall, sid, transcript, currentRestaurantId);
+            return relayViaHttp(functionCall, sid, transcript || undefined, currentRestaurantId);
         }
 
         ensureListener();
@@ -425,7 +439,7 @@ export function useGeminiFunctionRelay({
                 sessionId: wsSessionId,
                 turnId: functionCall.turnId,
             });
-            const latestTranscript = takeLatestTranscript?.() || getLatestTranscript?.() || undefined;
+            const latestTranscript = transcript || undefined;
             liveUiStore.setProcessing('Analizuję...', functionCall.name);
             if (latestTranscript) {
                 liveUiStore.setTranscript('user', latestTranscript);
@@ -489,7 +503,7 @@ export function useGeminiFunctionRelay({
                 }));
             })();
         });
-    }, [wsRef, ensureListener, getLatestTranscript, takeLatestTranscript, getSessionId, getCurrentRestaurantId]);
+    }, [wsRef, ensureListener, getLatestTranscript, takeLatestTranscript, getTranscriptForTurn, getSessionId, getCurrentRestaurantId]);
 
     const relayAll = useCallback(
         (functionCalls: GeminiFunctionCall[]) => Promise.all(functionCalls.map(relay)),
