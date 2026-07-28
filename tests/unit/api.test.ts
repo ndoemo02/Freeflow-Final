@@ -2,7 +2,7 @@
  * Testy jednostkowe dla funkcji API (api.ts)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import api, { createOrder, getUserOrders, getRestaurants, getRestaurantMenu, type CreateOrderRequest } from '../../src/lib/api';
 
 // Mock fetch
@@ -12,6 +12,10 @@ describe('API Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (fetch as any).mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('api', () => {
@@ -31,6 +35,7 @@ describe('API Functions', () => {
     });
 
     it('should throw error on failed request', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       (fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 404,
@@ -42,6 +47,7 @@ describe('API Functions', () => {
       });
 
       await expect(api('/api/test')).rejects.toThrow('API 404: Not Found');
+      expect(consoleError).toHaveBeenCalledWith('API error:', 'Not Found');
     });
 
     it('should return empty object for non-JSON response', async () => {
