@@ -1,18 +1,3 @@
-/**
- * discoveryTaxonomy.ts
- * ─────────────────────────────────────────────────────────────
- * Typy taksonomiczne dla frontendu.
- * Mirror typów z backend/api/brain/discovery/queryUnderstanding.ts
- *
- * Używane przez:
- *   - IntentChips (chipsy nad Voice Barem)
- *   - Discovery results rendering
- *   - Filter UI
- * ─────────────────────────────────────────────────────────────
- */
-
-// ─── L1: Top Groups ──────────────────────────────────────────
-
 export type TopGroupID =
   | 'fast_food'
   | 'pizza_italian'
@@ -20,8 +5,6 @@ export type TopGroupID =
   | 'polish'
   | 'grill'
   | 'desserts_cafe';
-
-// ─── L2: Categories ──────────────────────────────────────────
 
 export type CategoryID =
   | 'burgers' | 'kebab' | 'pizza_takeaway' | 'hot_snacks'
@@ -31,30 +14,47 @@ export type CategoryID =
   | 'kebab_grill' | 'steak' | 'bbq'
   | 'cafe' | 'cake_bakery' | 'ice_cream';
 
-// ─── Core Tags ───────────────────────────────────────────────
-
 export type CoreTag = 'spicy' | 'vege' | 'quick' | 'open_now' | 'delivery';
-
-// ─── Vibe ────────────────────────────────────────────────────
-
 export type VibeID = 'romantic' | 'cozy' | 'business' | 'loud' | 'family';
-
-// ─── Dietary ─────────────────────────────────────────────────
-
 export type DietaryID = 'vegan' | 'vegetarian' | 'gluten_free' | 'keto' | 'halal' | 'lactose_free';
+export type PriceBand = 'budget' | 'mid' | 'premium';
+export type DiscoverySort = 'distance' | 'price' | 'rating';
+export type Proximity = 'near';
+export type DiscoverySource = 'deterministic' | 'fallback';
 
-// ─── Taxonomy IDs (wszystkie wymiary w jednym union) ─────────
+export type TaxonomyDimension =
+  | 'topGroup'
+  | 'category'
+  | 'tag'
+  | 'vibe'
+  | 'dietary'
+  | 'priceBand'
+  | 'proximity'
+  | 'sort'
+  | 'variant';
 
-export type TaxonomyID = TopGroupID | CategoryID | CoreTag | VibeID | DietaryID;
+export type TaxonomyChipState =
+  | 'recognized'
+  | 'verified'
+  | 'unknown'
+  | 'no_match'
+  | 'unresolved';
 
-// ─── Display Entry ───────────────────────────────────────────
+export type TaxonomyID =
+  | TopGroupID
+  | CategoryID
+  | CoreTag
+  | VibeID
+  | DietaryID
+  | PriceBand
+  | Proximity
+  | `sort_${DiscoverySort}`
+  | `variant:${string}`;
 
 export interface TaxonomyDisplayEntry {
   emoji: string;
   labelPl: string;
 }
-
-// ─── Parsed Query (z backendu) ───────────────────────────────
 
 export interface ParsedQuery {
   topGroups: TopGroupID[];
@@ -62,24 +62,28 @@ export interface ParsedQuery {
   tags: CoreTag[];
   vibes: VibeID[];
   dietarys: DietaryID[];
+  priceBand?: PriceBand | null;
+  sort?: DiscoverySort | null;
+  proximity?: Proximity | null;
+  unresolved?: string[];
+  source?: DiscoverySource;
   open_now: boolean;
   confidence: 'deterministic' | 'partial' | 'empty';
   rawText: string;
 }
 
-// ─── Chip (do renderowania w UI) ─────────────────────────────
-
 export interface TaxonomyChip {
   id: TaxonomyID;
   emoji: string;
   labelPl: string;
-  dimension: 'topGroup' | 'category' | 'tag' | 'vibe' | 'dietary';
+  dimension: TaxonomyDimension;
+  state?: TaxonomyChipState;
 }
-
-// ─── Event z parsera do frontendu ────────────────────────────
 
 export interface ParserChipEvent {
   type: 'parser_chips';
   chips: TaxonomyChip[];
   confidence: 'deterministic' | 'partial' | 'empty';
+  unresolved?: string[];
+  source?: DiscoverySource;
 }
