@@ -442,15 +442,28 @@ export function compactToolResponse(
     case 'find_nearby': {
       const list = (response.restaurants as any[] | undefined) ?? [];
       // Keep payload lean to reduce voice generation latency after tool response.
-      compact.restaurants = list.slice(0, 5).map((x: any) => ({
-        id: x.id,
-        name: x.name,
-        cuisine: x.cuisine_type || x.cuisine || x.category || null,
-        rating: x.maps_rating ?? x.rating ?? null,
-        ratingsTotal: x.maps_ratings_total ?? null,
-        distance: x.distance ?? null,
-        city: x.city || null,
-      }));
+      compact.restaurants = list.slice(0, 5).map((x: any) => {
+        const filterFeedback = Array.isArray(x.discovery_filter_feedback)
+          ? x.discovery_filter_feedback
+            .slice(0, 3)
+            .map((entry: any) => ({
+              id: String(entry?.id || '').trim(),
+              dimension: String(entry?.dimension || '').trim(),
+              state: String(entry?.state || '').trim(),
+            }))
+            .filter((entry: { id: string }) => Boolean(entry.id))
+          : [];
+        return {
+          id: x.id,
+          name: x.name,
+          cuisine: x.cuisine_type || x.cuisine || x.category || null,
+          rating: x.maps_rating ?? x.rating ?? null,
+          ratingsTotal: x.maps_ratings_total ?? null,
+          distance: x.distance ?? null,
+          city: x.city || null,
+          ...(filterFeedback.length > 0 ? { filterFeedback } : {}),
+        };
+      });
       break;
     }
     case 'show_menu':
