@@ -502,7 +502,19 @@ export function compactToolResponse(
       }
       break;
     }
-    case 'confirm_add_to_cart':
+    case 'confirm_add_to_cart': {
+      const cart = (response.cart as any) ?? {};
+      const mutationObserved = cartChangedByMeta || Boolean(liveToolMeta.cartChanged);
+      compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
+      compact.cartTotal = cart.total ?? null;
+      compact.cartChanged = mutationObserved;
+      compact.actionStatus = mutationObserved ? 'added' : 'not_added';
+      if (!mutationObserved) compact.mustClarify = true;
+      compact.cartItems = Array.isArray(cart.items)
+        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        : [];
+      break;
+    }
     case 'get_cart_state': {
       const cart = (response.cart as any) ?? {};
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
@@ -531,6 +543,13 @@ export function compactToolResponse(
       compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
       if (clarifyNotAdded) {
         compact.mustClarify = true;
+        const responseContext = (response.context || response.contextUpdates || {}) as Record<string, unknown>;
+        const expectedContext = String(responseContext.expectedContext || '').trim();
+        const hasPendingOrder = Boolean(responseContext.pendingOrder);
+        if (expectedContext === 'confirm_add_to_cart' || hasPendingOrder) {
+          compact.confirmationRequired = true;
+          compact.nextAction = 'confirm_add_to_cart';
+        }
       }
       break;
     }

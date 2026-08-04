@@ -51,5 +51,18 @@ describe('composeLiveSystemInstruction', () => {
     expect(instruction).toContain('alergeny');
     expect(instruction).toContain('PYTANIE TO NIE ZAMÓWIENIE');
     expect(instruction).toContain('Samo wymienienie nazwy pozycji nie jest zgodą');
+    expect(instruction).toContain('NATYCHMIAST wywołaj confirm_add_to_cart');
+    expect(instruction).toContain('actionStatus="added"');
+    expect(instruction).toContain('cartChanged=true');
+  });
+
+  it('keeps the previous language for restaurant and dish names', () => {
+    const instruction = buildDemoGuideInstruction({
+      scenario_id: 'piekary-local',
+      preferred_locale: 'pl',
+    });
+
+    expect(instruction).toContain('Sama nazwa restauracji, dania lub marki jest językowo neutralna');
+    expect(instruction).toContain('Angielskie nazwy pól i narzędzi nigdy nie zmieniają języka');
   });
 });

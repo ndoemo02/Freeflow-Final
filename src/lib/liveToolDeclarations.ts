@@ -164,7 +164,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'confirm_add_to_cart',
-    description: 'Confirm pending add-to-cart operation.',
+    description: 'Commit the pending add-to-cart draft after the user explicitly confirms it (for example: "dodaj", "tak", "potwierdzam"). Call this tool before saying that an item was added. Only report success when the tool result says actionStatus="added" and cartChanged=true.',
     parameters: { type: O, properties: {} },
   },
   {
