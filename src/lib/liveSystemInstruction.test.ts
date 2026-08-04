@@ -51,7 +51,9 @@ describe('composeLiveSystemInstruction', () => {
     expect(instruction).toContain('alergeny');
     expect(instruction).toContain('PYTANIE TO NIE ZAMÓWIENIE');
     expect(instruction).toContain('Samo wymienienie nazwy pozycji nie jest zgodą');
-    expect(instruction).toContain('NATYCHMIAST wywołaj confirm_add_to_cart');
+    expect(instruction).toContain('KOSZYK JEST EKRANEM KONTROLI');
+    expect(instruction).toContain('Nie pytaj drugi raz „potwierdzasz?”');
+    expect(instruction).toContain('confirmationRequired=true');
     expect(instruction).toContain('actionStatus="added"');
     expect(instruction).toContain('cartChanged=true');
   });

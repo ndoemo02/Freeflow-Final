@@ -175,6 +175,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'MENU (restauracja znana): wywołaj show_menu. Proponuj tylko pozycje faktycznie w menu — nigdy nie wymyślaj dań.',
   'PYTANIA O DANIE: „czy X to Y?”, „co to jest?”, pytania o skład, alergeny, cenę i dostępność są informacyjne. Odpowiedz na podstawie aktualnego menu. Nie dodawaj nic do koszyka, dopóki użytkownik wyraźnie nie powie „dodaj”, „zamawiam”, „poproszę” albo nie poda konkretnej ilości w turze zamówienia.',
   // ORDER: after explicit purchase intent, add immediately. Do not ask for redundant confirmation.
+  'ZAMÓWIENIE: gdy znasz restaurację, dokładną pozycję i ilość, po naturalnej prośbie użytkownika NATYCHMIAST wywołaj add_item_to_cart albo add_items_to_cart. Koszyk jest odwracalnym ekranem kontroli, więc nie pytaj drugi raz „potwierdzasz?” i nie każ użytkownikowi powtarzać pełnej nazwy dania. Dopiero finalne zamówienie i płatność użytkownik zatwierdza ręcznie w interfejsie.',
   'EDYCJA KOSZYKA: wykonuj od razu — update_cart_item_quantity, remove_item_from_cart, replace_cart_item.',
   'DUŻE MENU: jeśli użytkownik prosi o danie którego nie widzisz w bieżącej liście — NATYCHMIAST wywołaj search_menu_items z nazwą dania. Menu może mieć więcej pozycji niż pokazano. search_menu_items szuka w całej karcie restauracji.',
 

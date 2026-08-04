@@ -72,7 +72,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'add_item_to_cart',
-    description: 'Add one item to cart by dish name and quantity. Use special_instructions when user requests modifications (remove ingredients, add extras, leave a note). If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
+    description: 'Add one fully resolved item directly to the reversible cart review by dish name and quantity. Call immediately after an explicit natural order; do not ask for a second voice confirmation. Use special_instructions when user requests modifications (remove ingredients, add extras, leave a note). Include restaurant_name or restaurant_id whenever restaurant scope is known.',
     parameters: {
       type: O,
       properties: {
@@ -94,7 +94,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'add_items_to_cart',
-    description: 'Add multiple items to cart in one transaction. Each item can have special_instructions for modifications. If user mentions a restaurant, include restaurant_name (or restaurant_id) in args.',
+    description: 'Add multiple fully resolved items directly to the reversible cart review in one transaction. Call immediately after an explicit natural order; do not ask for a second voice confirmation. Each item can have special_instructions for modifications. Include restaurant_name or restaurant_id whenever restaurant scope is known.',
     parameters: {
       type: O,
       properties: {
@@ -164,7 +164,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'confirm_add_to_cart',
-    description: 'Commit the pending add-to-cart draft after the user explicitly confirms it (for example: "dodaj", "tak", "potwierdzam"). Call this tool before saying that an item was added. Only report success when the tool result says actionStatus="added" and cartChanged=true.',
+    description: 'Legacy recovery only: commit an already pending cart draft when the previous tool result explicitly returned confirmationRequired=true and the user then confirmed. Do not create this extra confirmation step during the normal ordering flow. Only report success when actionStatus="added" and cartChanged=true.',
     parameters: { type: O, properties: {} },
   },
   {
