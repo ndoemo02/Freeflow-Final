@@ -64,6 +64,7 @@ export default function Home() {
     isActive: liveSessionActive,
     start: startLiveSession,
     stop: stopLiveSession,
+    sendText: sendLiveText,
     error: liveSessionError,
   } = useLiveVoiceSession({
     wsRef: socketRef,
@@ -221,27 +222,38 @@ export default function Home() {
     startListening();
   }, [isListening, startListening, stop, resetTranscript]);
 
-  const handleTextSubmit = useCallback(async (text: string) => {
+  const handleTextSubmit = useCallback(async (text: string): Promise<boolean> => {
     const sanitized = text.trim();
-    if (!sanitized) return;
+    if (!sanitized) return false;
 
     // Block non-user content: raw HTML, JSON blobs, JS error prefixes
     if (/^[<{[]/.test(sanitized) || /^(Error|TypeError|SyntaxError|Failed|Uncaught)\b/.test(sanitized)) {
       console.warn('[IntakeGate] Blocked non-user input:', sanitized.slice(0, 80));
-      return;
+      return false;
     }
 
-    // When Gemini Live is active it owns the session.
-    // BrainV2 must only be reached via ToolRouter (Gemini tool calls), never directly.
+    stop(); // Stop non-Live TTS before beginning a new user turn.
+
+    // Live owns the conversational turn while active. Text enters the active
+    // provider and reaches BrainV2 only through the same ToolRouter as voice.
     if (liveSessionActive) {
-      return;
+      const result = await sendLiveText(sanitized);
+      if (!result.accepted) {
+        logBridge('user_input_rejected', {
+          session_id: sessionId,
+          source: 'voicebar_text_live',
+          reason: result.reason,
+        });
+        return false;
+      }
+      return true;
     }
 
     const textTurnId = generateTurnId(sessionId);
     logBridge('user_input_received', { turn_id: textTurnId, session_id: sessionId, source: 'voicebar_text', text: sanitized.slice(0, 60) });
-    stop(); // Stop TTS before sending
     await sendMessage(sanitized);
-  }, [liveSessionActive, sendMessage, stop]);
+    return true;
+  }, [liveSessionActive, sendLiveText, sendMessage, sessionId, stop]);
 
   const panelRestaurant = (location.state as {
     openRestaurant?: { id?: string; name?: string };

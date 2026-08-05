@@ -11,6 +11,7 @@ import {
   SYSTEM_INSTRUCTION_SILESIAN,
   SYSTEM_INSTRUCTION_STANDARD,
   type LiveProviderFailure,
+  type LiveTextSendResult,
 } from './useGeminiLiveSession';
 import { useGeminiFunctionRelay, type GeminiFunctionCall } from './useGeminiFunctionRelay';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
@@ -36,6 +37,7 @@ export interface UseOpenAIRealtimeSessionOptions {
 export interface UseOpenAIRealtimeSessionResult {
   start: () => Promise<boolean>;
   stop: () => void;
+  sendText: (text: string) => Promise<LiveTextSendResult>;
   isActive: boolean;
   error: string | null;
 }
@@ -82,7 +84,10 @@ export function useOpenAIRealtimeSession({
   const startInFlightRef = useRef(false);
   const sessionIdRef = useRef(propSessionId);
   const latestTranscriptRef = useRef<string | null>(null);
+  const latestTranscriptTurnIdRef = useRef<string | null>(null);
+  const currentTurnIdRef = useRef<string | null>(null);
   const assistantTranscriptRef = useRef('');
+  const responseActiveRef = useRef(false);
   const handledCallsRef = useRef(new Set<string>());
   const onTerminalFailureRef = useRef(onTerminalFailure);
 
@@ -95,7 +100,14 @@ export function useOpenAIRealtimeSession({
     takeLatestTranscript: () => {
       const transcript = latestTranscriptRef.current;
       latestTranscriptRef.current = null;
+      latestTranscriptTurnIdRef.current = null;
       return transcript;
+    },
+    getTranscriptForTurn: (requestedTurnId) => {
+      if (!requestedTurnId || latestTranscriptTurnIdRef.current !== requestedTurnId) {
+        return null;
+      }
+      return latestTranscriptRef.current;
     },
     getSessionId: () => sessionIdRef.current,
     getCurrentRestaurantId: currentRestaurantId,
@@ -137,6 +149,10 @@ export function useOpenAIRealtimeSession({
     }
 
     assistantTranscriptRef.current = '';
+    latestTranscriptRef.current = null;
+    latestTranscriptTurnIdRef.current = null;
+    currentTurnIdRef.current = null;
+    responseActiveRef.current = false;
     handledCallsRef.current.clear();
   }, []);
 
@@ -166,13 +182,73 @@ export function useOpenAIRealtimeSession({
     channel.send(JSON.stringify(event));
   }, []);
 
+  const sendText = useCallback(async (text: string): Promise<LiveTextSendResult> => {
+    const sanitized = text.trim();
+    const channel = channelRef.current;
+    if (!sanitized || !activeRef.current || !channel || channel.readyState !== 'open') {
+      return {
+        accepted: false,
+        reason: 'live_not_ready',
+        message: 'Sesja OpenAI Live nie jest jeszcze gotowa na wiadomość tekstową.',
+      };
+    }
+
+    const textTurnId = generateTurnId(sessionIdRef.current || 'unknown');
+    latestTranscriptRef.current = sanitized;
+    latestTranscriptTurnIdRef.current = textTurnId;
+    currentTurnIdRef.current = textTurnId;
+    assistantTranscriptRef.current = '';
+
+    const liveUi = useLiveUiSessionStore.getState();
+    liveUi.setTranscript('user', sanitized);
+    liveUi.setProcessing('Analizuję...');
+    logBridge('user_input_received', {
+      turn_id: textTurnId,
+      session_id: sessionIdRef.current,
+      source: 'voicebar_text_live',
+      provider: 'openai',
+      text: sanitized.slice(0, 80),
+    });
+    logBridge('transcript_received', {
+      turn_id: textTurnId,
+      session_id: sessionIdRef.current,
+      source: 'voicebar_text_live',
+      provider: 'openai',
+      text: sanitized.slice(0, 80),
+    });
+
+    try {
+      if (responseActiveRef.current) {
+        sendEvent({ type: 'response.cancel' });
+      }
+      sendEvent({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: sanitized }],
+        },
+      });
+      sendEvent({ type: 'response.create' });
+      return { accepted: true, provider: 'openai', turnId: textTurnId };
+    } catch (sendError) {
+      const message = sendError instanceof Error ? sendError.message : 'openai_live_text_send_failed';
+      setError(message);
+      return {
+        accepted: false,
+        reason: 'provider_error',
+        message: 'Nie udało się wysłać tekstu do OpenAI Live.',
+      };
+    }
+  }, [sendEvent]);
+
   const handleFunctionCall = useCallback(async (item: OpenAIRealtimeEvent) => {
     const callId = String(item.call_id || item.id || '').trim();
     const name = String(item.name || '').trim();
     if (!callId || !name || handledCallsRef.current.has(callId)) return;
     handledCallsRef.current.add(callId);
 
-    const turnId = generateTurnId(sessionIdRef.current || 'unknown');
+    const turnId = currentTurnIdRef.current || generateTurnId(sessionIdRef.current || 'unknown');
     const call: GeminiFunctionCall = {
       id: callId,
       name,
@@ -222,18 +298,30 @@ export function useOpenAIRealtimeSession({
     switch (event.type) {
       case 'input_audio_buffer.speech_started':
         assistantTranscriptRef.current = '';
+        currentTurnIdRef.current = generateTurnId(sessionIdRef.current || 'unknown');
+        logBridge('user_input_received', {
+          turn_id: currentTurnIdRef.current,
+          session_id: sessionIdRef.current,
+          source: 'live_audio',
+          provider: 'openai',
+        });
         liveUi.setListening('Słucham...');
         break;
       case 'input_audio_buffer.speech_stopped':
+        liveUi.setProcessing('Analizuję...');
+        break;
       case 'response.created':
+        responseActiveRef.current = true;
         liveUi.setProcessing('Analizuję...');
         break;
       case 'conversation.item.input_audio_transcription.completed': {
         const transcript = String(event.transcript || '').trim();
         if (transcript) {
           latestTranscriptRef.current = transcript;
+          latestTranscriptTurnIdRef.current = currentTurnIdRef.current;
           liveUi.setTranscript('user', transcript);
           logBridge('transcript_received', {
+            turn_id: currentTurnIdRef.current,
             session_id: sessionIdRef.current,
             text: transcript.slice(0, 80),
             provider: 'openai',
@@ -259,6 +347,7 @@ export function useOpenAIRealtimeSession({
         void handleFunctionCall(event);
         break;
       case 'response.done': {
+        responseActiveRef.current = false;
         const outputs = Array.isArray(event.response?.output) ? event.response.output : [];
         outputs
           .filter((item: OpenAIRealtimeEvent) => item?.type === 'function_call')
@@ -421,5 +510,5 @@ export function useOpenAIRealtimeSession({
     cleanup();
   }, [cleanup]);
 
-  return { start, stop, isActive, error };
+  return { start, stop, sendText, isActive, error };
 }

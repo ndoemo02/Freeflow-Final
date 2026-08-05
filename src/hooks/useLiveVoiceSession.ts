@@ -3,6 +3,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import {
   useGeminiLiveSession,
   type LiveProviderFailure,
+  type LiveTextSendResult,
   type UseGeminiLiveSessionOptions,
   type UseGeminiLiveSessionResult,
 } from './useGeminiLiveSession';
@@ -35,11 +36,13 @@ export function useLiveVoiceSession(
   const {
     start: startGemini,
     stop: stopGemini,
+    sendText: sendGeminiText,
     isActive: geminiActive,
   } = useGeminiLiveSession({ ...options, onTerminalFailure: onGeminiFailure });
   const {
     start: startOpenAI,
     stop: stopOpenAI,
+    sendText: sendOpenAIText,
     isActive: openaiActive,
     error: openaiError,
   } = useOpenAIRealtimeSession({ ...options, onTerminalFailure: onOpenAIFailure });
@@ -82,12 +85,27 @@ export function useLiveVoiceSession(
     setProvider('gemini');
   }, [stopGemini, stopOpenAI]);
 
+  const sendText = useCallback(async (text: string): Promise<LiveTextSendResult> => {
+    if (fallbackStartingRef.current) {
+      return {
+        accepted: false,
+        reason: 'provider_transition',
+        message: 'Trwa przełączanie providera Live. Spróbuj ponownie za chwilę.',
+      };
+    }
+    if (provider === 'openai') {
+      return sendOpenAIText(text);
+    }
+    return sendGeminiText(text);
+  }, [provider, sendGeminiText, sendOpenAIText]);
+
   const microphoneError = failure?.kind === 'microphone' ? failure.code : null;
   const effectiveError = microphoneError || fallbackError || (provider === 'openai' ? openaiError : null);
 
   return {
     start,
     stop,
+    sendText,
     isActive: geminiActive || openaiActive,
     error: effectiveError,
     reconnectHalted: Boolean(fallbackError),

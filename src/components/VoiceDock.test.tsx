@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import VoiceDock from './VoiceDock';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
@@ -119,5 +119,29 @@ describe('VoiceDock', () => {
     const { container } = render(<VoiceDock error="live_token_unavailable" />);
     expect(container.querySelector('.ff-voice-dock')).toHaveAttribute('data-state', 'error');
     expect(screen.getByText(/awaria.*tryb zapasowy/i)).toBeInTheDocument();
+  });
+
+  it('clears typed input only after the transport accepts it', async () => {
+    const onTextSubmit = vi.fn().mockResolvedValue(true);
+    render(<VoiceDock onTextSubmit={onTextSubmit} />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'szybko fit' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => expect(onTextSubmit).toHaveBeenCalledWith('szybko fit'));
+    await waitFor(() => expect(input).toHaveValue(''));
+  });
+
+  it('retains typed input when the active transport rejects it', async () => {
+    const onTextSubmit = vi.fn().mockResolvedValue(false);
+    render(<VoiceDock onTextSubmit={onTextSubmit} />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'bez glutenu' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    await waitFor(() => expect(onTextSubmit).toHaveBeenCalledWith('bez glutenu'));
+    expect(input).toHaveValue('bez glutenu');
   });
 });

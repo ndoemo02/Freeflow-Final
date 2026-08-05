@@ -19,7 +19,7 @@ type DockState = 'idle' | 'listening' | 'speaking' | 'thinking' | 'error';
 
 interface VoiceDockProps {
   onMicClick?: () => void;
-  onTextSubmit?: (value: string) => void;
+  onTextSubmit?: (value: string) => boolean | void | Promise<boolean | void>;
   isListening?: boolean;
   isThinking?: boolean;
   isSpeaking?: boolean;
@@ -134,6 +134,7 @@ export default function VoiceDock({
   const dockRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const [isSubmittingText, setIsSubmittingText] = useState(false);
 
   // Store — trzy punkty
   const sessionState = useLiveUiSessionStore((s) => s.sessionState);
@@ -189,17 +190,26 @@ export default function VoiceDock({
 
   const hasText = inputValue.trim().length > 0;
 
-  const submit = () => {
-    if (hasText) {
-      onTextSubmit?.(inputValue);
-      setInputValue('');
+  const submit = async () => {
+    if (!hasText || isSubmittingText || !onTextSubmit) return;
+    const submittedValue = inputValue;
+    setIsSubmittingText(true);
+    try {
+      const accepted = await onTextSubmit(submittedValue);
+      if (accepted !== false) {
+        setInputValue((current) => current === submittedValue ? '' : current);
+      }
+    } catch (submitError) {
+      console.warn('[VoiceDock] Text submit failed; retaining input.', submitError);
+    } finally {
+      setIsSubmittingText(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return;
     if (hasText) {
-      submit();
+      void submit();
     } else {
       onMicClick?.();
     }
@@ -328,9 +338,10 @@ export default function VoiceDock({
             {hasText ? (
               <button
                 type="button"
-                onClick={submit}
+                onClick={() => { void submit(); }}
                 className="ff-voice-dock__send"
                 aria-label="Wyślij"
+                disabled={isSubmittingText}
               >
                 <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
                   <path d="M1 7.5h13M8.5 2 14 7.5 8.5 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>

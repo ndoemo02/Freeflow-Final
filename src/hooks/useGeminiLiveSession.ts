@@ -297,9 +297,22 @@ export interface LiveProviderFailure {
   code: string;
 }
 
+export type LiveTextSendResult =
+  | {
+      accepted: true;
+      provider: 'gemini' | 'openai';
+      turnId: string;
+    }
+  | {
+      accepted: false;
+      reason: 'live_not_ready' | 'provider_transition' | 'provider_error';
+      message: string;
+    };
+
 export interface UseGeminiLiveSessionResult {
   start: () => Promise<boolean>;
   stop: () => void;
+  sendText: (text: string) => Promise<LiveTextSendResult>;
   isActive: boolean;
   error: string | null;
   reconnectHalted: boolean;
@@ -739,6 +752,7 @@ export function useGeminiLiveSession({
   const modelSwitchRestartRef = useRef(false);
   const latestUserTranscriptRef = useRef<string | null>(null);
   const latestUserTranscriptTurnIdRef = useRef<string | null>(null);
+  const textTurnSenderRef = useRef<((text: string, turnId: string) => void) | null>(null);
   const autoNearbyRecoveryInFlightRef = useRef(false);
   const autoNearbyRecoveryLastTsRef = useRef(0);
   const lastToolResponseSentAtRef = useRef<number | null>(null);
@@ -839,6 +853,7 @@ export function useGeminiLiveSession({
       try { sessionRef.current.close(); } catch { /* noop */ }
     }
     sessionRef.current = null;
+    textTurnSenderRef.current = null;
 
     activeRef.current = false;
     setIsActive(false);
@@ -870,6 +885,32 @@ export function useGeminiLiveSession({
       startInFlightRef.current = false;
     }
   }, [cleanupRuntime, clearReconnectTimer, clearStallWatchdog]);
+
+  const sendText = useCallback(async (text: string): Promise<LiveTextSendResult> => {
+    const sanitized = text.trim();
+    const sender = textTurnSenderRef.current;
+    if (!sanitized || !activeRef.current || !sessionRef.current || !sender) {
+      return {
+        accepted: false,
+        reason: 'live_not_ready',
+        message: 'Sesja Gemini Live nie jest jeszcze gotowa na wiadomość tekstową.',
+      };
+    }
+
+    const textTurnId = generateTurnId(sessionIdRef.current || 'unknown');
+    try {
+      sender(sanitized, textTurnId);
+      return { accepted: true, provider: 'gemini', turnId: textTurnId };
+    } catch (sendError) {
+      const message = sendError instanceof Error ? sendError.message : 'gemini_live_text_send_failed';
+      setError(message);
+      return {
+        accepted: false,
+        reason: 'provider_error',
+        message: 'Nie udało się wysłać tekstu do Gemini Live.',
+      };
+    }
+  }, []);
 
   const start = useCallback(async () => {
     if (!enabled) return false;
@@ -1344,6 +1385,36 @@ export function useGeminiLiveSession({
       });
 
       sessionRef.current = session;
+      textTurnSenderRef.current = (text, textTurnId) => {
+        turnId = textTurnId;
+        assistantTranscriptBuffer = '';
+        firstAudioFrameAt = 0;
+        lastTranscriptAt = Date.now();
+        latestUserTranscriptRef.current = text;
+        latestUserTranscriptTurnIdRef.current = textTurnId;
+        player.stop();
+
+        const liveUi = useLiveUiSessionStore.getState();
+        liveUi.setTranscript('user', text);
+        liveUi.setProcessing('Analizuję...');
+        logBridge('user_input_received', {
+          turn_id: textTurnId,
+          session_id: sessionIdRef.current,
+          source: 'voicebar_text_live',
+          text: text.slice(0, 80),
+        });
+        logBridge('transcript_received', {
+          turn_id: textTurnId,
+          session_id: sessionIdRef.current,
+          source: 'voicebar_text_live',
+          text: text.slice(0, 80),
+        });
+        session.sendClientContent({
+          turns: [{ role: 'user', parts: [{ text }] }],
+          turnComplete: true,
+        });
+        armStallWatchdog('text_turn_sent');
+      };
       activeRef.current = true;
       setIsActive(true);
       useLiveUiSessionStore.getState().setListening('Słucham...');
@@ -1416,5 +1487,5 @@ export function useGeminiLiveSession({
     };
   }, [cleanupRuntime, clearReconnectTimer]);
 
-  return { start, stop, isActive, error, reconnectHalted };
+  return { start, stop, sendText, isActive, error, reconnectHalted };
 }
