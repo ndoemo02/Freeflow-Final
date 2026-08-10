@@ -209,7 +209,7 @@ export default function BusinessPanel() {
       setLoadingRests(true)
       const { data, error } = await supabase
         .from('restaurants')
-        .select('id,name,created_at')
+        .select('id,name')
         .eq('owner_id', user.id)
         .order('name', { ascending: true })
       if (!alive) return
@@ -617,7 +617,7 @@ export default function BusinessPanel() {
                 .select('id,name')
               if (error) throw error
               const { data: list } = await supabase.from('restaurants')
-                .select('id,name,created_at').eq('owner_id', user.id).order('name')
+                .select('id,name').eq('owner_id', user.id).order('name')
               setRestaurants(list || [])
               const createdId = data?.[0]?.id
               if (createdId) setRestaurantId(createdId)

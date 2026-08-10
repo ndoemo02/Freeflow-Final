@@ -137,9 +137,14 @@ function getSectionFromSearch(search: string): SectionName | null {
     return PANEL_SECTIONS.has(value as SectionName) ? (value as SectionName) : null;
 }
 
+// Kolumny zawezone do zatwierdzonego kontraktu PUBLIC restaurants (audyt B1,
+// 2026-08-10), zgodne z grantem etapu 10. `rating`/`delivery_time` uzywane
+// nizej w renderze (linie ~858, ~862) nie sa czescia kontraktu (VERIFY-FIRST,
+// istnienie kolumn niepotwierdzone) - oba miejsca maja juz fallback (`|| 'New'`,
+// `|| '30-40'`), wiec ich brak w odpowiedzi nie psuje renderu.
 const fetchActiveRestaurants = () => supabase
     .from('restaurants')
-    .select('*')
+    .select('id,name,address,city,cuisine_type,lat,lng,delivery_available,price_level,is_active,taxonomy_groups,taxonomy_cats,taxonomy_tags,image_url')
     .eq('is_active', true)
     .limit(20);
 
