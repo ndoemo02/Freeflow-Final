@@ -69,3 +69,10 @@ export const supabase =
 
 if (!g.__freeflow_supabase__) g.__freeflow_supabase__ = supabase;
 
+/** Bieżący Supabase access_token (JWT) do nagłówka Authorization: Bearer dla
+ * backendowych endpointów owner-scoped (np. GET /api/owner/restaurants). */
+export async function getAccessToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+

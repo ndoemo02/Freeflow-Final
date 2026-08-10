@@ -14,7 +14,8 @@
 import React, { useEffect, useState, Fragment, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { supabase } from '../../lib/supabase'
+import { supabase, getAccessToken } from '../../lib/supabase'
+import { getApiUrl } from '../../lib/config'
 import { Dialog, Transition } from '@headlessui/react'
 import { ROUTES } from '../../app/routeConfig'
 import { useOwnerRestaurant } from '../../hooks/useOwnerRestaurant'
@@ -279,7 +280,11 @@ function DetailsTab({ restaurantId, userId }) {
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Load full restaurant details
+  // Load full restaurant details — GET /api/owner/restaurants/:id (Bearer JWT).
+  // Ownership is resolved server-side from the JWT (auth.getUser + owner_id
+  // filter in privateServerClient), not from a client-side Supabase filter —
+  // see api/owner/restaurants.js. photo_gallery comes back in the same call,
+  // no separate request needed.
   useEffect(() => {
     if (!restaurantId) return
     let alive = true
@@ -290,20 +295,25 @@ function DetailsTab({ restaurantId, userId }) {
     //   ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS description TEXT,
     //     ADD COLUMN IF NOT EXISTS min_order_pln NUMERIC,
     //     ADD COLUMN IF NOT EXISTS is_open BOOLEAN NOT NULL DEFAULT false;
-    supabase
-      .from('restaurants')
-      .select('id,name,city,address,phone,website,is_active,delivery_available,cuisine_type,maps_rating,image_url')
-      .eq('id', restaurantId)
-      .eq('owner_id', userId)
-      .single()
-      .then(({ data, error }) => {
+    ;(async () => {
+      try {
+        const token = await getAccessToken()
+        if (!token) throw new Error('Brak aktywnej sesji.')
+
+        const res = await fetch(getApiUrl(`/api/owner/restaurants/${restaurantId}`), {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const json = await res.json().catch(() => null)
         if (!alive) return
         setLoading(false)
-        if (error || !data) {
-          console.error('[RestaurantManager] load error:', error)
+
+        if (!res.ok || !json?.ok || !json.data) {
+          console.error('[RestaurantManager] load error:', json?.error || res.status)
           setErrorMsg('Nie udało się załadować danych restauracji.')
           return
         }
+
+        const data = json.data
         setForm(prev => ({
           ...prev,
           name:               data.name             ?? '',
@@ -320,23 +330,18 @@ function DetailsTab({ restaurantId, userId }) {
           ...(data.is_open        != null && { is_open:        data.is_open }),
         }))
         setMeta({
-          id:           data.id,
-          cuisine_type: data.cuisine_type ?? '',
-          maps_rating:  data.maps_rating,
-          photo_gallery: [],
+          id:            data.id,
+          cuisine_type:  data.cuisine_type ?? '',
+          maps_rating:   data.maps_rating,
+          photo_gallery: Array.isArray(data.photo_gallery) ? data.photo_gallery : [],
         })
-
-        // Fetch photo_gallery separately — JSONB column, may require extra grants
-        supabase
-          .from('restaurants')
-          .select('photo_gallery')
-          .eq('id', restaurantId)
-          .single()
-          .then(({ data: gd }) => {
-            if (!alive || !gd) return
-            setMeta(m => ({ ...m, photo_gallery: Array.isArray(gd.photo_gallery) ? gd.photo_gallery : [] }))
-          })
-      })
+      } catch (err) {
+        if (!alive) return
+        setLoading(false)
+        console.error('[RestaurantManager] load error:', err)
+        setErrorMsg('Nie udało się załadować danych restauracji.')
+      }
+    })()
     return () => { alive = false }
   }, [restaurantId])
 

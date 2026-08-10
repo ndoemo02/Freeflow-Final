@@ -277,14 +277,17 @@ export function CartProvider({ children }) {
     }
 
     if (!restData?.id) {
-      const aliasResult = await supabase
-        .from('restaurants')
-        .select('id, name')
-        .ilike('aliases', `%${searchName}%`)
-        .limit(1)
-        .maybeSingle();
-      if (aliasResult.data?.id) {
-        restData = aliasResult.data;
+      // Stage10: `aliases` is backend-only (never granted to anon/authenticated) —
+      // this fallback goes through the backend resolver instead of a direct
+      // Supabase select on restaurants.aliases.
+      try {
+        const resolveRes = await fetch(getApiUrl(`/api/restaurants/resolve?name=${encodeURIComponent(searchName)}`));
+        const resolveJson = await resolveRes.json().catch(() => null);
+        if (resolveRes.ok && resolveJson?.ok && resolveJson.data?.id) {
+          restData = resolveJson.data;
+        }
+      } catch (err) {
+        console.error('[CART_RESTAURANT_RESOLVE] resolve endpoint error:', err);
       }
     }
 
