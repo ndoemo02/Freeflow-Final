@@ -14,7 +14,7 @@
 import React, { useEffect, useState, Fragment, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../state/auth'
-import { supabase, getAccessToken } from '../../lib/supabase'
+import { getAccessToken } from '../../lib/supabase'
 import { getApiUrl } from '../../lib/config'
 import { Dialog, Transition } from '@headlessui/react'
 import { ROUTES } from '../../app/routeConfig'
@@ -367,12 +367,18 @@ function DetailsTab({ restaurantId, userId }) {
         ...(!isNaN(minOrder)          && { min_order_pln:  minOrder }),
         ...(form.is_open       != null && { is_open:        form.is_open }),
       }
-      const { error } = await supabase
-        .from('restaurants')
-        .update(patch)
-        .eq('id', restaurantId)
-        .eq('owner_id', userId)
-      if (error) throw error
+      const token = await getAccessToken()
+      if (!token) throw new Error('Brak aktywnej sesji.')
+      const res = await fetch(getApiUrl(`/api/owner/restaurants/${restaurantId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(patch),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) {
+        console.error('[RestaurantManager] save error:', json?.error || res.status)
+        throw new Error('Błąd zapisu.')
+      }
       // Patch shared store (name/city shown in selector)
       const store = useOwnerRestaurantStore.getState()
       store.setRestaurantList(
@@ -522,31 +528,22 @@ function MenuTab({ restaurantId }) {
   const reload = useCallback(async (id = restaurantId) => {
     if (!id) { setItems([]); return }
     setLoading(true); setGlobalErr('')
-
-    // Try with image_url first; if that column doesn't exist yet, fall back
-    let { data, error } = await supabase
-      .from('menu_items_v2')
-      .select('id,name,price_pln,description,category,available,image_url,section_order')
-      .eq('restaurant_id', id)
-      .order('section_order', { ascending: true })
-      .order('category', { nullsFirst: false })
-      .order('name')
-
-    if (error && /image_url/.test(error.message)) {
-      // Column doesn't exist yet → fetch without it
-      const fb = await supabase
-        .from('menu_items_v2')
-        .select('id,name,price_pln,description,category,available,section_order')
-        .eq('restaurant_id', id)
-        .order('section_order', { ascending: true })
-        .order('category', { nullsFirst: false })
-        .order('name')
-      data = fb.data; error = fb.error
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error('Brak aktywnej sesji.')
+      const res = await fetch(getApiUrl(`/api/owner/restaurants/${id}/menu`), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) throw new Error(json?.error || 'load_failed')
+      setItems(json.data || [])
+    } catch (err) {
+      console.error('[MenuTab] reload error:', err)
+      setItems([])
+      setGlobalErr('Nie udało się załadować menu.')
+    } finally {
+      setLoading(false)
     }
-
-    setItems(error ? [] : (data || []))
-    if (error) { console.error('[MenuTab] reload error:', error); setGlobalErr(error.message) }
-    setLoading(false)
   }, [restaurantId])
 
   useEffect(() => { reload(restaurantId) }, [restaurantId])
@@ -559,16 +556,25 @@ function MenuTab({ restaurantId }) {
       const price = parsePrice(addForm.price_pln)
       if (!addForm.name.trim()) throw new Error('Nazwa jest wymagana')
       if (isNaN(price) || price < 0) throw new Error('Podaj poprawną cenę')
-      const { error } = await supabase.from('menu_items_v2').insert({
-        restaurant_id: restaurantId,
-        name:          addForm.name.trim(),
-        price_pln:     price,
-        description:   addForm.description.trim() || null,
-        category:      addForm.category.trim()    || null,
-        available:     addForm.available,
-        image_url:     addForm.image_url.trim()   || null,
+      const token = await getAccessToken()
+      if (!token) throw new Error('Brak aktywnej sesji.')
+      const res = await fetch(getApiUrl(`/api/owner/restaurants/${restaurantId}/menu`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name:        addForm.name.trim(),
+          price_pln:   price,
+          description: addForm.description.trim() || null,
+          category:    addForm.category.trim()    || null,
+          available:   addForm.available,
+          image_url:   addForm.image_url.trim()   || null,
+        }),
       })
-      if (error) throw error
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) {
+        console.error('[MenuTab] addItem error:', json?.error || res.status)
+        throw new Error('Błąd zapisu.')
+      }
       setAddForm(EMPTY_ITEM_FORM); setAddOpen(false)
       await reload()
     } catch (e) { setAddErr(e.message) } finally { setBusyAdd(false) }
@@ -594,15 +600,25 @@ function MenuTab({ restaurantId }) {
       const price = parsePrice(editForm.price_pln)
       if (!editForm.name.trim()) throw new Error('Nazwa jest wymagana')
       if (isNaN(price) || price < 0) throw new Error('Podaj poprawną cenę')
-      const { error } = await supabase.from('menu_items_v2').update({
-        name:        editForm.name.trim(),
-        price_pln:   price,
-        description: editForm.description.trim() || null,
-        category:    editForm.category.trim()    || null,
-        available:   editForm.available,
-        image_url:   editForm.image_url.trim()   || null,
-      }).eq('id', editItem.id)
-      if (error) throw error
+      const token = await getAccessToken()
+      if (!token) throw new Error('Brak aktywnej sesji.')
+      const res = await fetch(getApiUrl(`/api/owner/restaurants/${restaurantId}/menu/${editItem.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name:        editForm.name.trim(),
+          price_pln:   price,
+          description: editForm.description.trim() || null,
+          category:    editForm.category.trim()    || null,
+          available:   editForm.available,
+          image_url:   editForm.image_url.trim()   || null,
+        }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) {
+        console.error('[MenuTab] saveEdit error:', json?.error || res.status)
+        throw new Error('Błąd zapisu.')
+      }
       setEditOpen(false); setEditItem(null)
       await reload()
     } catch (e) { setEditErr(e.message) } finally { setBusyEdit(false) }
@@ -612,8 +628,17 @@ function MenuTab({ restaurantId }) {
     if (!delItem) return
     try {
       setBusyDel(true)
-      const { error } = await supabase.from('menu_items_v2').delete().eq('id', delItem.id)
-      if (error) throw error
+      const token = await getAccessToken()
+      if (!token) throw new Error('Brak aktywnej sesji.')
+      const res = await fetch(getApiUrl(`/api/owner/restaurants/${restaurantId}/menu/${delItem.id}`), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.ok) {
+        console.error('[MenuTab] deleteItem error:', json?.error || res.status)
+        throw new Error('Błąd usuwania.')
+      }
       setDelOpen(false); setDelItem(null)
       await reload()
     } catch (e) { setGlobalErr(e.message) } finally { setBusyDel(false) }
