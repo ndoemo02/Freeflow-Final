@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "baseUrl": "http://127.0.0.1:5199",
+  "artifactRoot": "C:/Firerfox Portable/Freeflow brain/.ui-parity",
+  "settleMs": 900,
+  "pixelChannelThreshold": 8,
+  "driftRatio": 0.005,
+  "viewports": [
+    { "name": "360x800", "width": 360, "height": 800, "mobile": true },
+    { "name": "390x844", "width": 390, "height": 844, "mobile": true },
+    { "name": "430x932", "width": 430, "height": 932, "mobile": true },
+    { "name": "768x1024", "width": 768, "height": 1024, "mobile": false },
+    { "name": "1440x900", "width": 1440, "height": 900, "mobile": false }
+  ],
+  "routes": [
+    { "name": "home", "path": "/", "auth": "public" },
+    { "name": "panel-client", "path": "/panel/client", "auth": "public" },
+    { "name": "panel-business", "path": "/panel/business", "auth": "test-account-required" },
+    { "name": "panel-kds", "path": "/panel/business-kds", "auth": "test-account-required" },
+    { "name": "panel-admin", "path": "/panel/admin", "auth": "internal-admin-test-account-required" },
+    { "name": "panel-manage", "path": "/panel/manage", "auth": "test-account-required" },
+    { "name": "settings", "path": "/settings", "auth": "public" },
+    { "name": "ui-lab", "path": "/ui-lab", "auth": "public" }
+  ],
+  "clientSections": [
+    "dashboard",
+    "food",
+    "taxi",
+    "hotels",
+    "orders",
+    "payments",
+    "profile",
+    "settings"
+  ],
+  "interactionStates": [
+    { "name": "home-drawer-open", "path": "/", "action": "open-drawer" },
+    { "name": "client-drawer-open", "path": "/panel/client", "action": "open-drawer" },
+    { "name": "home-focus-probe", "path": "/", "action": "focus-probe" },
+    { "name": "home-reduced-motion", "path": "/", "action": "reduced-motion" },
+    { "name": "client-cart-empty", "path": "/panel/client", "action": "cart-empty" },
+    { "name": "client-cart-filled", "path": "/panel/client", "action": "cart-filled" }
+  ]
+}
