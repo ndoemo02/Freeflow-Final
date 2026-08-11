@@ -20,6 +20,7 @@ export default function ChannelBreakdownCard({ data }: ChannelBreakdownCardProps
         { key: 'restaurant' as const, ...data.restaurant, ...getChannelDisplay('restaurant') },
         { key: 'hotel' as const, ...data.hotel, ...getChannelDisplay('hotel') },
         { key: 'delivery' as const, ...data.delivery, ...getChannelDisplay('delivery') },
+        { key: 'unknown' as const, ...data.unknown, ...getChannelDisplay('unknown') },
     ];
 
     return (

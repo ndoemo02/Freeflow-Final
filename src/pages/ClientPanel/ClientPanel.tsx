@@ -22,6 +22,7 @@ import ErrorFallback from '../../components/ErrorFallback';
 import { useToast } from '../../components/Toast';
 import { getApiUrl } from '../../lib/config';
 import { formatDemoOrderLabel } from '../../lib/demoLabels';
+import { getAnalysisConsent, updateAnalysisConsent } from '../../lib/analysisConsent';
 import './ClientPanel.css';
 
 // Types
@@ -172,6 +173,9 @@ export default function ClientPanel() {
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [stripeBusyOrderId, setStripeBusyOrderId] = useState<string | null>(null);
     const [profileSaving, setProfileSaving] = useState(false);
+    const [analysisConsent, setAnalysisConsent] = useState(false);
+    const [audioConsent, setAudioConsent] = useState(false);
+    const [consentLoaded, setConsentLoaded] = useState(false);
     const stripeFinalizeRef = useRef('');
     const [profileForm, setProfileForm] = useState<ProfileFormState>({
         first_name: '',
@@ -263,6 +267,23 @@ export default function ClientPanel() {
         };
     }, [user?.id, user?.email]);
 
+    useEffect(() => {
+        let cancelled = false;
+        if (!user?.id) return;
+        getAnalysisConsent()
+            .then((consent) => {
+                if (cancelled) return;
+                setAnalysisConsent(consent.quality_enabled === true);
+                setAudioConsent(consent.audio_enabled === true);
+                setConsentLoaded(true);
+            })
+            .catch((error) => {
+                console.warn('[CONSENT_PROFILE_LOAD]', error?.message || 'consent_unavailable');
+                if (!cancelled) setConsentLoaded(false);
+            });
+        return () => { cancelled = true; };
+    }, [user?.id]);
+
     const handleProfileFieldChange = (key: keyof ProfileFormState, value: string) => {
         setProfileForm(prev => ({ ...prev, [key]: value }));
     };
@@ -287,6 +308,10 @@ export default function ClientPanel() {
 
             if (data?.user && typeof setUser === 'function') {
                 setUser(data.user);
+            }
+
+            if (consentLoaded) {
+                await updateAnalysisConsent(analysisConsent, analysisConsent && audioConsent, 'profile');
             }
 
             console.log('[PROFILE_SAVE] saved');
@@ -1361,6 +1386,32 @@ export default function ClientPanel() {
                                                 />
                                             </div>
                                         </div>
+
+                                        <hr />
+                                        <h4>Program jakości Amber</h4>
+                                        <label className="form-group" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={analysisConsent}
+                                                disabled={!consentLoaded}
+                                                onChange={(event) => {
+                                                    setAnalysisConsent(event.target.checked);
+                                                    if (!event.target.checked) setAudioConsent(false);
+                                                }}
+                                            />
+                                            <span>
+                                                Zezwalam na zapisywanie tekstowego przebiegu: co powiedziałem, co Amber zrozumiała i jakie kroki wykonała — wyłącznie do analizy jakości i testów demo.
+                                            </span>
+                                        </label>
+                                        <label className="form-group" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={audioConsent}
+                                                disabled={!consentLoaded || !analysisConsent}
+                                                onChange={(event) => setAudioConsent(event.target.checked)}
+                                            />
+                                            <span>Osobno zezwalam na przyszłe próbki głosu. Zapis audio nie jest jeszcze aktywny, a ta zgoda sama nie uruchamia nagrywania.</span>
+                                        </label>
 
                                         <button type="submit" className="primary-btn full" disabled={profileSaving}>
                                             <i className="fas fa-save" /> {profileSaving ? 'Zapisywanie...' : 'Zapisz zmiany'}

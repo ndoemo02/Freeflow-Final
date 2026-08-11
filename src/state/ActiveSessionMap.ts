@@ -34,10 +34,30 @@ export interface FullSessionSnapshot {
   conversationPhase: string;
 }
 
-function hashCartItems(items: CartItemSnapshot[]): string {
+const CART_STATE_HASH_VERSION = 'cart-fnv1a-v1';
+
+type CartHashItem = Partial<CartItemSnapshot> & {
+  menu_item_id?: string;
+  qty?: number | string;
+  price_pln?: number | string;
+  quantity?: number | string;
+  price?: number | string;
+};
+
+function finiteNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function hashCartItems(items: CartHashItem[]): string {
   if (!items || items.length === 0) return 'empty';
   const normalized = items
-    .map((i) => `${i.id}:${i.quantity}:${i.price}`)
+    .map((i) => {
+      const id = String(i.menu_item_id ?? i.id ?? '');
+      const quantity = finiteNumber(i.quantity ?? i.qty, 1);
+      const price = finiteNumber(i.price_pln ?? i.price, 0);
+      return `${id}:${quantity}:${price}`;
+    })
     .sort()
     .join('|');
   // Simple FNV-1a-like hash for consistency verification
@@ -57,8 +77,8 @@ function extractCartItems(cart: any): CartItemSnapshot[] {
     .map((item: any) => ({
       id: String(item.id || item.menu_item_id || ''),
       name: String(item.name || ''),
-      quantity: Number(item.quantity || item.qty || 1),
-      price: Number(item.price_pln || item.price || 0),
+      quantity: finiteNumber(item.quantity ?? item.qty, 1),
+      price: finiteNumber(item.price_pln ?? item.price, 0),
     }));
 }
 
@@ -183,4 +203,4 @@ class ActiveSessionMapStore {
 
 export const activeSessionMap = new ActiveSessionMapStore();
 
-export { hashCartItems, extractCartItems };
+export { CART_STATE_HASH_VERSION, hashCartItems, extractCartItems };

@@ -5,10 +5,11 @@
  * No mutations - only GET requests.
  * Status = Backend truth.
  * 
- * Can use mock data when backend endpoints not available.
+ * Backend failures are surfaced as unavailable; demo fixtures are never returned.
  */
 
 import { getApiUrl } from './config';
+import { getAccessToken } from './supabase';
 
 // ============== Types ==============
 
@@ -16,13 +17,13 @@ export interface KPIData {
     ordersToday: number;
     revenueToday: number;
     revenueTodayFormatted: string;
-    avgFulfillmentTime: number; // in minutes
+    avgFulfillmentTime: number | null; // in minutes
     customersToday: number;
     trends: {
-        orders: number;    // +/- percentage
-        revenue: number;
-        avgTime: number;
-        customers: number;
+        orders: number | null;    // +/- percentage
+        revenue: number | null;
+        avgTime: number | null;
+        customers: number | null;
     };
 }
 
@@ -30,10 +31,11 @@ export interface ChannelBreakdown {
     restaurant: { count: number; percentage: number };
     hotel: { count: number; percentage: number };
     delivery: { count: number; percentage: number };
+    unknown: { count: number; percentage: number };
 }
 
 export type OrderStatus = 'new' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
-export type OrderChannel = 'restaurant' | 'hotel' | 'delivery';
+export type OrderChannel = 'restaurant' | 'hotel' | 'delivery' | 'unknown';
 
 export interface ActiveOrder {
     id: string;
@@ -55,150 +57,30 @@ export interface BusinessDashboardData {
     lastUpdated: string;
 }
 
-// ============== Mock Data (for development) ==============
-
-const MOCK_KPIS: KPIData = {
-    ordersToday: 47,
-    revenueToday: 4280.50,
-    revenueTodayFormatted: '4 280,50 zł',
-    avgFulfillmentTime: 18,
-    customersToday: 38,
-    trends: {
-        orders: 12,
-        revenue: 8,
-        avgTime: -3, // minus = faster = good
-        customers: 5,
-    }
-};
-
-const MOCK_CHANNELS: ChannelBreakdown = {
-    restaurant: { count: 21, percentage: 45 },
-    hotel: { count: 14, percentage: 30 },
-    delivery: { count: 12, percentage: 25 },
-};
-
-const MOCK_ACTIVE_ORDERS: ActiveOrder[] = [
-    {
-        id: 'ord-001',
-        orderNumber: '#2847',
-        channel: 'restaurant',
-        status: 'new',
-        items: ['Pierogi ruskie x2', 'Żurek'],
-        total: 52.00,
-        totalFormatted: '52,00 zł',
-        location: 'Stolik 12',
-        createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-        elapsedMinutes: 5,
-    },
-    {
-        id: 'ord-002',
-        orderNumber: '#2846',
-        channel: 'hotel',
-        status: 'preparing',
-        items: ['Kotlet schabowy', 'Zupa pomidorowa'],
-        total: 68.50,
-        totalFormatted: '68,50 zł',
-        location: 'Pokój 214',
-        createdAt: new Date(Date.now() - 12 * 60000).toISOString(),
-        elapsedMinutes: 12,
-    },
-    {
-        id: 'ord-003',
-        orderNumber: '#2845',
-        channel: 'delivery',
-        status: 'ready',
-        items: ['Pizza Margherita', 'Cola'],
-        total: 45.00,
-        totalFormatted: '45,00 zł',
-        location: 'ul. Kwiatowa 15/3',
-        createdAt: new Date(Date.now() - 22 * 60000).toISOString(),
-        elapsedMinutes: 22,
-    },
-    {
-        id: 'ord-004',
-        orderNumber: '#2844',
-        channel: 'restaurant',
-        status: 'preparing',
-        items: ['Bigos', 'Piwo Tyskie x2'],
-        total: 48.00,
-        totalFormatted: '48,00 zł',
-        location: 'Stolik 7',
-        createdAt: new Date(Date.now() - 8 * 60000).toISOString(),
-        elapsedMinutes: 8,
-    },
-    {
-        id: 'ord-005',
-        orderNumber: '#2843',
-        channel: 'hotel',
-        status: 'new',
-        items: ['Śniadanie kontynentalne'],
-        total: 35.00,
-        totalFormatted: '35,00 zł',
-        location: 'Pokój 108',
-        createdAt: new Date(Date.now() - 2 * 60000).toISOString(),
-        elapsedMinutes: 2,
-    },
-];
-
 // ============== API Functions ==============
 
-const USE_MOCK = false; // Production ready
-
-function getAdminToken(): string {
-    const envToken = String(import.meta.env.VITE_ADMIN_TOKEN || '').trim();
-    if (envToken) return envToken;
-
-    if (typeof window === 'undefined') return '';
-
-    try {
-        return String(window.localStorage.getItem('admin-token') || '').trim();
-    } catch {
-        return '';
-    }
-}
-
-function getHeaders(): Record<string, string> {
-    const token = getAdminToken();
-    return token
-        ? {
-            'Content-Type': 'application/json',
-            'x-admin-token': token
-        }
-        : {
-            'Content-Type': 'application/json'
-        };
+async function getHeaders(): Promise<Record<string, string>> {
+    const token = await getAccessToken();
+    if (!token) throw new Error('Owner authentication required');
+    return {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+    };
 }
 
 /**
  * Fetch all dashboard data in one call
- * Uses /api/admin/orders to aggregate data
+ * Uses the tenant-scoped /api/owner/orders feed.
  */
 export async function fetchBusinessDashboard(restaurantId?: string): Promise<BusinessDashboardData> {
-    if (USE_MOCK) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return {
-            kpis: MOCK_KPIS,
-            channels: MOCK_CHANNELS,
-            activeOrders: MOCK_ACTIVE_ORDERS,
-            lastUpdated: new Date().toISOString(),
-        };
-    }
-
+    if (!restaurantId) throw new Error('Restaurant selection required');
     try {
         // Fetch all orders (limit 500 to catch today's volume)
-        const qs = restaurantId ? `&restaurant_id=${encodeURIComponent(restaurantId)}` : '';
-        const url = getApiUrl(`api/admin/orders?limit=500${qs}`);
-        const response = await fetch(url, { headers: getHeaders() });
+        const url = getApiUrl(`api/owner/orders?limit=500&restaurant_id=${encodeURIComponent(restaurantId)}`);
+        const response = await fetch(url, { headers: await getHeaders() });
 
         if (!response.ok) {
-            console.warn('[BusinessAPI] Fetch failed, falling back to mock');
-            // Mock fallback if token invalid or server error
-            return {
-                kpis: MOCK_KPIS,
-                channels: MOCK_CHANNELS,
-                activeOrders: MOCK_ACTIVE_ORDERS,
-                lastUpdated: new Date().toISOString(),
-            };
+            throw new Error(`Business dashboard unavailable: HTTP ${response.status}`);
         }
 
         const json = await response.json();
@@ -210,11 +92,13 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
 
         const revenueToday = ordersToday.reduce((sum: number, o: any) => sum + (Number(o.totalPrice) || 0), 0);
 
-        // Calculate average elapsed time for completed orders (if backend provided closedAt, but here we estimate)
-        // Since we don't have exact fulfillment time easily, we use elapsed time of 'delivered' orders as proxy or 15 mins default
-        const avgFulfillmentTime = 18; // Placeholder/Estimate
+        // The current orders API has no authoritative completion timestamp.
+        // Keep this unavailable until the operational schema exposes one.
+        const avgFulfillmentTime = null;
 
-        const uniqueCustomers = new Set(ordersToday.map((o: any) => o.userId || o.customer?.phone || 'guest')).size;
+        const uniqueCustomers = new Set(
+            ordersToday.map((o: any) => o.userId || o.customer?.phone || null).filter(Boolean),
+        ).size;
 
         const kpis: KPIData = {
             ordersToday: ordersToday.length,
@@ -222,40 +106,39 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
             revenueTodayFormatted: revenueToday.toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
             avgFulfillmentTime,
             customersToday: uniqueCustomers,
-            trends: MOCK_KPIS.trends // No historical data comparison yet
+            trends: { orders: null, revenue: null, avgTime: null, customers: null }
         };
 
         // --- Calculate Channels ---
-        const channelCounts = { restaurant: 0, hotel: 0, delivery: 0 };
+        const channelCounts = { restaurant: 0, hotel: 0, delivery: 0, unknown: 0 };
         const totalChannels = ordersToday.length || 1;
 
-        // Heuristic mapping if channel field missing or different
-        ordersToday.forEach((o: any) => {
-            // Here assuming backend might not return 'channel' directly, so defaults to 'restaurant'
-            // But if we had channel logic:
-            // const ch = o.channel || 'restaurant'; 
-            // For now using random dist or 'restaurant' as default since Admin API might not explicitly return channel enum
-            channelCounts.restaurant++;
+        // The current orders contract has no authoritative channel field.
+        ordersToday.forEach(() => {
+            channelCounts.unknown++;
         });
 
         const channels: ChannelBreakdown = {
             restaurant: { count: channelCounts.restaurant, percentage: Math.round(channelCounts.restaurant / totalChannels * 100) },
             hotel: { count: 0, percentage: 0 },
-            delivery: { count: 0, percentage: 0 }
+            delivery: { count: 0, percentage: 0 },
+            unknown: { count: channelCounts.unknown, percentage: Math.round(channelCounts.unknown / totalChannels * 100) }
         };
 
         // --- Active Orders ---
         const activeOrders: ActiveOrder[] = orders
-            .filter((o: any) => ['new', 'pending', 'preparing', 'ready'].includes(o.status))
+            .filter((o: any) => ['new', 'pending', 'accepted', 'preparing', 'ready', 'completed'].includes(o.status))
             .map((o: any) => ({
                 id: o.id,
                 orderNumber: `#${o.id.slice(0, 4)}`,
-                channel: 'restaurant', // Defaulting as Admin API lacks specific channel mapping in first version
-                status: o.status === 'pending' ? 'new' : o.status, // Map 'pending' to 'new' for UI
+                channel: 'unknown',
+                status: ['pending', 'accepted'].includes(o.status)
+                    ? 'new'
+                    : (o.status === 'completed' ? 'ready' : o.status),
                 items: Array.isArray(o.items) ? o.items.map((i: any) => i.name || i) : [],
                 total: Number(o.totalPrice) || 0,
                 totalFormatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
-                location: o.customer?.address || 'Stolik',
+                location: o.customer?.address || 'Brak danych',
                 createdAt: o.createdAt,
                 elapsedMinutes: Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000)
             }));
@@ -268,13 +151,8 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
         };
 
     } catch (error) {
-        console.warn('[BusinessAPI] Network error, using mock data:', error instanceof Error ? error.message : error);
-        return {
-            kpis: MOCK_KPIS,
-            channels: MOCK_CHANNELS,
-            activeOrders: MOCK_ACTIVE_ORDERS,
-            lastUpdated: new Date().toISOString(),
-        };
+        console.warn('[BusinessAPI] Dashboard unavailable:', error instanceof Error ? error.message : error);
+        throw error;
     }
 }
 
@@ -327,6 +205,8 @@ export function getChannelDisplay(channel: OrderChannel): { label: string; icon:
             return { label: 'Hotel', icon: '🏨', color: '#8b5cf6' };
         case 'delivery':
             return { label: 'Dostawa', icon: '🚴', color: '#22c55e' };
+        case 'unknown':
+            return { label: 'Nieustalony', icon: '❔', color: '#6b7280' };
         default:
             return { label: channel, icon: '📦', color: '#6b7280' };
     }

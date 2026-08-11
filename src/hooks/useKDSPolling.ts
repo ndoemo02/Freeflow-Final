@@ -102,6 +102,9 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
                 return;
             }
             console.error('[useKDSPolling] Fetch error:', err);
+            setOrders([]);
+            setStats({ newCount: 0, preparingCount: 0, readyCount: 0, avgTimeMinutes: 0 });
+            setLastUpdated(null);
             setError(err instanceof Error ? err.message : 'Failed to fetch orders');
         } finally {
             setIsLoading(false);
@@ -147,20 +150,20 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
     // ============== Actions (ALL call backend, NO local mutations) ==============
 
     const startOrder = useCallback(async (orderId: string): Promise<boolean> => {
-        const result = await apiStartOrder(orderId);
+        const result = await apiStartOrder(orderId, restaurantId);
         if (result.ok) {
             await refresh(); // Refresh from backend - single source of truth
         }
         return result.ok;
-    }, [refresh]);
+    }, [refresh, restaurantId]);
 
     const markOrderReady = useCallback(async (orderId: string): Promise<boolean> => {
-        const result = await apiMarkOrderReady(orderId);
+        const result = await apiMarkOrderReady(orderId, restaurantId);
         if (result.ok) {
             await refresh();
         }
         return result.ok;
-    }, [refresh]);
+    }, [refresh, restaurantId]);
 
     const toggleItem = useCallback(async (orderId: string, itemIndex: number): Promise<boolean> => {
         const result = await apiToggleOrderItem(orderId, itemIndex);
@@ -171,20 +174,20 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
     }, [refresh]);
 
     const completeOrder = useCallback(async (orderId: string): Promise<boolean> => {
-        const result = await apiCompleteOrder(orderId);
+        const result = await apiCompleteOrder(orderId, restaurantId);
         if (result.ok) {
             await refresh();
         }
         return result.ok;
-    }, [refresh]);
+    }, [refresh, restaurantId]);
 
     const bumpOrder = useCallback(async (orderId: string): Promise<boolean> => {
-        const result = await apiBumpOrder(orderId);
+        const result = await apiBumpOrder(orderId, restaurantId);
         if (result.ok) {
             await refresh();
         }
         return result.ok;
-    }, [refresh]);
+    }, [refresh, restaurantId]);
 
     const recallLastOrder = useCallback(async (): Promise<boolean> => {
         const result = await apiRecallLastOrder();

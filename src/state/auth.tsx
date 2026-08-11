@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { supabase, SUPABASE_RUNTIME } from "../lib/supabase"
+import { clearPendingSignupConsent, rememberPendingOAuthSignupConsent, rememberPendingSignupConsent, syncPendingSignupConsent } from "../lib/analysisConsent"
 
 type User = {
   id: string
@@ -13,8 +14,8 @@ type AuthContextType = {
   user: User
   setUser: (user: User) => void
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string) => Promise<void>
-  signInWithGoogle: () => Promise<void>
+  signUp: (email: string, password: string, options?: { qualityEnabled?: boolean }) => Promise<void>
+  signInWithGoogle: (options?: { qualityEnabled?: boolean }) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -39,11 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }: any) => {
       const u = data.session?.user
       setUser(mapAuthUser(u))
+      if (u?.id && data.session?.access_token) {
+        void syncPendingSignupConsent(u.id, data.session.access_token).catch((error) => {
+          console.warn('[CONSENT_SIGNUP_SYNC]', error?.message || 'sync_failed')
+        })
+      }
     })
     // listen for auth state changes
     const { data: sub } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       const u = session?.user
       setUser(mapAuthUser(u))
+      if (u?.id && session?.access_token) {
+        void syncPendingSignupConsent(u.id, session.access_token).catch((error) => {
+          console.warn('[CONSENT_SIGNUP_SYNC]', error?.message || 'sync_failed')
+        })
+      }
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -53,12 +64,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error
   }
 
-  async function signUp(email: string, password: string) {
-    const { error } = await supabase.auth.signUp({ email, password })
+  async function signUp(email: string, password: string, options: { qualityEnabled?: boolean } = {}) {
+    const qualityEnabled = options.qualityEnabled === true
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
+    if (qualityEnabled && data.user?.id) {
+      rememberPendingSignupConsent(data.user.id, qualityEnabled)
+      if (data.session?.access_token) {
+        try {
+          await syncPendingSignupConsent(data.user.id, data.session.access_token)
+        } catch (syncError: any) {
+          // The account was already created. Consent capture is privacy-safe
+          // fail-closed and can be enabled again from the profile; do not show
+          // a misleading registration failure.
+          console.warn('[CONSENT_SIGNUP_SYNC]', syncError?.message || 'sync_failed')
+        }
+      }
+    }
   }
 
-  async function signInWithGoogle() {
+  async function signInWithGoogle(options: { qualityEnabled?: boolean } = {}) {
+    rememberPendingOAuthSignupConsent(options.qualityEnabled === true)
     const redirectTo = `${window.location.origin}/`;
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -67,9 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         skipBrowserRedirect: true,
       }
     })
-    if (error) throw error
+    if (error) {
+      clearPendingSignupConsent()
+      throw error
+    }
     const oauthUrl = data?.url
     if (!oauthUrl) {
+      clearPendingSignupConsent()
       throw new Error('Brak URL autoryzacji Google (Supabase OAuth).')
     }
 
@@ -91,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    clearPendingSignupConsent()
     await supabase.auth.signOut()
   }
 

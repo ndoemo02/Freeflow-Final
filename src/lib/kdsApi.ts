@@ -11,6 +11,7 @@
  */
 
 import { getApiUrl } from './config';
+import { getAccessToken } from './supabase';
 
 // ============== Types ==============
 
@@ -37,7 +38,7 @@ export type KDSDisplayStatus =
 /**
  * Order Channel
  */
-export type OrderChannel = 'restaurant' | 'hotel' | 'delivery';
+export type OrderChannel = 'restaurant' | 'hotel' | 'delivery' | 'unknown';
 
 /**
  * Order Item
@@ -187,79 +188,19 @@ export function getChannelDisplay(channel: OrderChannel): {
             return { name: 'Room Service', short: 'HOTEL', icon: 'fa-bed', cssClass: 'channel-hotel' };
         case 'delivery':
             return { name: 'Dostawa', short: 'DOST', icon: 'fa-motorcycle', cssClass: 'channel-delivery' };
+        case 'unknown':
+            return { name: 'Nieustalony', short: 'N/D', icon: 'fa-question', cssClass: 'channel-unknown' };
     }
-}
-
-// ============== Mock fallback ==============
-// Used when backend is unreachable (dev with no backend, demo mode).
-// Returns clearly-labelled demo orders so KDS UI is testable without a live backend.
-
-function getMockKDSData(): KDSDashboardResponse {
-    const now = Date.now();
-    return {
-        ok: true,
-        orders: [
-            {
-                id: 'mock-1',
-                order_number: '#0001',
-                channel: 'restaurant',
-                status: 'new',
-                items: [
-                    { id: 'i1', name: 'Burger Klasyczny', quantity: 2, station: 'kuchnia', done: false },
-                    { id: 'i2', name: 'Frytki duże', quantity: 2, station: 'kuchnia', done: false },
-                ],
-                total: 52.00,
-                total_formatted: '52,00 zł',
-                location: 'Stolik 4',
-                priority: false,
-                created_at: new Date(now - 3 * 60_000).toISOString(),
-            },
-            {
-                id: 'mock-2',
-                order_number: '#0002',
-                channel: 'delivery',
-                status: 'preparing',
-                items: [
-                    { id: 'i3', name: 'Pizza Margherita', quantity: 1, station: 'kuchnia', done: false },
-                    { id: 'i4', name: 'Cola 0.5l', quantity: 2, station: 'bar', done: true },
-                ],
-                total: 41.50,
-                total_formatted: '41,50 zł',
-                location: 'Dostawa',
-                priority: true,
-                customer_name: 'Jan Kowalski',
-                created_at: new Date(now - 8 * 60_000).toISOString(),
-            },
-            {
-                id: 'mock-3',
-                order_number: '#0003',
-                channel: 'hotel',
-                status: 'ready',
-                items: [
-                    { id: 'i5', name: 'Zupa dnia', quantity: 1, station: 'kuchnia', done: true },
-                    { id: 'i6', name: 'Sok pomarańczowy', quantity: 1, station: 'bar', done: true },
-                ],
-                total: 24.00,
-                total_formatted: '24,00 zł',
-                location: 'Pokój 201',
-                priority: false,
-                customer_name: 'Anna Nowak',
-                created_at: new Date(now - 15 * 60_000).toISOString(),
-            },
-        ],
-        stats: { new_count: 1, preparing_count: 1, ready_count: 1, avg_time_minutes: 12 },
-        last_updated: new Date(now).toISOString(),
-    };
 }
 
 // ============== API Functions ==============
 
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN || '';
-
-function getHeaders() {
+async function getHeaders() {
+    const token = await getAccessToken();
+    if (!token) throw new Error('Owner authentication required');
     return {
         'Content-Type': 'application/json',
-        'x-admin-token': ADMIN_TOKEN
+        Authorization: `Bearer ${token}`,
     };
 }
 
@@ -282,10 +223,10 @@ function sanitizeKdsNotes(rawNotes: unknown): string | null {
  * GET /api/admin/orders
  */
 export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboardResponse> {
+    if (!restaurantId) throw new Error('Restaurant selection required');
     try {
-        const qs = restaurantId ? `&restaurant_id=${encodeURIComponent(restaurantId)}` : '';
-        const url = getApiUrl(`api/admin/orders?limit=100${qs}`);
-        const response = await fetch(url, { headers: getHeaders() });
+        const url = getApiUrl(`api/owner/orders?limit=100&restaurant_id=${encodeURIComponent(restaurantId)}`);
+        const response = await fetch(url, { headers: await getHeaders() });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch KDS orders: ${response.statusText}`);
@@ -301,9 +242,9 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
         const orders: KDSOrder[] = activeOrders.map((o: any) => ({
             id: o.id,
             order_number: `#${o.id.slice(0, 4)}`,
-            channel: 'restaurant', // Default
+            channel: 'unknown',
             // DB constraint in production can reject "ready", so treat "completed" as KDS-ready stage.
-            status: o.status === 'pending' ? 'new' : o.status, // Map pending -> new
+            status: o.status === 'pending' ? 'new' : (o.status === 'completed' ? 'ready' : o.status),
             items: Array.isArray(o.items) ? o.items.map((i: any, idx: number) => ({
                 id: `item-${idx}`,
                 name: i.name || i.dish_name || (typeof i === 'string' ? i : 'Pozycja'),
@@ -313,7 +254,7 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
             })) : [],
             total: Number(o.totalPrice) || 0,
             total_formatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
-            location: 'Stolik',
+            location: 'Brak danych',
             priority: false,
             notes: sanitizeKdsNotes(o.notes),
             created_at: o.createdAt,
@@ -322,12 +263,18 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
             restaurant_id: o.restaurantId
         }));
 
-        // Calculate stats
+        const activeAges = orders
+            .map((order) => Math.max(0, (Date.now() - new Date(order.created_at).getTime()) / 60000))
+            .filter(Number.isFinite);
+
+        // Calculate stats exclusively from the tenant-scoped orders response.
         const stats = {
             new_count: orders.filter((o: any) => o.status === 'new' || o.status === 'pending').length,
             preparing_count: orders.filter((o: any) => o.status === 'preparing').length,
             ready_count: orders.filter((o: any) => o.status === 'ready').length,
-            avg_time_minutes: 15 // Placeholder
+            avg_time_minutes: activeAges.length
+                ? Math.round(activeAges.reduce((sum, minutes) => sum + minutes, 0) / activeAges.length)
+                : 0
         };
 
         return {
@@ -337,22 +284,23 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
             last_updated: new Date().toISOString()
         };
     } catch (error) {
-        console.warn('[KDS API] Backend unavailable, using mock data:', error instanceof Error ? error.message : error);
-        return getMockKDSData();
+        console.warn('[KDS API] Backend unavailable:', error instanceof Error ? error.message : error);
+        throw error;
     }
 }
 
 /**
  * Start an order (transition: new/pending -> preparing)
- * Uses generic PATCH /api/orders/:id
+ * Uses tenant-scoped PATCH /api/owner/orders/:id
  */
-export async function startOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
+export async function startOrder(orderId: string, restaurantId?: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}`);
+        if (!restaurantId) throw new Error('Restaurant selection required');
+        const url = getApiUrl(`api/owner/orders/${orderId}`);
         const response = await fetch(url, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'preparing' })
+            headers: await getHeaders(),
+            body: JSON.stringify({ status: 'preparing', restaurant_id: restaurantId })
         });
 
         const data = await response.json();
@@ -370,34 +318,21 @@ export async function startOrder(orderId: string): Promise<{ ok: boolean; order?
 
 /**
  * Mark order as ready (transition: preparing -> completed in DB, rendered as "GOTOWE" in KDS UI)
- * Uses generic PATCH /api/orders/:id
+ * Uses tenant-scoped PATCH /api/owner/orders/:id
  */
-export async function markOrderReady(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
+export async function markOrderReady(orderId: string, restaurantId?: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}`);
-        const candidateStatuses = ['completed', 'accepted'];
-        let lastError = 'Failed to mark order as ready';
-
-        for (const status of candidateStatuses) {
-            const response = await fetch(url, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-
-            const data = await response.json().catch(() => ({}));
-            if (response.ok) {
-                return { ok: true };
-            }
-
-            const errorText = String(data?.error || response.statusText || 'unknown_error');
-            lastError = errorText;
-            if (!errorText.includes('orders_status_check')) {
-                break;
-            }
-        }
-
-        return { ok: false, error: lastError };
+        if (!restaurantId) throw new Error('Restaurant selection required');
+        const url = getApiUrl(`api/owner/orders/${orderId}`);
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: await getHeaders(),
+            body: JSON.stringify({ status: 'completed', restaurant_id: restaurantId })
+        });
+        const data = await response.json().catch(() => ({}));
+        return response.ok
+            ? { ok: true }
+            : { ok: false, error: String(data?.error || response.statusText || 'unknown_error') };
     } catch (error) {
         console.error('[KDS API] Ready order error:', error);
         return { ok: false, error: error instanceof Error ? error.message : 'Network error' };
@@ -412,20 +347,21 @@ export async function toggleOrderItem(
     itemIndex: number
 ): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     console.warn('[KDS API] Item toggle not persisted to backend yet (not supported in V1 API)');
-    return { ok: true };
+    return { ok: false, error: 'not_supported' };
 }
 
 /**
  * Complete/deliver an order (transition: ready -> delivered)
- * Uses generic PATCH /api/orders/:id
+ * Uses tenant-scoped PATCH /api/owner/orders/:id
  */
-export async function completeOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
+export async function completeOrder(orderId: string, restaurantId?: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
     try {
-        const url = getApiUrl(`api/orders/${orderId}`);
+        if (!restaurantId) throw new Error('Restaurant selection required');
+        const url = getApiUrl(`api/owner/orders/${orderId}`);
         const response = await fetch(url, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'delivered' })
+            headers: await getHeaders(),
+            body: JSON.stringify({ status: 'delivered', restaurant_id: restaurantId })
         });
 
         const data = await response.json();
@@ -445,8 +381,8 @@ export async function completeOrder(orderId: string): Promise<{ ok: boolean; ord
  * Bump order (move back to ready? or special status)
  * Treating as 'ready' for V1
  */
-export async function bumpOrder(orderId: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
-    return markOrderReady(orderId);
+export async function bumpOrder(orderId: string, restaurantId?: string): Promise<{ ok: boolean; order?: KDSOrder; error?: string }> {
+    return markOrderReady(orderId, restaurantId);
 }
 
 /**

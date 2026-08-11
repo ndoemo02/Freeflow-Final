@@ -20,7 +20,7 @@ describe('useConversationStore restaurant selection', () => {
     beforeEach(() => {
         localStorage.clear();
         useConversationStore.setState({
-            sessionId: 'test-session',
+            sessionId: 'sess_test_session',
             isThinking: false,
             error: null,
             uiMode: 'list',
@@ -102,7 +102,7 @@ describe('useConversationStore restaurant selection', () => {
     it('continues with the active session id returned by the backend', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue(brainResponse({
             ok: true,
-            session_id: 'replacement-session',
+            session_id: 'sess_replacement_1',
             intent: 'find_nearby',
             reply: 'Znalazłam miejsca w pobliżu.',
             restaurants: [VIEN, REZYDENCJA],
@@ -114,7 +114,7 @@ describe('useConversationStore restaurant selection', () => {
 
         await useConversationStore.getState().sendMessage('Pokaż restauracje w pobliżu');
 
-        expect(useConversationStore.getState().sessionId).toBe('replacement-session');
-        expect(localStorage.getItem('amber-session-id')).toBe('replacement-session');
+        expect(useConversationStore.getState().sessionId).toBe('sess_replacement_1');
+        expect(localStorage.getItem('amber-session-id')).toBe('sess_replacement_1');
     });
 });

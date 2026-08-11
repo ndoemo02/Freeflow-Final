@@ -16,8 +16,10 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { getApiUrl } from '../lib/config';
+import { getAccessToken } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import { ttsManager } from '../tts/ttsManager';
+import { generateSessionId, isCanonicalSessionId } from '../lib/sessionIdContract';
 
 export interface BrainMessage {
     role: 'user' | 'assistant' | 'system';
@@ -149,10 +151,12 @@ async function callBrainV2(
         console.warn('Failed to parse cart for backend sync', e);
     }
 
+    const accessToken = await getAccessToken();
     const response = await fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
             session_id: sessionId,
@@ -188,17 +192,10 @@ export function useBrainSession(): UseBrainSessionReturn {
     // When a conversation closes, we switch to newSessionId from backend
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Generate session ID helper
-    const generateSessionId = () => {
-        const ts = Date.now();
-        const rand = Math.random().toString(36).substring(2, 8);
-        return `sess_${ts}_${rand}`;
-    };
-
     // Session ID - persisted in localStorage, can be updated on lifecycle events
     const [sessionId, setSessionId] = useState(() => {
         const stored = localStorage.getItem("amber-session-id");
-        if (stored) return stored;
+        if (isCanonicalSessionId(stored)) return stored;
         const newId = generateSessionId();
         localStorage.setItem("amber-session-id", newId);
         return newId;
@@ -226,17 +223,20 @@ export function useBrainSession(): UseBrainSessionReturn {
      */
     const handleConversationClosed = useCallback((response: BrainV2Response) => {
         if (response.conversationClosed && response.newSessionId) {
+            const nextSessionId = isCanonicalSessionId(response.newSessionId)
+                ? response.newSessionId
+                : generateSessionId();
             logger.info(
                 `🔒 [SessionLifecycle] Conversation closed: ${response.closedReason}`,
-                `| Switching to ${response.newSessionId}`
+                `| Switching to ${nextSessionId}`
             );
 
             // STOP TTS ON SESSION CLOSE (User Request #4)
             ttsManager.stop();
 
             // CRITICAL: Update session ID immediately
-            setSessionId(response.newSessionId);
-            localStorage.setItem("amber-session-id", response.newSessionId);
+            setSessionId(nextSessionId);
+            localStorage.setItem("amber-session-id", nextSessionId);
 
             // Set cooldown to block duplicate input for 1500ms
             closedCooldownRef.current = Date.now();
@@ -303,6 +303,11 @@ export function useBrainSession(): UseBrainSessionReturn {
             return response;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            if (errorMessage === 'invalid_session_id' || errorMessage === 'missing_session_id') {
+                const recoveredSessionId = generateSessionId();
+                setSessionId(recoveredSessionId);
+                localStorage.setItem('amber-session-id', recoveredSessionId);
+            }
             logger.error("❌ [useBrainSession] Brain Error:", errorMessage);
             setError("Przepraszam, mam problem z połączeniem.");
             setLastResponse("");

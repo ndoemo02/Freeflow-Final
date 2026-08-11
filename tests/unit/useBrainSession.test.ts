@@ -49,10 +49,10 @@ describe('useBrainSession', () => {
         // Setup mock response that closes conversation
         const closeResponse = {
             ok: true,
-            session_id: 'sess-1',
+            session_id: 'sess_1',
             reply: 'Zamówienie złożone.',
             conversationClosed: true,
-            newSessionId: 'sess-new',
+            newSessionId: 'sess_new',
             closedReason: 'ORDER_CONFIRMED'
         };
 
@@ -70,7 +70,7 @@ describe('useBrainSession', () => {
         });
         await firstCallPromise;
 
-        expect(result.current.sessionId).toBe('sess-new');
+        expect(result.current.sessionId).toBe('sess_new');
 
         // 2. Second send: should be ignored due to cooldown
         let secondCallResult: any;
@@ -87,16 +87,16 @@ describe('useBrainSession', () => {
 
         const closeResponse = {
             ok: true,
-            session_id: 'sess-1',
+            session_id: 'sess_1',
             reply: 'Zamówienie złożone.',
             conversationClosed: true,
-            newSessionId: 'sess-new',
+            newSessionId: 'sess_new',
             closedReason: 'ORDER_CONFIRMED'
         };
 
         const nextResponse = {
             ok: true,
-            session_id: 'sess-new',
+            session_id: 'sess_new',
             reply: 'W czym mogę jeszcze pomóc?'
         };
 

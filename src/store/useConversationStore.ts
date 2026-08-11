@@ -4,6 +4,8 @@ import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { repairMojibakeText } from '../lib/textSanitizer';
 import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
+import { getAccessToken } from '../lib/supabase';
+import { generateSessionId, isCanonicalSessionId } from '../lib/sessionIdContract';
 
 interface SelectRestaurantUiAction {
     type: 'select_restaurant';
@@ -103,9 +105,6 @@ interface ConversationState {
     handleOrderSuccess: () => void;
 }
 
-const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-
-
 export const useConversationStore = create<ConversationState>((set, get) => ({
     sessionId: (() => {
         // Always generate a fresh session on page load to prevent stale FSM state restore.
@@ -160,8 +159,9 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     },
 
     setSessionId: (id) => {
-        localStorage.setItem('amber-session-id', id);
-        set({ sessionId: id });
+        const canonicalId = isCanonicalSessionId(id) ? id : generateSessionId();
+        localStorage.setItem('amber-session-id', canonicalId);
+        set({ sessionId: canonicalId });
     },
 
     handleOrderSuccess: () => {
@@ -293,9 +293,13 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
             let response: Response;
             try {
+                const accessToken = await getAccessToken();
                 response = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                    },
                     body: JSON.stringify({
                         session_id: sessionId,
                         demo_context: getActiveDemoContextPayload(),
@@ -315,11 +319,18 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
             }
 
             const data = await response.json();
-            if (!response.ok || data.ok === false) throw new Error(data.error || 'Brain error');
+            if (!response.ok || data.ok === false) {
+                if (data.error === 'invalid_session_id' || data.error === 'missing_session_id') {
+                    get().resetSession();
+                }
+                throw new Error(data.error || 'Brain error');
+            }
 
             const responseSessionId = String(data.session_id || data.newSessionId || '').trim();
-            if (responseSessionId && responseSessionId !== sessionId) {
+            if (responseSessionId && isCanonicalSessionId(responseSessionId) && responseSessionId !== sessionId) {
                 get().setSessionId(responseSessionId);
+            } else if (responseSessionId && !isCanonicalSessionId(responseSessionId)) {
+                console.warn('[SESSION_ID_REJECTED] Backend returned a noncanonical session identifier.');
             }
 
             const rawReply = repairMojibakeText(data.reply || data.text || '');

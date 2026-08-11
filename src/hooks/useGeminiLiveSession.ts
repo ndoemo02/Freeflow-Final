@@ -11,6 +11,7 @@ import {
   type LiveServerMessage,
 } from '@google/genai';
 import { startPCM16Stream } from '../lib/audioStream';
+import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
 import { composeLiveSystemInstruction } from '../lib/liveSystemInstruction';
@@ -264,9 +265,13 @@ async function fetchLiveAccessToken(
   sessionId: string,
   demoContext: ReturnType<typeof getActiveDemoContextPayload>,
 ): Promise<string> {
+  const accessToken = await getAccessToken();
   const response = await fetch(getApiUrl('/api/voice/live/token'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
     body: JSON.stringify({
       model,
       session_id: sessionId,

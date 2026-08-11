@@ -23,6 +23,7 @@ import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { postBridgeTelemetry } from '../lib/interactionBridge';
+import { getAccessToken } from '../lib/supabase';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { awaitTurnTranscriptEvidence } from '../lib/liveTranscriptEvidence';
 
@@ -260,9 +261,13 @@ async function relayViaHttp(
         has_gps: Number.isFinite(Number(enrichedArgs.lat)) && Number.isFinite(Number(enrichedArgs.lng)),
     });
 
+    const accessToken = await getAccessToken();
     const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify(body),
     });
 

@@ -15,6 +15,7 @@ import {
 } from './useGeminiLiveSession';
 import { useGeminiFunctionRelay, type GeminiFunctionCall } from './useGeminiFunctionRelay';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
+import { getAccessToken } from '../lib/supabase';
 
 const OPENAI_AMBER_VOICE_STYLE = [
   'Speak exclusively in Polish.',
@@ -443,9 +444,13 @@ export function useOpenAIRealtimeSession({
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      const accessToken = await getAccessToken();
       const response = await fetch(getApiUrl('/api/voice/live/openai-session'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           instructions,
           session_id: sessionIdRef.current,

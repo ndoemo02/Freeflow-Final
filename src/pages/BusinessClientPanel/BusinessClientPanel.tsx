@@ -61,6 +61,7 @@ export default function BusinessClientPanel() {
             setData(dashboardData);
             setLastRefresh(new Date());
         } catch (err) {
+            setData(null);
             setError('Nie udało się załadować danych. Spróbuj ponownie.');
             console.error('[BusinessPanel] Load error:', err);
         } finally {
@@ -162,21 +163,21 @@ export default function BusinessClientPanel() {
                     iconBgColor="var(--ff-status-ready)"
                     value={kpis?.ordersToday || 0}
                     label="Zamówień dziś"
-                    trend={kpis?.trends.orders}
+                    trend={kpis?.trends.orders ?? undefined}
                 />
                 <StatCard
                     icon={<IconDollar />}
                     iconBgColor="var(--ff-amber-500)"
                     value={kpis?.revenueTodayFormatted || '0 zł'}
                     label="Przychód dziś"
-                    trend={kpis?.trends.revenue}
+                    trend={kpis?.trends.revenue ?? undefined}
                 />
                 <StatCard
                     icon={<IconClock />}
                     iconBgColor="var(--ff-status-pending)"
-                    value={`${kpis?.avgFulfillmentTime || 0} min`}
-                    label="Śr. czas realizacji"
-                    trend={kpis?.trends.avgTime}
+                    value={kpis?.avgFulfillmentTime == null ? 'N/D' : `${kpis.avgFulfillmentTime} min`}
+                    label="Śr. wiek aktywnych"
+                    trend={kpis?.trends.avgTime ?? undefined}
                     trendReversed // For time, negative = better
                 />
                 <StatCard
@@ -184,7 +185,7 @@ export default function BusinessClientPanel() {
                     iconBgColor="var(--neon2)"
                     value={kpis?.customersToday || 0}
                     label="Klienci dziś"
-                    trend={kpis?.trends.customers}
+                    trend={kpis?.trends.customers ?? undefined}
                 />
             </section>
 

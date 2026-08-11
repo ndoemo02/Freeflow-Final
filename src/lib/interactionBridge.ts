@@ -31,10 +31,17 @@ function fmt(v: unknown): string {
   return String(v);
 }
 
+function safeLogValue(key: string, value: unknown): unknown {
+  if (/(text|transcript|input|reply|args|body|address|phone|email)/i.test(key)) {
+    return `[redacted:length=${typeof value === 'string' ? value.length : 0}]`;
+  }
+  return value;
+}
+
 export function logBridge(stage: string, detail: Record<string, unknown>): void {
   const parts = Object.entries(detail)
     .filter(([, val]) => val !== undefined && val !== null)
-    .map(([k, v]) => `${k}=${fmt(v)}`);
+    .map(([k, v]) => `${k}=${fmt(safeLogValue(k, v))}`);
   console.log(`[InteractionBridge] ${stage} ${parts.join(' | ')}`);
 }
 

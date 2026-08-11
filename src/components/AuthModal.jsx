@@ -13,6 +13,7 @@ export default function AuthModal({ onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [analysisConsent, setAnalysisConsent] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -36,7 +37,7 @@ export default function AuthModal({ onClose }) {
     setLoading(true);
     setError("");
     try {
-      await signUp(email, password);
+      await signUp(email, password, { qualityEnabled: analysisConsent });
       onClose();
       alert("Rejestracja pomyślna! Sprawdź swój e-mail, aby potwierdzić konto.");
     } catch (error) {
@@ -49,7 +50,7 @@ export default function AuthModal({ onClose }) {
     setLoading(true);
     setError("");
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(isLoginView ? undefined : { qualityEnabled: analysisConsent });
       onClose();
     } catch (error) {
       setError(error.message);
@@ -276,6 +277,20 @@ export default function AuthModal({ onClose }) {
                     required
                   />
                 </div>
+
+                {/* Register Button - inny kolor */}
+                <label className="flex items-start gap-3 rounded-2xl border border-white/15 bg-white/5 p-4 text-sm text-white/75">
+                  <input
+                    type="checkbox"
+                    checked={analysisConsent}
+                    onChange={(event) => setAnalysisConsent(event.target.checked)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    Zgadzam się na wykorzystanie tekstowych przebiegów rozmów w trybie demo/test do analizy jakości Amber.
+                    Zgoda jest opcjonalna, nie jest wymagana do założenia konta i można ją wycofać w profilu.
+                  </span>
+                </label>
 
                 {/* Register Button - inny kolor */}
                 <button
