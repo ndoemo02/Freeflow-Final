@@ -46,7 +46,7 @@
   /* ---------- TYPOGRAFIA ---------- */
   /* Display tylko dla liczb-hero i nagłówków paneli; UI dla całej reszty. */
   --ff-font-ui:      'Space Grotesk', system-ui, sans-serif;
-  --ff-font-display: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;
+  --ff-font-display: 'Space Grotesk', system-ui, sans-serif;
   --ff-font-context: 'Satisfy', cursive;
 
   --ff-text-eyebrow: 0.6875rem; /* 11px, uppercase */
