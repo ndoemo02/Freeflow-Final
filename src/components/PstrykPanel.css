@@ -55,7 +55,7 @@
 .pstryk-content h2 {
   color: #00ffff;
   margin-bottom: 10px;
-  font-family: "Orbitron", sans-serif;
+  font-family: var(--ff-font-display);
   text-transform: uppercase;
 }
 

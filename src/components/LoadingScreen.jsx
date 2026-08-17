@@ -191,7 +191,7 @@ export default function LoadingScreen({ onComplete }) {
           <div
             className="flex text-7xl md:text-8xl lg:text-9xl font-bold uppercase whitespace-nowrap relative"
             style={{
-              fontFamily: 'Poppins, sans-serif',
+              fontFamily: 'var(--ff-font-display)',
               fontWeight: 700,
               transformStyle: 'preserve-3d',
               textShadow: '0 0 10px rgba(255, 165, 0, 0.8), 0 0 20px rgba(255, 165, 0, 0.6), 0 0 40px rgba(255, 165, 0, 0.4)',
@@ -243,8 +243,6 @@ export default function LoadingScreen({ onComplete }) {
 
       {/* CSS animations */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;700&display=swap');
-
         @keyframes slideInLeft {
           to {
             opacity: 1;

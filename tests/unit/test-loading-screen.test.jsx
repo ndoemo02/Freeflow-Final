@@ -76,7 +76,7 @@ describe('LoadingScreen Component', () => {
     const { container } = render(<LoadingScreen onComplete={mockOnComplete} />);
 
     const logoDiv = container.querySelector('div.flex.text-7xl');
-    expect(logoDiv).toHaveStyle('font-family: Poppins, sans-serif');
+    expect(logoDiv).toHaveStyle('font-family: var(--ff-font-display)');
   });
 
   it('should have proper animation delays for letters', () => {

@@ -45,7 +45,7 @@ export default function TableReservations() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-purple-400 to-blue-400 bg-clip-text text-transparent font-orbitron">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-purple-400 to-blue-400 bg-clip-text text-transparent font-display">
             Ruchome Stoliki
           </h1>
           <p className="text-xl text-slate-300 mb-2">
@@ -83,7 +83,7 @@ export default function TableReservations() {
 
             {/* Title */}
             <div>
-              <h2 className="text-4xl font-bold text-white mb-4 font-orbitron">
+              <h2 className="text-4xl font-bold text-white mb-4 font-display">
                 Wkrótce dostępne!
               </h2>
               <p className="text-xl text-slate-300 max-w-2xl mx-auto">
@@ -117,7 +117,7 @@ export default function TableReservations() {
 
             {/* Mock Preview */}
             <div className="mt-12 p-8 rounded-2xl bg-gradient-to-br from-slate-800/50 to-purple-900/30 border border-white/10">
-              <h3 className="text-2xl font-bold text-white mb-6 font-orbitron">
+              <h3 className="text-2xl font-bold text-white mb-6 font-display">
                 Podgląd (Mock)
               </h3>
               <div className="relative h-64 bg-slate-900/50 rounded-xl border border-white/10 overflow-hidden">
