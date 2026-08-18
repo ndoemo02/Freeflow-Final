@@ -5,8 +5,22 @@ import { getApiUrl } from '../lib/config';
 import { useToast } from '../components/Toast';
 import { useConversationStore } from '../store/useConversationStore';
 import { activeSessionMap } from '../state/ActiveSessionMap';
+import { isCanonicalSessionId } from '../lib/sessionIdContract';
 
 const CartContext = createContext();
+
+// Kontrakt B3: session_id musi pasowac do ^sess_[a-z0-9_]+$, dlugosc <=128
+// (CHECK w orders.session_id i brain_sessions.id na nowej bazie). Oba klucze
+// localStorage sprawdzane, ale zwracany jest wylacznie kanoniczny identyfikator
+// — nie samo cokolwiek, co tam lezy.
+function getCartSessionId() {
+  if (typeof window === 'undefined') return null;
+  const candidates = [
+    window.localStorage.getItem('amber-session-id'),
+    window.localStorage.getItem('brain_session_id'),
+  ];
+  return candidates.find(isCanonicalSessionId) || null;
+}
 
 export function useCart() {
   const context = useContext(CartContext);
@@ -32,7 +46,7 @@ export function CartProvider({ children }) {
     const savedCart = localStorage.getItem('freeflow_cart');
     const savedRestaurant = localStorage.getItem('freeflow_cart_restaurant');
     const savedSessionId = localStorage.getItem('freeflow_cart_session');
-    const currentSessionId = localStorage.getItem('amber-session-id') || localStorage.getItem('brain_session_id');
+    const currentSessionId = getCartSessionId();
 
     // Nowa sesja = inne sessionId niż przy ostatnim zapisie → wyczyść stare dane
     // Fix #6.1 Ghost Cart guard: store wyczyszczony → ignoruj localStorage
@@ -81,7 +95,7 @@ export function CartProvider({ children }) {
   useEffect(() => {
     if (cart.length > 0) {
       localStorage.setItem('freeflow_cart', JSON.stringify(cart));
-      const sid = localStorage.getItem('amber-session-id') || localStorage.getItem('brain_session_id');
+      const sid = getCartSessionId();
       if (sid) localStorage.setItem('freeflow_cart_session', sid);
     } else {
       localStorage.removeItem('freeflow_cart');
@@ -171,7 +185,7 @@ export function CartProvider({ children }) {
       window.localStorage.removeItem('freeflow_cart_session');
 
       // Fix #6.1: Clear ActiveSessionMap so no stale data survives.
-      const sid = window.localStorage.getItem('amber-session-id') || window.localStorage.getItem('brain_session_id');
+      const sid = getCartSessionId();
       if (sid) {
         activeSessionMap.delete(sid);
         console.log('[CART_RESET] ActiveSessionMap cleared for session', sid.slice(0, 8));
@@ -189,7 +203,7 @@ export function CartProvider({ children }) {
     resetCartLocal({ clearRestaurant, closeDrawer, silent: true });
 
     if (syncBackend && typeof window !== 'undefined') {
-      const sessionId = window.localStorage.getItem('amber-session-id') || window.localStorage.getItem('brain_session_id');
+      const sessionId = getCartSessionId();
       if (sessionId) {
         fetch(getApiUrl('/api/brain/v2'), {
           method: 'POST',

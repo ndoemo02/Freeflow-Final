@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { getApiUrl } from "../lib/config";
-import { supabase } from "../lib/supabase";
 
 export const useOrders = (options = {}) => {
   const {
@@ -72,19 +71,6 @@ export const useOrders = (options = {}) => {
     return normalizeOrders(data);
   }, [restaurantId, userId]);
 
-  const fetchFromSupabase = useCallback(async () => {
-    if (!restaurantId && !userId) return [];
-
-    let query = supabase.from("orders").select("*").order("created_at", { ascending: false });
-
-    if (restaurantId) query = query.eq("restaurant_id", restaurantId);
-    if (!restaurantId && userId) query = query.eq("user_id", userId);
-
-    const { data, error: supabaseError } = await query;
-    if (supabaseError) throw supabaseError;
-    return normalizeOrders(data);
-  }, [restaurantId, userId]);
-
   const fetchOrders = useCallback(async () => {
     if (!restaurantId && !userId) {
       setError(null);
@@ -102,22 +88,14 @@ export const useOrders = (options = {}) => {
       if (onOrderUpdate) onOrderUpdate(apiOrders);
       return apiOrders;
     } catch (apiErr) {
-      try {
-        const fallbackOrders = await fetchFromSupabase();
-        setOrders(fallbackOrders);
-
-        if (onOrderUpdate) onOrderUpdate(fallbackOrders);
-        return fallbackOrders;
-      } catch (fallbackErr) {
-        const finalMessage = fallbackErr?.message || apiErr?.message || "Failed to fetch orders";
-        setError(finalMessage);
-        if (onError) onError(fallbackErr || apiErr);
-        return [];
-      }
+      const finalMessage = apiErr?.message || "Failed to fetch orders";
+      setError(finalMessage);
+      if (onError) onError(apiErr);
+      return [];
     } finally {
       setLoading(false);
     }
-  }, [fetchFromApi, fetchFromSupabase, onOrderUpdate, onError, restaurantId, userId]);
+  }, [fetchFromApi, onOrderUpdate, onError, restaurantId, userId]);
 
   const createOrder = useCallback(async (orderData) => {
     setLoading(true);

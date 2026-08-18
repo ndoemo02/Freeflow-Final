@@ -147,15 +147,18 @@ export default function CustomerPanel() {
     try {
       setLoadingMenu(true);
       const { data, error } = await supabase
-        .from('menu_items')
-        .select('id,name,price,description')
+        .from('menu_items_v2')
+        .select('id,name,price_pln,description')
         .eq('restaurant_id', restaurantId)
         .order('name');
 
       if (error) throw error;
 
-      setMenuItems(data || []);
-      AmberLogger.log("Menu loaded:", data);
+      // price render/addToCart nizej w tym pliku czyta pole `price` - normalizujemy
+      // tu, u zrodla, zeby nie dotykac renderu ani ksztaltu obiektu w koszyku.
+      const normalized = (data || []).map((item) => ({ ...item, price: item.price_pln }));
+      setMenuItems(normalized);
+      AmberLogger.log("Menu loaded:", normalized);
     } catch (e) {
       push('Błąd podczas ładowania menu', 'error');
       AmberLogger.error(e);
