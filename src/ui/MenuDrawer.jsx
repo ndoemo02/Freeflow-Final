@@ -320,7 +320,6 @@ export default function MenuDrawer() {
                       <OpItem iconName="business" label="Panel Właściciela" route={ROUTES.PANEL_BUSINESS} requiresAuth />
                       <OpItem iconName="kds" label="Zarządzanie restauracją" route={ROUTES.PANEL_MANAGE} requiresAuth />
                       <OpItem iconName="kds" label="Kitchen Display" route={ROUTES.PANEL_BUSINESS_KDS} requiresAuth />
-                      <OpItem iconName="analytics" label="Analityka" route={ROUTES.PANEL_ADMIN} requiresAuth />
 
                       {userRole === "admin" && FEATURE_FLAGS.DEV_LABS && (
                         <OpItem iconName="debug" label="Debug Tools" route="/dev/debug" />

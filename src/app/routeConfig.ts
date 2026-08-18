@@ -14,7 +14,7 @@ export const ROUTES = {
   PANEL_MANAGE: "/panel/manage",
   PANEL_RESTAURANT_MANAGER: "/panel/restaurant-manager",
   PANEL_BUSINESS_KDS: "/panel/business-kds",
-  PANEL_ADMIN: "/panel/admin",
+  QUALITY_LAB: "/panel/quality",
   PANEL_DRIVER: "/panel/driver",
   PANEL_CLIENT: "/panel/client",
   SETTINGS: "/settings",
@@ -23,8 +23,6 @@ export const ROUTES = {
 } as const;
 
 export const ROUTE_ALIASES = [
-  { from: "/admin", to: ROUTES.PANEL_ADMIN },
-  { from: "/admin-panel", to: ROUTES.PANEL_ADMIN },
   { from: "/driver", to: ROUTES.PANEL_DRIVER },
   { from: "/client", to: ROUTES.PANEL_CLIENT },
   { from: "/restaurants", to: ROUTES.PANEL_CLIENT },

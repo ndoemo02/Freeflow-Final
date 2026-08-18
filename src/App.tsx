@@ -10,7 +10,7 @@ import BusinessPanel from "./pages/Panel/BusinessPanel";
 import RestaurantManager from "./pages/Panel/RestaurantManager";
 import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
-import AdminPanel from "./pages/AdminPanel";
+import AmberQualityLab from "./pages/AmberQualityLab";
 import DriverPanel from "./pages/DriverPanel";
 import AuthModal from "./components/AuthModal";
 import MenuDrawer from "./ui/MenuDrawer";
@@ -141,10 +141,10 @@ function AppContent() {
             )}
           />
           <Route
-            path={ROUTES.PANEL_ADMIN}
+            path={ROUTES.QUALITY_LAB}
             element={(
               <WorkspaceAccessRoute>
-                <AdminPanel />
+                <AmberQualityLab />
               </WorkspaceAccessRoute>
             )}
           />

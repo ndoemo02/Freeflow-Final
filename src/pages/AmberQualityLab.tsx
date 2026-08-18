@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getApiUrl } from '../../lib/config';
-import { getAccessToken } from '../../lib/supabase';
+import { getApiUrl } from '../lib/config';
+import { getAccessToken } from '../lib/supabase';
 
 type QualitySession = {
   id: string;
@@ -35,7 +35,7 @@ type QualityStep = {
 async function qualityFetch(path: string) {
   const token = await getAccessToken();
   if (!token) throw new Error('Zaloguj się ponownie, aby otworzyć Quality Lab.');
-  const response = await fetch(getApiUrl(`/api/admin/quality${path}`), {
+  const response = await fetch(getApiUrl(`/api/quality${path}`), {
     headers: {
       Authorization: `Bearer ${token}`,
       'x-access-reason': 'post_hoc_quality_review',

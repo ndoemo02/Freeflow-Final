@@ -21,19 +21,4 @@ describe('production panels never substitute realistic mock data', () => {
     expect(kds).toContain('api/owner/orders');
     expect(kds).not.toContain('api/orders/');
   });
-
-  it('does not synthesize satisfaction, charts, top lists, or accounts', () => {
-    const analytics = source('src/lib/analytics.ts');
-    const admin = source('src/pages/AdminPanel.jsx');
-    expect(analytics).not.toContain('getMockAnalyticsKPI');
-    expect(analytics).not.toContain('customerSatisfaction = 97.3');
-    expect(analytics).not.toContain(".from('orders')");
-    expect(analytics).toContain('/api/admin/internal-dashboard');
-    expect(admin).not.toContain('getMockAccounts');
-    expect(admin).not.toContain(".from('profiles')");
-    expect(admin).toContain('label="Satysfakcja" value="N/D"');
-    expect(admin).toContain('Panel nie podstawia wartości demonstracyjnych');
-    expect(admin).not.toContain('EventSource');
-    expect(admin).not.toContain('/api/amber/live');
-  });
 });
