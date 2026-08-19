@@ -60,7 +60,14 @@ export default function CustomerPanel() {
     const loadData = async () => {
       setLoading(true);
 
-      // Load profile from auth metadata
+      // Dane kontaktowe z `user_metadata`, nie z tabeli `profiles`. To sa dane
+      // wlasne uzytkownika do wyswietlenia — NIE decyduja o zadnym dostepie
+      // (CLAUDE.md §8: user_metadata jest edytowalne przez uzytkownika).
+      //
+      // Pole `role` usuniete 2026-08-19: bylo zaszyta stala 'customer', wiec
+      // pokazywalo to samo kazdemu i nie niosla zadnej informacji. Rola nie jest
+      // cecha osoby, tylko czlonkostwa w firmie (`business_members.role_key`),
+      // wiec w panelu KLIENTA nie ma czego pokazywac.
       const profileData = {
         first_name: user.user_metadata?.first_name || '',
         last_name: user.user_metadata?.last_name || '',
@@ -68,7 +75,6 @@ export default function CustomerPanel() {
         phone: user.user_metadata?.phone || '',
         address: user.user_metadata?.address || '',
         city: user.user_metadata?.city || '',
-        role: 'customer'
       };
       setProfile(profileData);
       AmberLogger.log("Profile loaded:", profileData);
@@ -626,7 +632,6 @@ function ProfileTab({ profile, user, editing, setEditing, saving, saveProfile, s
           placeholder="Warszawa"
           icon="🌆"
         />
-        <Field label="Rola" value={profile.role || "customer"} icon="🎭" />
       </div>
     </div>
   )

@@ -281,10 +281,11 @@ function DetailsTab({ restaurantId, userId }) {
   const [errorMsg, setErrorMsg] = useState('')
 
   // Load full restaurant details — GET /api/owner/restaurants/:id (Bearer JWT).
-  // Ownership is resolved server-side from the JWT (auth.getUser + owner_id
-  // filter in privateServerClient), not from a client-side Supabase filter —
-  // see api/owner/restaurants.js. photo_gallery comes back in the same call,
-  // no separate request needed.
+  // Scope is resolved server-side from the JWT: auth.getUser → business_members
+  // → set of business_account_id carrying the venue.manage capability, then
+  // .in('business_account_id', …). Never a client-side Supabase filter, and no
+  // longer an owner_id column — see api/owner/restaurants.js and _helpers.js.
+  // photo_gallery comes back in the same call, no separate request needed.
   useEffect(() => {
     if (!restaurantId) return
     let alive = true

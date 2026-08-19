@@ -2,8 +2,10 @@
  * useOwnerRestaurant — shared hook for owner panel restaurant selection
  *
  * - Fetches restaurant list from GET /api/owner/restaurants (Bearer JWT) once
- *   per user session (cached in store). Ownership is resolved server-side
- *   from the JWT (auth.getUser) — never from a client-supplied owner_id.
+ *   per user session (cached in store). Scope is resolved server-side from the
+ *   JWT (auth.getUser → business_members → venue.manage) — never from anything
+ *   the client supplies. The list may span several companies: one person can
+ *   belong to more than one business account.
  * - selectedId is persisted in localStorage via ownerRestaurantStore
  * - All three owner panels (business, manage, kds) share the same selectedId
  */

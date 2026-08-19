@@ -6,7 +6,6 @@ import { ToastProvider } from "./components/Toast";
 import { CartProvider } from "./state/CartContext";
 import Cart from "./components/Cart";
 import CustomerPanel from "./pages/Panel/CustomerPanel";
-import BusinessPanel from "./pages/Panel/BusinessPanel";
 import RestaurantManager from "./pages/Panel/RestaurantManager";
 import BusinessPanelNew from "./pages/BusinessPanelNew";
 import BusinessClientPanel from "./pages/BusinessClientPanel";
