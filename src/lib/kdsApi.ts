@@ -20,6 +20,7 @@ import { getAccessToken } from './supabase';
  */
 export type BackendOrderStatus =
     | 'pending'     // Just created, waiting for kitchen
+    | 'confirmed'   // Klient zaplacil, restauracja jeszcze nie przyjela (P4)
     | 'new'         // Acknowledged, needs attention
     | 'preparing'   // Being prepared
     | 'ready'       // Ready for pickup/delivery
@@ -125,8 +126,10 @@ export function mapStatusToKDS(
         return 'status-warning';
     }
 
-    // New orders get the new status (yellow)
-    if (status === 'pending' || status === 'new') {
+    // New orders get the new status (yellow).
+    // 'confirmed' = oplacone i nieprzyjete jeszcze przez kuchnie, wiec wymaga
+    // uwagi dokladnie tak samo jak zamowienie swieze.
+    if (status === 'pending' || status === 'new' || status === 'confirmed') {
         return 'status-new';
     }
 
@@ -159,6 +162,8 @@ export function getStatusBadge(status: BackendOrderStatus): {
         case 'pending':
         case 'new':
             return { label: 'Nowe', color: '#92400e', bgColor: '#fef3c7' };
+        case 'confirmed':
+            return { label: 'Opłacone', color: '#5b21b6', bgColor: '#ede9fe' };
         case 'preparing':
             return { label: 'W przygotowaniu', color: '#1e40af', bgColor: '#dbeafe' };
         case 'ready':
@@ -204,6 +209,11 @@ async function getHeaders() {
     };
 }
 
+/**
+ * P4-B: filtr markera `[stripe_test_paid:...]` usuniety. Stan platnosci wyraza
+ * status 'confirmed' + confirmed_at, a nie tekst w notatce - nie ma juz czego
+ * wycinac z widoku kuchni. Zostaje samo przyciecie bialych znakow.
+ */
 function sanitizeKdsNotes(rawNotes: unknown): string | null {
     const notes = String(rawNotes ?? '');
     if (!notes) return null;
@@ -211,7 +221,7 @@ function sanitizeKdsNotes(rawNotes: unknown): string | null {
     const cleaned = notes
         .split('\n')
         .map((line) => line.trim())
-        .filter((line) => line.length > 0 && !line.includes('[stripe_test_paid:'))
+        .filter((line) => line.length > 0)
         .join('\n')
         .trim();
 
@@ -269,7 +279,7 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
 
         // Calculate stats exclusively from the tenant-scoped orders response.
         const stats = {
-            new_count: orders.filter((o: any) => o.status === 'new' || o.status === 'pending').length,
+            new_count: orders.filter((o: any) => o.status === 'new' || o.status === 'pending' || o.status === 'confirmed').length,
             preparing_count: orders.filter((o: any) => o.status === 'preparing').length,
             ready_count: orders.filter((o: any) => o.status === 'ready').length,
             avg_time_minutes: activeAges.length

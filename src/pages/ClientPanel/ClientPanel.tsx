@@ -23,6 +23,7 @@ import { useToast } from '../../components/Toast';
 import { getApiUrl } from '../../lib/config';
 import { formatDemoOrderLabel } from '../../lib/demoLabels';
 import { getAnalysisConsent, updateAnalysisConsent } from '../../lib/analysisConsent';
+import { isOrderPaid } from '../../lib/orderPaymentState';
 import './ClientPanel.css';
 
 // Types
@@ -343,13 +344,9 @@ export default function ClientPanel() {
     const navItemsWithBadge = mainNavItems.map(item =>
         item.id === 'orders' ? { ...item, badge: stats.activeCount || undefined } : item
     );
-    const isStripePaidOrder = (order: any) => {
-        const notes = String(order?.notes || '');
-        return notes.includes('[stripe_test_paid:');
-    };
     const canStartStripePayment = (order: any) => {
         if (!order?.id) return false;
-        if (isStripePaidOrder(order)) return false;
+        if (isOrderPaid(order)) return false;
         const status = normalizeOrderStatus(order?.status);
         return !['cancelled', 'completed', 'delivered'].includes(status);
     };
@@ -439,30 +436,15 @@ export default function ClientPanel() {
                     throw new Error(verifyPayload?.error || 'Nie udało się potwierdzić płatności Stripe');
                 }
 
-                const existingOrder = orders.find((item: any) => String(item?.id) === String(orderId));
-                const existingNotes = String(existingOrder?.notes || '');
-                const marker = `[stripe_test_paid:${sessionId}]`;
-                const mergedNotes = existingNotes.includes(marker)
-                    ? existingNotes
-                    : [existingNotes, marker].filter(Boolean).join('\n');
-                const patchPayload: Record<string, string> = { notes: mergedNotes };
-                if (user?.id) {
-                    patchPayload.user_id = user.id;
-                }
-
-                const patchResponse = await fetch(getApiUrl(`/api/orders/${orderId}`), {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(patchPayload),
-                });
-                const patchResult = await patchResponse.json().catch(() => ({}));
-                if (!patchResponse.ok) {
-                    throw new Error(patchResult?.error || 'Nie udało się oznaczyć płatności przy zamówieniu');
-                }
-
-                await fetchOrders?.();
-
-                // ── Finalize: clean backend session + frontend state ──
+                // P4: zapis markera platnosci do `notes` przez PATCH /api/orders
+                // zostal usuniety. Dwa powody, oba twarde:
+                //   1. PATCH wymaga tokenu admina (T1), a panel klienta go nie ma;
+                //      pole user_id jest do tego trwale poza allowlista. Zadanie
+                //      konczylo sie bledem, ktory przerywal finalizacje PRZED
+                //      wywolaniem /api/orders/finalize.
+                //   2. Stan platnosci wyraza teraz status 'confirmed' + confirmed_at,
+                //      ustawiane po stronie backendu w finalizeOrder.js.
+                // -- Finalize: status + confirmed_at, sesja backendu, stan frontendu --
                 const brainSessionId = useConversationStore.getState().sessionId;
                 try {
                   const finalizeResponse = await fetch(getApiUrl('/api/orders/finalize'), {
@@ -477,6 +459,7 @@ export default function ClientPanel() {
                   }
                   useConversationStore.getState().handleOrderSuccess();
                   console.log('[STRIPE_FINALIZE] Frontend state cleared after payment');
+                  await fetchOrders?.();
                 } catch (finalizeErr: any) {
                   console.warn('[STRIPE_FINALIZE] Session cleanup failed (non-critical):', finalizeErr.message);
                 }

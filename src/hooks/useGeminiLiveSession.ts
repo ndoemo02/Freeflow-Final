@@ -31,6 +31,7 @@ import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '..
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { generateTurnId, logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
+import { createSessionClosureLatch } from '../lib/liveSessionClosure';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -738,11 +739,26 @@ export function useGeminiLiveSession({
 
   const sessionRef = useRef<Session | null>(null);
   const stopMicRef = useRef<(() => void) | null>(null);
+  // P4-C: sesja live konczy sie na potwierdzeniu zamowienia, ale dopiero PO
+  // wybrzmieniu odpowiedzi. Warunek zamkniecia mieszka w czystym kontrakcie,
+  // tu zostaje samo podpiecie sygnalow.
+  const closureLatchRef = useRef(createSessionClosureLatch());
+  const endSessionRef = useRef<(() => void) | null>(null);
+
   const playerRef = useRef(new AudioPlayer((isPlaying) => {
     const liveUi = useLiveUiSessionStore.getState();
     if (isPlaying) {
+      closureLatchRef.current.notePlaybackStarted();
       liveUi.setSpeaking('Amber odpowiada...');
-    } else if (activeRef.current) {
+      return;
+    }
+    if (closureLatchRef.current.notePlaybackStopped()) {
+      // Zamowienie potwierdzone glosem i Amber skonczyla mowic - koniec sesji.
+      // Bez `return` UI ustawiloby zaraz potem 'Słucham...' w martwej sesji.
+      endSessionRef.current?.();
+      return;
+    }
+    if (activeRef.current) {
       liveUi.setListening('Słucham...');
     }
   }));
@@ -882,6 +898,7 @@ export function useGeminiLiveSession({
       clearStallWatchdog();
       sessionResumptionHandleRef.current = null;
       clearResumptionHandle();
+      closureLatchRef.current.reset();
       cleanupRuntime(true);
       setError(null);
       useLiveUiSessionStore.getState().setPaused();
@@ -890,6 +907,14 @@ export function useGeminiLiveSession({
       startInFlightRef.current = false;
     }
   }, [cleanupRuntime, clearReconnectTimer, clearStallWatchdog]);
+
+  // P4-C: zatrzask konczy sesje przez `stop`, a nie przez samo `cleanupRuntime` -
+  // cleanup zostawilby desiredActive i reconnect otworzylby sesje z powrotem
+  // sekunde po jej zamknieciu. Uchwyt przez ref, bo odtwarzacz powstaje
+  // wczesniej niz `stop` i domkniecie zlapaloby wersje nieaktualna.
+  useEffect(() => {
+    endSessionRef.current = stop;
+  }, [stop]);
 
   const sendText = useCallback(async (text: string): Promise<LiveTextSendResult> => {
     const sanitized = text.trim();
@@ -1047,6 +1072,7 @@ export function useGeminiLiveSession({
         httpOptions: { apiVersion: 'v1alpha' },
       });
       const player = playerRef.current;
+      closureLatchRef.current.reset();
       let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
       const emitAssistantSpeechPart = (rawTextPart: unknown): string => {
@@ -1188,6 +1214,12 @@ export function useGeminiLiveSession({
                 const relayStart = Date.now();
                 const result = await relay(geminiCall);
                 const relayMs = Date.now() - relayStart;
+                // P4-C: potwierdzenie zamowienia zbroi zamkniecie sesji. Zbroimy
+                // na WYNIKU, nie na wywolaniu - narzedzie zakonczone bledem nie
+                // konczy rozmowy, bo klient nadal ma co poprawic.
+                if (!((result.response ?? {}) as Record<string, unknown>).error) {
+                  closureLatchRef.current.armForTool(result.name);
+                }
                 const backendMs = (result.response as any)?.backend_ms;
                 perfTimings.push({ stage: 'http_roundtrip', ms: relayMs });
                 if (typeof backendMs === 'number') {
@@ -1272,6 +1304,12 @@ export function useGeminiLiveSession({
           assistantTranscriptBuffer = '';
           clearStallWatchdog();
           player.stop();
+        }
+
+        if ((msg as any)?.serverContent?.turnComplete) {
+          if (closureLatchRef.current.noteTurnComplete()) {
+            endSessionRef.current?.();
+          }
         }
 
         if ((msg as any)?.serverContent?.turnComplete && !lastToolCallAt) {
