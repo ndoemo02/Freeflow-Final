@@ -29,7 +29,7 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
 import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
-import { generateTurnId, logBridge, postBridgeTelemetry } from '../lib/interactionBridge';
+import { generateTurnId, logBridge } from '../lib/interactionBridge';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { createSessionClosureLatch } from '../lib/liveSessionClosure';
 
@@ -46,40 +46,22 @@ const AUTO_RECOVERY_COOLDOWN_MS = 7000;
 const LIVE_STALL_WARNING_MS = 9000;
 const SESSION_RESUMPTION_HANDLE_KEY = 'ff_live_resumption_handle';
 
-// ── Live Performance Instrumentation ──
-const PERF_ENDPOINT = '/api/live/perf';
+// ── Live Performance Instrumentation (wylacznie lokalna) ──
+// Wysylka na POST /api/live/perf wycieta w P0.5-D razem z backendowym
+// handlerem i tabela `live_perf_logs`. Pomiary zostaja w konsoli i w
+// localStorage jako bufor diagnostyczny. Telemetrie zdalna odbuduje P7.
 const PERF_LOG_HISTORY_KEY = 'ff_live_perf_log';
 
 type PerfTiming = { stage: string; ms: number; metadata?: Record<string, unknown> };
 
-function postPerfTimings(sessionId: string, model: string, timings: PerfTiming[], turnId?: string | null): void {
+function recordPerfTimings(sessionId: string, timings: PerfTiming[]): void {
   if (!timings.length) return;
-  const body = { entries: timings.map(t => ({ ...t, session_id: sessionId, model, turn_id: turnId || undefined })) };
-  try {
-    const url = getApiUrl(PERF_ENDPOINT);
-    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
-  } catch {}
-  // Also persist locally for debugging
   try {
     const arr = JSON.parse(localStorage.getItem(PERF_LOG_HISTORY_KEY) || '[]');
     arr.push({ ts: new Date().toISOString(), sessionId: sessionId.slice(0, 8), timings });
     if (arr.length > 50) arr.splice(0, arr.length - 50);
     localStorage.setItem(PERF_LOG_HISTORY_KEY, JSON.stringify(arr));
   } catch {}
-}
-
-function postLiveDiag(stage: string, sessionId: string | null | undefined, turnId: string | null | undefined, metadata: Record<string, unknown>, ms = 0): void {
-  try {
-    postBridgeTelemetry([{
-      stage,
-      session_id: String(sessionId || 'unknown'),
-      turn_id: String(turnId || ''),
-      ms,
-      metadata,
-    }]);
-  } catch {
-    // diagnostics must never affect live flow
-  }
 }
 
 function saveResumptionHandle(handle: string): void {
@@ -1073,7 +1055,6 @@ export function useGeminiLiveSession({
       });
       const player = playerRef.current;
       closureLatchRef.current.reset();
-      let perfModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
 
       const emitAssistantSpeechPart = (rawTextPart: unknown): string => {
         const rawText = String(rawTextPart || '');
@@ -1141,7 +1122,7 @@ export function useGeminiLiveSession({
         const e2e = firstAudioFrameAt ? Date.now() - firstAudioFrameAt : 0;
         if (e2e > 0) perfTimings.push({ stage: 'total_e2e', ms: e2e });
         console.log(`[LivePerf] ${sid.slice(0,8)} turn=${tid || '?'} ${perfTimings.map(t => `${t.stage}=${t.ms}ms`).join(' | ')}`);
-        postPerfTimings(sid, perfModel, [...perfTimings], tid);
+        recordPerfTimings(sid, [...perfTimings]);
         perfTimings.length = 0;
         // Reset per-turn state for next interaction
         turnId = null;
@@ -1192,10 +1173,6 @@ export function useGeminiLiveSession({
           perfTimings.push({ stage: 'transcript_to_toolcall', ms: lastToolCallAt - (lastTranscriptAt || firstAudioFrameAt || lastToolCallAt) });
           const toolNames = msg.toolCall.functionCalls.map((fc: any) => fc.name || '?').join(',');
           logBridge('toolcall_received', { turn_id: turnId, session_id: sessionIdRef.current, tools: toolNames });
-          postLiveDiag('live_function_call_received', sessionIdRef.current, turnId, {
-            tools: toolNames,
-            count: msg.toolCall.functionCalls.length,
-          });
           useLiveUiSessionStore.getState().setProcessing('Analizuje...');
           armStallWatchdog('tool_call_pending');
           const calls = msg.toolCall.functionCalls;
@@ -1236,13 +1213,6 @@ export function useGeminiLiveSession({
                   );
                   logBridge('action_result_received', { turn_id: turnId, session_id: sessionIdRef.current, tool: result.name, source: 'http_fallback' });
                   logBridge('ui_update_applied', { turn_id: turnId, duration_ms: Date.now() - applyStart });
-                  postLiveDiag('live_ui_restaurants_applied', sessionIdRef.current, turnId, {
-                    source: 'http_fallback',
-                    tool: result.name,
-                    restaurants_count: Array.isArray((responseForUi as any).restaurants) ? (responseForUi as any).restaurants.length : 0,
-                    menu_count: Array.isArray((responseForUi as any).menu || (responseForUi as any).menuItems) ? ((responseForUi as any).menu || (responseForUi as any).menuItems).length : 0,
-                    intent: (responseForUi as any).intent || null,
-                  }, Date.now() - applyStart);
                 }
                 const compactStart = Date.now();
                 const compact = compactToolResponse(

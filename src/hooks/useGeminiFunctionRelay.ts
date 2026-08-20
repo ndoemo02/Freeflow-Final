@@ -22,7 +22,6 @@
 import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
-import { postBridgeTelemetry } from '../lib/interactionBridge';
 import { getAccessToken } from '../lib/supabase';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { awaitTurnTranscriptEvidence } from '../lib/liveTranscriptEvidence';
@@ -79,27 +78,6 @@ function transcriptSuggestsNearbyWithoutExplicitLocation(transcript: string | un
     const loc = normalizeLoose(location || '');
     if (!loc) return true;
     return !t.includes(loc);
-}
-
-function postRelayDiag(
-    stage: string,
-    sessionId: string | undefined,
-    turnId: string | undefined,
-    startedAt: number | null,
-    metadata: Record<string, unknown>,
-): void {
-    const sid = String(sessionId || '').trim() || 'unknown';
-    try {
-        postBridgeTelemetry([{
-            stage,
-            session_id: sid,
-            turn_id: String(turnId || ''),
-            ms: startedAt ? Math.max(0, Date.now() - startedAt) : 0,
-            metadata,
-        }]);
-    } catch {
-        // telemetry must never affect live flow
-    }
 }
 
 async function getRelayGPSCoords(): Promise<{ lat: number; lng: number } | null> {
@@ -253,13 +231,6 @@ async function relayViaHttp(
 
     const requestId = String(body.request_id || '');
     const relayStartedAt = Date.now();
-    postRelayDiag('live_relay_http_send', effectiveSessionId, functionCall.turnId, null, {
-        tool: functionCall.name,
-        request_id: requestId,
-        args_keys: Object.keys(enrichedArgs).sort(),
-        transcript_present: Boolean(transcript),
-        has_gps: Number.isFinite(Number(enrichedArgs.lat)) && Number.isFinite(Number(enrichedArgs.lng)),
-    });
 
     const accessToken = await getAccessToken();
     const res = await fetch(url, {
@@ -276,12 +247,6 @@ async function relayViaHttp(
         try { errBody = await res.json(); } catch { /* noop */ }
         const detail = errBody.error || errBody.message || errBody.reason || `HTTP ${res.status}`;
         console.error(`[LiveDiag] ❌ relay HTTP ${res.status}: ${detail}  (tool=${functionCall.name} sessionId=${effectiveSessionId.slice(0, 8)}...)`);
-        postRelayDiag('live_relay_http_error', effectiveSessionId, functionCall.turnId, relayStartedAt, {
-            tool: functionCall.name,
-            request_id: requestId,
-            status: res.status,
-            detail: String(detail).slice(0, 80),
-        });
         throw new Error(detail);
     }
 
@@ -292,14 +257,6 @@ async function relayViaHttp(
     const inner = (data?.response && typeof data.response === 'object' && !Array.isArray(data.response))
         ? data.response
         : data;
-    postRelayDiag('live_relay_http_response', effectiveSessionId, functionCall.turnId, relayStartedAt, {
-        tool: functionCall.name,
-        request_id: requestId,
-        ok: data?.ok !== false,
-        restaurants_count: Array.isArray((inner as any)?.restaurants) ? (inner as any).restaurants.length : 0,
-        menu_count: Array.isArray((inner as any)?.menu || (inner as any)?.menuItems) ? ((inner as any).menu || (inner as any).menuItems).length : 0,
-        intent: (inner as any)?.intent || null,
-    });
     return { name: functionCall.name, response: inner };
 }
 
@@ -357,20 +314,8 @@ export function useGeminiFunctionRelay({
                 pendingRef.current.delete(msg.request_id);
 
                 if (msg.type === 'tool_error') {
-                    postRelayDiag('live_relay_ws_error', pending.sessionId, pending.turnId, pending.startedAt, {
-                        tool: pending.tool,
-                        request_id: String(msg.request_id || ''),
-                        detail: String(msg.error || 'tool_error').slice(0, 80),
-                    });
                     pending.reject(new Error(msg.error || 'tool_error'));
                 } else {
-                    postRelayDiag('live_relay_ws_response', pending.sessionId, pending.turnId, pending.startedAt, {
-                        tool: pending.tool,
-                        request_id: String(msg.request_id || ''),
-                        restaurants_count: Array.isArray(msg.response?.restaurants) ? msg.response.restaurants.length : 0,
-                        menu_count: Array.isArray(msg.response?.menu || msg.response?.menuItems) ? (msg.response.menu || msg.response.menuItems).length : 0,
-                        intent: msg.response?.intent || null,
-                    });
                     pending.resolve({
                         name: msg.tool,
                         response: msg.response ?? { ok: msg.ok },
@@ -427,11 +372,6 @@ export function useGeminiFunctionRelay({
                 // ── DIAG: timeout ─────────────────────────────────────
                 console.error(`[LiveDiag] ⏱ relay TIMEOUT for ${functionCall.name}  req:${requestId}`);
                 // ──────────────────────────────────────────────────────
-                postRelayDiag('live_relay_ws_error', wsSessionId, functionCall.turnId, wsRelayStartedAt, {
-                    tool: functionCall.name,
-                    request_id: requestId,
-                    detail: 'relay_timeout',
-                });
                 reject(new Error('relay_timeout'));
             }, RELAY_TIMEOUT_MS);
 
@@ -482,22 +422,10 @@ export function useGeminiFunctionRelay({
                 if (ws.readyState !== WebSocket.OPEN) {
                     clearTimeout(timer);
                     pendingRef.current.delete(requestId);
-                    postRelayDiag('live_relay_ws_error', wsSessionId, functionCall.turnId, wsRelayStartedAt, {
-                        tool: functionCall.name,
-                        request_id: requestId,
-                        detail: 'ws_not_connected',
-                    });
                     reject(new Error('ws_not_connected'));
                     return;
                 }
 
-                postRelayDiag('live_relay_ws_send', wsSessionId, functionCall.turnId, null, {
-                    tool: functionCall.name,
-                    request_id: requestId,
-                    args_keys: Object.keys(enrichedArgs).sort(),
-                    transcript_present: Boolean(latestTranscript),
-                    has_gps: Number.isFinite(Number(enrichedArgs.lat)) && Number.isFinite(Number(enrichedArgs.lng)),
-                });
                 ws.send(JSON.stringify({
                     type: 'tool_call',
                     tool: functionCall.name,
