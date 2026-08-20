@@ -1,7 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_SUPABASE_URL = 'https://ezemaacyyvbpjlagchds.supabase.co';
-const EXPECTED_PROJECT_REF = 'ezemaacyyvbpjlagchds';
+/**
+ * Klient jest PRZYPIETY do jednego projektu Supabase.
+ *
+ * Przepiete na nowa baze w P5 (2026-08-20): `ezemaacyyvbpjlagchds` (eu-west-3)
+ * -> `vvzpykgiyotgvaorpoqs` (eu-central-1).
+ *
+ * `resolveSupabaseUrl` ponizej ODRZUCA `VITE_SUPABASE_URL` wskazujacy na inny
+ * projekt i wraca do wartosci domyslnej. To jest zabezpieczenie przed cicha
+ * zmiana bazy przez zle ustawiona zmienna — nie przeszkoda do usuniecia.
+ *
+ * UWAGA PRZY KOLEJNEJ MIGRACJI: samo ustawienie `VITE_SUPABASE_URL` NIE
+ * przepnie frontendu. Trzeba zmienic te dwie stale i fallback klucza nizej,
+ * inaczej guard zwroci `env_mismatch` i aplikacja pojedzie po staremu,
+ * zostawiajac po sobie tylko ostrzezenie w konsoli.
+ */
+const DEFAULT_SUPABASE_URL = 'https://vvzpykgiyotgvaorpoqs.supabase.co';
+const EXPECTED_PROJECT_REF = 'vvzpykgiyotgvaorpoqs';
 
 type SupabaseUrlResolution = {
   url: string;
@@ -37,7 +52,12 @@ export function resolveSupabaseUrl(rawUrl?: string): SupabaseUrlResolution {
 
 const resolvedSupabase = resolveSupabaseUrl(import.meta.env.VITE_SUPABASE_URL);
 const supabaseUrl = resolvedSupabase.url;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6ZW1hYWN5eXZicGpsYWdjaGRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk3ODU1MzYsImV4cCI6MjA3NTM2MTUzNn0.uRKmqxL0Isx3DmOxmgc_zPwG5foYXft9WpIROoTTgGU';
+// Fallback klucza musi wskazywac na TEN SAM projekt co DEFAULT_SUPABASE_URL —
+// inaczej brak `VITE_SUPABASE_ANON_KEY` daje URL nowej bazy z kluczem starej
+// i kazde zadanie konczy sie bledem uwierzytelnienia zamiast czytelna awaria.
+// Klucz `anon` jest PUBLICZNY z definicji (trafia do bundla przegladarki);
+// dostep ogranicza RLS i granty, nie tajnosc tej wartosci.
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2enB5a2dpeW90Z3Zhb3Jwb3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwMjU5MjMsImV4cCI6MjEwMjYwMTkyM30.gEZTyAoMqojJpeF0iy8W_8ThDFmpI7I7iVSikZRIR_M';
 
 export const SUPABASE_RUNTIME = {
   url: supabaseUrl,
