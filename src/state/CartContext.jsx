@@ -1,6 +1,6 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './auth';
-import { supabase } from '../lib/supabase';
+import { supabase, getAccessToken } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
 import { useToast } from '../components/Toast';
 import { useConversationStore } from '../store/useConversationStore';
@@ -363,9 +363,12 @@ export function CartProvider({ children }) {
       const apiUrl = getApiUrl('/api/orders');
       console.log('🛒 Submitting order to:', apiUrl);
 
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error('Zaloguj się ponownie, aby złożyć zamówienie.');
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify(orderData),
       });
 
