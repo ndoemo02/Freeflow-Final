@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityHandling,
   EndSensitivity,
@@ -32,6 +32,7 @@ import { activeSessionMap } from '../state/ActiveSessionMap';
 import { generateTurnId, logBridge } from '../lib/interactionBridge';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { createSessionClosureLatch } from '../lib/liveSessionClosure';
+import { resolveCartConfirmationState, cartConfirmationResponseForUi } from '../lib/cartConfirmationState';
 
 const DEFAULT_LIVE_MODEL =
   (import.meta.env.VITE_GEMINI_LIVE_MODEL as string | undefined) ||
@@ -594,7 +595,7 @@ export function applyToolResultToStore(
     );
 
     const reply = String(response.reply || response.text || '');
-    const nextIntent = String(response.intent || state.lastIntent || '');
+    const nextIntent = String(response.intent || '');
     const nextPhase = String((response.context as any)?.conversationPhase || response.phase || state.conversationPhase || '');
 
     let nextUiMode = state.uiMode;
@@ -656,36 +657,69 @@ export function applyToolResultToStore(
     // który mógłby być niezsynchronizowany po przejściach menu↔checkout.
     // Fix #5.5: normalizeCartItems wymusza identyczną strukturę każdego przedmiotu
     // (id, name, price_pln, qty) — eliminuje "widma" z brakującymi kluczami.
-    const backendCartRaw = (response.meta as any)?.cart || response.cart;
+    const backendCartRaw = (response.meta as any)?.cart ?? response.cart ?? (response.context as any)?.cart;
     const backendCart = normalizeCartItems(backendCartRaw) || backendCartRaw;
     const backendCartHash = (response.meta as any)?.cartHash || (response as any).cartHash || '';
     const cartForStore = backendCart || state.cart; // fallback tylko gdy backend nie wysłał wcale
 
     const hasFreshMenu = menuItems && menuItems.length > 0;
     const hasFreshRestaurants = restaurants && restaurants.length > 0;
+    const responseContext = (response.context || {}) as Record<string, any>;
+    const confirmationState = resolveCartConfirmationState({
+        previous: {
+            currentRestaurant: state.currentRestaurant,
+            selectedRestaurantPreviewId: state.selectedRestaurantPreviewId,
+            menuItems: state.menuItems,
+            pendingOrder: state.pendingOrder,
+            expectedContext: state.expectedContext,
+            cart: state.cart,
+            conversationPhase: state.conversationPhase,
+            uiMode: state.uiMode,
+        },
+        incoming: {
+            currentRestaurant: enrichedRestaurant,
+            selectedRestaurantPreviewId: state.selectedRestaurantPreviewId,
+            menuItems: hasFreshMenu ? menuItems : state.menuItems,
+            pendingOrder: Object.prototype.hasOwnProperty.call(responseContext, 'pendingOrder')
+                ? responseContext.pendingOrder
+                : state.pendingOrder,
+            expectedContext: Object.prototype.hasOwnProperty.call(responseContext, 'expectedContext')
+                ? (responseContext.expectedContext || null)
+                : state.expectedContext,
+            cart: cartForStore,
+            conversationPhase: nextPhase || state.conversationPhase,
+            uiMode: nextUiMode,
+        },
+        intent: nextIntent,
+        toolName,
+        context: responseContext,
+    });
+    const responseForUi = cartConfirmationResponseForUi(response, confirmationState);
 
     useConversationStore.setState((prev) => ({
         isThinking: false,
         error: null,
         lastResponse: reply,
-        lastFullResponse: response,
-        uiMode: nextUiMode,
-        conversationPhase: nextPhase || state.conversationPhase,
-        currentRestaurant: enrichedRestaurant,
-        pendingOrder: (response.context as any)?.pendingOrder || null,
-        cart: cartForStore,
-        cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
+        lastFullResponse: responseForUi,
+        uiMode: confirmationState.uiMode,
+        conversationPhase: confirmationState.conversationPhase,
+        currentRestaurant: confirmationState.currentRestaurant,
+        pendingOrder: confirmationState.pendingOrder,
+        cart: confirmationState.cart,
+        cartSyncKey: backendCart && !confirmationState.suppressCartActions ? prev.cartSyncKey + 1 : prev.cartSyncKey,
+        expectedContext: confirmationState.expectedContext,
         lastIntent: nextIntent || state.lastIntent,
         lastSource: ((response.meta as any)?.source as string) || 'live_http_relay',
         suggestedRestaurants: hasFreshRestaurants ? restaurants : state.suggestedRestaurants,
-        menuItems: hasFreshMenu ? menuItems : state.menuItems,
+        selectedRestaurantPreviewId: confirmationState.selectedRestaurantPreviewId,
+        menuItems: confirmationState.menuItems,
     }));
 
     // Mirror do ActiveSessionMap — Level 2 Memory
-    if (backendCart) {
+    if (backendCart && !confirmationState.suppressCartActions) {
         activeSessionMap.updateFromResponse(
             String(state.sessionId || ''),
-            response,
+            responseForUi,
             nextUiMode,
             nextPhase || state.conversationPhase,
         );

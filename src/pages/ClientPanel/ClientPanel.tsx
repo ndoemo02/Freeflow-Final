@@ -1,4 +1,5 @@
-﻿/**
+import { startStripeCheckout, finalizeStripeOrder } from '../../lib/stripePayments';
+/**
  * Client Panel - ServiceHub-style Customer Dashboard
  * 
  * Features:
@@ -348,7 +349,7 @@ export default function ClientPanel() {
         if (!order?.id) return false;
         if (isOrderPaid(order)) return false;
         const status = normalizeOrderStatus(order?.status);
-        return !['cancelled', 'completed', 'delivered'].includes(status);
+        return status === 'pending';
     };
 
     const filteredOrders = useMemo(() => {
@@ -364,27 +365,7 @@ export default function ClientPanel() {
 
         try {
             setStripeBusyOrderId(order.id);
-            const origin = window.location.origin;
-            const successUrl = `${origin}/panel/client?section=orders&stripe=success&order_id=${encodeURIComponent(order.id)}&session_id={CHECKOUT_SESSION_ID}`;
-            const cancelUrl = `${origin}/panel/client?section=orders&stripe=cancel&order_id=${encodeURIComponent(order.id)}`;
-
-            const response = await fetch(getApiUrl('/api/payments/checkout-session'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    order_id: order.id,
-                    customer_email: user?.email || null,
-                    success_url: successUrl,
-                    cancel_url: cancelUrl,
-                }),
-            });
-
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok || !payload?.url) {
-                throw new Error(payload?.error || 'Nie udało się utworzyć sesji Stripe');
-            }
-
-            window.location.assign(payload.url);
+            window.location.assign(await startStripeCheckout(order.id));
         } catch (error: any) {
             console.error('[STRIPE_ORDER_CHECKOUT_ERROR]', error);
             push?.(error?.message || 'Błąd płatności testowej', 'error');
@@ -399,7 +380,7 @@ export default function ClientPanel() {
         const sessionId = params.get('session_id');
         const orderId = params.get('order_id');
 
-        if (!stripeState) return;
+        if (!stripeState || !user?.id) return;
         const dedupeKey = `${stripeState}:${sessionId || ''}:${orderId || ''}`;
         if (stripeFinalizeRef.current === dedupeKey) return;
         stripeFinalizeRef.current = dedupeKey;
@@ -426,56 +407,21 @@ export default function ClientPanel() {
         const finalizeStripePayment = async () => {
             try {
                 setStripeBusyOrderId(orderId);
-                const verifyResponse = await fetch(getApiUrl('/api/payments/verify-session'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId }),
-                });
-                const verifyPayload = await verifyResponse.json().catch(() => ({}));
-                if (!verifyResponse.ok || !verifyPayload?.paid) {
-                    throw new Error(verifyPayload?.error || 'Nie udało się potwierdzić płatności Stripe');
-                }
-
-                // P4: zapis markera platnosci do `notes` przez PATCH /api/orders
-                // zostal usuniety. Dwa powody, oba twarde:
-                //   1. PATCH wymaga tokenu admina (T1), a panel klienta go nie ma;
-                //      pole user_id jest do tego trwale poza allowlista. Zadanie
-                //      konczylo sie bledem, ktory przerywal finalizacje PRZED
-                //      wywolaniem /api/orders/finalize.
-                //   2. Stan platnosci wyraza teraz status 'confirmed' + confirmed_at,
-                //      ustawiane po stronie backendu w finalizeOrder.js.
-                // -- Finalize: status + confirmed_at, sesja backendu, stan frontendu --
-                const brainSessionId = useConversationStore.getState().sessionId;
-                try {
-                  const finalizeResponse = await fetch(getApiUrl('/api/orders/finalize'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_id: orderId, session_id: brainSessionId }),
-                  });
-                  const finalizePayload = await finalizeResponse.json().catch(() => ({}));
-                  if (finalizeResponse.ok && finalizePayload?.newSessionId) {
-                    useConversationStore.getState().setSessionId(finalizePayload.newSessionId);
-                    console.log('[STRIPE_FINALIZE] Session reset to:', finalizePayload.newSessionId.slice(0, 8) + '...');
-                  }
-                  useConversationStore.getState().handleOrderSuccess();
-                  console.log('[STRIPE_FINALIZE] Frontend state cleared after payment');
-                  await fetchOrders?.();
-                } catch (finalizeErr: any) {
-                  console.warn('[STRIPE_FINALIZE] Session cleanup failed (non-critical):', finalizeErr.message);
-                }
+                await finalizeStripeOrder(orderId, sessionId);
+                await fetchOrders?.();
 
                 push?.('Płatność testowa zakończona pomyślnie.', 'success');
+                cleanStripeParams();
             } catch (error: any) {
                 console.error('[STRIPE_ORDER_FINALIZE_ERROR]', error);
                 push?.(error?.message || 'Błąd finalizacji płatności testowej', 'error');
             } finally {
                 setStripeBusyOrderId(null);
-                cleanStripeParams();
             }
         };
 
         finalizeStripePayment();
-    }, [location.search, orders, fetchOrders, push]);
+    }, [location.search, orders, fetchOrders, push, user?.id]);
 
     return (
         <div className="client-panel">

@@ -160,6 +160,7 @@ export function getStatusBadge(status: BackendOrderStatus): {
 } {
     switch (status) {
         case 'pending':
+            return { label: 'Oczekuje na płatność', color: '#92400e', bgColor: '#fef3c7' };
         case 'new':
             return { label: 'Nowe', color: '#92400e', bgColor: '#fef3c7' };
         case 'confirmed':
@@ -229,14 +230,14 @@ function sanitizeKdsNotes(rawNotes: unknown): string | null {
 }
 
 /**
- * Fetch KDS orders from backend using Admin API
- * GET /api/admin/orders
+ * Fetch KDS orders from the tenant-scoped owner API
+ * GET /api/owner/orders
  */
-export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboardResponse> {
+export async function fetchKDSOrders(restaurantId?: string, signal?: AbortSignal): Promise<KDSDashboardResponse> {
     if (!restaurantId) throw new Error('Restaurant selection required');
     try {
         const url = getApiUrl(`api/owner/orders?limit=100&restaurant_id=${encodeURIComponent(restaurantId)}`);
-        const response = await fetch(url, { headers: await getHeaders() });
+        const response = await fetch(url, { headers: await getHeaders(), ...(signal ? { signal } : {}) });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch KDS orders: ${response.statusText}`);
@@ -254,23 +255,24 @@ export async function fetchKDSOrders(restaurantId?: string): Promise<KDSDashboar
             order_number: `#${o.id.slice(0, 4)}`,
             channel: 'unknown',
             // DB constraint in production can reject "ready", so treat "completed" as KDS-ready stage.
-            status: o.status === 'pending' ? 'new' : (o.status === 'completed' ? 'ready' : o.status),
+            status: o.status === 'accepted' ? 'new' : (o.status === 'completed' ? 'ready' : o.status),
             items: Array.isArray(o.items) ? o.items.map((i: any, idx: number) => ({
                 id: `item-${idx}`,
                 name: i.name || i.dish_name || (typeof i === 'string' ? i : 'Pozycja'),
                 quantity: i.quantity || i.qty || 1,
+                notes: sanitizeKdsNotes(i.special_instructions) || undefined,
                 station: 'kuchnia', // Default station
                 done: false // Backend V1 doesn't track item status yet
             })) : [],
-            total: Number(o.totalPrice) || 0,
-            total_formatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
-            location: 'Brak danych',
+            total: Number(o.total_price) || 0,
+            total_formatted: (Number(o.total_price) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
+            location: o.delivery_address || 'Brak danych',
             priority: false,
             notes: sanitizeKdsNotes(o.notes),
-            created_at: o.createdAt,
-            updated_at: o.updatedAt,
-            customer_name: o.customer?.name,
-            restaurant_id: o.restaurantId
+            created_at: o.created_at,
+            updated_at: o.updated_at,
+            customer_name: o.customer_name,
+            restaurant_id: o.restaurant_id
         }));
 
         const activeAges = orders

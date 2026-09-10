@@ -1,4 +1,5 @@
-﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import { customerFetch } from '../lib/customerFetch';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './auth';
 import { supabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
@@ -37,6 +38,7 @@ export function CartProvider({ children }) {
   const [restaurant, setRestaurant] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submission = useRef(null);
 
   useEffect(() => {
     // Fix #5.6: Wykryj nową sesję po refreshu strony.
@@ -205,7 +207,7 @@ export function CartProvider({ children }) {
     if (syncBackend && typeof window !== 'undefined') {
       const sessionId = getCartSessionId();
       if (sessionId) {
-        fetch(getApiUrl('/api/brain/v2'), {
+        customerFetch(getApiUrl('/api/brain/v2'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -295,7 +297,7 @@ export function CartProvider({ children }) {
       // this fallback goes through the backend resolver instead of a direct
       // Supabase select on restaurants.aliases.
       try {
-        const resolveRes = await fetch(getApiUrl(`/api/restaurants/resolve?name=${encodeURIComponent(searchName)}`));
+        const resolveRes = await customerFetch(getApiUrl(`/api/restaurants/resolve?name=${encodeURIComponent(searchName)}`));
         const resolveJson = await resolveRes.json().catch(() => null);
         if (resolveRes.ok && resolveJson?.ok && resolveJson.data?.id) {
           restData = resolveJson.data;
@@ -318,6 +320,7 @@ export function CartProvider({ children }) {
 
   const buildOrderData = (deliveryInfo, restaurantId, status = 'pending') => ({
     user_id: user?.id || null,
+    session_id: getCartSessionId(),
     restaurant_id: restaurantId,
     restaurant_name: restaurant?.name || 'Unknown Restaurant',
     items: cart.map((item) => ({
@@ -334,7 +337,6 @@ export function CartProvider({ children }) {
     customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
     delivery_address: deliveryInfo.address || user?.user_metadata?.address || '',
     notes: deliveryInfo.notes || '',
-    created_at: new Date().toISOString(),
   });
 
   const submitOrder = async (deliveryInfo) => {
@@ -363,10 +365,12 @@ export function CartProvider({ children }) {
       const apiUrl = getApiUrl('/api/orders');
       console.log('🛒 Submitting order to:', apiUrl);
 
-      const response = await fetch(apiUrl, {
+      const body = JSON.stringify(orderData);
+      if (submission.current?.body !== body) submission.current = { body, key: crypto.randomUUID() };
+      const response = await customerFetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData),
+        body,
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': submission.current.key },
       });
 
       if (!response.ok) {
@@ -381,6 +385,7 @@ export function CartProvider({ children }) {
       }
 
       const data = await response.json();
+      submission.current = null;
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
       resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true });
       return data;

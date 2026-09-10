@@ -37,7 +37,7 @@ function OrderCard({
     }, [order.created_at]);
 
     // Map the status locally for KDS rendering logic
-    const mappedStatus = (order.status === 'pending' || order.status === 'new') ? 'new'
+    const mappedStatus = (order.status === 'pending' || order.status === 'new' || order.status === 'confirmed') ? 'new'
         : order.status === 'preparing' ? 'preparing'
             : (order.status === 'ready' || order.status === 'completed') ? 'ready'
                 : 'completed';
@@ -69,6 +69,9 @@ function OrderCard({
                             <span className="text-xs text-slate-500">{new Date(order.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {order.status === 'confirmed' && (
+                                <span className="text-xs font-semibold text-emerald-400">Opłacone</span>
+                            )}
                             {order.priority && (
                                 <div className="flex items-center gap-1">
                                     <svg className="w-4 h-4 text-red-500 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
@@ -99,6 +102,7 @@ function OrderCard({
                             </span>
                             <div className={`flex-1 min-w-0 ${item.done ? 'line-through text-slate-400' : 'text-slate-200'}`}>
                                 <p className="truncate text-sm">{item.name}</p>
+                                {item.notes && <p className="text-xs text-amber-300 break-words">{item.notes}</p>}
                                 {item.station && (
                                     <p className="text-[10px] text-slate-500 uppercase">{item.station}</p>
                                 )}
@@ -115,6 +119,7 @@ function OrderCard({
             )}
 
             <button
+                disabled={order.status === 'pending'}
                 onClick={() => {
                     if (mappedStatus === 'new') {
                         handleStartOrder(order.id);
@@ -133,7 +138,7 @@ function OrderCard({
                         mappedStatus === 'ready' ? 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700' :
                             'bg-gradient-to-r from-blue-500 to-sky-600 hover:from-blue-600 hover:to-sky-700'}`}
             >
-                {mappedStatus === 'new'
+                {order.status === 'pending' ? 'OCZEKUJE NA PŁATNOŚĆ' : mappedStatus === 'new'
                     ? 'PRZYJMIJ'
                     : mappedStatus === 'preparing'
                         ? 'PRZYGOTOWANE'
@@ -249,7 +254,7 @@ export default function BusinessPanelNew() {
         return [
             {
                 title: 'NOWE',
-                orders: filteredOrders.filter(o => o.status === 'new' || o.status === 'pending'),
+                orders: filteredOrders.filter(o => o.status === 'new' || o.status === 'pending' || o.status === 'confirmed'),
                 color: 'from-orange-500 to-orange-600'
             },
             {

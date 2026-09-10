@@ -1,10 +1,11 @@
 // src/lib/api.ts - using Vercel proxy for CORS
+import { customerFetch } from './customerFetch';
 
 export default async function api(path: string, init?: RequestInit): Promise<any> {
   // Use full URLs if they start with http, otherwise relative URLs
   const fullUrl = path.startsWith('http') ? path : path;
   
-  const res = await fetch(fullUrl, init);
+  const res = await (path.startsWith('/api/orders') ? customerFetch(fullUrl, init) : fetch(fullUrl, init));
 
   const ct = res.headers.get('content-type') || '';
   const isJson = ct.includes('application/json');

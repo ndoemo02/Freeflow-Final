@@ -71,20 +71,24 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
     // Refs for cleanup
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+    const activeScopeRef = useRef<string | undefined>(undefined);
 
     /**
      * Fetch orders from backend
      */
     const fetchData = useCallback(async () => {
+        if (!enabled || !restaurantId || activeScopeRef.current !== restaurantId) return;
         // Create new abort controller for this request
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
-        abortControllerRef.current = new AbortController();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
         try {
             setError(null);
-            const response: KDSDashboardResponse = await fetchKDSOrders(restaurantId);
+            const response: KDSDashboardResponse = await fetchKDSOrders(restaurantId, controller.signal);
+            if (controller.signal.aborted) return;
 
             if (response.ok) {
                 setOrders(response.orders);
@@ -97,6 +101,7 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
                 setLastUpdated(new Date(response.last_updated));
             }
         } catch (err) {
+            if (controller.signal.aborted) return;
             if (err instanceof Error && err.name === 'AbortError') {
                 // Request was aborted, ignore
                 return;
@@ -107,17 +112,18 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
             setLastUpdated(null);
             setError(err instanceof Error ? err.message : 'Failed to fetch orders');
         } finally {
-            setIsLoading(false);
+            if (!controller.signal.aborted) setIsLoading(false);
         }
-    }, [restaurantId]);
+    }, [enabled, restaurantId]);
 
     /**
      * Manual refresh
      */
     const refresh = useCallback(async () => {
+        if (!enabled || !restaurantId || activeScopeRef.current !== restaurantId) return;
         setIsLoading(true);
         await fetchData();
-    }, [fetchData]);
+    }, [enabled, restaurantId, fetchData]);
 
     /**
      * Start polling
@@ -201,8 +207,17 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
 
     // Initial fetch and polling setup
     useEffect(() => {
-        if (!enabled) return;
-
+        activeScopeRef.current = enabled ? restaurantId : undefined;
+        setOrders([]);
+        setStats({ newCount: 0, preparingCount: 0, readyCount: 0, avgTimeMinutes: 0 });
+        setLastUpdated(null);
+        setError(null);
+        if (!enabled || !restaurantId) {
+            stopPolling();
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
         // Initial fetch
         fetchData();
 
@@ -211,12 +226,14 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
 
         // Cleanup
         return () => {
+            activeScopeRef.current = undefined;
             stopPolling();
         };
-    }, [enabled, fetchData, startPolling, stopPolling]);
+    }, [enabled, restaurantId, fetchData, startPolling, stopPolling]);
 
     // Focus/blur handlers - abort polling on blur, resume on focus
     useEffect(() => {
+        if (!enabled || !restaurantId) return;
         const handleVisibilityChange = () => {
             if (document.hidden) {
                 // Page is hidden - stop polling
@@ -248,7 +265,7 @@ export function useKDSPolling(options: UseKDSPollingOptions = {}): UseKDSPolling
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [fetchData, startPolling, stopPolling]);
+    }, [enabled, restaurantId, fetchData, startPolling, stopPolling]);
 
     return {
         orders,

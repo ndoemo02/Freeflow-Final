@@ -1,3 +1,4 @@
+vi.mock('../../src/lib/supabase', () => ({ getAccessToken: vi.fn(async () => 'test-token') }));
 /**
  * Testy jednostkowe dla funkcji API (api.ts)
  */
@@ -11,7 +12,7 @@ global.fetch = vi.fn();
 describe('API Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (fetch as any).mockClear();
+    (fetch as any).mockReset();
   });
 
   afterEach(() => {
@@ -140,9 +141,7 @@ describe('API Functions', () => {
         '/api/orders',
         expect.objectContaining({
           method: 'POST',
-          headers: expect.objectContaining({
-            'Content-Type': 'application/json',
-          }),
+          headers: expect.any(Headers),
         })
       );
     });
@@ -189,7 +188,7 @@ describe('API Functions', () => {
 
       const result = await getUserOrders();
       expect(result).toEqual(mockOrders);
-      expect(fetch).toHaveBeenCalledWith('/api/orders', { method: 'GET' });
+      expect(fetch).toHaveBeenCalledWith('/api/orders', expect.objectContaining({ method: 'GET', headers: expect.any(Headers) }));
     });
 
     it('should fetch orders with user ID', async () => {
@@ -205,7 +204,7 @@ describe('API Functions', () => {
 
       const result = await getUserOrders('user-123');
       expect(result).toEqual(mockOrders);
-      expect(fetch).toHaveBeenCalledWith('/api/orders?user_id=user-123', { method: 'GET' });
+      expect(fetch).toHaveBeenCalledWith('/api/orders?user_id=user-123', expect.objectContaining({ method: 'GET', headers: expect.any(Headers) }));
     });
 
     it('should return empty array when orders field is missing', async () => {

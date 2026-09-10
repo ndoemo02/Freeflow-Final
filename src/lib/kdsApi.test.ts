@@ -35,10 +35,13 @@ const zamowienieOplacone = {
     id: 'ord-oplacone-1234',
     status: 'confirmed',
     items: [{ name: 'Pizza', quantity: 1 }],
-    totalPrice: 42,
+    total_price: '58.00',
     notes: 'Bez cebuli',
-    createdAt: new Date().toISOString(),
-    restaurantId: 'rest-1',
+    created_at: new Date().toISOString(),
+    updated_at: '2026-09-06T12:05:00.000Z',
+    restaurant_id: 'rest-1',
+    customer_name: 'Klient demo',
+    delivery_address: 'Adres demo',
 };
 
 beforeEach(() => {
@@ -50,6 +53,33 @@ afterEach(() => {
 });
 
 describe('P4-B / KDS rozpoznaje zamowienie oplacone', () => {
+    it('mapuje surowy rekord owner/orders bez utraty kwoty, czasu i lokalu', async () => {
+        const wynik = await fetchKDSOrders('rest-1');
+        expect(wynik.orders[0]).toMatchObject({
+            total: 58,
+            total_formatted: (58).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
+            created_at: zamowienieOplacone.created_at,
+            updated_at: zamowienieOplacone.updated_at,
+            restaurant_id: 'rest-1',
+            customer_name: 'Klient demo',
+            location: 'Adres demo',
+        });
+        expect(fetch).toHaveBeenCalledWith(
+            expect.stringContaining('/api/owner/orders?limit=100&restaurant_id=rest-1'),
+            { headers: expect.objectContaining({ Authorization: 'Bearer token-testowy' }) },
+        );
+    });
+
+    it('nie pokazuje anulowanych i dostarczonych jako aktywnych', async () => {
+        vi.stubGlobal('fetch', mockOrdersResponse([
+            zamowienieOplacone,
+            { ...zamowienieOplacone, id: 'cancelled', status: 'cancelled' },
+            { ...zamowienieOplacone, id: 'delivered', status: 'delivered' },
+        ]));
+        expect((await fetchKDSOrders('rest-1')).orders.map(order => order.id))
+            .toEqual([zamowienieOplacone.id]);
+    });
+
     it('status confirmed dociera do kuchni bez podmiany na inny', async () => {
         const wynik = await fetchKDSOrders('rest-1');
 

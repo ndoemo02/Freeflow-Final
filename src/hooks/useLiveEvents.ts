@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveLiveWsBase } from '../lib/config';
 import { useConversationStore } from '../store/useConversationStore';
 import { normalizeRestaurants, normalizeMenuItems, normalizeCartItems } from '../lib/normalizeData';
@@ -7,6 +7,8 @@ import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { logBridge } from '../lib/interactionBridge';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
+import { resolveCartConfirmationState, cartConfirmationResponseForUi } from '../lib/cartConfirmationState';
+import { getAccessToken } from '../lib/supabase';
 
 // Module-level GPS cache — survives WS reconnects within the same page session
 let _gpsCache: { lat: number; lng: number; ts: number } | null = null;
@@ -503,7 +505,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
             }, delay);
         };
 
-        const connectSocket = (reason: 'initial' | 'reconnect') => {
+        const connectSocket = async (reason: 'initial' | 'reconnect') => {
             if (!shouldReconnectRef.current || disposed) return;
 
             const existing = socketRef.current;
@@ -524,7 +526,9 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
 
             const nonce = ++connectNonceRef.current;
             // connect requested â€” reason=${reason} session=${effectSessionId} nonce=${nonce}`);
-            const socket = new WebSocket(wsUrl);
+            const token = await getAccessToken().catch(() => null);
+            if (disposed || nonce !== connectNonceRef.current || !token) return;
+            const socket = new WebSocket(wsUrl, ['freeflow', `bearer.${token}`]);
             socketRef.current = socket;
             activeSocketSessionIdRef.current = effectSessionId;
 
@@ -626,7 +630,7 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                     || null,
                 );
 
-                const nextIntent = response.intent || state.lastIntent || null;
+                const nextIntent = response.intent || null;
                 let nextUiMode = state.uiMode;
                 if (nextIntent === 'find_nearby') {
                     nextUiMode = 'list';
@@ -663,18 +667,6 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 if (hasMenuItems && (menuSurfaceIntent || menuSurfaceTool || nextCurrentRestaurantEnriched)) {
                     nextUiMode = 'restaurant';
                 }
-
-                dispatchRef.current(
-                    response.actions,
-                    {
-                        ...(response.meta || {}),
-                        cart: response.cart || response.meta?.cart,
-                        intent: response.intent || response.meta?.intent,
-                        tool: liveToolName || response.meta?.tool || null,
-                    },
-                    response.turn_id || response.timestamp || parsed.request_id,
-                    response.events,
-                );
 
                 const previousSelectedRestaurantPreviewId = state.selectedRestaurantPreviewId;
                 const resolvedSelectedRestaurantPreviewId = resolveFocusedRestaurantPreviewId({
@@ -720,33 +712,75 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 // Fix #5: Backend cart jest "Prawdą Absolutną" — full override, bez fallbacku
                 // do state.cart. Po przejściach menu↔checkout state.cart może być niezsynchronizowany.
                 // Fix #5.5: normalizeCartItems wymusza identyczną strukturę każdego przedmiotu.
-                const backendCartRaw = response.meta?.cart || response.cart;
+                const backendCartRaw = response.meta?.cart ?? response.cart ?? response.context?.cart;
                 const backendCart = normalizeCartItems(backendCartRaw) || backendCartRaw;
                 const backendCartHash = response.meta?.cartHash || response.cartHash || '';
                 const cartForStore = backendCart || state.cart;
+                const responseContext = response.context || {};
+                const confirmationState = resolveCartConfirmationState({
+                    previous: {
+                        currentRestaurant: state.currentRestaurant,
+                        selectedRestaurantPreviewId: state.selectedRestaurantPreviewId,
+                        menuItems: state.menuItems,
+                        pendingOrder: state.pendingOrder,
+                        expectedContext: state.expectedContext,
+                        cart: state.cart,
+                        conversationPhase: state.conversationPhase,
+                        uiMode: state.uiMode,
+                    },
+                    incoming: {
+                        currentRestaurant: nextCurrentRestaurantEnriched,
+                        selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
+                        menuItems: (menuItems && menuItems.length > 0) ? menuItems : (isIdle ? null : state.menuItems),
+                        pendingOrder: Object.prototype.hasOwnProperty.call(responseContext, 'pendingOrder')
+                            ? responseContext.pendingOrder
+                            : (isIdle ? null : state.pendingOrder),
+                        expectedContext: Object.prototype.hasOwnProperty.call(responseContext, 'expectedContext')
+                            ? (responseContext.expectedContext || null)
+                            : (isIdle ? null : state.expectedContext),
+                        cart: cartForStore,
+                        conversationPhase: newPhase,
+                        uiMode: nextUiMode,
+                    },
+                    intent: nextIntent,
+                    toolName: liveToolName,
+                    context: responseContext,
+                });
+                const responseForUi = cartConfirmationResponseForUi(response, confirmationState);
+                dispatchRef.current(
+                    responseForUi.actions,
+                    {
+                        ...(response.meta || {}),
+                        cart: responseForUi.cart,
+                        intent: response.intent || response.meta?.intent,
+                        tool: liveToolName || response.meta?.tool || null,
+                    },
+                    response.turn_id || response.timestamp || parsed.request_id,
+                    response.events,
+                );
 
                 const nextStoreState = {
                     isThinking: false,
                     error: null,
                     lastResponse: reply,
-                    lastFullResponse: response,
+                    lastFullResponse: responseForUi,
                     conversationHistory: history,
-                    uiMode: nextUiMode,
-                    conversationPhase: newPhase,
-                    currentRestaurant: nextCurrentRestaurantEnriched,
-                    pendingOrder: response.context?.pendingOrder || null,
-                    cart: cartForStore,
-                    expectedContext: isIdle ? null : (response.context?.expectedContext || state.expectedContext),
+                    uiMode: confirmationState.uiMode,
+                    conversationPhase: confirmationState.conversationPhase,
+                    currentRestaurant: confirmationState.currentRestaurant,
+                    pendingOrder: confirmationState.pendingOrder,
+                    cart: confirmationState.cart,
+                    expectedContext: confirmationState.expectedContext,
                     lastIntent: response.intent || state.lastIntent,
                     lastSource: response.meta?.source || 'live_tool',
                     suggestedRestaurants: (restaurants && restaurants.length > 0) ? restaurants : (isIdle ? null : state.suggestedRestaurants),
-                    selectedRestaurantPreviewId: nextSelectedRestaurantPreviewId,
-                    menuItems: (menuItems && menuItems.length > 0) ? menuItems : (isIdle ? null : state.menuItems),
+                    selectedRestaurantPreviewId: confirmationState.selectedRestaurantPreviewId,
+                    menuItems: confirmationState.menuItems,
                 };
                 const uiUpdateStart = Date.now();
                 useConversationStore.setState((prev) => ({
                     ...nextStoreState,
-                    cartSyncKey: backendCart ? prev.cartSyncKey + 1 : prev.cartSyncKey,
+                    cartSyncKey: backendCart && !confirmationState.suppressCartActions ? prev.cartSyncKey + 1 : prev.cartSyncKey,
                 }));
                 logBridge('ui_update_applied', { turn_id: wsTurnId, duration_ms: Date.now() - uiUpdateStart });
 
@@ -763,10 +797,10 @@ export function useLiveEvents({ enabled, sessionId, dispatch }: UseLiveEventsOpt
                 }
 
                 // Mirror do ActiveSessionMap — Level 2 Memory
-                if (backendCart) {
+                if (backendCart && !confirmationState.suppressCartActions) {
                     activeSessionMap.updateFromResponse(
                         String(effectSessionId || state.sessionId || ''),
-                        response,
+                        responseForUi,
                         nextUiMode,
                         newPhase,
                     );

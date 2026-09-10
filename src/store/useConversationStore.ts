@@ -1,11 +1,12 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { getApiUrl } from '../lib/config';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { repairMojibakeText } from '../lib/textSanitizer';
-import { normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
+import { normalizeCartItems, normalizeMenuItems, normalizeRestaurants } from '../lib/normalizeData';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { getAccessToken } from '../lib/supabase';
 import { generateSessionId, isCanonicalSessionId } from '../lib/sessionIdContract';
+import { resolveCartConfirmationState, cartConfirmationResponseForUi } from '../lib/cartConfirmationState';
 
 interface SelectRestaurantUiAction {
     type: 'select_restaurant';
@@ -384,6 +385,42 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                     suggestedRestaurants: stateBeforeApply.suggestedRestaurants,
                     previousRestaurant: stateBeforeApply.currentRestaurant,
                 });
+            const backendCartRaw = data.meta?.cart ?? data.cart ?? ctx.cart;
+            const backendCart = normalizeCartItems(backendCartRaw) || backendCartRaw || null;
+            const pendingOrderFromResponse = Object.prototype.hasOwnProperty.call(ctx, 'pendingOrder')
+                ? ctx.pendingOrder
+                : ((isIdle && hasContext) ? null : stateBeforeApply.pendingOrder);
+            const expectedContextFromResponse = Object.prototype.hasOwnProperty.call(ctx, 'expectedContext')
+                ? (ctx.expectedContext || null)
+                : ((isIdle || isFindNearby) ? null : stateBeforeApply.expectedContext);
+            const confirmationState = resolveCartConfirmationState({
+                previous: {
+                    currentRestaurant: stateBeforeApply.currentRestaurant,
+                    selectedRestaurantPreviewId: stateBeforeApply.selectedRestaurantPreviewId,
+                    menuItems: stateBeforeApply.menuItems,
+                    pendingOrder: stateBeforeApply.pendingOrder,
+                    expectedContext: stateBeforeApply.expectedContext,
+                    cart: stateBeforeApply.cart,
+                    conversationPhase: stateBeforeApply.conversationPhase,
+                    uiMode: stateBeforeApply.uiMode,
+                },
+                incoming: {
+                    currentRestaurant: reconciledRestaurant,
+                    selectedRestaurantPreviewId: isFindNearby
+                        ? normalizeEntityId(restaurantsFromResponse?.[0]?.id) || null
+                        : normalizeEntityId(reconciledRestaurant?.id) || (isIdle ? null : stateBeforeApply.selectedRestaurantPreviewId),
+                    menuItems: menuFromResponse || (isIdle ? null : stateBeforeApply.menuItems),
+                    pendingOrder: pendingOrderFromResponse,
+                    expectedContext: expectedContextFromResponse,
+                    cart: backendCart || stateBeforeApply.cart,
+                    conversationPhase: newPhase,
+                    uiMode: nextUiMode,
+                },
+                intent: nextIntent,
+                toolName: data.meta?.tool || data.tool || data.name,
+                context: ctx,
+            });
+            const responseForUi = cartConfirmationResponseForUi(data, confirmationState);
             console.debug('[FSM_PHASE]', newPhase, hasContext ? '' : '(retained)');
             console.debug('[UI_STATE] listVisible:', isIdle && !!restaurantsFromResponse?.length, 'resultsCount:', restaurantsFromResponse?.length ?? 0, 'focusedRestaurant:', isFindNearby ? null : get().selectedRestaurantPreviewId, 'mode:', newPhase);
             console.debug(`[UI_MODE] mode=${nextUiMode}`);
@@ -427,23 +464,20 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
                 lastResponse: amberReply,
                 conversationHistory: newHistory,
                 lastContext: ctx,
-                lastFullResponse: data,
-                uiMode: nextUiMode,
-                conversationPhase: newPhase,
-                currentRestaurant: reconciledRestaurant,
-                pendingOrder: (isIdle && hasContext) ? null : (ctx.pendingOrder || get().pendingOrder),
-                cart: (data.meta && 'cart' in data.meta) ? data.meta.cart : (ctx.cart ?? s.cart),
-                cartSyncKey: ((data.meta && 'cart' in data.meta) || ctx.cart != null) ? s.cartSyncKey + 1 : s.cartSyncKey,
-                // When phase resets to idle (or find_nearby forces discovery), clear expectedContext to prevent UI desynchro (P4)
-                expectedContext: (isIdle || isFindNearby) ? null : (hasContext ? (ctx.expectedContext || null) : s.expectedContext),
+                lastFullResponse: responseForUi,
+                uiMode: confirmationState.uiMode,
+                conversationPhase: confirmationState.conversationPhase,
+                currentRestaurant: confirmationState.currentRestaurant,
+                pendingOrder: confirmationState.pendingOrder,
+                cart: confirmationState.cart,
+                cartSyncKey: backendCart && !confirmationState.suppressCartActions ? s.cartSyncKey + 1 : s.cartSyncKey,
+                expectedContext: confirmationState.expectedContext,
                 conversationClosed: data.conversationClosed || false,
                 closedReason: data.closedReason || data.meta?.closedReason || null,
                 orderFinalized: false,
                 suggestedRestaurants: (restaurantsFromResponse && restaurantsFromResponse.length > 0) ? restaurantsFromResponse : (isIdle ? null : s.suggestedRestaurants),
-                selectedRestaurantPreviewId: isFindNearby
-                    ? normalizeEntityId(restaurantsFromResponse?.[0]?.id) || null
-                    : normalizeEntityId(reconciledRestaurant?.id) || (isIdle ? null : s.selectedRestaurantPreviewId),
-                menuItems: menuFromResponse || (isIdle ? null : s.menuItems),
+                selectedRestaurantPreviewId: confirmationState.selectedRestaurantPreviewId,
+                menuItems: confirmationState.menuItems,
                 lastIntent: data.intent || null,
                 lastSource: data.meta?.source || null,
             }));

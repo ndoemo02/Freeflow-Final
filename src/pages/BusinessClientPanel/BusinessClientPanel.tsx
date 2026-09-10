@@ -205,7 +205,7 @@ export default function BusinessClientPanel() {
                         <h3 className="business-panel__section-title">Aktywność na żywo</h3>
                         <div className="quick-stat">
                             <span className="quick-stat__icon">🟢</span>
-                            <span className="quick-stat__value">{orders.filter(o => o.status === 'new').length}</span>
+                            <span className="quick-stat__value">{orders.filter(o => o.status === 'new' || o.status === 'confirmed').length}</span>
                             <span className="quick-stat__label">Nowych</span>
                         </div>
                         <div className="quick-stat">

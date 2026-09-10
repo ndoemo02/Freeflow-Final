@@ -5,9 +5,13 @@ vi.mock('../lib/config', () => ({
 }));
 
 import { useConversationStore } from './useConversationStore';
+import { applyToolResultToStore } from '../hooks/useGeminiLiveSession';
 
 const VIEN = { id: 'vien-id', name: 'Vien-Thien', city: 'Piekary Śląskie' };
 const REZYDENCJA = { id: 'rezy-id', name: 'Rezydencja Luxury Hotel', city: 'Piekary Śląskie' };
+const MENU = [{ id: 'dish-1', restaurant_id: REZYDENCJA.id, name: 'Danie hotelowe', price_pln: 42 }];
+const PENDING_ORDER = { items: [{ id: 'dish-1', quantity: 1 }], restaurant_id: REZYDENCJA.id };
+const EMPTY_CART = { items: [], total: 0 };
 
 function brainResponse(body: Record<string, unknown>) {
     return new Response(JSON.stringify(body), {
@@ -26,6 +30,10 @@ describe('useConversationStore restaurant selection', () => {
             uiMode: 'list',
             conversationPhase: 'idle',
             currentRestaurant: null,
+            pendingOrder: null,
+            cart: EMPTY_CART,
+            cartSyncKey: 0,
+            expectedContext: null,
             lastResponse: '',
             conversationHistory: [],
             lastContext: null,
@@ -116,5 +124,135 @@ describe('useConversationStore restaurant selection', () => {
 
         expect(useConversationStore.getState().sessionId).toBe('sess_replacement_1');
         expect(localStorage.getItem('amber-session-id')).toBe('sess_replacement_1');
+    });
+
+    it('typed transport preserves menu confirmation state despite idle/open_checkout backend fields', async () => {
+        useConversationStore.setState({
+            uiMode: 'restaurant',
+            conversationPhase: 'ordering',
+            currentRestaurant: REZYDENCJA,
+            selectedRestaurantPreviewId: REZYDENCJA.id,
+            menuItems: MENU,
+            cart: EMPTY_CART,
+        });
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(brainResponse({
+            ok: true,
+            intent: 'open_checkout',
+            reply: 'Dodać Danie hotelowe do koszyka?',
+            cart: { items: [{ id: 'dish-1', quantity: 1 }], total: 42 },
+            actions: [
+                { type: 'SYNC_CART', payload: { items: [{ id: 'dish-1', quantity: 1 }] } },
+                { type: 'SHOW_CART' },
+            ],
+            context: {
+                conversationPhase: 'idle',
+                expectedContext: 'confirm_add_to_cart',
+                pendingOrder: PENDING_ORDER,
+            },
+        }));
+
+        await useConversationStore.getState().sendMessage('Dodaj danie hotelowe');
+
+        expect(useConversationStore.getState()).toMatchObject({
+            uiMode: 'restaurant',
+            conversationPhase: 'ordering',
+            currentRestaurant: REZYDENCJA,
+            selectedRestaurantPreviewId: REZYDENCJA.id,
+            menuItems: MENU,
+            pendingOrder: PENDING_ORDER,
+            expectedContext: 'confirm_add_to_cart',
+            cart: EMPTY_CART,
+        });
+        expect(useConversationStore.getState().lastFullResponse).toMatchObject({
+            cart: EMPTY_CART,
+            actions: [],
+        });
+    });
+
+    it('voice HTTP fallback preserves the same pre-confirmation boundary', () => {
+        useConversationStore.setState({
+            uiMode: 'restaurant',
+            conversationPhase: 'ordering',
+            currentRestaurant: REZYDENCJA,
+            selectedRestaurantPreviewId: REZYDENCJA.id,
+            menuItems: MENU,
+            cart: EMPTY_CART,
+        });
+
+        applyToolResultToStore('add_item_to_cart', {
+            intent: 'open_checkout',
+            cart: { items: [{ id: 'dish-1', quantity: 1 }], total: 42 },
+            context: {
+                conversationPhase: 'idle',
+                expectedContext: 'confirm_add_to_cart',
+                pendingOrder: PENDING_ORDER,
+            },
+        });
+
+        expect(useConversationStore.getState()).toMatchObject({
+            uiMode: 'restaurant',
+            conversationPhase: 'ordering',
+            currentRestaurant: REZYDENCJA,
+            selectedRestaurantPreviewId: REZYDENCJA.id,
+            menuItems: MENU,
+            pendingOrder: PENDING_ORDER,
+            expectedContext: 'confirm_add_to_cart',
+            cart: EMPTY_CART,
+        });
+    });
+
+    it('typed and voice-equivalent tak accept the same confirmed cart state', async () => {
+        const confirmedCart = { items: [{ id: 'dish-1', name: 'Danie hotelowe', quantity: 1, price_pln: 42 }], total: 42 };
+        const confirmedResponse = {
+            ok: true,
+            intent: 'confirm_add_to_cart',
+            reply: 'Dodano do koszyka.',
+            cart: confirmedCart,
+            context: {
+                conversationPhase: 'ordering',
+                currentRestaurant: REZYDENCJA,
+                last_menu: MENU,
+                pendingOrder: null,
+                expectedContext: null,
+            },
+        };
+        const confirmationState = {
+            uiMode: 'restaurant' as const,
+            conversationPhase: 'ordering',
+            currentRestaurant: REZYDENCJA,
+            selectedRestaurantPreviewId: REZYDENCJA.id,
+            menuItems: MENU,
+            pendingOrder: PENDING_ORDER,
+            expectedContext: 'confirm_add_to_cart',
+            cart: EMPTY_CART,
+        };
+        const projectState = () => {
+            const state = useConversationStore.getState();
+            return {
+                uiMode: state.uiMode,
+                conversationPhase: state.conversationPhase,
+                currentRestaurant: state.currentRestaurant,
+                menuItems: state.menuItems,
+                pendingOrder: state.pendingOrder,
+                expectedContext: state.expectedContext,
+                cart: state.cart,
+            };
+        };
+
+        useConversationStore.setState(confirmationState);
+        vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(brainResponse(confirmedResponse));
+        await useConversationStore.getState().sendMessage('tak');
+        const typedState = projectState();
+
+        useConversationStore.setState(confirmationState);
+        applyToolResultToStore('confirm_add_to_cart', confirmedResponse);
+        const voiceState = projectState();
+
+        expect(voiceState).toEqual(typedState);
+        expect(typedState).toMatchObject({
+            pendingOrder: null,
+            expectedContext: null,
+            cart: expect.objectContaining({ total: 42 }),
+        });
     });
 });

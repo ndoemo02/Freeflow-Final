@@ -34,7 +34,7 @@ export interface ChannelBreakdown {
     unknown: { count: number; percentage: number };
 }
 
-export type OrderStatus = 'new' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+export type OrderStatus = 'new' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 export type OrderChannel = 'restaurant' | 'hotel' | 'delivery' | 'unknown';
 
 export interface ActiveOrder {
@@ -88,16 +88,16 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
 
         // --- Calculate KPIs ---
         const today = new Date().toDateString();
-        const ordersToday = orders.filter((o: any) => new Date(o.createdAt).toDateString() === today);
+        const ordersToday = orders.filter((o: any) => new Date(o.created_at).toDateString() === today);
 
-        const revenueToday = ordersToday.reduce((sum: number, o: any) => sum + (Number(o.totalPrice) || 0), 0);
+        const revenueToday = ordersToday.reduce((sum: number, o: any) => sum + (Number(o.total_price) || 0), 0);
 
         // The current orders API has no authoritative completion timestamp.
         // Keep this unavailable until the operational schema exposes one.
         const avgFulfillmentTime = null;
 
         const uniqueCustomers = new Set(
-            ordersToday.map((o: any) => o.userId || o.customer?.phone || null).filter(Boolean),
+            ordersToday.map((o: any) => o.customer_phone || null).filter(Boolean),
         ).size;
 
         const kpis: KPIData = {
@@ -127,7 +127,7 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
 
         // --- Active Orders ---
         const activeOrders: ActiveOrder[] = orders
-            .filter((o: any) => ['new', 'pending', 'accepted', 'preparing', 'ready', 'completed'].includes(o.status))
+            .filter((o: any) => ['new', 'confirmed', 'pending', 'accepted', 'preparing', 'ready', 'completed'].includes(o.status))
             .map((o: any) => ({
                 id: o.id,
                 orderNumber: `#${o.id.slice(0, 4)}`,
@@ -136,11 +136,11 @@ export async function fetchBusinessDashboard(restaurantId?: string): Promise<Bus
                     ? 'new'
                     : (o.status === 'completed' ? 'ready' : o.status),
                 items: Array.isArray(o.items) ? o.items.map((i: any) => i.name || i) : [],
-                total: Number(o.totalPrice) || 0,
-                totalFormatted: (Number(o.totalPrice) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
-                location: o.customer?.address || 'Brak danych',
-                createdAt: o.createdAt,
-                elapsedMinutes: Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000)
+                total: Number(o.total_price) || 0,
+                totalFormatted: (Number(o.total_price) || 0).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' }),
+                location: o.delivery_address || 'Brak danych',
+                createdAt: o.created_at,
+                elapsedMinutes: Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)
             }));
 
         return {
@@ -181,6 +181,8 @@ export function getStatusDisplay(status: OrderStatus): { label: string; tone: St
     switch (status) {
         case 'new':
             return { label: 'Nowe', tone: 'new' };
+        case 'confirmed':
+            return { label: 'Opłacone', tone: 'new' };
         case 'preparing':
             return { label: 'W przygotowaniu', tone: 'preparing' };
         case 'ready':

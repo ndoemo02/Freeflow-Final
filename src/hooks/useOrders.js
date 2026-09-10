@@ -1,3 +1,4 @@
+import { customerFetch } from '../lib/customerFetch';
 import { useState, useEffect, useCallback } from "react";
 import { getApiUrl } from "../lib/config";
 
@@ -58,7 +59,7 @@ export const useOrders = (options = {}) => {
     if (userId) params.set("user_id", String(userId));
 
     const endpoint = `${getApiUrl("/api/orders")}?${params.toString()}`;
-    const res = await fetch(endpoint, {
+    const res = await customerFetch(endpoint, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -102,7 +103,7 @@ export const useOrders = (options = {}) => {
     setError(null);
 
     try {
-      const res = await fetch(getApiUrl("/api/orders"), {
+      const res = await customerFetch(getApiUrl("/api/orders"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -137,7 +138,7 @@ export const useOrders = (options = {}) => {
     setError(null);
 
     try {
-      const res = await fetch(getApiUrl(`/api/orders/${orderId}`), {
+      const res = await customerFetch(getApiUrl(`/api/orders/${orderId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
