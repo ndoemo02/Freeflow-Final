@@ -1,4 +1,5 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { useAuth } from './auth';
 import { supabase, getAccessToken } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
@@ -37,6 +38,7 @@ export function CartProvider({ children }) {
   const [restaurant, setRestaurant] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submission = useRef(null);
 
   useEffect(() => {
     // Fix #5.6: Wykryj nową sesję po refreshu strony.
@@ -168,6 +170,7 @@ export function CartProvider({ children }) {
 
   const resetCartLocal = (options = {}) => {
     const { clearRestaurant = false, closeDrawer = false, silent = false } = options;
+    submission.current = null;
 
     setCart([]);
     if (clearRestaurant) {
@@ -334,7 +337,6 @@ export function CartProvider({ children }) {
     customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
     delivery_address: deliveryInfo.address || user?.user_metadata?.address || '',
     notes: deliveryInfo.notes || '',
-    created_at: new Date().toISOString(),
   });
 
   const submitOrder = async (deliveryInfo) => {
@@ -366,10 +368,17 @@ export function CartProvider({ children }) {
       const accessToken = await getAccessToken();
       if (!accessToken) throw new Error('Zaloguj się ponownie, aby złożyć zamówienie.');
 
+      // Keep the attempt across failed requests; changed order data starts a new one.
+      // The backend owns created_at, so elapsed time must not change this body.
+      const body = JSON.stringify(orderData);
+      if (!submission.current || submission.current.body !== body) {
+        submission.current = { body, key: crypto.randomUUID() };
+      }
+
       const response = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify(orderData),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}`, 'Idempotency-Key': submission.current.key },
+        body,
       });
 
       if (!response.ok) {

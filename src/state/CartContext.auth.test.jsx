@@ -20,7 +20,7 @@ beforeEach(() => {
   mock.fetch.mockImplementation(async () => new Response(JSON.stringify({ id: 'order-1' })));
   vi.stubGlobal('fetch', mock.fetch);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 async function filledCart() {
   const hook = renderHook(() => useCart(), { wrapper });
@@ -44,7 +44,47 @@ it('manual confirmation reads the current Supabase session and sends its JWT', a
   expect(init.method).toBe('POST');
   expect(new Headers(init.headers).get('Authorization')).toBe('Bearer refreshed-token');
   expect(new Headers(init.headers).get('Content-Type')).toBe('application/json');
+  expect(new Headers(init.headers).get('Idempotency-Key')).toMatch(/^[a-zA-Z0-9_-]{16,128}$/);
   expect(JSON.parse(init.body)).toMatchObject({ total_cents: 2400, items: [{ menu_item_id: 'dish-1', qty: 2 }] });
+});
+
+it.each(['network', 'server'])('keeps the same key and body for a delayed retry after %s failure', async failure => {
+  const { result } = await filledCart();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-11T10:00:00Z'));
+  if (failure === 'network') mock.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+  else mock.fetch.mockResolvedValueOnce(new Response('{}', { status: 503 }));
+  await act(async () => { expect(await result.current.submitOrder({ address: 'Test 1' })).toBe(false); });
+  vi.setSystemTime(new Date('2026-09-11T10:05:00Z'));
+  await act(async () => { await result.current.submitOrder({ address: 'Test 1' }); });
+  const [first, retry] = mock.fetch.mock.calls.map(([, init]) => init);
+  expect(first.headers['Idempotency-Key']).toMatch(/^[a-zA-Z0-9_-]{16,128}$/);
+  expect(retry.headers['Idempotency-Key']).toBe(first.headers['Idempotency-Key']);
+  expect(retry.body).toBe(first.body);
+});
+
+it.each(['delivery', 'quantity'])('uses a new key when %s changes after rejection', async change => {
+  const { result } = await filledCart();
+  mock.fetch.mockResolvedValueOnce(new Response('{}', { status: 400 }));
+  await act(async () => { await result.current.submitOrder({ address: 'Test 1' }); });
+  if (change === 'quantity') await act(async () => result.current.updateQuantity('dish-1', 3));
+  await act(async () => { await result.current.submitOrder({ address: change === 'delivery' ? 'Test 2' : 'Test 1' }); });
+  expect(mock.fetch.mock.calls[1][1].headers['Idempotency-Key'])
+    .not.toBe(mock.fetch.mock.calls[0][1].headers['Idempotency-Key']);
+});
+
+it.each(['success', 'explicit reset'])('uses a new key for another identical order after %s', async outcome => {
+  const { result } = await filledCart();
+  if (outcome === 'explicit reset') mock.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+  await act(async () => { await result.current.submitOrder({}); });
+  if (outcome === 'explicit reset') await act(async () => result.current.resetCartLocal({ clearRestaurant: true }));
+  await act(async () => result.current.addToCart(
+    { id: 'dish-1', name: 'Pierogi', price: 12, quantity: 2 },
+    { id: '11111111-1111-4111-8111-111111111111', name: 'Demo' },
+  ));
+  await act(async () => { await result.current.submitOrder({}); });
+  expect(mock.fetch.mock.calls[1][1].headers['Idempotency-Key'])
+    .not.toBe(mock.fetch.mock.calls[0][1].headers['Idempotency-Key']);
 });
 
 it.each([null, { access_token: '' }])('does not send an order without JWT despite cached user state (%j)', async session => {
