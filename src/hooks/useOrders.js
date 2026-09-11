@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getApiUrl } from "../lib/config";
+import { getAccessToken } from "../lib/supabase";
 
 export const useOrders = (options = {}) => {
   const {
@@ -58,9 +59,11 @@ export const useOrders = (options = {}) => {
     if (userId) params.set("user_id", String(userId));
 
     const endpoint = `${getApiUrl("/api/orders")}?${params.toString()}`;
+    const accessToken = await getAccessToken();
+    if (!accessToken) throw new Error("Zaloguj się ponownie, aby pobrać zamówienia.");
     const res = await fetch(endpoint, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
     });
 
     if (!res.ok) {
@@ -137,9 +140,11 @@ export const useOrders = (options = {}) => {
     setError(null);
 
     try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("Zaloguj się ponownie, aby zmienić status zamówienia.");
       const res = await fetch(getApiUrl(`/api/orders/${orderId}`), {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ status }),
       });
 
