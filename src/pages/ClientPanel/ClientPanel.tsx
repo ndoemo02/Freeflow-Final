@@ -15,7 +15,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../state/auth';
 import { useOrders } from '../../hooks/useOrders';
 import { useConversationStore } from '../../store/useConversationStore';
-import { supabase } from '../../lib/supabase';
+import { supabase, getAccessToken } from '../../lib/supabase';
 import { ROUTES } from '../../app/routeConfig';
 import StarfieldBackground from '../../components/StarfieldBackground';
 import ErrorFallback from '../../components/ErrorFallback';
@@ -368,9 +368,11 @@ export default function ClientPanel() {
             const successUrl = `${origin}/panel/client?section=orders&stripe=success&order_id=${encodeURIComponent(order.id)}&session_id={CHECKOUT_SESSION_ID}`;
             const cancelUrl = `${origin}/panel/client?section=orders&stripe=cancel&order_id=${encodeURIComponent(order.id)}`;
 
+            const accessToken = await getAccessToken();
+            if (!accessToken) throw new Error('Zaloguj się ponownie, aby rozpocząć płatność.');
             const response = await fetch(getApiUrl('/api/payments/checkout-session'), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
                 body: JSON.stringify({
                     order_id: order.id,
                     customer_email: user?.email || null,
@@ -426,10 +428,12 @@ export default function ClientPanel() {
         const finalizeStripePayment = async () => {
             try {
                 setStripeBusyOrderId(orderId);
+                const accessToken = await getAccessToken();
+                if (!accessToken) throw new Error('Zaloguj się ponownie, aby sprawdzić płatność.');
                 const verifyResponse = await fetch(getApiUrl('/api/payments/verify-session'), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ session_id: sessionId }),
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                    body: JSON.stringify({ order_id: orderId, session_id: sessionId }),
                 });
                 const verifyPayload = await verifyResponse.json().catch(() => ({}));
                 if (!verifyResponse.ok || !verifyPayload?.paid) {
