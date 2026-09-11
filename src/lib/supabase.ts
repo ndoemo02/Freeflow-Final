@@ -91,8 +91,9 @@ if (!g.__freeflow_supabase__) g.__freeflow_supabase__ = supabase;
 
 /** Bieżący Supabase access_token (JWT) do nagłówka Authorization: Bearer dla
  * backendowych endpointów owner-scoped (np. GET /api/owner/restaurants). */
-export async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(expectedUserId?: string): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
+  if (expectedUserId && data.session?.user?.id !== expectedUserId) return null;
   return data.session?.access_token ?? null;
 }
 

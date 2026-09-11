@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { useConversationStore } from '../store/useConversationStore';
 import { activeSessionMap } from '../state/ActiveSessionMap';
 import { isCanonicalSessionId } from '../lib/sessionIdContract';
+import { readCheckoutDraft, writeCheckoutDraft, removeCheckoutDraft, CHECKOUT_DRAFT_KEY } from '../lib/checkoutDraft';
 
 const CartContext = createContext();
 
@@ -32,15 +33,63 @@ export function useCart() {
 }
 
 export function CartProvider({ children }) {
-  const { user } = useAuth();
+  const { user, isLoading = false } = useAuth();
   const { push } = useToast();
   const [cart, setCart] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submission = useRef(null);
+  const draft = useRef(null);
+  const owner = useRef(undefined);
+  const blockedLiveSession = useRef(null);
+  const inFlight = useRef(false);
+  const [readyOwner, setReadyOwner] = useState(null);
+  const [checkoutDelivery, setCheckoutDelivery] = useState(null);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const [hasCheckoutDraft, setHasCheckoutDraft] = useState(false);
+  const ownerId = user?.id || '';
+  const liveSessionId = getCartSessionId();
 
   useEffect(() => {
+    if (isLoading) return;
+    const changedOwner = owner.current !== undefined && owner.current !== ownerId;
+    owner.current = ownerId;
+    setReadyOwner(ownerId);
+    if (changedOwner || !ownerId) {
+      removeCheckoutDraft();
+      draft.current = null;
+      submission.current = null;
+      setHasCheckoutDraft(false);
+      setCheckoutDelivery(null);
+      setCheckoutError(null);
+      setCart([]);
+      setRestaurant(null);
+      setIsOpen(false);
+      for (const key of ['freeflow_cart', 'freeflow_cart_restaurant', 'freeflow_cart_session', 'freeflow_cart_owner']) localStorage.removeItem(key);
+      if (changedOwner) {
+        blockedLiveSession.current = getCartSessionId();
+        useConversationStore.getState().resetSession?.();
+      }
+      return;
+    }
+    try {
+      const savedDraft = readCheckoutDraft(ownerId);
+      if (savedDraft) {
+        draft.current = savedDraft;
+        submission.current = savedDraft.submission || null;
+        setCart(savedDraft.cart);
+        setRestaurant(savedDraft.restaurant);
+        setCheckoutDelivery(savedDraft.deliveryInfo || null);
+        setHasCheckoutDraft(true);
+        setIsOpen(true);
+        return;
+      }
+    } catch (error) {
+      setCheckoutError(error.message);
+      setIsOpen(true);
+      return;
+    }
     // Fix #5.6: Wykryj nową sesję po refreshu strony.
     // CartContext persistuje w localStorage, ale backendowa sesja jest NOWA
     // (nowy sessionId). Stare dane koszyka z innej sesji powodują konflikt:
@@ -65,7 +114,8 @@ export function CartProvider({ children }) {
       return;
     }
 
-    const isNewSession = !savedSessionId || (currentSessionId && savedSessionId !== currentSessionId);
+    const isNewSession = localStorage.getItem('freeflow_cart_owner') !== ownerId
+      || !savedSessionId || (currentSessionId && savedSessionId !== currentSessionId);
 
     if (isNewSession) {
       console.log('[CART_SESSION] Nowa sesja — czyszcze stary koszyk z localStorage');
@@ -92,28 +142,92 @@ export function CartProvider({ children }) {
         console.error('Failed to parse restaurant from localStorage', e);
       }
     }
-  }, []);
+  }, [ownerId, isLoading]);
+
+  useEffect(() => useConversationStore.subscribe?.((state, previous) => {
+    if (state.sessionId === previous.sessionId || draft.current) return;
+    blockedLiveSession.current = previous.sessionId;
+    setCart([]);
+    setRestaurant(null);
+    setIsOpen(false);
+    submission.current = null;
+    for (const key of ['freeflow_cart', 'freeflow_cart_restaurant', 'freeflow_cart_session', 'freeflow_cart_owner']) localStorage.removeItem(key);
+  }), []);
 
   useEffect(() => {
+    if (isLoading || !ownerId || readyOwner !== ownerId || draft.current) return;
     if (cart.length > 0) {
+      localStorage.setItem('freeflow_cart_owner', ownerId);
       localStorage.setItem('freeflow_cart', JSON.stringify(cart));
       const sid = getCartSessionId();
       if (sid) localStorage.setItem('freeflow_cart_session', sid);
     } else {
       localStorage.removeItem('freeflow_cart');
     }
-  }, [cart]);
+  }, [cart, ownerId, readyOwner, isLoading]);
 
   useEffect(() => {
+    if (isLoading || !ownerId || readyOwner !== ownerId || draft.current) return;
     if (restaurant) {
       localStorage.setItem('freeflow_cart_restaurant', JSON.stringify(restaurant));
     } else {
       localStorage.removeItem('freeflow_cart_restaurant');
     }
-  }, [restaurant]);
+  }, [restaurant, ownerId, readyOwner, isLoading]);
+
+  useEffect(() => {
+    if (!draft.current || !cart.length || isLoading || readyOwner !== ownerId || draft.current.ownerId !== ownerId) return;
+    const next = { ...draft.current, cart, restaurant, deliveryInfo: checkoutDelivery };
+    try {
+      writeCheckoutDraft(next);
+      draft.current = next;
+    } catch (_) {
+      setCheckoutError('Nie można zapisać checkoutu. Sprawdź dostępność pamięci przeglądarki.');
+    }
+  }, [cart, restaurant, checkoutDelivery, ownerId, readyOwner, isLoading]);
+
+  const beginCheckout = () => {
+    if (draft.current) return true;
+    if (isLoading || !ownerId || owner.current !== ownerId || readyOwner !== ownerId || !cart.length || !restaurant || checkoutError) return false;
+    const next = { version: 1, id: crypto.randomUUID(), ownerId, cart, restaurant,
+      deliveryInfo: checkoutDelivery, submission: submission.current };
+    try {
+      writeCheckoutDraft(next);
+      draft.current = next;
+      setHasCheckoutDraft(true);
+      for (const key of ['freeflow_cart', 'freeflow_cart_restaurant', 'freeflow_cart_session', 'freeflow_cart_owner']) localStorage.removeItem(key);
+      return true;
+    } catch (_) {
+      setCheckoutError('Nie można zapisać checkoutu. Sprawdź dostępność pamięci przeglądarki.');
+      return false;
+    }
+  };
+
+  // Opening a populated cart is the manual handoff; mere SYNC_CART is not.
+  useEffect(() => { if (isOpen) beginCheckout(); }, [isOpen, cart, restaurant, readyOwner]);
+
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key !== CHECKOUT_DRAFT_KEY && event.key !== null) return;
+      // Another tab changed/cleared this checkout. Do not resurrect an older copy.
+      draft.current = null;
+      submission.current = null;
+      setCart([]);
+      setRestaurant(null);
+      setHasCheckoutDraft(false);
+      setCheckoutDelivery(null);
+      blockedLiveSession.current = getCartSessionId();
+      setCheckoutError('Checkout zmienił się w innej karcie. Odśwież stronę przed kontynuowaniem.');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const addToCart = (item, restaurantData) => {
-    if (restaurant && restaurant.id !== restaurantData.id) {
+    if (!ownerId || owner.current !== ownerId || readyOwner !== ownerId || isLoading || inFlight.current || checkoutError) return;
+    blockedLiveSession.current = null;
+    const replacingRestaurant = restaurant && restaurant.id !== restaurantData.id;
+    if (replacingRestaurant) {
       const confirm = window.confirm(
         `Masz już pozycje z ${restaurant.name} w koszyku. Czy chcesz wyczyścić koszyk i dodać pozycję z ${restaurantData.name}?`
       );
@@ -126,16 +240,17 @@ export function CartProvider({ children }) {
     }
 
     const quantityToAdd = item.quantity || 1;
-    const existingIndex = cart.findIndex(cartItem => cartItem.id === item.id);
+    const baseCart = replacingRestaurant ? [] : cart;
+    const existingIndex = baseCart.findIndex(cartItem => cartItem.id === item.id);
 
     if (existingIndex >= 0) {
-      const newCart = [...cart];
+      const newCart = baseCart.map(entry => ({ ...entry }));
       newCart[existingIndex].quantity += quantityToAdd;
       setCart(newCart);
       console.log(`✅ Updated quantity for ${item.name}: +${quantityToAdd} (total: ${newCart[existingIndex].quantity})`);
       push(`Zwiększono ilość: ${item.name} (+${quantityToAdd})`, 'success');
     } else {
-      setCart([...cart, { ...item, quantity: quantityToAdd }]);
+      setCart([...baseCart, { ...item, quantity: quantityToAdd }]);
       console.log(`✅ Added new item to cart: ${item.name} (quantity: ${quantityToAdd})`);
       push(`Dodano do koszyka: ${item.name} (${quantityToAdd}x)`, 'success');
     }
@@ -144,11 +259,12 @@ export function CartProvider({ children }) {
   };
 
   const removeFromCart = (itemId) => {
+    if (inFlight.current) return;
     const newCart = cart.filter(item => item.id !== itemId);
     setCart(newCart);
 
     if (newCart.length === 0) {
-      setRestaurant(null);
+      resetCartLocal({ clearRestaurant: true });
     }
 
     push('Usunięto z koszyka', 'info');
@@ -156,6 +272,7 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (itemId, quantity) => {
+    if (inFlight.current) return;
     if (quantity <= 0) {
       removeFromCart(itemId);
       return;
@@ -169,7 +286,14 @@ export function CartProvider({ children }) {
   };
 
   const resetCartLocal = (options = {}) => {
-    const { clearRestaurant = false, closeDrawer = false, silent = false } = options;
+    const { clearRestaurant = false, closeDrawer = false, silent = false, source = 'manual' } = options;
+    if (source === 'live' && (draft.current || checkoutError || isLoading || readyOwner !== ownerId || owner.current !== ownerId)) return;
+    removeCheckoutDraft();
+    draft.current = null;
+    setHasCheckoutDraft(false);
+    setCheckoutDelivery(null);
+    setCheckoutError(null);
+    blockedLiveSession.current = getCartSessionId();
     submission.current = null;
 
     setCart([]);
@@ -229,6 +353,9 @@ export function CartProvider({ children }) {
   };
 
   const syncCart = (backendItems, restaurantData) => {
+    if (draft.current || checkoutError || isLoading || !ownerId || readyOwner !== ownerId
+      || liveSessionId !== getCartSessionId() || owner.current !== ownerId
+      || (blockedLiveSession.current && blockedLiveSession.current === getCartSessionId())) return;
     console.log('🛒 Syncing cart from Backend:', backendItems, restaurantData);
     if (!backendItems || !Array.isArray(backendItems)) return;
 
@@ -314,6 +441,7 @@ export function CartProvider({ children }) {
     }
 
     finalRestaurantId = restData.id;
+    if (owner.current !== ownerId) throw new Error('Użytkownik zmienił się podczas przygotowania zamówienia.');
     setRestaurant((prev) => ({ ...prev, id: finalRestaurantId, name: restData.name }));
     console.log(`[CART_RESTAURANT_RESOLVE] success id=${finalRestaurantId} name="${restData.name}"`);
     return finalRestaurantId;
@@ -322,7 +450,6 @@ export function CartProvider({ children }) {
   const buildOrderData = (deliveryInfo, restaurantId, status = 'pending') => ({
     user_id: user?.id || null,
     restaurant_id: restaurantId,
-    restaurant_name: restaurant?.name || 'Unknown Restaurant',
     items: cart.map((item) => ({
       menu_item_id: item.id,
       name: item.name,
@@ -346,6 +473,7 @@ export function CartProvider({ children }) {
       push('Musisz być zalogowany, aby złożyć zamówienie', 'error');
       return false;
     }
+    if (inFlight.current || isLoading || readyOwner !== ownerId || checkoutError) return false;
 
     if (cart.length === 0) {
       push('Koszyk jest pusty', 'error');
@@ -357,16 +485,21 @@ export function CartProvider({ children }) {
       return false;
     }
 
+    if (!beginCheckout()) return false;
+    const attemptDraftId = draft.current.id;
+    inFlight.current = true;
     setIsSubmitting(true);
 
     try {
       const finalRestaurantId = await resolveRestaurantId();
+      if (owner.current !== ownerId || draft.current?.id !== attemptDraftId) return false;
       const orderData = buildOrderData(deliveryInfo, finalRestaurantId);
       const apiUrl = getApiUrl('/api/orders');
       console.log('🛒 Submitting order to:', apiUrl);
 
-      const accessToken = await getAccessToken();
+      const accessToken = await getAccessToken(ownerId);
       if (!accessToken) throw new Error('Zaloguj się ponownie, aby złożyć zamówienie.');
+      if (owner.current !== ownerId || draft.current?.id !== attemptDraftId) return false;
 
       // Keep the attempt across failed requests; changed order data starts a new one.
       // The backend owns created_at, so elapsed time must not change this body.
@@ -374,6 +507,10 @@ export function CartProvider({ children }) {
       if (!submission.current || submission.current.body !== body) {
         submission.current = { body, key: crypto.randomUUID() };
       }
+      const savedAttempt = { ...draft.current, deliveryInfo, submission: submission.current };
+      writeCheckoutDraft(savedAttempt);
+      draft.current = savedAttempt;
+      setCheckoutDelivery(deliveryInfo);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -393,6 +530,7 @@ export function CartProvider({ children }) {
       }
 
       const data = await response.json();
+      if (owner.current !== ownerId || draft.current?.id !== attemptDraftId) return false;
       push('Zamówienie złożone pomyślnie! 🎉', 'success');
       resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true });
       return data;
@@ -401,15 +539,17 @@ export function CartProvider({ children }) {
       push(`Błąd: ${error.message}`, 'error');
       return false;
     } finally {
+      inFlight.current = false;
       setIsSubmitting(false);
     }
   };
 
+  const canViewCart = !isLoading && !!ownerId && readyOwner === ownerId;
   const value = {
-    cart,
-    restaurant,
-    total,
-    isOpen,
+    cart: canViewCart ? cart : [],
+    restaurant: canViewCart ? restaurant : null,
+    total: canViewCart ? total : 0,
+    isOpen: canViewCart && isOpen,
     isSubmitting,
     addToCart,
     removeFromCart,
@@ -419,7 +559,13 @@ export function CartProvider({ children }) {
     syncCart,
     submitOrder,
     setIsOpen,
-    itemCount: cart.reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0)
+    setLiveIsOpen: (open) => { if (!draft.current) setIsOpen(open); },
+    beginCheckout,
+    hasCheckoutDraft: canViewCart && hasCheckoutDraft,
+    checkoutDelivery: canViewCart ? checkoutDelivery : null,
+    setCheckoutDelivery: (value) => { if (!inFlight.current && owner.current === ownerId) setCheckoutDelivery(value); },
+    checkoutError: canViewCart ? checkoutError : null,
+    itemCount: canViewCart ? cart.reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0) : 0
   };
 
   return (

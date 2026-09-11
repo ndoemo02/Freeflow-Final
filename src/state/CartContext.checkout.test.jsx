@@ -1,0 +1,216 @@
+import React from 'react';
+import { act, cleanup, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+const mock = vi.hoisted(() => ({
+  auth: { user: { id: 'a' }, isLoading: false }, state: { cart: null, cartSyncKey: 0 },
+  fetch: vi.fn(), token: vi.fn(), listener: null,
+}));
+vi.mock('./auth', () => ({ useAuth: () => mock.auth }));
+vi.mock('../lib/supabase', () => ({ supabase: {}, getAccessToken: mock.token }));
+vi.mock('../components/Toast', () => ({ useToast: () => ({ push: vi.fn() }) }));
+vi.mock('../lib/config', () => ({ getApiUrl: path => path }));
+vi.mock('../store/useConversationStore', () => ({ useConversationStore: { getState: () => mock.state, setState: vi.fn(),
+  subscribe: fn => { mock.listener = fn; return () => { mock.listener = null; }; },
+} }));
+vi.mock('./ActiveSessionMap', () => ({ activeSessionMap: { delete: vi.fn() } }));
+import { CartProvider, useCart } from './CartContext';
+import { CHECKOUT_DRAFT_KEY } from '../lib/checkoutDraft';
+import { useActionDispatcher } from '../hooks/useActionDispatcher';
+const wrapper = ({ children }) => <CartProvider>{children}</CartProvider>;
+const restaurant = { id: '11111111-1111-4111-8111-111111111111', name: 'Demo' };
+const items = [{ id: 'dish-1', name: 'Pierogi', price: 12, quantity: 2 }];
+const delivery = { name: 'Test', phone: '123', address: 'Test 1', notes: 'Dzwonek' };
+const read = () => JSON.parse(localStorage.getItem(CHECKOUT_DRAFT_KEY));
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem('amber-session-id', 'sess_live_a');
+  mock.auth = { user: { id: 'a' }, isLoading: false };
+  mock.state = { cart: null, cartSyncKey: 0 };
+  mock.fetch.mockReset().mockImplementation(async () => new Response(JSON.stringify({ id: 'order-1' })));
+  mock.token.mockReset().mockResolvedValue('jwt-a');
+  vi.stubGlobal('fetch', mock.fetch);
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+async function handoff() {
+  const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
+  await act(async () => hook.result.current.dispatch([
+    { type: 'SYNC_CART', payload: { items, restaurant } },
+    { type: 'SHOW_CART', payload: { mode: 'checkout' } },
+  ], { tool: 'open_checkout' }));
+  await act(async () => hook.result.current.setCheckoutDelivery(delivery));
+  expect(hook.result.current.hasCheckoutDraft).toBe(true);
+  return hook;
+}
+function remount(hook) {
+  hook.unmount();
+  localStorage.setItem('amber-session-id', 'sess_after_reload');
+  return renderHook(() => useCart(), { wrapper });
+}
+
+it('hands off the visible Live cart and restores it after reload under a new session', async () => {
+  const hook = await handoff();
+  const before = hook.result.current.cart;
+  const next = remount(hook);
+  expect(next.result.current.cart).toEqual(before);
+  expect(next.result.current.restaurant).toEqual(restaurant);
+  expect(next.result.current.checkoutDelivery).toEqual(delivery);
+  expect(next.result.current.isOpen).toBe(true);
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it('restores an owned checkout even if Live ghost guard signals that its conversation was cleared', async () => {
+  const hook = await handoff();
+  mock.state = { cart: null, cartSyncKey: 10 };
+  const next = remount(hook);
+  expect(next.result.current.cart).toHaveLength(1);
+  await act(async () => next.result.current.resetCartLocal({ source: 'live', clearRestaurant: true }));
+  await act(async () => next.result.current.syncCart([], null));
+  expect(next.result.current.cart).toHaveLength(1);
+});
+
+it('ignores late Live mutation and completion after handoff', async () => {
+  const hook = await handoff();
+  await act(async () => hook.result.current.dispatch([
+    { type: 'SYNC_CART', payload: { items: [{ ...items[0], quantity: 9 }], restaurant } },
+    { type: 'CLEAR_CART' },
+  ], {}, undefined, [{ type: 'EVENT_ORDER_COMPLETED' }]));
+  expect(hook.result.current.cart[0].quantity).toBe(2);
+  expect(read().cart[0].quantity).toBe(2);
+});
+
+it('persists edits and a failed attempt, then retries exactly the same order after reload', async () => {
+  const hook = await handoff();
+  await act(async () => hook.result.current.updateQuantity('dish-1', 3));
+  mock.fetch.mockRejectedValueOnce(new TypeError('lost response'));
+  await act(async () => { expect(await hook.result.current.submitOrder(delivery)).toBe(false); });
+  const first = mock.fetch.mock.calls[0][1];
+  expect(read().submission.key).toBe(first.headers['Idempotency-Key']);
+  const next = remount(hook);
+  mock.token.mockResolvedValue('jwt-refreshed');
+  await act(async () => { await next.result.current.submitOrder(next.result.current.checkoutDelivery); });
+  const retry = mock.fetch.mock.calls[1][1];
+  expect(retry.headers['Idempotency-Key']).toBe(first.headers['Idempotency-Key']);
+  expect(retry.headers.Authorization).toBe('Bearer jwt-refreshed');
+  expect(retry.body).toBe(first.body);
+  expect(read()).toBeNull();
+  expect(remount(next).result.current.cart).toEqual([]);
+});
+
+it.each(['clear', 'remove last item'])('does not revive a cancelled checkout after %s, and gives a new order a new key', async action => {
+  const hook = await handoff();
+  mock.fetch.mockRejectedValueOnce(new TypeError('lost response'));
+  await act(async () => { await hook.result.current.submitOrder(delivery); });
+  const oldKey = read().submission.key;
+  await act(async () => action === 'clear'
+    ? hook.result.current.resetCartLocal({ clearRestaurant: true, closeDrawer: true })
+    : hook.result.current.removeFromCart('dish-1'));
+  await act(async () => hook.result.current.syncCart(items, restaurant));
+  expect(hook.result.current.cart).toEqual([]);
+  expect(read()).toBeNull();
+  const next = remount(hook);
+  expect(next.result.current.cart).toEqual([]);
+  await act(async () => next.result.current.addToCart(items[0], restaurant));
+  await act(async () => { await next.result.current.submitOrder(delivery); });
+  expect(mock.fetch.mock.calls[1][1].headers['Idempotency-Key']).not.toBe(oldKey);
+});
+
+it('waits for auth hydration and never exposes a draft to another user', async () => {
+  const hook = await handoff();
+  mock.auth = { user: null, isLoading: true };
+  const next = remount(hook);
+  expect(next.result.current.cart).toEqual([]);
+  expect(read().ownerId).toBe('a');
+  mock.auth = { user: { id: 'b' }, isLoading: false };
+  next.rerender();
+  expect(next.result.current.cart).toEqual([]);
+  expect(read()).toBeNull();
+});
+
+it.each([null, { id: 'b' }])('clears state on logout/account switch (%j)', async user => {
+  const hook = await handoff();
+  mock.auth = { user, isLoading: false };
+  hook.rerender();
+  expect(hook.result.current.cart).toEqual([]);
+  expect(read()).toBeNull();
+  mock.auth = { user: { id: 'a' }, isLoading: false };
+  hook.rerender();
+  expect(hook.result.current.cart).toEqual([]);
+});
+
+it('does not POST if the attempt cannot be persisted', async () => {
+  const hook = await handoff();
+  vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+  await act(async () => { expect(await hook.result.current.submitOrder(delivery)).toBe(false); });
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it('does not POST when the owner changes while obtaining the JWT', async () => {
+  const hook = await handoff();
+  let release;
+  mock.token.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+  let pending;
+  await act(async () => { pending = hook.result.current.submitOrder(delivery); });
+  mock.auth = { user: { id: 'b' }, isLoading: false };
+  hook.rerender();
+  await act(async () => { release('jwt-b'); await pending; });
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it('restores the same user draft only after auth hydration completes', async () => {
+  const hook = await handoff();
+  mock.auth = { user: null, isLoading: true };
+  const next = remount(hook);
+  expect(next.result.current.cart).toEqual([]);
+  mock.auth = { user: { id: 'a' }, isLoading: false };
+  next.rerender();
+  expect(next.result.current.cart[0].quantity).toBe(2);
+});
+
+it('isolates transient Live carts between sessions and ignores an old callback', async () => {
+  const hook = renderHook(() => useCart(), { wrapper });
+  await act(async () => hook.result.current.syncCart(items, restaurant));
+  expect(hook.result.current.hasCheckoutDraft).toBe(false);
+  const oldSync = hook.result.current.syncCart;
+  await act(async () => {
+    localStorage.setItem('amber-session-id', 'sess_live_b');
+    mock.listener({ sessionId: 'sess_live_b' }, { sessionId: 'sess_live_a' });
+  });
+  expect(hook.result.current.cart).toEqual([]);
+  await act(async () => oldSync(items, restaurant));
+  expect(hook.result.current.cart).toEqual([]);
+  await act(async () => hook.result.current.syncCart(items, restaurant));
+  expect(hook.result.current.cart).toHaveLength(1);
+});
+
+it('keeps an owned checkout when Live changes sessions without reload', async () => {
+  const hook = await handoff();
+  await act(async () => {
+    localStorage.setItem('amber-session-id', 'sess_live_b');
+    mock.listener({ sessionId: 'sess_live_b' }, { sessionId: 'sess_live_a' });
+  });
+  expect(hook.result.current.cart).toHaveLength(1);
+  expect(read().ownerId).toBe('a');
+});
+
+it('does not resurrect a checkout cleared in another tab', async () => {
+  const hook = await handoff();
+  await act(async () => {
+    localStorage.removeItem(CHECKOUT_DRAFT_KEY);
+    window.dispatchEvent(new StorageEvent('storage', { key: CHECKOUT_DRAFT_KEY, newValue: null }));
+  });
+  expect(hook.result.current.cart).toEqual([]);
+  await act(async () => { expect(await hook.result.current.submitOrder(delivery)).toBe(false); });
+  expect(mock.fetch).not.toHaveBeenCalled();
+  expect(read()).toBeNull();
+});
+
+it('blocks damaged persisted attempts instead of silently assigning a fresh key', async () => {
+  const hook = await handoff();
+  const damaged = { ...read(), submission: { body: '{}', key: '' } };
+  localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify(damaged));
+  const next = remount(hook);
+  expect(next.result.current.checkoutError).toBeTruthy();
+  expect(next.result.current.isOpen).toBe(true);
+  await act(async () => { expect(await next.result.current.submitOrder(delivery)).toBe(false); });
+  expect(mock.fetch).not.toHaveBeenCalled();
+});

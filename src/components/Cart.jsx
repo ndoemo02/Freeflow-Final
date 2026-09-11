@@ -32,7 +32,7 @@ function formatCartPrice(value) {
 }
 
 export default function Cart() {
-  const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen, syncCart } = useCart();
+  const { cart, restaurant: activeRestaurant, total, isOpen, isSubmitting, removeFromCart, updateQuantity, clearCart, submitOrder, setIsOpen, syncCart, beginCheckout, checkoutDelivery, setCheckoutDelivery, checkoutError } = useCart();
 
   const restaurantLabel = activeRestaurant
     ? (typeof activeRestaurant === 'object'
@@ -64,7 +64,7 @@ export default function Cart() {
     };
   }, [user?.user_metadata]);
 
-  const [deliveryInfo, setDeliveryInfo] = useState({
+  const [localDeliveryInfo, setLocalDeliveryInfo] = useState({
     name: profileDefaults.name || '',
     phone: profileDefaults.phone || '',
     address: profileDefaults.address || '',
@@ -72,6 +72,12 @@ export default function Cart() {
   });
   const [deliveryTouched, setDeliveryTouched] = useState(false);
   const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
+  const deliveryInfo = checkoutDelivery || localDeliveryInfo;
+  const setDeliveryInfo = (next) => {
+    const value = typeof next === 'function' ? next(deliveryInfo) : next;
+    setLocalDeliveryInfo(value);
+    setCheckoutDelivery(value);
+  };
 
   React.useEffect(() => {
     const hasUserDefaults = !!(profileDefaults.name || profileDefaults.phone || profileDefaults.address);
@@ -169,6 +175,9 @@ export default function Cart() {
   }, [phase]);
 
   const isCartVisible = isOpen || (phase === 'checkout' && !closedInCheckout);
+  React.useEffect(() => {
+    if (isCartVisible && cart.length && activeRestaurant) beginCheckout();
+  }, [isCartVisible, cart, activeRestaurant, beginCheckout]);
 
   // Fix #5.7: Sync store cart → local CartContext.
   // Uses cartSyncKey (monotonic counter) as the primary trigger.
@@ -387,6 +396,10 @@ export default function Cart() {
                 </div>
 
                 {/* Cart Items */}
+                {checkoutError && <div role="alert" className="px-6 py-3 text-sm text-red-400">
+                  <p>{checkoutError}</p>
+                  <button type="button" onClick={handleClearCart} disabled={isSubmitting} className="underline">Wyczyść koszyk</button>
+                </div>}
                 <div className="p-6 max-h-[400px] overflow-y-auto">
                   {cart.length === 0 ? (
                     <div className="text-center py-12">
@@ -565,7 +578,7 @@ export default function Cart() {
                       <div className="flex-1" />
                       <button
                         type="button"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || !!checkoutError}
                         onClick={() => {
                           if (!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address) {
                             alert("Uzupełnij dane dostawy:\n- Imię i nazwisko\n- Telefon\n- Adres");

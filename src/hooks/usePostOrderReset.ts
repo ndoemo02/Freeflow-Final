@@ -12,7 +12,7 @@ export function usePostOrderReset() {
 
     const cart = useCart() as any;
     const resetCartLocal = cart?.resetCartLocal;
-    const setIsOpen = cart?.setIsOpen;
+    const setIsOpen = cart?.setLiveIsOpen || cart?.setIsOpen;
 
     const prevPhaseRef = useRef<string>(conversationPhase);
     const resetDoneForKeyRef = useRef<string | null>(null);
@@ -50,7 +50,7 @@ export function usePostOrderReset() {
 
         setTimeout(() => {
             if (resetCartLocal) {
-                resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true });
+                resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: true, source: 'live' });
                 console.log('[usePostOrderReset] Cart reset locally');
             }
         }, 300);

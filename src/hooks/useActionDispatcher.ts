@@ -42,7 +42,7 @@ export function useActionDispatcher() {
     const lastSyncKeyRef = useRef<string | null>(null);
 
     const syncCart = cart?.syncCart;
-    const setIsOpen = cart?.setIsOpen;
+    const setIsOpen = cart?.setLiveIsOpen || cart?.setIsOpen;
     const resetCartLocal = cart?.resetCartLocal;
     const push = toast?.push;
 
@@ -100,7 +100,7 @@ export function useActionDispatcher() {
 
                     case 'CLEAR_CART':
                         if (resetCartLocal) {
-                            resetCartLocal({ clearRestaurant: false, closeDrawer: false, silent: true });
+                            resetCartLocal({ clearRestaurant: false, closeDrawer: false, silent: true, source: 'live' });
                             // Also clear conversation store cart to prevent sync re-population.
                             // Cart.jsx sync effect would otherwise detect cart.length=0,
                             // read stale storeCart items, and re-populate CartContext.
@@ -163,7 +163,7 @@ export function useActionDispatcher() {
                 if (evt.type === 'EVENT_ORDER_COMPLETED') {
                     window.dispatchEvent(new CustomEvent('freeflow:orderCompleted', { detail: evt.payload }));
                     if (resetCartLocal) {
-                        resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: false });
+                        resetCartLocal({ clearRestaurant: true, closeDrawer: true, silent: false, source: 'live' });
                     }
                     console.log(`${fnTag} EVENT_ORDER_COMPLETED dispatched:`, evt.payload);
                 }

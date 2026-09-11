@@ -16,7 +16,7 @@ const wrapper = ({ children }) => <CartProvider>{children}</CartProvider>;
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
-  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'current-token' } } });
+  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'current-token', user: { id: 'customer-a' } } } });
   mock.fetch.mockImplementation(async () => new Response(JSON.stringify({ id: 'order-1' })));
   vi.stubGlobal('fetch', mock.fetch);
 });
@@ -35,7 +35,7 @@ async function filledCart() {
 it('manual confirmation reads the current Supabase session and sends its JWT', async () => {
   const { result } = await filledCart();
   // Token changes after render: submission must read the session at click time.
-  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'refreshed-token' } } });
+  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'refreshed-token', user: { id: 'customer-a' } } } });
   await act(async () => { expect(await result.current.submitOrder({})).toEqual({ id: 'order-1' }); });
   expect(mock.getSession).toHaveBeenCalledTimes(1);
   expect(mock.fetch).toHaveBeenCalledTimes(1);
@@ -103,8 +103,15 @@ it('preserves the cart after server rejection and reads a fresh JWT for an expli
   await act(async () => { expect(await result.current.submitOrder({})).toBe(false); });
   expect(result.current.cart).toHaveLength(1);
   expect(mock.fetch).toHaveBeenCalledTimes(1);
-  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'next-token' } } });
+  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'next-token', user: { id: 'customer-a' } } } });
   await act(async () => { await result.current.submitOrder({}); });
   expect(mock.getSession).toHaveBeenCalledTimes(2);
   expect(new Headers(mock.fetch.mock.calls[1][1].headers).get('Authorization')).toBe('Bearer next-token');
+});
+
+it('rejects a fresh SDK token for another owner even before React receives the auth event', async () => {
+  const { result } = await filledCart();
+  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'jwt-b', user: { id: 'customer-b' } } } });
+  await act(async () => { expect(await result.current.submitOrder({})).toBe(false); });
+  expect(mock.fetch).not.toHaveBeenCalled();
 });

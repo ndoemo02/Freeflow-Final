@@ -12,6 +12,7 @@ type User = {
 
 type AuthContextType = {
   user: User
+  isLoading: boolean
   setUser: (user: User) => void
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, options?: { qualityEnabled?: boolean }) => Promise<void>
@@ -23,6 +24,7 @@ const Ctx = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const mapAuthUser = (u: any): User =>
     u
@@ -36,27 +38,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       : null
 
   useEffect(() => {
+    let active = true
+    let authEventReceived = false
     // initial session
     supabase.auth.getSession().then(({ data }: any) => {
+      if (!active || authEventReceived) return
       const u = data.session?.user
       setUser(mapAuthUser(u))
+      setIsLoading(false)
       if (u?.id && data.session?.access_token) {
         void syncPendingSignupConsent(u.id, data.session.access_token).catch((error) => {
           console.warn('[CONSENT_SIGNUP_SYNC]', error?.message || 'sync_failed')
         })
       }
+    }).catch(() => {
+      if (active && !authEventReceived) {
+        setUser(null)
+        setIsLoading(false)
+      }
     })
     // listen for auth state changes
     const { data: sub } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
+      if (!active) return
+      authEventReceived = true
       const u = session?.user
       setUser(mapAuthUser(u))
+      setIsLoading(false)
       if (u?.id && session?.access_token) {
         void syncPendingSignupConsent(u.id, session.access_token).catch((error) => {
           console.warn('[CONSENT_SIGNUP_SYNC]', error?.message || 'sync_failed')
         })
       }
     })
-    return () => sub.subscription.unsubscribe()
+    return () => { active = false; sub.subscription.unsubscribe() }
   }, [])
 
   async function signIn(email: string, password: string) {
@@ -125,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const value: AuthContextType = { user, setUser, signIn, signUp, signInWithGoogle, signOut }
+  const value: AuthContextType = { user, isLoading, setUser, signIn, signUp, signInWithGoogle, signOut }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
