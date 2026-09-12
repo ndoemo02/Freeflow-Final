@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
-import { AuthProvider, useAuth } from "./state/auth";
+import { AuthProvider } from "./state/auth";
 import { useUI } from "./state/ui";
 import { ToastProvider } from "./components/Toast";
 import { CartProvider } from "./state/CartContext";
@@ -22,7 +22,7 @@ import BottomTabBar from "./components/BottomTabBar";
 import { ttsManager } from "./tts/ttsManager";
 import { lazy, Suspense, useEffect } from "react";
 import { ROUTES, ROUTE_ALIASES } from "./app/routeConfig";
-import { canAccessWorkspacePanels } from "./lib/accessControl";
+import { WorkspaceAccessRoute } from "./components/WorkspaceAccessRoute";
 
 const UiLab = lazy(() => import("./pages/UiLab"));
 
@@ -47,23 +47,6 @@ function OrdersRouteRedirect() {
     console.log("[NAV_FIX] orders route -> /panel/client?section=orders");
   }, []);
   return <Navigate to={`${ROUTES.PANEL_CLIENT}?section=orders`} replace />;
-}
-
-function WorkspaceAccessRoute({ children }: { children: JSX.Element }) {
-  const { user } = useAuth();
-
-  if (!user?.id) {
-    return <Navigate to={ROUTES.HOME} replace />;
-  }
-
-  if (!canAccessWorkspacePanels(user)) {
-    console.warn("[WORKSPACE_ACCESS_DENIED]", {
-      email: user?.email || null,
-    });
-    return <Navigate to={ROUTES.PANEL_CLIENT} replace />;
-  }
-
-  return children;
 }
 
 function AppContent() {

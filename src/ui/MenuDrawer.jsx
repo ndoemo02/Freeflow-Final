@@ -6,7 +6,7 @@ import { useAuth } from "../state/auth";
 import { useCart } from "../state/CartContext";
 import { useConversationStore } from "../store/useConversationStore";
 import { getUserRole } from "../lib/menuBuilder";
-import { canAccessWorkspacePanels } from "../lib/accessControl";
+import { useWorkspaceAccess } from "../hooks/useWorkspaceAccess";
 import { ROUTES, FEATURE_FLAGS, isRouteEnabled } from "../app/routeConfig";
 
 const Icon = ({ name, size = 15 }) => {
@@ -156,7 +156,7 @@ export default function MenuDrawer() {
   const { setIsOpen: setCartOpen, itemCount } = useCart();
   const clearHomeContext = useConversationStore((s) => s.clearHomeContext);
   const userRole = getUserRole(user);
-  const hasWorkspaceAccess = canAccessWorkspacePanels(user);
+  const { allowed: hasWorkspaceAccess } = useWorkspaceAccess();
   const clearPresentation = useUI((s) => s.clearPresentation);
 
   useEffect(() => {
@@ -166,6 +166,9 @@ export default function MenuDrawer() {
   }, [isOpen, close]);
 
   const [workspaceOpen, setWorkspaceOpen] = useState(hasWorkspaceAccess);
+  useEffect(() => {
+    setWorkspaceOpen(hasWorkspaceAccess);
+  }, [hasWorkspaceAccess]);
 
   const displayName = user?.email?.split("@")[0] || null;
   const roleLabel = userRole === "admin"
@@ -307,7 +310,7 @@ export default function MenuDrawer() {
               </button>
 
               <AnimatePresence initial={false}>
-                {workspaceOpen && (
+                {hasWorkspaceAccess && workspaceOpen && (
                   <motion.div
                     key="workspace-items"
                     initial={{ height: 0, opacity: 0 }}
