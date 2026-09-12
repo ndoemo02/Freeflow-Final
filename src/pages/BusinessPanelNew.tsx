@@ -37,7 +37,7 @@ function OrderCard({
     }, [order.created_at]);
 
     // Map the status locally for KDS rendering logic
-    const mappedStatus = (order.status === 'pending' || order.status === 'new') ? 'new'
+    const mappedStatus = (order.status === 'pending' || order.status === 'new' || order.status === 'confirmed') ? 'new'
         : order.status === 'preparing' ? 'preparing'
             : (order.status === 'ready' || order.status === 'completed') ? 'ready'
                 : 'completed';
@@ -249,7 +249,7 @@ export default function BusinessPanelNew() {
         return [
             {
                 title: 'NOWE',
-                orders: filteredOrders.filter(o => o.status === 'new' || o.status === 'pending'),
+                orders: filteredOrders.filter(o => o.status === 'new' || o.status === 'pending' || o.status === 'confirmed'),
                 color: 'from-orange-500 to-orange-600'
             },
             {
