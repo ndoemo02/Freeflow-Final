@@ -1,5 +1,6 @@
 // Explicitly gated single-session capture. No consumer endpoint or automatic capture.
-// In-memory only, bounded, no audio payloads or credentials.
+// Bounded memory export plus separately enabled best-effort persistence.
+import { persistTraceEvent } from './tracelabPersistence';
 function allowed(runId: string, sessionId: string, recording = true): boolean {
   if (import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG !== '1' || !runId || !sessionId) return false;
   if (import.meta.env.DEV) return true;
@@ -69,6 +70,7 @@ export function recordLiveCartAudit(sessionId: string | null | undefined, stage:
       payload: { ...payload, collector_id: sink.collector_id, sequence: sink.sequence } }, redact));
     sink.events.push(event);
     if (sink.events.length > 300) { sink.events.shift(); sink.truncated = true; }
+    if (import.meta.env.VITE_FREEFLOW_TRACELAB_PERSIST === '1') void persistTraceEvent(event);
   } catch { /* diagnostics must never affect ordering */ }
 }
 
