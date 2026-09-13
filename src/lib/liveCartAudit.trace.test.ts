@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { recordLiveCartAudit, exportLiveCartAuditRun } from './liveCartAudit';
+import { recordLiveCartAudit, exportLiveCartAuditRun, startLiveCartAuditRun, stopLiveCartAuditRun, installLiveCartAuditControls } from './liveCartAudit';
 const sink = () => (window as any).__FREEFLOW_CART_AUDIT__;
 beforeEach(() => {
   vi.stubEnv('DEV', true); vi.stubEnv('VITE_FREEFLOW_TRACELAB_DEBUG', '1');
   (window as any).__FREEFLOW_CART_AUDIT__ = { run_id: 'run', sessionId: 'session', events: [] };
 });
-afterEach(() => { delete (window as any).__FREEFLOW_CART_AUDIT__; vi.unstubAllEnvs(); });
+afterEach(() => { delete (window as any).__FREEFLOW_CART_AUDIT__; delete (window as any).__FREEFLOW_TRACELAB__; vi.unstubAllEnvs(); });
 it('blocks production and absent debug flag even when a consumer sets the global', () => {
   vi.stubEnv('DEV', false);
   recordLiveCartAudit('session', 'tool_selected', {});
@@ -38,4 +38,29 @@ it('correlates a rejected draft sync to incoming cart while retaining stale visi
   recordLiveCartAudit('session', 'conversation_store_applied', { request_id: 'r', turn_id: 't', cart: incoming });
   recordLiveCartAudit('session', 'cart_sync_attempt', { incoming, visible: { items: [] }, draft_active: true });
   expect(sink().events.at(-1)).toMatchObject({ request_id: 'r', payload: { draft_active: true, visible: { items: [] } } });
+});
+it('production requires the pinned window and manual start, then can stop and export after expiry', () => {
+  vi.stubEnv('DEV', false);
+  installLiveCartAuditControls();
+  expect((window as any).__FREEFLOW_TRACELAB__).toBeUndefined();
+  vi.stubEnv('VITE_FREEFLOW_TRACELAB_PRODUCTION_CAPTURE', '1');
+  vi.stubEnv('VITE_LIVE_CART_AUDIT_RUN_ID', 'run'); vi.stubEnv('VITE_LIVE_CART_AUDIT_SESSION_ID', 'session');
+  vi.stubEnv('VITE_LIVE_CART_AUDIT_START_AT', new Date(Date.now() - 1000).toISOString());
+  vi.stubEnv('VITE_LIVE_CART_AUDIT_EXPIRES_AT', new Date(Date.now() + 10000).toISOString());
+  recordLiveCartAudit('session', 'tool_selected', {});
+  expect(sink().events).toHaveLength(0); // old global alone is not a production start
+  installLiveCartAuditControls();
+  expect(startLiveCartAuditRun('wrong', 'session')).toBe(false);
+  expect(startLiveCartAuditRun('run', 'other')).toBe(false);
+  expect((window as any).__FREEFLOW_TRACELAB__.start('run', 'session')).toBe(true);
+  recordLiveCartAudit('session', 'tool_selected', { inlineData: { data: 'pcm-bytes' }, note: 'Bearer credential-value' });
+  recordLiveCartAudit('other', 'tool_selected', {});
+  expect(sink().events).toHaveLength(1);
+  expect(stopLiveCartAuditRun('run')).toBe(true);
+  recordLiveCartAudit('session', 'tool_selected', {});
+  expect(sink().events).toHaveLength(1);
+  vi.stubEnv('VITE_LIVE_CART_AUDIT_EXPIRES_AT', new Date(Date.now() - 100).toISOString());
+  const run = exportLiveCartAuditRun('run')!;
+  expect(run).not.toContain('pcm-bytes'); expect(run).not.toContain('credential-value');
+  expect(startLiveCartAuditRun('run', 'session')).toBe(false);
 });

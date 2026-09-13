@@ -1,5 +1,32 @@
-// Local debug build only. Reuses the existing collector; no production consumer endpoint.
+// Explicitly gated single-session capture. No consumer endpoint or automatic capture.
 // In-memory only, bounded, no audio payloads or credentials.
+function allowed(runId: string, sessionId: string, recording = true): boolean {
+  if (import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG !== '1' || !runId || !sessionId) return false;
+  if (import.meta.env.DEV) return true;
+  const start = Date.parse(import.meta.env.VITE_LIVE_CART_AUDIT_START_AT || '');
+  const end = Date.parse(import.meta.env.VITE_LIVE_CART_AUDIT_EXPIRES_AT || '');
+  return import.meta.env.VITE_FREEFLOW_TRACELAB_PRODUCTION_CAPTURE === '1'
+    && runId === import.meta.env.VITE_LIVE_CART_AUDIT_RUN_ID
+    && sessionId === import.meta.env.VITE_LIVE_CART_AUDIT_SESSION_ID
+    && Number.isFinite(start) && Number.isFinite(end) && end > start && end - start <= 30 * 60 * 1000
+    && (!recording || (Date.now() >= start && Date.now() < end));
+}
+const redact = (key: string, value: any) => /token|authorization|cookie|secret|password|api.?key|access.?key|private.?key|credential|base64|pcm|audio|inlineData/i.test(key) ? '[redacted]'
+  : typeof value === 'string' ? value.replace(/Bearer\s+[^\s"']+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[redacted]') : value;
+
+export function startLiveCartAuditRun(runId: string, sessionId: string): boolean {
+  if (!allowed(runId, sessionId)) return false;
+  (window as any).__FREEFLOW_CART_AUDIT__ = { run_id: runId, sessionId, events: [], stopped: false,
+    started: true, sequence: 0, collector_id: crypto.randomUUID() };
+  return true;
+}
+export function stopLiveCartAuditRun(runId: string): boolean {
+  const sink = (window as any).__FREEFLOW_CART_AUDIT__;
+  if (sink?.run_id !== runId || !allowed(runId, sink.sessionId, false)) return false;
+  sink.stopped = true;
+  return true;
+}
+
 export function auditCartSnapshot(cart: any) {
   const items = Array.isArray(cart) ? cart : cart?.items;
   return { items: (Array.isArray(items) ? items : []).map((i: any) => ({
@@ -13,10 +40,10 @@ export function auditCartSnapshot(cart: any) {
 export function recordLiveCartAudit(sessionId: string | null | undefined, stage: string, data: Record<string, unknown>) {
   try {
     const sink = (window as any).__FREEFLOW_CART_AUDIT__;
-    if (!import.meta.env.DEV || import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG !== '1'
-      || !sessionId || !sink?.run_id || sink?.sessionId !== sessionId || !Array.isArray(sink.events)) return;
+    if (!sessionId || !allowed(sink?.run_id, sessionId) || sink?.sessionId !== sessionId || !Array.isArray(sink.events)
+      || sink.stopped || (!import.meta.env.DEV && sink.started !== true)) return;
     let { turn_id = null, request_id = null, ...payload } = data;
-    if (!request_id && ['cart_sync_attempt', 'ui_cart_committed'].includes(stage)) {
+    if (!request_id && ['conversation_store_applied', 'cart_sync_attempt', 'ui_cart_committed'].includes(stage)) {
       // Correlate only an exact, unique snapshot already observed in this run.
       // Never attach the most recent request merely because it happened last.
       const key = (cart: any) => JSON.stringify(auditCartSnapshot(cart).items.map((i: any) =>
@@ -35,9 +62,11 @@ export function recordLiveCartAudit(sessionId: string | null | undefined, stage:
         payload = { ...payload, trace_correlation: 'unique_cart_snapshot' };
       }
     }
+    sink.collector_id ||= crypto.randomUUID();
+    sink.sequence = (sink.sequence || 0) + 1;
     const event = JSON.parse(JSON.stringify({ run_id: sink.run_id, session_id: sessionId, turn_id, request_id,
-      source: 'frontend', event: stage, timestamp: Date.now(), payload },
-      (key, value) => /token|authorization|cookie|secret|password|base64|pcm/i.test(key) ? '[redacted]' : value));
+      source: 'frontend', event: stage, timestamp: Date.now(),
+      payload: { ...payload, collector_id: sink.collector_id, sequence: sink.sequence } }, redact));
     sink.events.push(event);
     if (sink.events.length > 300) { sink.events.shift(); sink.truncated = true; }
   } catch { /* diagnostics must never affect ordering */ }
@@ -45,9 +74,19 @@ export function recordLiveCartAudit(sessionId: string | null | undefined, stage:
 
 export function exportLiveCartAuditRun(runId: string): string | null {
   const sink = (window as any).__FREEFLOW_CART_AUDIT__;
-  if (!import.meta.env.DEV || import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG !== '1'
-    || !runId || sink?.run_id !== runId || !Array.isArray(sink.events)) return null;
+  if (!runId || sink?.run_id !== runId || !allowed(runId, sink.sessionId, false) || !Array.isArray(sink.events)) return null;
   return JSON.stringify({ schema: 'freeflow.tracelab.v1', run_id: runId, truncated: !!sink.truncated,
     events: sink.events.filter((e: any) => e.run_id === runId && e.session_id === sink.sessionId) },
-    (key, value) => /token|authorization|cookie|secret|password|base64|pcm/i.test(key) ? '[redacted]' : value, 2);
+    redact, 2);
 }
+
+export function installLiveCartAuditControls(): void {
+  if (typeof window === 'undefined') return;
+  const runId = import.meta.env.VITE_LIVE_CART_AUDIT_RUN_ID;
+  const sessionId = import.meta.env.VITE_LIVE_CART_AUDIT_SESSION_ID;
+  if (!(import.meta.env.DEV && import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG === '1') && !allowed(runId, sessionId, false)) return;
+  (window as any).__FREEFLOW_TRACELAB__ = Object.freeze({
+    start: startLiveCartAuditRun, stop: stopLiveCartAuditRun, exportRun: exportLiveCartAuditRun,
+  });
+}
+installLiveCartAuditControls();

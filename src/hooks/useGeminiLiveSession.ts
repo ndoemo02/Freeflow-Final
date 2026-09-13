@@ -1195,11 +1195,13 @@ export function useGeminiLiveSession({
                 args: (fc.args ?? {}) as Record<string, unknown>,
                 turnId: turnId ?? undefined,
               };
+              const auditSessionId = sessionIdRef.current;
+              const auditTurnId = geminiCall.turnId ?? null;
               try {
                 const relayStart = Date.now();
-                recordLiveCartAudit(sessionIdRef.current, 'tool_selected', { turn_id: turnId, request_id: fc.id, tool: geminiCall.name, args: geminiCall.args });
+                recordLiveCartAudit(auditSessionId, 'tool_selected', { turn_id: auditTurnId, request_id: fc.id, tool: geminiCall.name, args: geminiCall.args });
                 const result = await relay(geminiCall);
-                recordLiveCartAudit(sessionIdRef.current, 'tool_execution_result', { turn_id: turnId, request_id: fc.id, tool: result.name, response: result.response, duration_ms: Date.now() - relayStart });
+                recordLiveCartAudit(auditSessionId, 'tool_execution_result', { turn_id: auditTurnId, request_id: fc.id, tool: result.name, response: result.response, duration_ms: Date.now() - relayStart });
                 const relayMs = Date.now() - relayStart;
                 // P4-C: potwierdzenie zamowienia zbroi zamkniecie sesji. Zbroimy
                 // na WYNIKU, nie na wywolaniu - narzedzie zakonczone bledem nie
@@ -1230,7 +1232,7 @@ export function useGeminiLiveSession({
                   (result.response ?? {}) as Record<string, unknown>,
                 );
                 perfTimings.push({ stage: 'compact_response', ms: Math.max(1, Date.now() - compactStart) });
-                recordLiveCartAudit(sessionIdRef.current, 'gemini_tool_response', { turn_id: turnId, request_id: fc.id, tool: result.name, response: compact,
+                recordLiveCartAudit(auditSessionId, 'gemini_tool_response', { turn_id: auditTurnId, request_id: fc.id, tool: result.name, response: compact,
                   presentation_cart: auditCartSnapshot(useConversationStore.getState().cart) });
                 const payloadBytes = new TextEncoder().encode(JSON.stringify(compact)).length;
                 reportPayloadSize(result.name, payloadBytes);
