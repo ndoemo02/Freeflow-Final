@@ -16,6 +16,8 @@ vi.mock('./ActiveSessionMap', () => ({ activeSessionMap: { delete: vi.fn() } }))
 import { CartProvider, useCart } from './CartContext';
 import { CHECKOUT_DRAFT_KEY } from '../lib/checkoutDraft';
 import { useActionDispatcher } from '../hooks/useActionDispatcher';
+import { compactToolResponse } from '../hooks/useGeminiLiveSession';
+import replay from './fixtures/liveCartAuditReplay.json';
 const wrapper = ({ children }) => <CartProvider>{children}</CartProvider>;
 const restaurant = { id: '11111111-1111-4111-8111-111111111111', name: 'Demo' };
 const items = [{ id: 'dish-1', name: 'Pierogi', price: 12, quantity: 2 }];
@@ -31,6 +33,46 @@ beforeEach(() => {
   vi.stubGlobal('fetch', mock.fetch);
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+it('audit: active draft rejects a successful later Live snapshot and survives reload stale', async () => {
+  const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
+  const first = replay.steps[0].response;
+  const second = replay.steps[1].response;
+  window.__FREEFLOW_CART_AUDIT__ = { sessionId: 'sess_live_a', events: [] };
+  await act(async () => hook.result.current.syncCart(first.cart.items, replay.restaurant));
+  await act(async () => hook.result.current.setIsOpen(true));
+  expect(hook.result.current.hasCheckoutDraft).toBe(true);
+  const compact = compactToolResponse('add_item_to_cart', second);
+  expect(compact.actionStatus).toBe('added');
+  expect(compact.cartCount).toBe(2);
+  await act(async () => hook.result.current.syncCart(second.cart.items, replay.restaurant));
+  expect(hook.result.current.cart.map(item => item.id)).toEqual([first.cart.items[0].id]);
+  const attempt = window.__FREEFLOW_CART_AUDIT__.events.filter(event => event.stage === 'cart_sync_attempt').at(-1);
+  expect(attempt).toMatchObject({ draft_active: true, owner_ready: true, session_matches: true, session_blocked: false });
+  expect(attempt.incoming.items).toHaveLength(2);
+  expect(attempt.visible.items).toHaveLength(1);
+  expect(remount(hook).result.current.cart).toHaveLength(1);
+  delete window.__FREEFLOW_CART_AUDIT__;
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
+
+it('Live add badge must not create a checkout draft: all three backend items remain visible', async () => {
+  const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
+  const snapshots = [];
+  for (const step of replay.steps) {
+    const response = step.response;
+    // Same boundaries as Live events: dispatch actions, then Cart consumes the store snapshot.
+    await act(async () => hook.result.current.dispatch(response.actions,
+      { ...response.meta, intent: response.intent, tool: step.tool, cart: response.cart }));
+    if (response.cart) {
+      await act(async () => hook.result.current.syncCart(response.cart.items, replay.restaurant));
+      snapshots.push({ draft: hook.result.current.hasCheckoutDraft, count: hook.result.current.cart.length });
+    }
+  }
+  expect(snapshots).toEqual([{ draft: false, count: 1 }, { draft: false, count: 2 }, { draft: false, count: 3 }]);
+  expect(hook.result.current.cart.map(item => item.id)).toEqual(replay.steps.at(-1).response.cart.items.map(item => item.id));
+  expect(mock.fetch).not.toHaveBeenCalled();
+});
 async function handoff() {
   const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
   await act(async () => hook.result.current.dispatch([

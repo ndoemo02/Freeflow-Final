@@ -1,0 +1,560 @@
+{
+  "source": "controlled backend replay with real ToolRouter/handlers and menu fixture; not production Gemini audio",
+  "sessionId": "sess_live_cart_audit",
+  "restaurant": {
+    "id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+    "name": "Silesiana Italiana"
+  },
+  "steps": [
+    {
+      "tool": "add_item_to_cart",
+      "transcript": "Dodaj Arancini z krupniokiem",
+      "response": {
+        "ok": true,
+        "intent": "create_order",
+        "reply": "Dodano 1 × Arancini z krupniokiem z Silesiana Italiana do koszyka. Co dalej — chcesz zobaczyć więcej dań czy przejść do zamówienia?",
+        "cart": {
+          "items": [
+            {
+              "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+              "name": "Arancini z krupniokiem",
+              "price_pln": 27,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Na początek",
+              "special_instructions": null
+            }
+          ],
+          "total": 27,
+          "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+        },
+        "actions": [
+          {
+            "type": "SHOW_CART",
+            "payload": {
+              "mode": "badge"
+            }
+          }
+        ],
+        "meta": {
+          "latency_total_ms": 12,
+          "source": "confirm_add_to_cart_handler",
+          "styling_ms": 0,
+          "tts_ms": 0,
+          "cartHash": "e30b88ee",
+          "state": {
+            "conversationPhase": "ordering",
+            "currentRestaurant": {
+              "id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "name": "Silesiana Italiana"
+            },
+            "orderMode": "building"
+          },
+          "checkoutProgress": {
+            "requiredFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "filledFields": [],
+            "missingFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "completion": 0,
+            "complete": false,
+            "readyToSubmit": false,
+            "cartItems": 1,
+            "cartTotal": 27,
+            "draft": {
+              "name": "",
+              "phone": "",
+              "address": "",
+              "notes": ""
+            }
+          },
+          "conversationClosed": false,
+          "cart": {
+            "items": [
+              {
+                "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+                "name": "Arancini z krupniokiem",
+                "price_pln": 27,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Na początek",
+                "special_instructions": null
+              }
+            ],
+            "total": 27,
+            "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "restaurant": {
+            "name": "Silesiana Italiana",
+            "id": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "focusedMenuItemId": "e36203d6-808d-4e73-9c09-147825fb87bb",
+          "liveTool": {
+            "toolName": "add_item_to_cart",
+            "requestId": "audit_0",
+            "turnId": "turn_0",
+            "runtimeIntent": "create_order",
+            "runtimeDomain": "ordering",
+            "orderMode": "building",
+            "entitiesResolved": [
+              {
+                "key": "dish",
+                "value": "Arancini z krupniokiem"
+              },
+              {
+                "key": "quantity",
+                "value": 1
+              },
+              {
+                "key": "hasExplicitNumber",
+                "value": false
+              },
+              {
+                "key": "restaurant",
+                "value": "Silesiana Italiana"
+              },
+              {
+                "key": "restaurantId",
+                "value": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+              }
+            ],
+            "cartBefore": {
+              "items": 0,
+              "total": 0
+            },
+            "cartAfter": {
+              "items": 1,
+              "total": 27
+            },
+            "cartChanged": true,
+            "autoCommittedCartDraft": true,
+            "pendingConfirmationPrepared": false,
+            "successDowngraded": false,
+            "clarifyNotAdded": false
+          },
+          "trace": [
+            "tool:add_item_to_cart",
+            "intent:create_order",
+            "live_transcript_hint:used",
+            "catalog_guard_ok:acced74f-ddac-43a0-9f78-016c397f4b8e",
+            "cart_intent_guard:explicit_cart_action",
+            "ivl:fsm_transition_ok:restaurant_selected:add_item_to_cart",
+            "ivl:args_ok:dish_in_menu",
+            "ivl:final:ok:confidence=1",
+            "icm_required_state:ok",
+            "dispatch_intent_locked:true",
+            "context_update:lastRestaurant,currentRestaurant,expectedContext,pendingOrder,conversationPhase,cart,lastIntent,lastMenuItems,last_menu",
+            "context_update:pendingOrder,pendingDish,expectedContext,conversationPhase,cart",
+            "cart_review:auto_commit:committed",
+            "order_mode:restaurant_selected->building"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "add_item_to_cart",
+      "transcript": "Dodaj Ravioli z dynią",
+      "response": {
+        "ok": true,
+        "intent": "create_order",
+        "reply": "Dodano 1 × Ravioli z dynią z Silesiana Italiana do koszyka. Co dalej — chcesz zobaczyć więcej dań czy przejść do zamówienia?",
+        "cart": {
+          "items": [
+            {
+              "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+              "name": "Arancini z krupniokiem",
+              "price_pln": 27,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Na początek",
+              "special_instructions": null
+            },
+            {
+              "id": "bae6c2a6-a0ec-4f67-b6cb-c86656572edf",
+              "name": "Ravioli z dynią",
+              "price_pln": 39,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Makarony",
+              "special_instructions": null
+            }
+          ],
+          "total": 66,
+          "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+        },
+        "actions": [
+          {
+            "type": "SHOW_CART",
+            "payload": {
+              "mode": "badge"
+            }
+          }
+        ],
+        "meta": {
+          "latency_total_ms": 3,
+          "source": "confirm_add_to_cart_handler",
+          "styling_ms": 0,
+          "tts_ms": 0,
+          "cartHash": "6c6407d1",
+          "state": {
+            "conversationPhase": "ordering",
+            "currentRestaurant": {
+              "id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "name": "Silesiana Italiana"
+            },
+            "orderMode": "building"
+          },
+          "checkoutProgress": {
+            "requiredFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "filledFields": [],
+            "missingFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "completion": 0,
+            "complete": false,
+            "readyToSubmit": false,
+            "cartItems": 2,
+            "cartTotal": 66,
+            "draft": {
+              "name": "",
+              "phone": "",
+              "address": "",
+              "notes": ""
+            }
+          },
+          "conversationClosed": false,
+          "cart": {
+            "items": [
+              {
+                "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+                "name": "Arancini z krupniokiem",
+                "price_pln": 27,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Na początek",
+                "special_instructions": null
+              },
+              {
+                "id": "bae6c2a6-a0ec-4f67-b6cb-c86656572edf",
+                "name": "Ravioli z dynią",
+                "price_pln": 39,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Makarony",
+                "special_instructions": null
+              }
+            ],
+            "total": 66,
+            "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "restaurant": {
+            "name": "Silesiana Italiana",
+            "id": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "focusedMenuItemId": "bae6c2a6-a0ec-4f67-b6cb-c86656572edf",
+          "liveTool": {
+            "toolName": "add_item_to_cart",
+            "requestId": "audit_1",
+            "turnId": "turn_1",
+            "runtimeIntent": "create_order",
+            "runtimeDomain": "ordering",
+            "orderMode": "building",
+            "entitiesResolved": [
+              {
+                "key": "dish",
+                "value": "Ravioli z dynią"
+              },
+              {
+                "key": "quantity",
+                "value": 1
+              },
+              {
+                "key": "hasExplicitNumber",
+                "value": false
+              },
+              {
+                "key": "restaurant",
+                "value": "Silesiana Italiana"
+              },
+              {
+                "key": "restaurantId",
+                "value": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+              }
+            ],
+            "cartBefore": {
+              "items": 1,
+              "total": 27
+            },
+            "cartAfter": {
+              "items": 2,
+              "total": 66
+            },
+            "cartChanged": true,
+            "autoCommittedCartDraft": true,
+            "pendingConfirmationPrepared": false,
+            "successDowngraded": false,
+            "clarifyNotAdded": false
+          },
+          "trace": [
+            "tool:add_item_to_cart",
+            "intent:create_order",
+            "live_transcript_hint:used",
+            "catalog_guard_ok:acced74f-ddac-43a0-9f78-016c397f4b8e",
+            "cart_intent_guard:explicit_cart_action",
+            "ivl:rapid_fire:different_args:minor_penalty",
+            "ivl:fsm_transition_ok:building:add_item_to_cart",
+            "ivl:args_ok:dish_in_menu",
+            "ivl:final:ok:confidence=0.9",
+            "icm_required_state:ok",
+            "dispatch_intent_locked:true",
+            "context_update:lastRestaurant,currentRestaurant,expectedContext,pendingOrder,conversationPhase,cart,lastIntent,lastMenuItems,last_menu",
+            "context_update:pendingOrder,pendingDish,expectedContext,conversationPhase,cart",
+            "cart_review:auto_commit:committed",
+            "order_mode:building(noop)"
+          ]
+        }
+      }
+    },
+    {
+      "tool": "search_menu_items",
+      "transcript": "Jakie macie desery?",
+      "response": {
+        "ok": true,
+        "intent": "search_menu_items",
+        "reply": "Nie znalazłam w Silesiana Italiana pozycji pasujących do \"Desery\".",
+        "meta": {
+          "source": "live_tool:search_menu_items",
+          "menuPresentationMode": "full",
+          "focusedMenuItemId": null,
+          "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+          "restaurantName": "Silesiana Italiana",
+          "cartScoped": true
+        }
+      }
+    },
+    {
+      "tool": "add_item_to_cart",
+      "transcript": "Dodaj Panna cotta makowa",
+      "response": {
+        "ok": true,
+        "intent": "create_order",
+        "reply": "Dodano 1 × Panna cotta makowa z Silesiana Italiana do koszyka. Co dalej — chcesz zobaczyć więcej dań czy przejść do zamówienia?",
+        "cart": {
+          "items": [
+            {
+              "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+              "name": "Arancini z krupniokiem",
+              "price_pln": 27,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Na początek",
+              "special_instructions": null
+            },
+            {
+              "id": "bae6c2a6-a0ec-4f67-b6cb-c86656572edf",
+              "name": "Ravioli z dynią",
+              "price_pln": 39,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Makarony",
+              "special_instructions": null
+            },
+            {
+              "id": "bf15a927-82bb-4ec3-94fc-285df9bb0b49",
+              "name": "Panna cotta makowa",
+              "price_pln": 21,
+              "qty": 1,
+              "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "restaurant_name": "Silesiana Italiana",
+              "item_tags": [],
+              "category": "Desery",
+              "special_instructions": null
+            }
+          ],
+          "total": 87,
+          "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+        },
+        "actions": [
+          {
+            "type": "SHOW_CART",
+            "payload": {
+              "mode": "badge"
+            }
+          }
+        ],
+        "meta": {
+          "latency_total_ms": 2,
+          "source": "confirm_add_to_cart_handler",
+          "styling_ms": 0,
+          "tts_ms": 0,
+          "cartHash": "a51e9196",
+          "state": {
+            "conversationPhase": "ordering",
+            "currentRestaurant": {
+              "id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+              "name": "Silesiana Italiana"
+            },
+            "orderMode": "building"
+          },
+          "checkoutProgress": {
+            "requiredFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "filledFields": [],
+            "missingFields": [
+              "name",
+              "phone",
+              "address"
+            ],
+            "completion": 0,
+            "complete": false,
+            "readyToSubmit": false,
+            "cartItems": 3,
+            "cartTotal": 87,
+            "draft": {
+              "name": "",
+              "phone": "",
+              "address": "",
+              "notes": ""
+            }
+          },
+          "conversationClosed": false,
+          "cart": {
+            "items": [
+              {
+                "id": "e36203d6-808d-4e73-9c09-147825fb87bb",
+                "name": "Arancini z krupniokiem",
+                "price_pln": 27,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Na początek",
+                "special_instructions": null
+              },
+              {
+                "id": "bae6c2a6-a0ec-4f67-b6cb-c86656572edf",
+                "name": "Ravioli z dynią",
+                "price_pln": 39,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Makarony",
+                "special_instructions": null
+              },
+              {
+                "id": "bf15a927-82bb-4ec3-94fc-285df9bb0b49",
+                "name": "Panna cotta makowa",
+                "price_pln": 21,
+                "qty": 1,
+                "restaurant_id": "acced74f-ddac-43a0-9f78-016c397f4b8e",
+                "restaurant_name": "Silesiana Italiana",
+                "item_tags": [],
+                "category": "Desery",
+                "special_instructions": null
+              }
+            ],
+            "total": 87,
+            "restaurantId": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "restaurant": {
+            "name": "Silesiana Italiana",
+            "id": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+          },
+          "focusedMenuItemId": "bf15a927-82bb-4ec3-94fc-285df9bb0b49",
+          "liveTool": {
+            "toolName": "add_item_to_cart",
+            "requestId": "audit_3",
+            "turnId": "turn_3",
+            "runtimeIntent": "create_order",
+            "runtimeDomain": "ordering",
+            "orderMode": "building",
+            "entitiesResolved": [
+              {
+                "key": "dish",
+                "value": "Panna cotta makowa"
+              },
+              {
+                "key": "quantity",
+                "value": 1
+              },
+              {
+                "key": "hasExplicitNumber",
+                "value": false
+              },
+              {
+                "key": "restaurant",
+                "value": "Silesiana Italiana"
+              },
+              {
+                "key": "restaurantId",
+                "value": "acced74f-ddac-43a0-9f78-016c397f4b8e"
+              }
+            ],
+            "cartBefore": {
+              "items": 2,
+              "total": 66
+            },
+            "cartAfter": {
+              "items": 3,
+              "total": 87
+            },
+            "cartChanged": true,
+            "autoCommittedCartDraft": true,
+            "pendingConfirmationPrepared": false,
+            "successDowngraded": false,
+            "clarifyNotAdded": false
+          },
+          "trace": [
+            "tool:add_item_to_cart",
+            "intent:create_order",
+            "live_transcript_hint:used",
+            "catalog_guard_ok:acced74f-ddac-43a0-9f78-016c397f4b8e",
+            "cart_intent_guard:explicit_cart_action",
+            "ivl:rapid_fire:different_args:minor_penalty",
+            "ivl:fsm_transition_ok:building:add_item_to_cart",
+            "ivl:args_ok:dish_in_menu",
+            "ivl:final:ok:confidence=0.9",
+            "icm_required_state:ok",
+            "dispatch_intent_locked:true",
+            "context_update:lastRestaurant,currentRestaurant,expectedContext,pendingOrder,conversationPhase,cart,lastIntent,lastMenuItems,last_menu",
+            "context_update:pendingOrder,pendingDish,expectedContext,conversationPhase,cart",
+            "cart_review:auto_commit:committed",
+            "order_mode:building(noop)"
+          ]
+        }
+      }
+    }
+  ]
+}

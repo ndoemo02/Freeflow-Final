@@ -1,5 +1,6 @@
 ﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRef } from 'react';
+import { recordLiveCartAudit, auditCartSnapshot } from '../lib/liveCartAudit';
 import { useAuth } from './auth';
 import { supabase, getAccessToken } from '../lib/supabase';
 import { getApiUrl } from '../lib/config';
@@ -204,6 +205,11 @@ export function CartProvider({ children }) {
   };
 
   // Opening a populated cart is the manual handoff; mere SYNC_CART is not.
+  useEffect(() => {
+    recordLiveCartAudit(getCartSessionId(), 'ui_cart_committed', {
+      cart: auditCartSnapshot(cart), drawer_open: isOpen, draft_active: !!draft.current,
+    });
+  }, [cart, isOpen, hasCheckoutDraft]);
   useEffect(() => { if (isOpen) beginCheckout(); }, [isOpen, cart, restaurant, readyOwner]);
 
   useEffect(() => {
@@ -353,6 +359,13 @@ export function CartProvider({ children }) {
   };
 
   const syncCart = (backendItems, restaurantData) => {
+    recordLiveCartAudit(getCartSessionId(), 'cart_sync_attempt', {
+      incoming: auditCartSnapshot(backendItems), visible: auditCartSnapshot(cart),
+      draft_active: !!draft.current, checkout_error: !!checkoutError, auth_loading: !!isLoading,
+      owner_ready: !!ownerId && readyOwner === ownerId && owner.current === ownerId,
+      session_matches: liveSessionId === getCartSessionId(),
+      session_blocked: !!blockedLiveSession.current && blockedLiveSession.current === getCartSessionId(),
+    });
     if (draft.current || checkoutError || isLoading || !ownerId || readyOwner !== ownerId
       || liveSessionId !== getCartSessionId() || owner.current !== ownerId
       || (blockedLiveSession.current && blockedLiveSession.current === getCartSessionId())) return;

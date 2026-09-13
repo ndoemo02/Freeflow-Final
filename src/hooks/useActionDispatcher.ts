@@ -47,7 +47,7 @@ export function useActionDispatcher() {
     const push = toast?.push;
 
     const ADD_TO_CART_INTENTS = ['confirm_add_to_cart', 'add_to_cart', 'add_item_to_cart'];
-    const EXPLICIT_CART_OPEN_INTENTS = ['show_cart', 'get_cart_state', 'open_checkout', 'proceed_to_checkout', 'confirm_order', 'create_order'];
+    const EXPLICIT_CART_OPEN_INTENTS = ['show_cart', 'get_cart_state', 'open_checkout', 'proceed_to_checkout', 'confirm_order'];
     const EXPLICIT_CART_OPEN_TOOLS = ['open_checkout', 'open_cart', 'get_cart_state'];
 
     const dispatch = useCallback((actions: BrainAction[] | undefined, meta?: BrainMeta, responseKey?: string, events?: BrainEvent[]) => {

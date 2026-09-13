@@ -10,6 +10,7 @@ import {
   type Session,
   type LiveServerMessage,
 } from '@google/genai';
+import { recordLiveCartAudit, auditCartSnapshot } from '../lib/liveCartAudit';
 import { startPCM16Stream } from '../lib/audioStream';
 import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
@@ -682,6 +683,10 @@ export function applyToolResultToStore(
     }));
 
     // Mirror do ActiveSessionMap — Level 2 Memory
+    recordLiveCartAudit(state.sessionId, 'conversation_store_applied', {
+        tool: toolName, request_id: (response.meta as any)?.liveTool?.requestId,
+        cart: auditCartSnapshot(useConversationStore.getState().cart), ui_mode: nextUiMode,
+    });
     if (backendCart) {
         activeSessionMap.updateFromResponse(
             String(state.sessionId || ''),
@@ -1062,6 +1067,7 @@ export function useGeminiLiveSession({
         if (!textPart) return '';
 
         assistantTranscriptBuffer += rawText;
+        recordLiveCartAudit(sessionIdRef.current, 'assistant_transcript', { text: rawText, transcript: assistantTranscriptBuffer });
         clearStallWatchdog();
         useLiveUiSessionStore.getState().setTranscript('assistant', assistantTranscriptBuffer.trim());
         window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
@@ -1151,6 +1157,7 @@ export function useGeminiLiveSession({
           latestUserTranscriptRef.current = normalizedTranscript;
           latestUserTranscriptTurnIdRef.current = turnId;
           logBridge('transcript_received', { turn_id: turnId, session_id: sessionIdRef.current, text: normalizedTranscript.slice(0, 80) });
+          recordLiveCartAudit(sessionIdRef.current, 'user_transcript', { turn_id: turnId, text: normalizedTranscript });
           const liveUiStore = useLiveUiSessionStore.getState();
           liveUiStore.setTranscript('user', normalizedTranscript);
           liveUiStore.setProcessing('Analizuje...');
@@ -1189,7 +1196,9 @@ export function useGeminiLiveSession({
               };
               try {
                 const relayStart = Date.now();
+                recordLiveCartAudit(sessionIdRef.current, 'tool_selected', { turn_id: turnId, request_id: fc.id, tool: geminiCall.name, args: geminiCall.args });
                 const result = await relay(geminiCall);
+                recordLiveCartAudit(sessionIdRef.current, 'tool_execution_result', { turn_id: turnId, request_id: fc.id, tool: result.name, response: result.response });
                 const relayMs = Date.now() - relayStart;
                 // P4-C: potwierdzenie zamowienia zbroi zamkniecie sesji. Zbroimy
                 // na WYNIKU, nie na wywolaniu - narzedzie zakonczone bledem nie
@@ -1220,6 +1229,8 @@ export function useGeminiLiveSession({
                   (result.response ?? {}) as Record<string, unknown>,
                 );
                 perfTimings.push({ stage: 'compact_response', ms: Math.max(1, Date.now() - compactStart) });
+                recordLiveCartAudit(sessionIdRef.current, 'gemini_tool_response', { turn_id: turnId, request_id: fc.id, tool: result.name, response: compact,
+                  presentation_cart: auditCartSnapshot(useConversationStore.getState().cart) });
                 const payloadBytes = new TextEncoder().encode(JSON.stringify(compact)).length;
                 reportPayloadSize(result.name, payloadBytes);
                 return {
@@ -1266,6 +1277,7 @@ export function useGeminiLiveSession({
               }
               clearStallWatchdog();
               player.enqueueBase64(blob.data);
+              recordLiveCartAudit(sessionIdRef.current, 'assistant_audio_enqueued', { turn_id: turnId, mime_type: blob.mimeType, encoded_length: blob.data.length });
             }
           }
         }
