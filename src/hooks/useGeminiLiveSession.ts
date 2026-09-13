@@ -685,6 +685,7 @@ export function applyToolResultToStore(
     // Mirror do ActiveSessionMap — Level 2 Memory
     recordLiveCartAudit(state.sessionId, 'conversation_store_applied', {
         tool: toolName, request_id: (response.meta as any)?.liveTool?.requestId,
+        turn_id: (response.meta as any)?.liveTool?.turnId,
         cart: auditCartSnapshot(useConversationStore.getState().cart), ui_mode: nextUiMode,
     });
     if (backendCart) {
@@ -1067,7 +1068,7 @@ export function useGeminiLiveSession({
         if (!textPart) return '';
 
         assistantTranscriptBuffer += rawText;
-        recordLiveCartAudit(sessionIdRef.current, 'assistant_transcript', { text: rawText, transcript: assistantTranscriptBuffer });
+        recordLiveCartAudit(sessionIdRef.current, 'assistant_transcript', { turn_id: turnId, text: rawText, transcript: assistantTranscriptBuffer });
         clearStallWatchdog();
         useLiveUiSessionStore.getState().setTranscript('assistant', assistantTranscriptBuffer.trim());
         window.dispatchEvent(new CustomEvent('freeflow:live-assistant-part', {
@@ -1198,7 +1199,7 @@ export function useGeminiLiveSession({
                 const relayStart = Date.now();
                 recordLiveCartAudit(sessionIdRef.current, 'tool_selected', { turn_id: turnId, request_id: fc.id, tool: geminiCall.name, args: geminiCall.args });
                 const result = await relay(geminiCall);
-                recordLiveCartAudit(sessionIdRef.current, 'tool_execution_result', { turn_id: turnId, request_id: fc.id, tool: result.name, response: result.response });
+                recordLiveCartAudit(sessionIdRef.current, 'tool_execution_result', { turn_id: turnId, request_id: fc.id, tool: result.name, response: result.response, duration_ms: Date.now() - relayStart });
                 const relayMs = Date.now() - relayStart;
                 // P4-C: potwierdzenie zamowienia zbroi zamkniecie sesji. Zbroimy
                 // na WYNIKU, nie na wywolaniu - narzedzie zakonczone bledem nie

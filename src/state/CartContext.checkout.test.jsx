@@ -38,7 +38,8 @@ it('audit: active draft rejects a successful later Live snapshot and survives re
   const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
   const first = replay.steps[0].response;
   const second = replay.steps[1].response;
-  window.__FREEFLOW_CART_AUDIT__ = { sessionId: 'sess_live_a', events: [] };
+  vi.stubEnv('VITE_FREEFLOW_TRACELAB_DEBUG', '1');
+  window.__FREEFLOW_CART_AUDIT__ = { run_id: 'checkout-regression', sessionId: 'sess_live_a', events: [] };
   await act(async () => hook.result.current.syncCart(first.cart.items, replay.restaurant));
   await act(async () => hook.result.current.setIsOpen(true));
   expect(hook.result.current.hasCheckoutDraft).toBe(true);
@@ -47,12 +48,13 @@ it('audit: active draft rejects a successful later Live snapshot and survives re
   expect(compact.cartCount).toBe(2);
   await act(async () => hook.result.current.syncCart(second.cart.items, replay.restaurant));
   expect(hook.result.current.cart.map(item => item.id)).toEqual([first.cart.items[0].id]);
-  const attempt = window.__FREEFLOW_CART_AUDIT__.events.filter(event => event.stage === 'cart_sync_attempt').at(-1);
+  const attempt = window.__FREEFLOW_CART_AUDIT__.events.filter(event => event.event === 'cart_sync_attempt').at(-1).payload;
   expect(attempt).toMatchObject({ draft_active: true, owner_ready: true, session_matches: true, session_blocked: false });
   expect(attempt.incoming.items).toHaveLength(2);
   expect(attempt.visible.items).toHaveLength(1);
   expect(remount(hook).result.current.cart).toHaveLength(1);
   delete window.__FREEFLOW_CART_AUDIT__;
+  vi.unstubAllEnvs();
   expect(mock.fetch).not.toHaveBeenCalled();
 });
 
