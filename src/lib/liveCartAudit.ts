@@ -4,6 +4,7 @@ export function auditCartSnapshot(cart: any) {
   const items = Array.isArray(cart) ? cart : cart?.items;
   return { items: (Array.isArray(items) ? items : []).map((i: any) => ({
     id: i.id || i.menu_item_id || null, name: i.name || null,
+    variant: i.size_or_variant ?? i.variant ?? null,
     qty: i.qty ?? i.quantity ?? null, price: i.price_pln ?? i.price ?? null,
     restaurant_id: i.restaurant_id || null,
   })), total: cart?.total ?? null };

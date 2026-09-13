@@ -507,14 +507,14 @@ export function compactToolResponse(
     }
     case 'confirm_add_to_cart': {
       const cart = (response.cart as any) ?? {};
-      const mutationObserved = cartChangedByMeta || Boolean(liveToolMeta.cartChanged);
+      const mutationObserved = response.ok !== false && (cartChangedByMeta || liveToolMeta.cartChanged === true);
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
       compact.actionStatus = mutationObserved ? 'added' : 'not_added';
       if (!mutationObserved) compact.mustClarify = true;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        ? cart.items.map((i: any) => ({ id: i.id || i.menu_item_id || null, variant: i.size_or_variant ?? i.variant ?? null, name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
       break;
     }
@@ -523,7 +523,7 @@ export function compactToolResponse(
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        ? cart.items.map((i: any) => ({ id: i.id || i.menu_item_id || null, variant: i.size_or_variant ?? i.variant ?? null, name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
       break;
     }
@@ -533,16 +533,16 @@ export function compactToolResponse(
     case 'add_item_to_cart':
     case 'add_items_to_cart': {
       const cart = (response.cart as any) ?? {};
-      const mutationObserved = cartChangedByMeta || Boolean(liveToolMeta.cartChanged);
+      const mutationObserved = response.ok !== false && (cartChangedByMeta || liveToolMeta.cartChanged === true);
       compact.cartCount = Array.isArray(cart.items) ? cart.items.length : 0;
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
       compact.cartItems = Array.isArray(cart.items)
-        ? cart.items.map((i: any) => ({ name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
+        ? cart.items.map((i: any) => ({ id: i.id || i.menu_item_id || null, variant: i.size_or_variant ?? i.variant ?? null, name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
         : [];
       const clarifyNotAdded = responseIntent === 'clarify_order'
         || liveToolMeta.clarifyNotAdded === true
-        || (!mutationObserved && (toolName === 'add_item_to_cart' || toolName === 'add_items_to_cart'));
+        || !mutationObserved;
       compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
       if (clarifyNotAdded) {
         compact.mustClarify = true;
