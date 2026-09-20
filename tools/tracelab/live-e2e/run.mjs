@@ -19,6 +19,12 @@ const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
 if (!scenario.stop_before_checkout || !Array.isArray(scenario.turns) || scenario.turns.length !== 5) {
   throw new Error('Scenario must contain the five bounded Phase 1 turns and stop before checkout');
 }
+const turnLimit = process.env.FREEFLOW_E2E_TURN_LIMIT
+  ? Number.parseInt(process.env.FREEFLOW_E2E_TURN_LIMIT, 10)
+  : scenario.turns.length;
+if (!Number.isInteger(turnLimit) || turnLimit < 1 || turnLimit > scenario.turns.length) {
+  throw new Error('FREEFLOW_E2E_TURN_LIMIT must be between 1 and the scenario turn count');
+}
 
 const baseURL = requireEnv('FREEFLOW_E2E_BASE_URL');
 const storageState = path.resolve(requireEnv('FREEFLOW_E2E_STORAGE_STATE'));
@@ -71,6 +77,7 @@ const collectBoundaryEvidence = async (failure = null) => {
   if (!outputDir || !runId) return;
   const runtime = await page.evaluate(() => ({
     audio_boundary: window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null,
+    gemini_session: window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__?.snapshot?.() || null,
     audio_shim: window.__FREEFLOW_AUDIO_SHIM__?.state?.() || null,
     collector_event_count: window.__FREEFLOW_CART_AUDIT__?.events?.length ?? null,
   })).catch(error => ({ collection_error: String(error) }));
@@ -112,20 +119,28 @@ try {
   await page.getByRole('button', { name: 'Włącz mikrofon' }).first().click();
   await page.waitForFunction(() => window.__FREEFLOW_AUDIO_SHIM__?.ready(), null, { timeout: 15000 });
   await page.locator('[data-ui-role="voice-dock-bar"][data-state="listening"]').waitFor({ timeout: 30000 });
+  await page.waitForFunction(() => Boolean(window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__?.startFixture), null, { timeout: 15000 });
 
-  for (let index = 0; index < scenario.turns.length; index++) {
+  for (let index = 0; index < turnLimit; index++) {
     const turn = scenario.turns[index];
     const before = await page.evaluate(() => window.__FREEFLOW_CART_AUDIT__?.events?.length || 0);
     const audio = fs.readFileSync(path.resolve(path.dirname(scenarioPath), turn.audio)).toString('base64');
     const boundaryBefore = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
     const playbackStartedAt = Date.now();
-    const playback = await page.evaluate(encoded => window.__FREEFLOW_AUDIO_SHIM__.playBase64(encoded), audio);
+    const { playback, fixtureStart, explicitBoundary } = await page.evaluate(async encoded => {
+      const fixtureStart = window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.startFixture();
+      const playback = await window.__FREEFLOW_AUDIO_SHIM__.playBase64(encoded);
+      const explicitBoundary = window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.endFixture();
+      return { playback, fixtureStart, explicitBoundary };
+    }, audio);
     const playbackFinishedAt = Date.now();
     const boundaryAfter = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
     fs.appendFileSync(path.join(outputDir, 'wav-playback.jsonl'), `${JSON.stringify({
       turn_id: turn.id,
       playback_started_at: playbackStartedAt,
       playback_finished_at: playbackFinishedAt,
+      fixture_start: fixtureStart,
+      explicit_boundary: explicitBoundary,
       boundary_before: boundaryBefore,
       boundary_after: boundaryAfter,
       ...playback,

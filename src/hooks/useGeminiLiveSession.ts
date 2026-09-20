@@ -16,6 +16,14 @@ import {
   noteQaChunkDisposition,
   noteQaSendRealtimeInputThrow,
 } from '../lib/audioBoundaryDiagnostics';
+import {
+  installQaGeminiFixtureControl,
+  noteQaGeminiClose,
+  noteQaGeminiError,
+  noteQaGeminiOpen,
+  noteQaGeminiServerMessage,
+  resetQaGeminiSessionDiagnostics,
+} from '../lib/geminiQaSessionDiagnostics';
 import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
@@ -117,6 +125,7 @@ const LIVE_VAD_CONFIG = {
     silenceDurationMs: 500,
   },
 } as const;
+const LIVE_AUTOMATIC_ACTIVITY_DETECTION_ENABLED = Boolean(LIVE_VAD_CONFIG.automaticActivityDetection);
 
 // Fix #5: ActiveSessionMap jako fundament spójności.
 // liveSessionCache pozostaje jako backward-compat wrapper delegujący do activeSessionMap.
@@ -1155,6 +1164,7 @@ export function useGeminiLiveSession({
       };
 
       const handleMessage = (msg: LiveServerMessage) => {
+        noteQaGeminiServerMessage(msg);
         const possibleTranscript =
           (msg as any)?.serverContent?.inputTranscription?.text
           || (msg as any)?.serverContent?.inputTranscription?.transcript
@@ -1332,6 +1342,7 @@ export function useGeminiLiveSession({
       };
 
       reportPromptSize(new TextEncoder().encode(activeInstruction).length);
+      resetQaGeminiSessionDiagnostics(LIVE_AUTOMATIC_ACTIVITY_DETECTION_ENABLED);
 
       const session = await ai.live.connect({
         model: activeModel,
@@ -1354,6 +1365,7 @@ export function useGeminiLiveSession({
         },
         callbacks: {
           onopen: () => {
+            noteQaGeminiOpen();
             clearReconnectTimer();
             clearReconnectStableTimer();
             reconnectStableTimerRef.current = setTimeout(() => {
@@ -1385,6 +1397,7 @@ export function useGeminiLiveSession({
           },
           onmessage: handleMessage,
           onerror: (e: ErrorEvent) => {
+            noteQaGeminiError(e);
             const message = e.message || 'gemini_live_error';
             console.error('[GEMINI_LIVE_ERROR]', {
               message,
@@ -1397,6 +1410,7 @@ export function useGeminiLiveSession({
             scheduleReconnect();
           },
           onclose: (event?: { code?: number; reason?: string }) => {
+            noteQaGeminiClose(event);
             console.warn('[GEMINI_LIVE_CLOSE]', {
               code: event?.code ?? null,
               reason: event?.reason || null,
@@ -1428,6 +1442,11 @@ export function useGeminiLiveSession({
       });
 
       sessionRef.current = session;
+      installQaGeminiFixtureControl((payload) => {
+        const activeSession = sessionRef.current;
+        if (!activeSession || !activeRef.current) throw new Error('qa_live_session_inactive');
+        activeSession.sendRealtimeInput(payload);
+      }, LIVE_AUTOMATIC_ACTIVITY_DETECTION_ENABLED);
       textTurnSenderRef.current = (text, textTurnId) => {
         turnId = textTurnId;
         assistantTranscriptBuffer = '';
