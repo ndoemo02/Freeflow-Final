@@ -22,6 +22,7 @@
 import { useCallback, useRef } from 'react';
 import { useLiveUiSessionStore } from '../state/liveUiSession';
 import { getApiUrl } from '../lib/config';
+import { getActiveLiveCartAuditRunId } from '../lib/liveCartAudit';
 import { getAccessToken } from '../lib/supabase';
 import { getActiveDemoContextPayload } from '../lib/demoContext';
 import { awaitTurnTranscriptEvidence } from '../lib/liveTranscriptEvidence';
@@ -228,6 +229,8 @@ async function relayViaHttp(
         turn_id: functionCall.turnId || undefined,
     };
     if (transcript) body.transcript = transcript;
+    const traceRunId = getActiveLiveCartAuditRunId(effectiveSessionId);
+    if (traceRunId) body.tracelab_run_id = traceRunId;
 
     const requestId = String(body.request_id || '');
     const relayStartedAt = Date.now();

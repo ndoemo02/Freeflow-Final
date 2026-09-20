@@ -1,0 +1,57 @@
+{
+  "id": "silesiana-cart-truth-v1",
+  "description": "First item, quantity, size variant, correction, authoritative cart query.",
+  "stop_before_checkout": true,
+  "turn_timeout_ms": 45000,
+  "turns": [
+    {
+      "id": "first-item",
+      "audio": "audio/01-first-item.wav",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj Ravioli z dynią",
+      "expected_cart": [{ "name": "Ravioli z dynią", "qty": 1 }],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "quantity",
+      "audio": "audio/02-quantity.wav",
+      "expected_transcript": "Zmień ilość ravioli na dwa",
+      "expected_cart": [{ "name": "Ravioli z dynią", "qty": 2 }],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "size-variant",
+      "audio": "audio/03-size-variant.wav",
+      "expected_transcript": "Dodaj małą lemoniadę",
+      "expected_cart": [
+        { "name": "Ravioli z dynią", "qty": 2 },
+        { "name": "Lemoniada", "qty": 1, "variant": "mała" }
+      ],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "draft_resolved", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "correction",
+      "audio": "audio/04-correction.wav",
+      "expected_transcript": "Chciałem dużą lemoniadę",
+      "expected_cart": [
+        { "name": "Ravioli z dynią", "qty": 2 },
+        { "name": "Lemoniada", "qty": 1, "variant": "duża" }
+      ],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "draft_resolved", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "cart-truth",
+      "audio": "audio/05-cart-truth.wav",
+      "expected_transcript": "Co faktycznie mam teraz w koszyku",
+      "expected_cart": [
+        { "name": "Ravioli z dynią", "qty": 2 },
+        { "name": "Lemoniada", "qty": 1, "variant": "duża" }
+      ],
+      "completion_events": ["user_transcript", "tool_execution_result", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "server_cart_snapshot", "assistant_transcript"]
+    }
+  ]
+}

@@ -62,6 +62,7 @@ _merge_fix.py
 .playwright-mcp/
 test-results/
 playwright-report/
+output/playwright/
 preview/
 step*_*.png
 .preview.*

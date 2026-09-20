@@ -10,6 +10,8 @@
     "test": "vitest",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
+    "test:live:e2e": "node tools/tracelab/live-e2e/run.mjs",
+    "test:live:e2e:unit": "node --test tools/tracelab/live-e2e/audio-shim.test.mjs",
     "postpatch": "node dev-tools/postpatch.cjs",
     "log": "node -e \"import('./dev-tools/patchLogger.js').then(m => m.logCursorPatch('Manual log', process.argv[1]))\""
   },

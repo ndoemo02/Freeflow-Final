@@ -1,7 +1,12 @@
-// Explicitly gated single-session capture. No consumer endpoint or automatic capture.
-// Bounded memory export plus separately enabled best-effort persistence.
-import { persistTraceEvent } from './tracelabPersistence';
+// Two isolated gates: the unchanged Phase B env-window capture and an authenticated,
+// allowlisted QA run created by the bounded Playwright runner. Both remain opt-in.
+import { fetchPersistedTraceRun, queueTraceEventPersistence, waitForTracePersistence } from './tracelabPersistence';
 function allowed(runId: string, sessionId: string, recording = true): boolean {
+  const sink = typeof window === 'undefined' ? null : (window as any).__FREEFLOW_CART_AUDIT__;
+  if (sink?.mode === 'qa' && sink.run_id === runId && sink.sessionId === sessionId) {
+    const expires = Date.parse(sink.capture_expires_at || '');
+    return !recording || (Number.isFinite(expires) && Date.now() < expires);
+  }
   if (import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG !== '1' || !runId || !sessionId) return false;
   if (import.meta.env.DEV) return true;
   const start = Date.parse(import.meta.env.VITE_LIVE_CART_AUDIT_START_AT || '');
@@ -18,8 +23,35 @@ const redact = (key: string, value: any) => /token|authorization|cookie|secret|p
 export function startLiveCartAuditRun(runId: string, sessionId: string): boolean {
   if (!allowed(runId, sessionId)) return false;
   (window as any).__FREEFLOW_CART_AUDIT__ = { run_id: runId, sessionId, events: [], stopped: false,
-    started: true, sequence: 0, collector_id: crypto.randomUUID() };
+    started: true, sequence: 0, collector_id: crypto.randomUUID(), mode: 'phase_b' };
   return true;
+}
+
+export async function startQaLiveCartAuditRun(sessionId: string): Promise<{ run_id: string; session_id: string; capture_expires_at: string }> {
+  if ((window as any).__FREEFLOW_TRACELAB_QA_RUNNER__ !== 'phase1') throw new Error('tracelab_qa_runner_required');
+  const [{ getAccessToken }, { getApiUrl }] = await Promise.all([import('./supabase'), import('./config')]);
+  const accessToken = await getAccessToken();
+  if (!accessToken) throw new Error('tracelab_test_account_required');
+  const response = await fetch(getApiUrl('/api/voice/live/tracelab-run'), {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.session_id !== sessionId || typeof payload?.run_id !== 'string') {
+    throw new Error(payload?.error || 'tracelab_run_unavailable');
+  }
+  const expires = Date.parse(payload.capture_expires_at || '');
+  if (!Number.isFinite(expires) || expires <= Date.now() || expires - Date.now() > 21 * 60 * 1000) {
+    throw new Error('invalid_tracelab_capture_window');
+  }
+  (window as any).__FREEFLOW_CART_AUDIT__ = { run_id: payload.run_id, sessionId, events: [], stopped: false,
+    started: true, sequence: 0, collector_id: crypto.randomUUID(), mode: 'qa', capture_expires_at: payload.capture_expires_at };
+  return { run_id: payload.run_id, session_id: sessionId, capture_expires_at: payload.capture_expires_at };
+}
+
+export function getActiveLiveCartAuditRunId(sessionId: string): string | null {
+  const sink = (window as any).__FREEFLOW_CART_AUDIT__;
+  return sink?.sessionId === sessionId && allowed(sink.run_id, sessionId) && !sink.stopped ? sink.run_id : null;
 }
 export function stopLiveCartAuditRun(runId: string): boolean {
   const sink = (window as any).__FREEFLOW_CART_AUDIT__;
@@ -70,8 +102,16 @@ export function recordLiveCartAudit(sessionId: string | null | undefined, stage:
       payload: { ...payload, collector_id: sink.collector_id, sequence: sink.sequence } }, redact));
     sink.events.push(event);
     if (sink.events.length > 300) { sink.events.shift(); sink.truncated = true; }
-    if (import.meta.env.VITE_FREEFLOW_TRACELAB_PERSIST === '1') void persistTraceEvent(event);
+    if (sink.mode === 'qa' || import.meta.env.VITE_FREEFLOW_TRACELAB_PERSIST === '1') queueTraceEventPersistence(event);
   } catch { /* diagnostics must never affect ordering */ }
+}
+
+export async function exportPersistedQaTraceRun(runId: string): Promise<string> {
+  const sink = (window as any).__FREEFLOW_CART_AUDIT__;
+  if (sink?.mode !== 'qa' || sink.run_id !== runId || !allowed(runId, sink.sessionId, false)) throw new Error('tracelab_run_not_active');
+  await waitForTracePersistence();
+  const events = await fetchPersistedTraceRun(runId, sink.sessionId);
+  return JSON.stringify({ schema: 'freeflow.tracelab.v1', run_id: runId, truncated: !!sink.truncated, events }, redact, 2);
 }
 
 export function exportLiveCartAuditRun(runId: string): string | null {
@@ -84,6 +124,16 @@ export function exportLiveCartAuditRun(runId: string): string | null {
 
 export function installLiveCartAuditControls(): void {
   if (typeof window === 'undefined') return;
+  if ((window as any).__FREEFLOW_TRACELAB_QA_RUNNER__ === 'phase1') {
+    (window as any).__FREEFLOW_TRACELAB_QA__ = Object.freeze({
+      start: startQaLiveCartAuditRun, stop: stopLiveCartAuditRun,
+      exportRun: exportPersistedQaTraceRun,
+      status: () => {
+        const sink = (window as any).__FREEFLOW_CART_AUDIT__;
+        return sink?.mode === 'qa' ? { run_id: sink.run_id, session_id: sink.sessionId, capture_expires_at: sink.capture_expires_at } : null;
+      },
+    });
+  }
   const runId = import.meta.env.VITE_LIVE_CART_AUDIT_RUN_ID;
   const sessionId = import.meta.env.VITE_LIVE_CART_AUDIT_SESSION_ID;
   if (!(import.meta.env.DEV && import.meta.env.VITE_FREEFLOW_TRACELAB_DEBUG === '1') && !allowed(runId, sessionId, false)) return;
