@@ -15,6 +15,7 @@ import {
 
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_FRAMES = 4096; // ~256ms at 16kHz
+const QA_CHUNK_FRAMES = 1600; // deterministic QA fixtures: exactly 100ms at 16kHz
 
 const WORKLET_CODE = `
 class PCM16Processor extends AudioWorkletProcessor {
@@ -64,8 +65,8 @@ class PCM16DiagnosticProcessor extends AudioWorkletProcessor {
       const s = Math.max(-1, Math.min(1, raw));
       this._buf.push(s < 0 ? s * 0x8000 : s * 0x7FFF);
     }
-    while (this._buf.length >= ${CHUNK_FRAMES}) {
-      const arr = new Int16Array(this._buf.splice(0, ${CHUNK_FRAMES}));
+    while (this._buf.length >= ${QA_CHUNK_FRAMES}) {
+      const arr = new Int16Array(this._buf.splice(0, ${QA_CHUNK_FRAMES}));
       const inputMetrics = {
         sample_count: this._inputCount,
         non_zero_sample_count: this._inputNonZero,
@@ -157,12 +158,22 @@ export async function startPCM16Stream(
   } catch {
     // Fallback: ScriptProcessorNode (deprecated but universally supported)
     const proc = ctx.createScriptProcessor(CHUNK_FRAMES, 1, 1);
+    let qaPending: number[] = [];
     proc.onaudioprocess = (e) => {
       const float32 = e.inputBuffer.getChannelData(0);
-      const pcm16 = float32ToPcm16(float32);
-      if (qaDiagnostics && isQaAudioBoundaryDiagnosticsEnabled()) {
-        noteQaPcmChunk(pcm16, { ...measureFloatSignal(float32), web_audio_callback_count: 1 });
+      if (qaDiagnostics) {
+        for (let index = 0; index < float32.length; index++) qaPending.push(float32[index]);
+        while (qaPending.length >= QA_CHUNK_FRAMES) {
+          const qaFloat32 = Float32Array.from(qaPending.splice(0, QA_CHUNK_FRAMES));
+          const qaPcm16 = float32ToPcm16(qaFloat32);
+          if (isQaAudioBoundaryDiagnosticsEnabled()) {
+            noteQaPcmChunk(qaPcm16, { ...measureFloatSignal(qaFloat32), web_audio_callback_count: 1 });
+          }
+          onChunk(qaPcm16);
+        }
+        return;
       }
+      const pcm16 = float32ToPcm16(float32);
       onChunk(pcm16);
     };
     source.connect(proc);

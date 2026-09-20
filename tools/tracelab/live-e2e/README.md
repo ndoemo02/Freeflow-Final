@@ -1,10 +1,21 @@
 # TraceLab Live E2E Phase 1
 
-This runner drives the existing FreeFlow Gemini Live UI with committed synthetic
-Polish WAV fixtures. It creates a fresh TraceLab run after the page creates its
-actual `session_id`, captures frontend and backend events through the existing
+This runner drives the existing FreeFlow Gemini Live UI with frozen synthetic
+Polish WAV fixtures. Every run clears only the prior QA session/cart keys before
+application bootstrap, then creates a TraceLab run bound to the new page-created
+`session_id`. It captures frontend and backend events through the existing
 Supabase tables, runs the existing backend CLI analyzer and writes one screenshot
 after each turn. It never clicks checkout.
+
+Fixtures follow `fixtures.json`: native mono PCM16 little-endian WAV at 16 kHz.
+The shim reads the WAV `data` chunk directly without runtime resampling or
+zero-padding. The QA-only PCM processor emits 1600-frame/3200-byte chunks; a final
+partial chunk is valid, and the existing fixture boundary sends exactly one
+`audioStreamEnd`. The normal microphone path and QA outbound gate are unchanged.
+
+`baseline-plan.json` freezes six planned Gemini 3.1 runs: the same main scenario
+three times, one happy path, one sequential multi-product scenario and one natural
+discovery scenario. Select a non-default scenario with `FREEFLOW_E2E_SCENARIO`.
 
 The backend feature is OFF unless both settings are present:
 

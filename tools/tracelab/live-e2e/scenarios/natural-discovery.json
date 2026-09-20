@@ -1,0 +1,32 @@
+{
+  "id": "silesiana-natural-discovery-v1",
+  "description": "Natural category discovery and recommendation followed by add-item.",
+  "stop_before_checkout": true,
+  "turn_timeout_ms": 45000,
+  "turns": [
+    {
+      "id": "discover-category",
+      "audio": "../audio/07-discovery-category.wav",
+      "expected_transcript": "Jakie macie dania z makaronem",
+      "expected_cart": [],
+      "completion_events": ["user_transcript", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "assistant_transcript"]
+    },
+    {
+      "id": "request-recommendation",
+      "audio": "../audio/08-discovery-recommendation.wav",
+      "expected_transcript": "Poleć mi danie z makaronem",
+      "expected_cart": [],
+      "completion_events": ["user_transcript", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "assistant_transcript"]
+    },
+    {
+      "id": "add-discovered-item",
+      "audio": "../audio/01-first-item.wav",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj ravioli z dynią jedną porcję",
+      "expected_cart": [{ "name": "Ravioli z dynią", "qty": 1 }],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    }
+  ]
+}

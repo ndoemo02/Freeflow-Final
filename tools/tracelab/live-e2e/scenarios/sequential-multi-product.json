@@ -1,0 +1,39 @@
+{
+  "id": "silesiana-sequential-multi-product-v1",
+  "description": "Three products added sequentially without checkout.",
+  "stop_before_checkout": true,
+  "turn_timeout_ms": 45000,
+  "turns": [
+    {
+      "id": "add-arancini",
+      "audio": "../audio/06-happy-arancini.wav",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj arancini z krupniokiem",
+      "expected_cart": [{ "name": "Arancini z krupniokiem", "qty": 1 }],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "add-ravioli",
+      "audio": "../audio/01-first-item.wav",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj ravioli z dynią jedną porcję",
+      "expected_cart": [
+        { "name": "Arancini z krupniokiem", "qty": 1 },
+        { "name": "Ravioli z dynią", "qty": 1 }
+      ],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    },
+    {
+      "id": "add-small-lemonade",
+      "audio": "../audio/03-size-variant.wav",
+      "expected_transcript": "Dodaj małą lemoniadę",
+      "expected_cart": [
+        { "name": "Arancini z krupniokiem", "qty": 1 },
+        { "name": "Ravioli z dynią", "qty": 1 },
+        { "name": "Lemoniada", "qty": 1, "variant": "mała" }
+      ],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "draft_resolved", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    }
+  ]
+}

@@ -7,7 +7,7 @@
     {
       "id": "first-item",
       "audio": "audio/01-first-item.wav",
-      "expected_transcript": "W restauracji Silesiana Italiana dodaj Ravioli z dynią",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj ravioli z dynią jedną porcję",
       "expected_cart": [{ "name": "Ravioli z dynią", "qty": 1 }],
       "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
       "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
@@ -15,7 +15,7 @@
     {
       "id": "quantity",
       "audio": "audio/02-quantity.wav",
-      "expected_transcript": "Zmień ilość ravioli na dwa",
+      "expected_transcript": "Ustaw dwie porcje ravioli z dynią",
       "expected_cart": [{ "name": "Ravioli z dynią", "qty": 2 }],
       "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
       "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
@@ -34,7 +34,7 @@
     {
       "id": "correction",
       "audio": "audio/04-correction.wav",
-      "expected_transcript": "Chciałem dużą lemoniadę",
+      "expected_transcript": "Popraw lemoniadę na dużą",
       "expected_cart": [
         { "name": "Ravioli z dynią", "qty": 2 },
         { "name": "Lemoniada", "qty": 1, "variant": "duża" }

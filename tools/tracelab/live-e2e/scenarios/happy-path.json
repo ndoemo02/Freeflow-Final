@@ -1,0 +1,16 @@
+{
+  "id": "silesiana-happy-path-v1",
+  "description": "One bounded add-item happy path.",
+  "stop_before_checkout": true,
+  "turn_timeout_ms": 45000,
+  "turns": [
+    {
+      "id": "add-arancini",
+      "audio": "../audio/06-happy-arancini.wav",
+      "expected_transcript": "W restauracji Silesiana Italiana dodaj arancini z krupniokiem",
+      "expected_cart": [{ "name": "Arancini z krupniokiem", "qty": 1 }],
+      "completion_events": ["user_transcript", "tool_execution_result", "ui_cart_committed", "assistant_transcript"],
+      "expected_trace_events": ["user_transcript", "mutation_result", "ui_cart_committed", "assistant_transcript"]
+    }
+  ]
+}

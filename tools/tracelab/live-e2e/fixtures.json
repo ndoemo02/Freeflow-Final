@@ -1,0 +1,154 @@
+{
+  "schema": "freeflow.qa-audio-fixtures.v1",
+  "standard": {
+    "container": "WAV",
+    "encoding": "PCM16 little-endian",
+    "channels": 1,
+    "sample_rate_hz": 16000,
+    "runtime_resampling": false,
+    "runtime_zero_padding": false,
+    "source": "WAV data chunk PCM bytes",
+    "chunk_frames": 1600,
+    "chunk_bytes": 3200,
+    "chunk_duration_ms": 100,
+    "final_partial_chunk_allowed": true,
+    "audio_stream_end_count": 1,
+    "qa_outbound_gate": "existing"
+  },
+  "offline_asr": {
+    "engine": "Transformers.js",
+    "model": "onnx-community/whisper-small",
+    "dtype": "q8",
+    "language": "polish",
+    "task": "transcribe"
+  },
+  "fixtures": [
+    {
+      "id": "main-first-item",
+      "path": "audio/01-first-item.wav",
+      "expected_phrase": "W restauracji Silesiana Italiana dodaj ravioli z dynią. Jedną porcję.",
+      "normalized_asr_transcript": "w restauracji silesiana italiane dodaj ravioli z dynia jedna porcje",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "add_item", "evidence": ["dodaj"] },
+        { "field": "quantity", "expected": 1, "evidence": ["jedna porcje"] },
+        { "field": "product", "expected": "Ravioli z dynią", "evidence": ["ravioli", "dynia"] },
+        { "field": "restaurant", "expected": "Silesiana Italiana", "evidence": ["silesiana", "italiane"] }
+      ],
+      "duration_ms": 6653,
+      "pcm_byte_count": 212898,
+      "peak": 16500,
+      "rms": 0.06493788,
+      "sha256": "8babd29544fd2afe70424adeb7ee17a8eeae649a9d1b0f673ba9b8a64ecbc797"
+    },
+    {
+      "id": "main-quantity",
+      "path": "audio/02-quantity.wav",
+      "expected_phrase": "Ustaw dwie porcje ravioli z dynią.",
+      "normalized_asr_transcript": "ustaw dwie porcje ravioli z dynia",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "set_quantity", "evidence": ["ustaw"] },
+        { "field": "quantity", "expected": 2, "evidence": ["dwie porcje"] },
+        { "field": "product", "expected": "Ravioli z dynią", "evidence": ["ravioli", "dynia"] }
+      ],
+      "duration_ms": 3030,
+      "pcm_byte_count": 96944,
+      "peak": 19459,
+      "rms": 0.0849422,
+      "sha256": "2a7510e0b168fca7209820612c6f2c69862f68018051358d96843d5dfea7af90"
+    },
+    {
+      "id": "main-size-variant",
+      "path": "audio/03-size-variant.wav",
+      "expected_phrase": "Dodaj małą lemoniadę.",
+      "normalized_asr_transcript": "dodaj mala lemoniade",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "add_item", "evidence": ["dodaj"] },
+        { "field": "quantity", "expected": 1, "evidence": ["mala lemoniade"] },
+        { "field": "product", "expected": "Lemoniada", "evidence": ["lemoniade"] },
+        { "field": "variant", "expected": "mała", "evidence": ["mala"] }
+      ],
+      "duration_ms": 2425,
+      "pcm_byte_count": 77590,
+      "peak": 21121,
+      "rms": 0.0937376,
+      "sha256": "513c0c6cef0dde9aa661343b155255d4c10a04327a1da08fe0527cbbb4195f4d"
+    },
+    {
+      "id": "main-correction",
+      "path": "audio/04-correction.wav",
+      "expected_phrase": "Popraw lemoniadę na dużą.",
+      "normalized_asr_transcript": "popraw lemoniady na duza",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "correct_item", "evidence": ["popraw"] },
+        { "field": "correction_target", "expected": "Lemoniada", "evidence": ["lemoniady"] },
+        { "field": "variant", "expected": "duża", "evidence": ["duza"] }
+      ],
+      "duration_ms": 2544,
+      "pcm_byte_count": 81392,
+      "peak": 20789,
+      "rms": 0.08632971,
+      "sha256": "3ff1988603178ef9c254247f1ce045eaef964cb30c5e112cddf40ca4c73c39b0"
+    },
+    {
+      "id": "main-cart-truth",
+      "path": "audio/05-cart-truth.wav",
+      "expected_phrase": "Co faktycznie mam teraz w koszyku?",
+      "normalized_asr_transcript": "co faktycznie mam teraz w koszyku",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "authoritative_cart_query", "evidence": ["faktycznie", "koszyku"] }
+      ],
+      "duration_ms": 3063,
+      "pcm_byte_count": 98006,
+      "peak": 22615,
+      "rms": 0.07738769,
+      "sha256": "045d9afe28be24c2f1ba4cecde9519ceb1833923c5ff27ee9fe1a2b4766d5df1"
+    },
+    {
+      "id": "happy-arancini",
+      "path": "audio/06-happy-arancini.wav",
+      "expected_phrase": "W restauracji Silesiana Italiana dodaj arancini z krupniokiem.",
+      "normalized_asr_transcript": "w restauracji silesiana italiane dodaj arancini z krupniokiem",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "add_item", "evidence": ["dodaj"] },
+        { "field": "quantity", "expected": 1, "evidence": ["arancini"] },
+        { "field": "product", "expected": "Arancini z krupniokiem", "evidence": ["arancini", "krupniokiem"] },
+        { "field": "restaurant", "expected": "Silesiana Italiana", "evidence": ["silesiana", "italiane"] }
+      ],
+      "duration_ms": 5220,
+      "pcm_byte_count": 167042,
+      "peak": 16500,
+      "rms": 0.06768994,
+      "sha256": "7662b88a773739535a0457fd1b093490fb8acb8be19600176c46df175c587aa8"
+    },
+    {
+      "id": "discovery-category",
+      "path": "audio/07-discovery-category.wav",
+      "expected_phrase": "Jakie macie dania z makaronem?",
+      "normalized_asr_transcript": "jakie macie dania z makaronem",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "category_discovery", "evidence": ["jakie macie"] },
+        { "field": "category", "expected": "makaron", "evidence": ["makaronem"] }
+      ],
+      "duration_ms": 2844,
+      "pcm_byte_count": 91008,
+      "peak": 23077,
+      "rms": 0.0931345,
+      "sha256": "f73971cac19863fce4d284a1f882c922fc641cff963e59658ca79d993c626b52"
+    },
+    {
+      "id": "discovery-recommendation",
+      "path": "audio/08-discovery-recommendation.wav",
+      "expected_phrase": "Poleć mi danie z makaronem.",
+      "normalized_asr_transcript": "polec mi danie z makaronem",
+      "critical_semantic_assertions": [
+        { "field": "intent", "expected": "category_recommendation", "evidence": ["polec"] },
+        { "field": "category", "expected": "makaron", "evidence": ["makaronem"] }
+      ],
+      "duration_ms": 2665,
+      "pcm_byte_count": 85276,
+      "peak": 22445,
+      "rms": 0.08800162,
+      "sha256": "b5cf0b206b20a92123ada9bb8a53cb77df4c738b45a5e8910decb1636f1ec2b9"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installFreeFlowAudioShim } from './audio-shim.mjs';
+import { parseDeterministicPcmWav } from './wav.mjs';
 import { blockedSideEffect } from './policy.mjs';
 import { cartMatchesExpected, transcriptMatches } from './assertions.mjs';
 
@@ -14,11 +15,12 @@ const requireEnv = name => {
   return value;
 };
 const safe = value => String(value).replace(/[^a-zA-Z0-9_.-]/g, '_');
-const QA_AUDIO_PROCESSING_TAIL_MS = 300; // one existing 4096-frame PCM block at 16 kHz is 256 ms
+const QA_AUDIO_PROCESSING_TAIL_MS = 120; // one deterministic 1600-frame PCM block at 16 kHz is 100 ms
 const scenarioPath = path.resolve(process.env.FREEFLOW_E2E_SCENARIO || path.join(here, 'scenario.json'));
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
-if (!scenario.stop_before_checkout || !Array.isArray(scenario.turns) || scenario.turns.length !== 5) {
-  throw new Error('Scenario must contain the five bounded Phase 1 turns and stop before checkout');
+if (!scenario.stop_before_checkout || !Array.isArray(scenario.turns)
+  || scenario.turns.length < 1 || scenario.turns.length > 5) {
+  throw new Error('Scenario must contain between one and five bounded turns and stop before checkout');
 }
 const turnLimit = process.env.FREEFLOW_E2E_TURN_LIMIT
   ? Number.parseInt(process.env.FREEFLOW_E2E_TURN_LIMIT, 10)
@@ -47,7 +49,17 @@ await context.route('**/*', async route => {
 if (typeof context.routeWebSocket === 'function') {
   await context.routeWebSocket(/\/api\/voice\/live\/ws(?:\?|$)/, ws => ws.close());
 }
-await context.addInitScript(installFreeFlowAudioShim);
+await context.addInitScript(() => {
+  for (const key of [
+    'amber-session-id',
+    'freeflow_cart',
+    'freeflow_cart_restaurant',
+    'freeflow_cart_session',
+  ]) localStorage.removeItem(key);
+});
+await context.addInitScript({
+  content: `(${installFreeFlowAudioShim.toString()})(${parseDeterministicPcmWav.toString()});`,
+});
 
 const page = await context.newPage();
 let runId;

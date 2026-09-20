@@ -1,0 +1,12 @@
+{
+  "schema": "freeflow.gemini31-baseline.v1",
+  "model": "gemini-3.1-flash-live-preview",
+  "runs": [
+    { "id": "main-01", "scenario": "scenario.json" },
+    { "id": "main-02", "scenario": "scenario.json" },
+    { "id": "main-03", "scenario": "scenario.json" },
+    { "id": "happy-01", "scenario": "scenarios/happy-path.json" },
+    { "id": "sequential-01", "scenario": "scenarios/sequential-multi-product.json" },
+    { "id": "discovery-01", "scenario": "scenarios/natural-discovery.json" }
+  ]
+}
