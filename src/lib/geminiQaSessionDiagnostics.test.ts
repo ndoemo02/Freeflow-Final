@@ -6,9 +6,11 @@ import {
   noteQaGeminiClose,
   noteQaGeminiError,
   noteQaGeminiOpen,
+  noteQaOutboundAudioSend,
   noteQaGeminiServerMessage,
   qaFixtureBoundary,
   resetQaGeminiSessionDiagnostics,
+  shouldSendQaOutboundAudio,
 } from './geminiQaSessionDiagnostics';
 
 describe('Gemini Live QA session diagnostics', () => {
@@ -33,18 +35,49 @@ describe('Gemini Live QA session diagnostics', () => {
   });
 
   it('sends exactly one audioStreamEnd after one automatic-VAD fixture', () => {
-    const send = vi.fn();
+    const gateStatesAtBoundary: boolean[] = [];
+    const send = vi.fn(() => {
+      gateStatesAtBoundary.push(Boolean(getQaGeminiSessionSnapshot()?.outbound_audio_gate_open));
+    });
     expect(installQaGeminiFixtureControl(send, true)).toBe(true);
 
+    expect(shouldSendQaOutboundAudio(4)).toBe(false);
     const start = (window as any).__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.startFixture();
+    expect(shouldSendQaOutboundAudio(8)).toBe(true);
+    noteQaOutboundAudioSend(8);
     vi.setSystemTime(2_000);
     const end = (window as any).__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.endFixture();
+    expect(shouldSendQaOutboundAudio(16)).toBe(false);
 
     expect(start.boundary).toBeNull();
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith({ audioStreamEnd: true });
+    expect(gateStatesAtBoundary).toEqual([false]);
     expect(end.boundary).toMatchObject({ type: 'audioStreamEnd', sent: true, timestamp: 2_000 });
-    expect(getQaGeminiSessionSnapshot()?.fixture_open).toBe(false);
+    expect(getQaGeminiSessionSnapshot()).toMatchObject({
+      fixture_open: false,
+      outbound_audio_gate_open: false,
+      audio_send_count_before_boundary: 1,
+      audio_send_bytes_before_boundary: 8,
+      audio_send_count_after_boundary: 0,
+      audio_send_bytes_after_boundary: 0,
+      pcm_chunk_suppressed_while_gate_closed: 2,
+      pcm_bytes_suppressed_while_gate_closed: 20,
+    });
+  });
+
+  it('records the first server event after the explicit boundary', () => {
+    installQaGeminiFixtureControl(vi.fn(), true);
+    (window as any).__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.startFixture();
+    vi.setSystemTime(2_000);
+    (window as any).__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.endFixture();
+    vi.setSystemTime(2_250);
+    noteQaGeminiServerMessage({ serverContent: { waitingForInput: true } });
+
+    expect(getQaGeminiSessionSnapshot()).toMatchObject({
+      first_server_event_after_boundary_at: 2_250,
+      first_server_event_after_boundary_types: ['serverContent', 'waitingForInput'],
+    });
   });
 
   it('captures only event types, timestamps and connection state metadata', () => {
@@ -80,6 +113,7 @@ describe('Gemini Live QA session diagnostics', () => {
   it('stays unavailable without the QA runner marker', () => {
     delete (window as any).__FREEFLOW_TRACELAB_QA_RUNNER__;
     expect(resetQaGeminiSessionDiagnostics(true)).toBe(false);
+    expect(shouldSendQaOutboundAudio(8)).toBe(true);
     expect((window as any).__FREEFLOW_GEMINI_QA_DIAGNOSTICS__).toBeUndefined();
   });
 });

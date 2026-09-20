@@ -22,9 +22,18 @@ type QaGeminiSessionState = {
   open_at: number | null;
   fixture_started_at: number | null;
   fixture_open: boolean;
+  outbound_audio_gate_open: boolean;
+  audio_send_count_before_boundary: number;
+  audio_send_bytes_before_boundary: number;
+  audio_send_count_after_boundary: number;
+  audio_send_bytes_after_boundary: number;
+  pcm_chunk_suppressed_while_gate_closed: number;
+  pcm_bytes_suppressed_while_gate_closed: number;
   incoming_event_count: number;
   incoming_events: IncomingEvent[];
   first_server_event_at: number | null;
+  first_server_event_after_boundary_at: number | null;
+  first_server_event_after_boundary_types: string[] | null;
   first_input_transcript_at: number | null;
   first_tool_call_at: number | null;
   first_assistant_response_at: number | null;
@@ -80,9 +89,18 @@ export function resetQaGeminiSessionDiagnostics(automaticActivityDetection: bool
     open_at: null,
     fixture_started_at: null,
     fixture_open: false,
+    outbound_audio_gate_open: false,
+    audio_send_count_before_boundary: 0,
+    audio_send_bytes_before_boundary: 0,
+    audio_send_count_after_boundary: 0,
+    audio_send_bytes_after_boundary: 0,
+    pcm_chunk_suppressed_while_gate_closed: 0,
+    pcm_bytes_suppressed_while_gate_closed: 0,
     incoming_event_count: 0,
     incoming_events: [],
     first_server_event_at: null,
+    first_server_event_after_boundary_at: null,
+    first_server_event_after_boundary_types: null,
     first_input_transcript_at: null,
     first_tool_call_at: null,
     first_assistant_response_at: null,
@@ -130,6 +148,11 @@ export function noteQaGeminiServerMessage(message: unknown): void {
   state.incoming_event_count++;
   state.incoming_events.push({ timestamp: now, types, turn_complete: Boolean(content?.turnComplete) });
   state.first_server_event_at ??= now;
+  const lastBoundary = state.boundaries[state.boundaries.length - 1];
+  if (lastBoundary && now >= lastBoundary.timestamp && state.first_server_event_after_boundary_at === null) {
+    state.first_server_event_after_boundary_at = now;
+    state.first_server_event_after_boundary_types = [...types];
+  }
   if (hasText(content?.inputTranscription) || hasText(content?.inputTranscript)) state.first_input_transcript_at ??= now;
   if (msg.toolCall) state.first_tool_call_at ??= now;
   if (hasText(content?.outputTranscription) || hasText(content?.outputTranscript) || content?.modelTurn) {
@@ -173,6 +196,25 @@ export function qaFixtureBoundary(
   return phase === 'start' ? { activityStart: {} } : { activityEnd: {} };
 }
 
+export function shouldSendQaOutboundAudio(pcmBytes: number): boolean {
+  if (!state) return true;
+  if (state.outbound_audio_gate_open) return true;
+  state.pcm_chunk_suppressed_while_gate_closed++;
+  state.pcm_bytes_suppressed_while_gate_closed += pcmBytes;
+  return false;
+}
+
+export function noteQaOutboundAudioSend(pcmBytes: number): void {
+  if (!state) return;
+  if (state.outbound_audio_gate_open) {
+    state.audio_send_count_before_boundary++;
+    state.audio_send_bytes_before_boundary += pcmBytes;
+    return;
+  }
+  state.audio_send_count_after_boundary++;
+  state.audio_send_bytes_after_boundary += pcmBytes;
+}
+
 export function installQaGeminiFixtureControl(
   sendRealtimeInput: (payload: QaRealtimeBoundary) => void,
   automaticActivityDetection: boolean,
@@ -185,8 +227,12 @@ export function installQaGeminiFixtureControl(
       if (state.fixture_open) throw new Error('qa_fixture_already_open');
       state.fixture_open = true;
       state.fixture_started_at = Date.now();
+      state.outbound_audio_gate_open = true;
     } else if (!state.fixture_open) {
       throw new Error('qa_fixture_not_open');
+    } else {
+      state.outbound_audio_gate_open = false;
+      state.fixture_open = false;
     }
 
     const payload = qaFixtureBoundary(automaticActivityDetection, phase);
@@ -198,6 +244,7 @@ export function installQaGeminiFixtureControl(
       ? 'audioStreamEnd'
       : ('activityStart' in payload ? 'activityStart' : 'activityEnd');
     const event: BoundaryEvent = { timestamp: Date.now(), type, sent: false, error_name: null };
+    state.boundaries.push(event);
     try {
       sendRealtimeInput(payload);
       event.sent = true;
@@ -205,7 +252,6 @@ export function installQaGeminiFixtureControl(
       event.error_name = error instanceof Error ? error.name : 'unknown';
       throw error;
     } finally {
-      state.boundaries.push(event);
       if (phase === 'end') state.fixture_open = false;
     }
     return { automatic_activity_detection: automaticActivityDetection, boundary: { ...event } };

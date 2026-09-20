@@ -21,8 +21,10 @@ import {
   noteQaGeminiClose,
   noteQaGeminiError,
   noteQaGeminiOpen,
+  noteQaOutboundAudioSend,
   noteQaGeminiServerMessage,
   resetQaGeminiSessionDiagnostics,
+  shouldSendQaOutboundAudio,
 } from '../lib/geminiQaSessionDiagnostics';
 import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
@@ -1012,12 +1014,15 @@ export function useGeminiLiveSession({
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
         const hasSession = Boolean(sessionRef.current);
         const active = activeRef.current;
-        const accepted = hasSession && active;
-        const audioBoundary = noteQaChunkDisposition(pcm16.byteLength, hasSession, active, accepted);
-        if (audioBoundary?.pcm_chunk_count === 1) {
+        if (!hasSession || !active || !sessionRef.current) {
+          noteQaChunkDisposition(pcm16.byteLength, hasSession, active, false);
+          return;
+        }
+        if (!shouldSendQaOutboundAudio(pcm16.byteLength)) return;
+        const audioBoundary = noteQaChunkDisposition(pcm16.byteLength, true, true, true);
+        if (audioBoundary?.accepted_chunk_count === 1) {
           recordLiveCartAudit(sessionIdRef.current, 'audio_pcm_observed', audioBoundary);
         }
-        if (!accepted || !sessionRef.current) return;
         const now = Date.now();
         if (!firstAudioFrameAt) {
           firstAudioFrameAt = now;
@@ -1027,6 +1032,7 @@ export function useGeminiLiveSession({
         }
 
         try {
+          noteQaOutboundAudioSend(pcm16.byteLength);
           if (audioBoundary?.send_realtime_input_attempt_count === 1) {
             recordLiveCartAudit(sessionIdRef.current, 'audio_send_attempted', audioBoundary);
           }

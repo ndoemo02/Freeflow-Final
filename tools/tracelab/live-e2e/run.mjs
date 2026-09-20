@@ -14,6 +14,7 @@ const requireEnv = name => {
   return value;
 };
 const safe = value => String(value).replace(/[^a-zA-Z0-9_.-]/g, '_');
+const QA_AUDIO_PROCESSING_TAIL_MS = 300; // one existing 4096-frame PCM block at 16 kHz is 256 ms
 const scenarioPath = path.resolve(process.env.FREEFLOW_E2E_SCENARIO || path.join(here, 'scenario.json'));
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
 if (!scenario.stop_before_checkout || !Array.isArray(scenario.turns) || scenario.turns.length !== 5) {
@@ -127,12 +128,13 @@ try {
     const audio = fs.readFileSync(path.resolve(path.dirname(scenarioPath), turn.audio)).toString('base64');
     const boundaryBefore = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
     const playbackStartedAt = Date.now();
-    const { playback, fixtureStart, explicitBoundary } = await page.evaluate(async encoded => {
+    const { playback, fixtureStart, explicitBoundary, processingTailMs } = await page.evaluate(async ({ encoded, tailMs }) => {
       const fixtureStart = window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.startFixture();
       const playback = await window.__FREEFLOW_AUDIO_SHIM__.playBase64(encoded);
+      await new Promise(resolve => setTimeout(resolve, tailMs));
       const explicitBoundary = window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__.endFixture();
-      return { playback, fixtureStart, explicitBoundary };
-    }, audio);
+      return { playback, fixtureStart, explicitBoundary, processingTailMs: tailMs };
+    }, { encoded: audio, tailMs: QA_AUDIO_PROCESSING_TAIL_MS });
     const playbackFinishedAt = Date.now();
     const boundaryAfter = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
     fs.appendFileSync(path.join(outputDir, 'wav-playback.jsonl'), `${JSON.stringify({
@@ -141,6 +143,7 @@ try {
       playback_finished_at: playbackFinishedAt,
       fixture_start: fixtureStart,
       explicit_boundary: explicitBoundary,
+      processing_tail_ms: processingTailMs,
       boundary_before: boundaryBefore,
       boundary_after: boundaryAfter,
       ...playback,
