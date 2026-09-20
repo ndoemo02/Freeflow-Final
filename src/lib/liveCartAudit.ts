@@ -111,7 +111,8 @@ export async function exportPersistedQaTraceRun(runId: string): Promise<string> 
   if (sink?.mode !== 'qa' || sink.run_id !== runId || !allowed(runId, sink.sessionId, false)) throw new Error('tracelab_run_not_active');
   await waitForTracePersistence();
   const events = await fetchPersistedTraceRun(runId, sink.sessionId);
-  return JSON.stringify({ schema: 'freeflow.tracelab.v1', run_id: runId, truncated: !!sink.truncated, events }, redact, 2);
+  return JSON.stringify({ schema: 'freeflow.tracelab.v1', run_id: runId, truncated: false,
+    memory_collector_truncated: !!sink.truncated, events }, redact, 2);
 }
 
 export function exportLiveCartAuditRun(runId: string): string | null {

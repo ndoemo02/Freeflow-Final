@@ -32,9 +32,23 @@ export function queueTraceEventPersistence(event: Record<string, unknown>): void
 
 export async function fetchPersistedTraceRun(runId: string, sessionId: string): Promise<Record<string, unknown>[]> {
   const { supabase } = await (clientModule ||= import('./supabase'));
-  const { data, error } = await supabase.from('tracelab_events')
-    .select('run_id,session_id,turn_id,request_id,source,event,timestamp,payload')
-    .eq('run_id', runId).eq('session_id', sessionId).order('timestamp', { ascending: true });
-  if (error) throw new Error('tracelab_export_unavailable');
-  return Array.isArray(data) ? data : [];
+  const pageSize = 1000;
+  const maxPages = 100;
+  const events: Record<string, unknown>[] = [];
+  for (let page = 0; page < maxPages; page++) {
+    const from = page * pageSize;
+    const { data, error } = await supabase.from('tracelab_events')
+      .select('run_id,session_id,turn_id,request_id,source,event,timestamp,payload')
+      .eq('run_id', runId).eq('session_id', sessionId)
+      .order('timestamp', { ascending: true })
+      .order('source', { ascending: true })
+      .order('collector_id', { ascending: true })
+      .order('sequence', { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw new Error('tracelab_export_unavailable');
+    const rows = Array.isArray(data) ? data : [];
+    events.push(...rows);
+    if (rows.length < pageSize) return events;
+  }
+  throw new Error('tracelab_export_page_limit_exceeded');
 }

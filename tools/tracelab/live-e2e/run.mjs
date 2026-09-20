@@ -7,6 +7,7 @@ import { installFreeFlowAudioShim } from './audio-shim.mjs';
 import { parseDeterministicPcmWav } from './wav.mjs';
 import { blockedSideEffect } from './policy.mjs';
 import { cartMatchesExpected, transcriptMatches } from './assertions.mjs';
+import { createTurnLatchStore, installQaTurnLatch } from './turn-latch.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const requireEnv = name => {
@@ -60,12 +61,16 @@ await context.addInitScript(() => {
 await context.addInitScript({
   content: `(${installFreeFlowAudioShim.toString()})(${parseDeterministicPcmWav.toString()});`,
 });
+await context.addInitScript({
+  content: `window.__FREEFLOW_CREATE_TURN_LATCH_STORE__ = ${createTurnLatchStore.toString()};`,
+});
 
 const page = await context.newPage();
 let runId;
 let outputDir;
 let sessionId;
 let bootstrapFailureDir;
+const scenarioResults = [];
 
 const ensureFailureOutputDir = () => {
   if (outputDir) return outputDir;
@@ -102,6 +107,52 @@ const runAnalyzer = (capturePath, reportName) => {
   return result.status;
 };
 
+const scenarioReport = () => {
+  const complete = scenarioResults.length === turnLimit;
+  const status = scenarioResults.some(result => result.status === 'FAIL') ? 'FAIL'
+    : scenarioResults.some(result => result.status === 'UNKNOWN') || !complete ? 'UNKNOWN' : 'PASS';
+  return { schema: 'freeflow.tracelab.qa-scenario.v1', run_id: runId || null, status,
+    completed_turns: scenarioResults.length, expected_turns: turnLimit, turns: scenarioResults };
+};
+
+const writeScenarioReport = () => {
+  if (!outputDir) return scenarioReport();
+  const report = scenarioReport();
+  fs.writeFileSync(path.join(outputDir, 'scenario-report.json'), JSON.stringify(report, null, 2));
+  return report;
+};
+
+const writeEventVolume = capture => {
+  if (!outputDir || !capture) return null;
+  const events = JSON.parse(capture).events || [];
+  const counts = {};
+  for (const event of events) counts[event.event] = (counts[event.event] || 0) + 1;
+  const volume = {
+    total: events.length,
+    repetitive: {
+      cart_sync_attempt: counts.cart_sync_attempt || 0,
+      ui_cart_committed: counts.ui_cart_committed || 0,
+    },
+    by_event: counts,
+  };
+  fs.writeFileSync(path.join(outputDir, 'event-volume.json'), JSON.stringify(volume, null, 2));
+  return volume;
+};
+
+const writeRunResult = failure => {
+  if (!outputDir) return;
+  const scenarioResult = writeScenarioReport();
+  const tracePath = path.join(outputDir, 'report-persisted', 'report.json');
+  const trace = fs.existsSync(tracePath) ? JSON.parse(fs.readFileSync(tracePath, 'utf8')) : null;
+  const overall = scenarioResult.status === 'FAIL' || trace?.status === 'FAIL' ? 'FAIL'
+    : scenarioResult.status === 'UNKNOWN' || !trace || trace.status === 'UNKNOWN' ? 'UNKNOWN' : 'PASS';
+  fs.writeFileSync(path.join(outputDir, 'result.json'), JSON.stringify({
+    schema: 'freeflow.tracelab.qa-result.v1', run_id: runId, status: overall,
+    scenario_status: scenarioResult.status, trace_analyzer_status: trace?.status || 'UNKNOWN',
+    failure: failure ? String(failure) : null,
+  }, null, 2));
+};
+
 const collectBoundaryEvidence = async (failure = null) => {
   const evidenceDir = failure ? ensureFailureOutputDir() : outputDir;
   if (!evidenceDir) return;
@@ -125,6 +176,7 @@ const collectBoundaryEvidence = async (failure = null) => {
     gemini_session: window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__?.snapshot?.() || null,
     audio_shim: window.__FREEFLOW_AUDIO_SHIM__?.state?.() || null,
     collector_event_count: window.__FREEFLOW_CART_AUDIT__?.events?.length ?? null,
+    qa_turn_latch: window.__FREEFLOW_TRACELAB_TURN_LATCH__?.current?.() || null,
   })).catch(error => ({ collection_error: String(error) }));
   fs.writeFileSync(path.join(evidenceDir, 'audio-boundary.json'), JSON.stringify({
     captured_at: Date.now(),
@@ -150,6 +202,7 @@ const collectBoundaryEvidence = async (failure = null) => {
   if (persistedCapture) {
     const persistedPath = path.join(evidenceDir, 'capture-persisted.json');
     fs.writeFileSync(persistedPath, persistedCapture);
+    writeEventVolume(persistedCapture);
     runAnalyzer(persistedPath, 'report-persisted');
   }
 };
@@ -165,6 +218,7 @@ try {
   outputDir = path.resolve('output', 'playwright', 'tracelab', safe(runId));
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, 'scenario.json'), JSON.stringify({ ...scenario, run_id: runId, session_id: sessionId }, null, 2), { flag: 'wx' });
+  await page.evaluate(installQaTurnLatch);
 
   await page.getByRole('button', { name: 'Włącz mikrofon' }).first().click();
   await page.waitForFunction(() => window.__FREEFLOW_AUDIO_SHIM__?.ready(), null, { timeout: 15000 });
@@ -173,7 +227,9 @@ try {
 
   for (let index = 0; index < turnLimit; index++) {
     const turn = scenario.turns[index];
-    const before = await page.evaluate(() => window.__FREEFLOW_CART_AUDIT__?.events?.length || 0);
+    await page.evaluate(({ turnId, required }) => window.__FREEFLOW_TRACELAB_TURN_LATCH__.begin(turnId, required), {
+      turnId: turn.id, required: turn.completion_events,
+    });
     const audio = fs.readFileSync(path.resolve(path.dirname(scenarioPath), turn.audio)).toString('base64');
     const boundaryBefore = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
     const playbackStartedAt = Date.now();
@@ -197,28 +253,42 @@ try {
       boundary_after: boundaryAfter,
       ...playback,
     })}\n`);
-    await page.waitForFunction(({ start, required }) => {
-      const events = (window.__FREEFLOW_CART_AUDIT__?.events || []).slice(start);
-      return required.every(name => events.some(event => event.event === name));
-    }, { start: before, required: turn.completion_events }, { timeout: scenario.turn_timeout_ms });
+    try {
+      await page.waitForFunction(turnId => window.__FREEFLOW_TRACELAB_TURN_LATCH__?.status(turnId)?.complete === true,
+        turn.id, { timeout: scenario.turn_timeout_ms });
+    } catch (error) {
+      const observation = await page.evaluate(turnId => window.__FREEFLOW_TRACELAB_TURN_LATCH__?.status(turnId) || null, turn.id);
+      scenarioResults.push({ turn_id: turn.id, status: 'UNKNOWN', reason: 'required_stage_timeout', observation });
+      writeScenarioReport();
+      fs.writeFileSync(path.join(outputDir, `${String(index + 1).padStart(2, '0')}-${safe(turn.id)}-timeout-observation.json`),
+        JSON.stringify(observation, null, 2));
+      throw error;
+    }
     await page.locator('[data-ui-role="voice-dock-bar"][data-state="listening"]').waitFor({ timeout: scenario.turn_timeout_ms });
-    const evidence = await page.evaluate(start => {
-      const events = window.__FREEFLOW_CART_AUDIT__?.events || [];
-      const current = events.slice(start);
-      const transcript = [...current].reverse().find(event => event.event === 'user_transcript')?.payload?.text || '';
-      const cart = [...events].reverse().find(event => event.event === 'ui_cart_committed')?.payload?.cart || null;
-      return { transcript, cart };
-    }, before);
-    if (!transcriptMatches(turn.expected_transcript, evidence.transcript)) {
-      throw new Error(`Transcript mismatch in ${turn.id}: ${JSON.stringify(evidence.transcript)}`);
-    }
-    if (!cartMatchesExpected(evidence.cart, turn.expected_cart)) {
-      throw new Error(`Visible cart mismatch in ${turn.id}: ${JSON.stringify(evidence.cart)}`);
-    }
+    const observation = await page.evaluate(turnId => window.__FREEFLOW_TRACELAB_TURN_LATCH__.end(turnId), turn.id);
+    const evidence = {
+      transcript: observation?.latest_events?.user_transcript?.payload?.text || '',
+      cart: observation?.latest_events?.ui_cart_committed?.payload?.cart || null,
+    };
+    const transcriptOk = transcriptMatches(turn.expected_transcript, evidence.transcript);
+    const cartOk = cartMatchesExpected(evidence.cart, turn.expected_cart);
+    const turnResult = {
+      turn_id: turn.id, status: transcriptOk && cartOk ? 'PASS' : 'FAIL',
+      checks: {
+        transcript_matches: { status: transcriptOk ? 'PASS' : 'FAIL', expected: turn.expected_transcript, actual: evidence.transcript },
+        visible_cart_matches: { status: cartOk ? 'PASS' : 'FAIL', expected: turn.expected_cart, actual: evidence.cart },
+      },
+      observed_required_stages: observation?.observed || {},
+      repetitive_event_counts: observation?.repetitive_event_counts || {},
+    };
+    scenarioResults.push(turnResult);
+    writeScenarioReport();
     const cartLabel = await page.locator('button[aria-label^="Otwórz koszyk"]').first().getAttribute('aria-label').catch(() => null);
     await page.screenshot({ path: path.join(outputDir, `${String(index + 1).padStart(2, '0')}-${safe(turn.id)}.png`), fullPage: true });
-    fs.appendFileSync(path.join(outputDir, 'turns.jsonl'), `${JSON.stringify({ turn_id: turn.id, transcript: evidence.transcript, cart: evidence.cart, cart_label: cartLabel })}\n`);
+    fs.appendFileSync(path.join(outputDir, 'turns.jsonl'), `${JSON.stringify({ turn_id: turn.id, transcript: evidence.transcript,
+      cart: evidence.cart, cart_label: cartLabel, observation, status: turnResult.status })}\n`);
     if (blocked.length) throw new Error(`Blocked side-effect attempts detected: ${JSON.stringify(blocked)}`);
+    if (!transcriptOk || !cartOk) throw new Error(`Scenario mismatch in ${turn.id}`);
   }
 
   let capture;
@@ -229,6 +299,7 @@ try {
     await page.waitForTimeout(500);
   }
   fs.writeFileSync(path.join(outputDir, 'capture.json'), capture, { flag: 'wx' });
+  writeEventVolume(capture);
   await collectBoundaryEvidence();
   await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__.stop(id), runId);
 
@@ -236,9 +307,11 @@ try {
     stdio: 'inherit', env: { ...process.env, FREEFLOW_TRACELAB_DEBUG: '1' },
   });
   if (blocked.length) throw new Error(`Blocked side-effect attempts detected: ${JSON.stringify(blocked)}`);
+  writeRunResult(null);
   process.stdout.write(`${JSON.stringify({ ok: true, run_id: runId, session_id: sessionId, output: outputDir })}\n`);
 } catch (error) {
   await collectBoundaryEvidence(error);
+  writeRunResult(error);
   if (runId) await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.stop?.(id), runId).catch(() => {});
   throw error;
 } finally {
