@@ -65,6 +65,22 @@ const page = await context.newPage();
 let runId;
 let outputDir;
 let sessionId;
+let bootstrapFailureDir;
+
+const ensureFailureOutputDir = () => {
+  if (outputDir) return outputDir;
+  if (!bootstrapFailureDir) {
+    bootstrapFailureDir = path.resolve(
+      'output',
+      'playwright',
+      'tracelab',
+      'bootstrap-failures',
+      `${Date.now()}-${process.pid}`,
+    );
+    fs.mkdirSync(bootstrapFailureDir, { recursive: true });
+  }
+  return bootstrapFailureDir;
+};
 
 const writeJson = (name, value) => {
   if (!outputDir) return;
@@ -87,31 +103,52 @@ const runAnalyzer = (capturePath, reportName) => {
 };
 
 const collectBoundaryEvidence = async (failure = null) => {
-  if (!outputDir || !runId) return;
+  const evidenceDir = failure ? ensureFailureOutputDir() : outputDir;
+  if (!evidenceDir) return;
   const runtime = await page.evaluate(() => ({
+    bootstrap: {
+      url: window.location.href,
+      pathname: window.location.pathname,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      ready_state: document.readyState,
+      voice_dock_exists: Boolean(document.querySelector('[data-ui-role="voice-dock-bar"]')),
+      data_ui_roles: [...new Set([...document.querySelectorAll('[data-ui-role]')]
+        .map(element => element.getAttribute('data-ui-role')).filter(Boolean))],
+      overlays: [...document.querySelectorAll('[role="dialog"], [aria-modal="true"]')].map(element => ({
+        tag: element.tagName.toLowerCase(),
+        role: element.getAttribute('role'),
+        aria_modal: element.getAttribute('aria-modal'),
+        class_name: String(element.className || '').slice(0, 160),
+      })).slice(0, 20),
+    },
     audio_boundary: window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null,
     gemini_session: window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__?.snapshot?.() || null,
     audio_shim: window.__FREEFLOW_AUDIO_SHIM__?.state?.() || null,
     collector_event_count: window.__FREEFLOW_CART_AUDIT__?.events?.length ?? null,
   })).catch(error => ({ collection_error: String(error) }));
-  writeJson('audio-boundary.json', {
+  fs.writeFileSync(path.join(evidenceDir, 'audio-boundary.json'), JSON.stringify({
     captured_at: Date.now(),
     failure: failure ? String(failure) : null,
     blocked_side_effect_count: blocked.length,
     ...runtime,
-  });
-  await page.screenshot({ path: path.join(outputDir, failure ? 'timeout.png' : 'final.png'), fullPage: true }).catch(() => {});
+  }, null, 2));
+  await page.screenshot({ path: path.join(evidenceDir, failure ? 'timeout.png' : 'final.png'), fullPage: true }).catch(() => {});
+
+  if (!runId) {
+    process.stderr.write(`${JSON.stringify({ bootstrap_failure_evidence: evidenceDir })}\n`);
+    return;
+  }
 
   const memoryCapture = await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.exportMemory?.(id) || null, runId).catch(() => null);
   if (memoryCapture) {
-    const memoryPath = path.join(outputDir, 'capture-memory.json');
+    const memoryPath = path.join(evidenceDir, 'capture-memory.json');
     fs.writeFileSync(memoryPath, memoryCapture);
     runAnalyzer(memoryPath, 'report-memory');
   }
 
   const persistedCapture = await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.exportRun?.(id) || null, runId).catch(() => null);
   if (persistedCapture) {
-    const persistedPath = path.join(outputDir, 'capture-persisted.json');
+    const persistedPath = path.join(evidenceDir, 'capture-persisted.json');
     fs.writeFileSync(persistedPath, persistedCapture);
     runAnalyzer(persistedPath, 'report-persisted');
   }
