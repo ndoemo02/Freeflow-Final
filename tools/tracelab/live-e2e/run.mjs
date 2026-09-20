@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,10 +45,62 @@ await context.addInitScript(installFreeFlowAudioShim);
 const page = await context.newPage();
 let runId;
 let outputDir;
+let sessionId;
+
+const writeJson = (name, value) => {
+  if (!outputDir) return;
+  fs.writeFileSync(path.join(outputDir, name), JSON.stringify(value, null, 2));
+};
+
+const runAnalyzer = (capturePath, reportName) => {
+  if (!outputDir || !runId || !sessionId || !fs.existsSync(capturePath)) return null;
+  const reportDir = path.join(outputDir, reportName);
+  const result = spawnSync(process.execPath, [cli, '--run', runId, '--session', sessionId, '--out', reportDir, capturePath], {
+    encoding: 'utf8', env: { ...process.env, FREEFLOW_TRACELAB_DEBUG: '1' },
+  });
+  writeJson(`${reportName}-exit.json`, {
+    status: result.status,
+    signal: result.signal,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  });
+  return result.status;
+};
+
+const collectBoundaryEvidence = async (failure = null) => {
+  if (!outputDir || !runId) return;
+  const runtime = await page.evaluate(() => ({
+    audio_boundary: window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null,
+    audio_shim: window.__FREEFLOW_AUDIO_SHIM__?.state?.() || null,
+    collector_event_count: window.__FREEFLOW_CART_AUDIT__?.events?.length ?? null,
+  })).catch(error => ({ collection_error: String(error) }));
+  writeJson('audio-boundary.json', {
+    captured_at: Date.now(),
+    failure: failure ? String(failure) : null,
+    blocked_side_effect_count: blocked.length,
+    ...runtime,
+  });
+  await page.screenshot({ path: path.join(outputDir, failure ? 'timeout.png' : 'final.png'), fullPage: true }).catch(() => {});
+
+  const memoryCapture = await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.exportMemory?.(id) || null, runId).catch(() => null);
+  if (memoryCapture) {
+    const memoryPath = path.join(outputDir, 'capture-memory.json');
+    fs.writeFileSync(memoryPath, memoryCapture);
+    runAnalyzer(memoryPath, 'report-memory');
+  }
+
+  const persistedCapture = await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.exportRun?.(id) || null, runId).catch(() => null);
+  if (persistedCapture) {
+    const persistedPath = path.join(outputDir, 'capture-persisted.json');
+    fs.writeFileSync(persistedPath, persistedCapture);
+    runAnalyzer(persistedPath, 'report-persisted');
+  }
+};
+
 try {
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.locator('[data-ui-role="voice-dock-bar"]').waitFor({ state: 'visible', timeout: 30000 });
-  const sessionId = await page.waitForFunction(() => /^sess_[a-z0-9_]+$/.test(localStorage.getItem('amber-session-id') || ''), null, { timeout: 15000 })
+  sessionId = await page.waitForFunction(() => /^sess_[a-z0-9_]+$/.test(localStorage.getItem('amber-session-id') || ''), null, { timeout: 15000 })
     .then(handle => handle.jsonValue()).then(() => page.evaluate(() => localStorage.getItem('amber-session-id')));
   await page.waitForFunction(() => Boolean(window.__FREEFLOW_TRACELAB_QA__?.start), null, { timeout: 15000 });
   const started = await page.evaluate(session => window.__FREEFLOW_TRACELAB_QA__.start(session), sessionId);
@@ -65,7 +117,19 @@ try {
     const turn = scenario.turns[index];
     const before = await page.evaluate(() => window.__FREEFLOW_CART_AUDIT__?.events?.length || 0);
     const audio = fs.readFileSync(path.resolve(path.dirname(scenarioPath), turn.audio)).toString('base64');
-    await page.evaluate(encoded => window.__FREEFLOW_AUDIO_SHIM__.playBase64(encoded), audio);
+    const boundaryBefore = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
+    const playbackStartedAt = Date.now();
+    const playback = await page.evaluate(encoded => window.__FREEFLOW_AUDIO_SHIM__.playBase64(encoded), audio);
+    const playbackFinishedAt = Date.now();
+    const boundaryAfter = await page.evaluate(() => window.__FREEFLOW_AUDIO_BOUNDARY_DIAGNOSTICS__?.snapshot?.() || null);
+    fs.appendFileSync(path.join(outputDir, 'wav-playback.jsonl'), `${JSON.stringify({
+      turn_id: turn.id,
+      playback_started_at: playbackStartedAt,
+      playback_finished_at: playbackFinishedAt,
+      boundary_before: boundaryBefore,
+      boundary_after: boundaryAfter,
+      ...playback,
+    })}\n`);
     await page.waitForFunction(({ start, required }) => {
       const events = (window.__FREEFLOW_CART_AUDIT__?.events || []).slice(start);
       return required.every(name => events.some(event => event.event === name));
@@ -98,6 +162,7 @@ try {
     await page.waitForTimeout(500);
   }
   fs.writeFileSync(path.join(outputDir, 'capture.json'), capture, { flag: 'wx' });
+  await collectBoundaryEvidence();
   await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__.stop(id), runId);
 
   execFileSync(process.execPath, [cli, '--run', runId, '--session', sessionId, '--out', outputDir, path.join(outputDir, 'capture.json')], {
@@ -105,6 +170,10 @@ try {
   });
   if (blocked.length) throw new Error(`Blocked side-effect attempts detected: ${JSON.stringify(blocked)}`);
   process.stdout.write(`${JSON.stringify({ ok: true, run_id: runId, session_id: sessionId, output: outputDir })}\n`);
+} catch (error) {
+  await collectBoundaryEvidence(error);
+  if (runId) await page.evaluate(id => window.__FREEFLOW_TRACELAB_QA__?.stop?.(id), runId).catch(() => {});
+  throw error;
 } finally {
   await context.close();
   await browser.close();

@@ -128,6 +128,7 @@ export function installLiveCartAuditControls(): void {
     (window as any).__FREEFLOW_TRACELAB_QA__ = Object.freeze({
       start: startQaLiveCartAuditRun, stop: stopLiveCartAuditRun,
       exportRun: exportPersistedQaTraceRun,
+      exportMemory: exportLiveCartAuditRun,
       status: () => {
         const sink = (window as any).__FREEFLOW_CART_AUDIT__;
         return sink?.mode === 'qa' ? { run_id: sink.run_id, session_id: sink.sessionId, capture_expires_at: sink.capture_expires_at } : null;

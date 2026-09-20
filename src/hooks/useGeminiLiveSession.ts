@@ -12,6 +12,10 @@ import {
 } from '@google/genai';
 import { recordLiveCartAudit, auditCartSnapshot } from '../lib/liveCartAudit';
 import { startPCM16Stream } from '../lib/audioStream';
+import {
+  noteQaChunkDisposition,
+  noteQaSendRealtimeInputThrow,
+} from '../lib/audioBoundaryDiagnostics';
 import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
@@ -997,7 +1001,14 @@ export function useGeminiLiveSession({
       // config/token first can leave Chrome's AudioContext suspended until the
       // user clicks the dock a second time.
       const stopMic = await startPCM16Stream((pcm16: ArrayBuffer) => {
-        if (!sessionRef.current || !activeRef.current) return;
+        const hasSession = Boolean(sessionRef.current);
+        const active = activeRef.current;
+        const accepted = hasSession && active;
+        const audioBoundary = noteQaChunkDisposition(pcm16.byteLength, hasSession, active, accepted);
+        if (audioBoundary?.pcm_chunk_count === 1) {
+          recordLiveCartAudit(sessionIdRef.current, 'audio_pcm_observed', audioBoundary);
+        }
+        if (!accepted || !sessionRef.current) return;
         const now = Date.now();
         if (!firstAudioFrameAt) {
           firstAudioFrameAt = now;
@@ -1007,6 +1018,9 @@ export function useGeminiLiveSession({
         }
 
         try {
+          if (audioBoundary?.send_realtime_input_attempt_count === 1) {
+            recordLiveCartAudit(sessionIdRef.current, 'audio_send_attempted', audioBoundary);
+          }
           sessionRef.current.sendRealtimeInput({
             audio: {
               data: arrayBufferToBase64(pcm16),
@@ -1014,6 +1028,7 @@ export function useGeminiLiveSession({
             },
           });
         } catch {
+          noteQaSendRealtimeInputThrow();
           // noop
         }
       });

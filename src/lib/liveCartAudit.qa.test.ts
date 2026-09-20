@@ -34,6 +34,9 @@ it('starts from the actual session, persists redacted events and exports both so
   expect(mocks.persist).toHaveBeenCalledWith(expect.objectContaining({
     run_id: started.run_id, session_id: 'sess_actual', payload: expect.objectContaining({ audio: '[redacted]' }),
   }));
+  const memory = JSON.parse((window as any).__FREEFLOW_TRACELAB_QA__.exportMemory(started.run_id));
+  expect(memory.events).toHaveLength(1);
+  expect(memory.events[0]).toMatchObject({ source: 'frontend', event: 'user_transcript' });
   mocks.fetchRun.mockResolvedValue([{ run_id: started.run_id, session_id: 'sess_actual', source: 'backend', event: 'mutation_result' }]);
   const exported = JSON.parse(await (window as any).__FREEFLOW_TRACELAB_QA__.exportRun(started.run_id));
   expect(exported.events[0]).toMatchObject({ source: 'backend', event: 'mutation_result' });

@@ -5,6 +5,14 @@
  * Gemini Live expects: base64-encoded PCM16 mono at 16 kHz.
  */
 
+import {
+  isQaAudioBoundaryDiagnosticsEnabled,
+  measureFloatSignal,
+  noteQaPcmChunk,
+  resetQaAudioBoundaryDiagnostics,
+  type AudioSignalMetrics,
+} from './audioBoundaryDiagnostics';
+
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_FRAMES = 4096; // ~256ms at 16kHz
 
@@ -31,6 +39,53 @@ class PCM16Processor extends AudioWorkletProcessor {
 registerProcessor('pcm16-processor', PCM16Processor);
 `;
 
+const QA_WORKLET_CODE = `
+class PCM16DiagnosticProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._buf = [];
+    this._inputPeak = 0;
+    this._inputSquareSum = 0;
+    this._inputNonZero = 0;
+    this._inputCount = 0;
+    this._processCount = 0;
+  }
+  process(inputs) {
+    const ch = inputs[0]?.[0];
+    if (!ch) return true;
+    this._processCount++;
+    for (let i = 0; i < ch.length; i++) {
+      const raw = ch[i];
+      const absolute = Math.abs(raw);
+      if (raw !== 0) this._inputNonZero++;
+      if (absolute > this._inputPeak) this._inputPeak = absolute;
+      this._inputSquareSum += raw * raw;
+      this._inputCount++;
+      const s = Math.max(-1, Math.min(1, raw));
+      this._buf.push(s < 0 ? s * 0x8000 : s * 0x7FFF);
+    }
+    while (this._buf.length >= ${CHUNK_FRAMES}) {
+      const arr = new Int16Array(this._buf.splice(0, ${CHUNK_FRAMES}));
+      const inputMetrics = {
+        sample_count: this._inputCount,
+        non_zero_sample_count: this._inputNonZero,
+        peak: this._inputPeak,
+        square_sum: this._inputSquareSum,
+        web_audio_callback_count: this._processCount,
+      };
+      this.port.postMessage({ pcm16: arr.buffer, input_metrics: inputMetrics }, [arr.buffer]);
+      this._inputPeak = 0;
+      this._inputSquareSum = 0;
+      this._inputNonZero = 0;
+      this._inputCount = 0;
+      this._processCount = 0;
+    }
+    return true;
+  }
+}
+registerProcessor('pcm16-diagnostic-processor', PCM16DiagnosticProcessor);
+`;
+
 function float32ToPcm16(float32: Float32Array): ArrayBuffer {
   const int16 = new Int16Array(float32.length);
   for (let i = 0; i < float32.length; i++) {
@@ -49,6 +104,7 @@ function float32ToPcm16(float32: Float32Array): ArrayBuffer {
 export async function startPCM16Stream(
   onChunk: (pcm16: ArrayBuffer) => void,
 ): Promise<() => void> {
+  const qaDiagnostics = resetQaAudioBoundaryDiagnostics();
   // Create/resume the context before the first await so it remains associated
   // with the user's Run Live click (required by browser autoplay policies).
   const ctx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
@@ -74,13 +130,21 @@ export async function startPCM16Stream(
 
   try {
     // AudioWorklet path (preferred)
-    const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+    const blob = new Blob([qaDiagnostics ? QA_WORKLET_CODE : WORKLET_CODE], { type: 'application/javascript' });
     const url = URL.createObjectURL(blob);
     await ctx.audioWorklet.addModule(url);
     URL.revokeObjectURL(url);
 
-    const node = new AudioWorkletNode(ctx, 'pcm16-processor');
-    node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => onChunk(e.data);
+    const processorName = qaDiagnostics ? 'pcm16-diagnostic-processor' : 'pcm16-processor';
+    const node = new AudioWorkletNode(ctx, processorName);
+    node.port.onmessage = (e: MessageEvent<ArrayBuffer | { pcm16: ArrayBuffer; input_metrics: AudioSignalMetrics }>) => {
+      if (qaDiagnostics && !(e.data instanceof ArrayBuffer)) {
+        noteQaPcmChunk(e.data.pcm16, e.data.input_metrics);
+        onChunk(e.data.pcm16);
+        return;
+      }
+      onChunk(e.data as ArrayBuffer);
+    };
     source.connect(node);
     // Connect to destination to keep processing alive (silent output)
     node.connect(ctx.destination);
@@ -94,7 +158,12 @@ export async function startPCM16Stream(
     // Fallback: ScriptProcessorNode (deprecated but universally supported)
     const proc = ctx.createScriptProcessor(CHUNK_FRAMES, 1, 1);
     proc.onaudioprocess = (e) => {
-      onChunk(float32ToPcm16(e.inputBuffer.getChannelData(0)));
+      const float32 = e.inputBuffer.getChannelData(0);
+      const pcm16 = float32ToPcm16(float32);
+      if (qaDiagnostics && isQaAudioBoundaryDiagnosticsEnabled()) {
+        noteQaPcmChunk(pcm16, { ...measureFloatSignal(float32), web_audio_callback_count: 1 });
+      }
+      onChunk(pcm16);
     };
     source.connect(proc);
     proc.connect(ctx.destination);
