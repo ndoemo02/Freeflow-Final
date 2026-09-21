@@ -38,7 +38,8 @@ It uses the Live API `v1beta`, omits thinking configuration and copies the
 existing function declarations with explicit `BLOCKING` behavior. Without this
 exact runner marker, the production Live setup is unchanged.
 Compatibility smoke runs also require `FREEFLOW_E2E_EXPECTED_LIVE_MODEL`, which
-fails before fixture playback if the runtime model or setup metadata differs.
+sets the model only in the disposable QA browser context and fails before fixture
+playback if the runtime model or setup metadata differs.
 
 ```powershell
 $env:FREEFLOW_E2E_BASE_URL='https://<frontend>'

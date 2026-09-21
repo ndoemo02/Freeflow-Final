@@ -68,9 +68,10 @@ await context.addInitScript(() => {
   ]) localStorage.removeItem(key);
 });
 if (compatibilityProfile) {
-  await context.addInitScript(profile => {
+  await context.addInitScript(({ profile, model }) => {
     window.__FREEFLOW_GEMINI_LIVE_COMPATIBILITY_PROFILE__ = profile;
-  }, compatibilityProfile);
+    localStorage.setItem('ff_live_model_override', model);
+  }, { profile: compatibilityProfile, model: expectedLiveModel });
 }
 await context.addInitScript({
   content: `(${installFreeFlowAudioShim.toString()})(${parseDeterministicPcmWav.toString()});`,
