@@ -29,6 +29,12 @@ import {
 import { getAccessToken } from '../lib/supabase';
 import { AudioPlayer } from '../lib/audioPlayback';
 import { LIVE_FUNCTION_DECLARATIONS } from '../lib/liveToolDeclarations';
+import {
+  exposeQaLiveCompatibilityRuntime,
+  getQaLiveCompatibilityProfile,
+  QA_LIVE_COMPATIBILITY_API_VERSION,
+  withBlockingFunctionDeclarations,
+} from '../lib/qaLiveCompatibilityProfile';
 import { composeLiveSystemInstruction } from '../lib/liveSystemInstruction';
 import {
   extractFoodDiscoveryQuery,
@@ -263,6 +269,7 @@ async function fetchLiveAccessToken(
   model: string,
   sessionId: string,
   demoContext: ReturnType<typeof getActiveDemoContextPayload>,
+  compatibilityProfile: string | null,
 ): Promise<string> {
   const accessToken = await getAccessToken();
   const response = await fetch(getApiUrl('/api/voice/live/token'), {
@@ -275,6 +282,7 @@ async function fetchLiveAccessToken(
       model,
       session_id: sessionId,
       demo_context: demoContext,
+      ...(compatibilityProfile ? { compatibility_profile: compatibilityProfile } : {}),
     }),
   });
   const payload = await response.json().catch(() => null);
@@ -283,6 +291,10 @@ async function fetchLiveAccessToken(
     const code = typeof payload?.error === 'string' ? payload.error : 'live_token_unavailable';
     throw new Error(code);
   }
+  if (compatibilityProfile && (
+    payload?.compatibility_profile !== compatibilityProfile
+    || payload?.api_version !== QA_LIVE_COMPATIBILITY_API_VERSION
+  )) throw new Error('live_compatibility_profile_mismatch');
   return token;
 }
 
@@ -1056,6 +1068,11 @@ export function useGeminiLiveSession({
       const runtimeConfig = await fetchLiveRuntimeConfig();
       const activeModel = runtimeConfig.liveModel || DEFAULT_LIVE_MODEL;
       if (!activeModel) throw new Error('LIVE model not configured');
+      const compatibilityProfile = getQaLiveCompatibilityProfile();
+      const apiVersion = compatibilityProfile ? QA_LIVE_COMPATIBILITY_API_VERSION : 'v1alpha';
+      const functionDeclarations = compatibilityProfile
+        ? withBlockingFunctionDeclarations(LIVE_FUNCTION_DECLARATIONS)
+        : LIVE_FUNCTION_DECLARATIONS;
       const sid = sessionIdRef.current ?? 'unknown';
       const defaultInstruction = runtimeConfig.speechStyle === 'silesian'
         ? SYSTEM_INSTRUCTION_SILESIAN
@@ -1077,17 +1094,17 @@ export function useGeminiLiveSession({
         gpsSafetyPrefix: hasGpsRule(defaultInstruction) ? '' : GPS_SAFETY_PREFIX,
         demoContext: activeDemoContext,
       });
-      const modelSpecificConfig = activeModel.startsWith('gemini-3.1-')
+      const modelSpecificConfig = !compatibilityProfile && activeModel.startsWith('gemini-3.1-')
         ? { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } }
         : {};
-      const ephemeralToken = await fetchLiveAccessToken(activeModel, sid, activeDemoContext);
+      const ephemeralToken = await fetchLiveAccessToken(activeModel, sid, activeDemoContext, compatibilityProfile);
       if (!desiredActiveRef.current) {
         cleanupRuntime(true);
         return false;
       }
       const ai = new GoogleGenAI({
         apiKey: ephemeralToken,
-        httpOptions: { apiVersion: 'v1alpha' },
+        httpOptions: { apiVersion },
       });
       const player = playerRef.current;
       closureLatchRef.current.reset();
@@ -1364,7 +1381,7 @@ export function useGeminiLiveSession({
               prebuiltVoiceConfig: { voiceName: runtimeConfig.liveVoice || 'Aoede' },
             },
           },
-          tools: [{ functionDeclarations: LIVE_FUNCTION_DECLARATIONS }],
+          tools: [{ functionDeclarations }],
           ...(sessionResumptionHandleRef.current
             ? { sessionResumption: { transparent: true, handle: sessionResumptionHandleRef.current } }
             : {}),
@@ -1483,6 +1500,15 @@ export function useGeminiLiveSession({
         });
         armStallWatchdog('text_turn_sent');
       };
+
+      exposeQaLiveCompatibilityRuntime({
+        profile: compatibilityProfile,
+        api_version: apiVersion,
+        model: activeModel,
+        thinking_config_present: Object.prototype.hasOwnProperty.call(modelSpecificConfig, 'thinkingConfig'),
+        function_declaration_count: functionDeclarations.length,
+        function_behaviors: [...new Set(functionDeclarations.map(declaration => declaration.behavior || 'UNSPECIFIED'))],
+      });
       activeRef.current = true;
       setIsActive(true);
       useLiveUiSessionStore.getState().setListening('Słucham...');

@@ -17,6 +17,15 @@ const requireEnv = name => {
 };
 const safe = value => String(value).replace(/[^a-zA-Z0-9_.-]/g, '_');
 const QA_AUDIO_PROCESSING_TAIL_MS = 120; // one deterministic 1600-frame PCM block at 16 kHz is 100 ms
+const QA_LIVE_COMPATIBILITY_PROFILE = 'gemini-live-v1beta-blocking-v1';
+const compatibilityProfile = String(process.env.FREEFLOW_E2E_COMPATIBILITY_PROFILE || '').trim();
+const expectedLiveModel = String(process.env.FREEFLOW_E2E_EXPECTED_LIVE_MODEL || '').trim();
+if (compatibilityProfile && compatibilityProfile !== QA_LIVE_COMPATIBILITY_PROFILE) {
+  throw new Error('Unsupported FREEFLOW_E2E_COMPATIBILITY_PROFILE');
+}
+if (compatibilityProfile && !expectedLiveModel) {
+  throw new Error('Missing FREEFLOW_E2E_EXPECTED_LIVE_MODEL for compatibility smoke');
+}
 const scenarioPath = path.resolve(process.env.FREEFLOW_E2E_SCENARIO || path.join(here, 'scenario.json'));
 const scenario = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'));
 if (!scenario.stop_before_checkout || !Array.isArray(scenario.turns)
@@ -58,6 +67,11 @@ await context.addInitScript(() => {
     'freeflow_cart_session',
   ]) localStorage.removeItem(key);
 });
+if (compatibilityProfile) {
+  await context.addInitScript(profile => {
+    window.__FREEFLOW_GEMINI_LIVE_COMPATIBILITY_PROFILE__ = profile;
+  }, compatibilityProfile);
+}
 await context.addInitScript({
   content: `(${installFreeFlowAudioShim.toString()})(${parseDeterministicPcmWav.toString()});`,
 });
@@ -177,6 +191,7 @@ const collectBoundaryEvidence = async (failure = null) => {
     audio_shim: window.__FREEFLOW_AUDIO_SHIM__?.state?.() || null,
     collector_event_count: window.__FREEFLOW_CART_AUDIT__?.events?.length ?? null,
     qa_turn_latch: window.__FREEFLOW_TRACELAB_TURN_LATCH__?.current?.() || null,
+    compatibility_profile: window.__FREEFLOW_GEMINI_LIVE_COMPATIBILITY_RUNTIME__ || null,
   })).catch(error => ({ collection_error: String(error) }));
   fs.writeFileSync(path.join(evidenceDir, 'audio-boundary.json'), JSON.stringify({
     captured_at: Date.now(),
@@ -218,12 +233,41 @@ try {
   outputDir = path.resolve('output', 'playwright', 'tracelab', safe(runId));
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(path.join(outputDir, 'scenario.json'), JSON.stringify({ ...scenario, run_id: runId, session_id: sessionId }, null, 2), { flag: 'wx' });
+  if (compatibilityProfile) fs.writeFileSync(path.join(outputDir, 'compatibility-profile.json'), JSON.stringify({
+    schema: 'freeflow.gemini-live-compatibility-profile.v1',
+    profile: compatibilityProfile,
+    expected_api_version: 'v1beta',
+    expected_thinking_config_present: false,
+    expected_function_behavior: 'BLOCKING',
+    expected_model: expectedLiveModel,
+  }, null, 2), { flag: 'wx' });
   await page.evaluate(installQaTurnLatch);
 
   await page.getByRole('button', { name: 'Włącz mikrofon' }).first().click();
   await page.waitForFunction(() => window.__FREEFLOW_AUDIO_SHIM__?.ready(), null, { timeout: 15000 });
   await page.locator('[data-ui-role="voice-dock-bar"][data-state="listening"]').waitFor({ timeout: 30000 });
   await page.waitForFunction(() => Boolean(window.__FREEFLOW_GEMINI_QA_DIAGNOSTICS__?.startFixture), null, { timeout: 15000 });
+  if (compatibilityProfile) {
+    const actual = await page.evaluate(() => window.__FREEFLOW_GEMINI_LIVE_COMPATIBILITY_RUNTIME__ || null);
+    const valid = actual?.profile === compatibilityProfile
+      && actual?.api_version === 'v1beta'
+      && actual?.model === expectedLiveModel
+      && actual?.thinking_config_present === false
+      && Array.isArray(actual?.function_behaviors)
+      && actual.function_behaviors.length === 1
+      && actual.function_behaviors[0] === 'BLOCKING';
+    fs.writeFileSync(path.join(outputDir, 'compatibility-profile.json'), JSON.stringify({
+      schema: 'freeflow.gemini-live-compatibility-profile.v1',
+      profile: compatibilityProfile,
+      expected_api_version: 'v1beta',
+      expected_thinking_config_present: false,
+      expected_function_behavior: 'BLOCKING',
+      expected_model: expectedLiveModel,
+      actual,
+      preflight_status: valid ? 'PASS' : 'FAIL',
+    }, null, 2));
+    if (!valid) throw new Error('compatibility_profile_preflight_failed');
+  }
 
   for (let index = 0; index < turnLimit; index++) {
     const turn = scenario.turns[index];

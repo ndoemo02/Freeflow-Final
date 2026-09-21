@@ -32,6 +32,14 @@ The runner requires a Playwright storage-state file for the allowlisted test
 account. Keep it outside the repository. It is consumed by the browser context
 and is never copied to output or logged.
 
+The optional QA-only common Live compatibility profile is enabled per runner
+process with `FREEFLOW_E2E_COMPATIBILITY_PROFILE=gemini-live-v1beta-blocking-v1`.
+It uses the Live API `v1beta`, omits thinking configuration and copies the
+existing function declarations with explicit `BLOCKING` behavior. Without this
+exact runner marker, the production Live setup is unchanged.
+Compatibility smoke runs also require `FREEFLOW_E2E_EXPECTED_LIVE_MODEL`, which
+fails before fixture playback if the runtime model or setup metadata differs.
+
 ```powershell
 $env:FREEFLOW_E2E_BASE_URL='https://<frontend>'
 $env:FREEFLOW_E2E_STORAGE_STATE='C:\secure\freeflow-test-account.json'
