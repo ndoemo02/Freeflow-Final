@@ -190,7 +190,7 @@ export function CartProvider({ children }) {
   const beginCheckout = () => {
     if (draft.current) return true;
     if (isLoading || !ownerId || owner.current !== ownerId || readyOwner !== ownerId || !cart.length || !restaurant || checkoutError) return false;
-    const next = { version: 1, id: crypto.randomUUID(), ownerId, cart, restaurant,
+    const next = { version: 1, id: crypto.randomUUID(), ownerId, sessionId: getCartSessionId(), cart, restaurant,
       deliveryInfo: checkoutDelivery, submission: submission.current };
     try {
       writeCheckoutDraft(next);
@@ -366,11 +366,20 @@ export function CartProvider({ children }) {
       session_matches: liveSessionId === getCartSessionId(),
       session_blocked: !!blockedLiveSession.current && blockedLiveSession.current === getCartSessionId(),
     });
-    if (draft.current || checkoutError || isLoading || !ownerId || readyOwner !== ownerId
+    // An open checkout stays editable by voice; only an in-flight submission freezes the cart.
+    if (inFlight.current || checkoutError || isLoading || !ownerId || readyOwner !== ownerId
       || liveSessionId !== getCartSessionId() || owner.current !== ownerId
       || (blockedLiveSession.current && blockedLiveSession.current === getCartSessionId())) return;
     console.log('🛒 Syncing cart from Backend:', backendItems, restaurantData);
     if (!backendItems || !Array.isArray(backendItems)) return;
+    // With a checkout draft open, accept only the session that created it: a snapshot from
+    // another session (reload under a new id, ghost reset) must not overwrite the checkout.
+    if (draft.current && draft.current.sessionId !== getCartSessionId()) return;
+    if (draft.current && !backendItems.length) {
+      removeCheckoutDraft();
+      draft.current = null;
+      setHasCheckoutDraft(false);
+    }
 
     const mappedItems = backendItems.map(item => ({
       id: item.id || item.menu_item_id,

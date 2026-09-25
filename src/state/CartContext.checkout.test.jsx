@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('audit: active draft rejects a successful later Live snapshot and survives reload stale', async () => {
+it('audit: active draft accepts a later Live snapshot from its session and reload restores it', async () => {
   const hook = renderHook(() => ({ ...useCart(), ...useActionDispatcher() }), { wrapper });
   const first = replay.steps[0].response;
   const second = replay.steps[1].response;
@@ -47,12 +47,12 @@ it('audit: active draft rejects a successful later Live snapshot and survives re
   expect(compact.actionStatus).toBe('added');
   expect(compact.cartCount).toBe(2);
   await act(async () => hook.result.current.syncCart(second.cart.items, replay.restaurant));
-  expect(hook.result.current.cart.map(item => item.id)).toEqual([first.cart.items[0].id]);
+  expect(hook.result.current.cart.map(item => item.id)).toEqual(second.cart.items.map(item => item.id));
   const attempt = window.__FREEFLOW_CART_AUDIT__.events.filter(event => event.event === 'cart_sync_attempt').at(-1).payload;
   expect(attempt).toMatchObject({ draft_active: true, owner_ready: true, session_matches: true, session_blocked: false });
   expect(attempt.incoming.items).toHaveLength(2);
-  expect(attempt.visible.items).toHaveLength(1);
-  expect(remount(hook).result.current.cart).toHaveLength(1);
+  expect(read().cart).toHaveLength(2);
+  expect(remount(hook).result.current.cart).toHaveLength(2);
   delete window.__FREEFLOW_CART_AUDIT__;
   vi.unstubAllEnvs();
   expect(mock.fetch).not.toHaveBeenCalled();
@@ -110,16 +110,40 @@ it('restores an owned checkout even if Live ghost guard signals that its convers
   await act(async () => next.result.current.resetCartLocal({ source: 'live', clearRestaurant: true }));
   await act(async () => next.result.current.syncCart([], null));
   expect(next.result.current.cart).toHaveLength(1);
+  await act(async () => next.result.current.syncCart([{ id: 'beer-1', name: 'Piwo', price: 9, quantity: 1 }], restaurant));
+  expect(next.result.current.cart.map(item => item.id)).toEqual(['dish-1']);
 });
 
-it('ignores late Live mutation and completion after handoff', async () => {
+it('keeps an open checkout editable by Live in the same session but ignores Live clears', async () => {
   const hook = await handoff();
   await act(async () => hook.result.current.dispatch([
-    { type: 'SYNC_CART', payload: { items: [{ ...items[0], quantity: 9 }], restaurant } },
-    { type: 'CLEAR_CART' },
-  ], {}, undefined, [{ type: 'EVENT_ORDER_COMPLETED' }]));
+    { type: 'SYNC_CART', payload: { items: [{ ...items[0], quantity: 3 }, { id: 'beer-1', name: 'Piwo', price: 9, quantity: 1 }], restaurant } },
+  ], {}));
+  expect(hook.result.current.cart.map(item => [item.id, item.quantity])).toEqual([['dish-1', 3], ['beer-1', 1]]);
+  expect(read().cart).toHaveLength(2);
+  await act(async () => hook.result.current.dispatch([{ type: 'CLEAR_CART' }], {}, undefined, [{ type: 'EVENT_ORDER_COMPLETED' }]));
+  expect(hook.result.current.cart).toHaveLength(2);
+  expect(hook.result.current.hasCheckoutDraft).toBe(true);
+});
+
+it('follows a voice removal of the last item in the same session and drops the draft', async () => {
+  const hook = await handoff();
+  await act(async () => hook.result.current.syncCart([], restaurant));
+  expect(hook.result.current.cart).toHaveLength(0);
+  expect(hook.result.current.hasCheckoutDraft).toBe(false);
+  expect(localStorage.getItem(CHECKOUT_DRAFT_KEY)).toBeNull();
+});
+
+it('freezes the cart while the order submission is in flight', async () => {
+  const hook = await handoff();
+  let resolvePost;
+  mock.fetch.mockImplementationOnce(() => new Promise(resolve => { resolvePost = resolve; }));
+  let pending;
+  await act(async () => { pending = hook.result.current.submitOrder(delivery); await Promise.resolve(); });
+  await vi.waitFor(() => expect(mock.fetch).toHaveBeenCalledTimes(1));
+  await act(async () => hook.result.current.syncCart([{ ...items[0], quantity: 7 }], restaurant));
   expect(hook.result.current.cart[0].quantity).toBe(2);
-  expect(read().cart[0].quantity).toBe(2);
+  await act(async () => { resolvePost(new Response(JSON.stringify({ id: 'order-1' }))); await pending; });
 });
 
 it('persists edits and a failed attempt, then retries exactly the same order after reload', async () => {
