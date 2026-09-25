@@ -282,3 +282,12 @@ it('blocks damaged persisted attempts instead of silently assigning a fresh key'
   await act(async () => { expect(await next.result.current.submitOrder(delivery)).toBe(false); });
   expect(mock.fetch).not.toHaveBeenCalled();
 });
+
+it('sends the Live session that built the cart, so the backend can clear that session cart', async () => {
+  const hook = await handoff();
+  localStorage.setItem('amber-session-id', 'sess_live_b');
+  await act(async () => { await hook.result.current.submitOrder(delivery); });
+  const body = JSON.parse(mock.fetch.mock.calls[0][1].body);
+  expect(body.session_id).toBe('sess_live_a');
+  expect(body.items).toEqual([expect.objectContaining({ menu_item_id: 'dish-1', qty: 2 })]);
+});

@@ -486,6 +486,8 @@ export function CartProvider({ children }) {
     customer_phone: deliveryInfo.phone || user?.user_metadata?.phone || '',
     delivery_address: deliveryInfo.address || user?.user_metadata?.address || '',
     notes: deliveryInfo.notes || '',
+    // The Live session that built this cart; the backend clears that session cart after the order.
+    ...(isCanonicalSessionId(draft.current?.sessionId) ? { session_id: draft.current.sessionId } : {}),
   });
 
   const submitOrder = async (deliveryInfo) => {
