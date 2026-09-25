@@ -181,7 +181,7 @@ const BASE_SYSTEM_INSTRUCTION = [
   'MENU (restauracja znana): wywołaj show_menu. Proponuj tylko pozycje faktycznie w menu — nigdy nie wymyślaj dań.',
   'PYTANIA O DANIE: „czy X to Y?”, „co to jest?”, pytania o skład, alergeny, cenę i dostępność są informacyjne. Odpowiedz na podstawie aktualnego menu. Nie dodawaj nic do koszyka, dopóki użytkownik wyraźnie nie powie „dodaj”, „zamawiam”, „poproszę” albo nie poda konkretnej ilości w turze zamówienia.',
   // ORDER: after explicit purchase intent, add immediately. Do not ask for redundant confirmation.
-  'ZAMÓWIENIE: gdy znasz restaurację, dokładną pozycję i ilość, po naturalnej prośbie użytkownika NATYCHMIAST wywołaj add_item_to_cart albo add_items_to_cart. Koszyk jest odwracalnym ekranem kontroli, więc nie pytaj drugi raz „potwierdzasz?” i nie każ użytkownikowi powtarzać pełnej nazwy dania. Dopiero finalne zamówienie i płatność użytkownik zatwierdza ręcznie w interfejsie.',
+  'ZAMÓWIENIE: gdy znasz restaurację, dokładną pozycję i ilość, po naturalnej prośbie użytkownika NATYCHMIAST wywołaj add_item_to_cart albo add_items_to_cart. Koszyk jest odwracalnym ekranem kontroli, więc nie pytaj drugi raz „potwierdzasz?” i nie każ użytkownikowi powtarzać pełnej nazwy dania. Jedyny wyjątek: wynik narzędzia z toolOutcome="awaiting_confirmation" — wtedy zapytaj o zgodę. Dopiero finalne zamówienie i płatność użytkownik zatwierdza ręcznie w interfejsie.',
   'EDYCJA KOSZYKA: wykonuj od razu — update_cart_item_quantity, remove_item_from_cart, replace_cart_item.',
   'DUŻE MENU: jeśli użytkownik prosi o danie którego nie widzisz w bieżącej liście — NATYCHMIAST wywołaj search_menu_items z nazwą dania. Menu może mieć więcej pozycji niż pokazano. search_menu_items szuka w całej karcie restauracji.',
 
@@ -211,6 +211,8 @@ export type LiveRuntimeConfig = {
   speechStyle: 'standard' | 'silesian';
   amberPrompt: string;
   promptSource: string;
+  // Optional speech language (e.g. "pl-PL"), toggled via system_config.live_language_code.
+  liveLanguageCode: string;
 };
 
 function normalizeSpeechStyle(value: unknown): 'standard' | 'silesian' {
@@ -241,6 +243,7 @@ export async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
     speechStyle: 'standard',
     amberPrompt: '',
     promptSource: 'fallback',
+    liveLanguageCode: '',
   };
   try {
     const res = await fetch(getApiUrl('/api/voice/live/runtime-config'));
@@ -252,10 +255,14 @@ export async function fetchLiveRuntimeConfig(): Promise<LiveRuntimeConfig> {
     const speechStyle = normalizeSpeechStyle(json.speech_style);
     const amberPrompt = typeof json.amber_prompt === 'string' ? json.amber_prompt.trim() : '';
     const liveVoice = typeof json.live_voice === 'string' && json.live_voice.trim() ? json.live_voice.trim() : 'Aoede';
+    const liveLanguageCode = typeof json.live_language_code === 'string' && /^[a-z]{2}(-[A-Z]{2})?$/.test(json.live_language_code.trim())
+      ? json.live_language_code.trim()
+      : '';
     return {
       fetched: true,
       liveModel,
       liveVoice,
+      liveLanguageCode,
       speechStyle,
       amberPrompt,
       promptSource: String(json.prompt_source || (amberPrompt ? 'system_config:amber_prompt' : `speech_style:${speechStyle}`)),
@@ -505,7 +512,9 @@ export function compactToolResponse(
       const menuItemsLimit = items.length <= 25 ? items.length : 20;
       compact.menuItems = items.slice(0, menuItemsLimit).map((x: any) => ({
         id: x.id,
-        name: x.base_name || x.name,
+        // Full item name incl. variant: the model must pass exactly this as `dish`.
+        name: x.name || x.base_name,
+        base: x.base_name || null,
         price: x.price ?? null,
         category: x.category ?? null,
         tags: Array.isArray(x.item_tags) ? x.item_tags : (Array.isArray(x.tags) ? x.tags : []),
@@ -539,6 +548,7 @@ export function compactToolResponse(
       compact.cartTotal = cart.total ?? null;
       compact.cartChanged = mutationObserved;
       compact.actionStatus = mutationObserved ? 'added' : 'not_added';
+      compact.toolOutcome = mutationObserved ? 'added' : 'not_added';
       if (!mutationObserved) compact.mustClarify = true;
       compact.cartItems = Array.isArray(cart.items)
         ? cart.items.map((i: any) => ({ id: i.id || i.menu_item_id || null, variant: i.size_or_variant ?? i.variant ?? null, name: i.name, qty: i.qty ?? i.quantity ?? 1, price: i.price ?? i.price_pln ?? null, tags: i.item_tags || [], spicy: !!i.spicy, is_vege: !!i.is_vege, dietary_flags: i.dietary_flags || [], ...(i.special_instructions ? { special_instructions: i.special_instructions } : {}) }))
@@ -571,14 +581,28 @@ export function compactToolResponse(
         || liveToolMeta.clarifyNotAdded === true
         || !mutationObserved;
       compact.actionStatus = clarifyNotAdded ? 'not_added_clarify' : 'added';
+      compact.toolOutcome = clarifyNotAdded ? 'not_added' : 'added';
       if (clarifyNotAdded) {
         compact.mustClarify = true;
         const responseContext = (response.context || response.contextUpdates || {}) as Record<string, unknown>;
         const expectedContext = String(responseContext.expectedContext || '').trim();
-        const hasPendingOrder = Boolean(responseContext.pendingOrder);
-        if (expectedContext === 'confirm_add_to_cart' || hasPendingOrder) {
+        const clarifyOptions = ((response.meta as any)?.clarify?.options || []) as Array<{ name?: string }>;
+        const choices = clarifyOptions.map((option) => String(option?.name || '').trim()).filter(Boolean);
+        // Only a draft prepared by this call awaits confirmation; a stale pendingOrder left in the
+        // session must never turn a fresh question into "confirm" (it would commit the old draft).
+        const responseSource = String((response.meta as any)?.source || '');
+        const draftPreparedNow = expectedContext === 'confirm_add_to_cart'
+          || liveToolMeta.pendingConfirmationPrepared === true
+          || responseSource === 'order_handler_pending'
+          || responseSource === 'order_handler_multi_pending';
+        if (choices.length > 0) {
+          compact.choices = choices;
+          compact.nextAction = 'ask_user_choice';
+          compact.toolOutcome = 'needs_choice';
+        } else if (draftPreparedNow) {
           compact.confirmationRequired = true;
           compact.nextAction = 'confirm_add_to_cart';
+          compact.toolOutcome = 'awaiting_confirmation';
         }
       }
       break;
@@ -1372,7 +1396,10 @@ export function useGeminiLiveSession({
         config: {
           responseModalities: [Modality.AUDIO],
           systemInstruction: activeInstruction,
-          inputAudioTranscription: {},
+          // Language hint for input transcription, off unless system_config.live_language_code is set.
+          inputAudioTranscription: runtimeConfig.liveLanguageCode
+            ? { languageCodes: [runtimeConfig.liveLanguageCode] }
+            : {},
           outputAudioTranscription: {},
           realtimeInputConfig: LIVE_VAD_CONFIG,
           ...modelSpecificConfig,

@@ -9,6 +9,7 @@ import { Type, type FunctionDeclaration } from '@google/genai';
 
 const O = Type.OBJECT;
 const S = Type.STRING;
+const DISH_NAME = { type: Type.STRING, description: 'Exact full menu item name as returned in the name field of show_menu or search_menu_items, including the variant or size (e.g. "Kotlet schabowy — standard", "Kompot domowy 0,3 l"). Never shorten to the base dish name.' };
 const N = Type.NUMBER;
 const A = Type.ARRAY;
 
@@ -76,7 +77,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
     parameters: {
       type: O,
       properties: {
-        dish: { type: S },
+        dish: DISH_NAME,
         quantity: { type: N },
         restaurant_id: { type: S },
         restaurant_name: { type: S },
@@ -103,7 +104,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
           items: {
             type: O,
             properties: {
-              dish: { type: S },
+              dish: DISH_NAME,
               quantity: { type: N },
               special_instructions: {
                 type: O,
@@ -164,7 +165,7 @@ export const LIVE_FUNCTION_DECLARATIONS: FunctionDeclaration[] = [
   },
   {
     name: 'confirm_add_to_cart',
-    description: 'Legacy recovery only: commit an already pending cart draft when the previous tool result explicitly returned confirmationRequired=true and the user then confirmed. Do not create this extra confirmation step during the normal ordering flow. Only report success when actionStatus="added" and cartChanged=true.',
+    description: 'Commit the prepared cart draft after the previous tool result returned confirmationRequired=true (toolOutcome="awaiting_confirmation", e.g. several items prepared at once) and the user then agreed. Do not invent this step for a single item that was already added. Only report success when actionStatus="added" and cartChanged=true.',
     parameters: { type: O, properties: {} },
   },
   {
