@@ -71,7 +71,17 @@ export default function Cart() {
     notes: ''
   });
   const [deliveryTouched, setDeliveryTouched] = useState(false);
-  const [deliveryConfirmed, setDeliveryConfirmed] = useState(false);
+  const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const cartReviewSignature = JSON.stringify([
+    activeRestaurant?.id ?? activeRestaurant?.name ?? activeRestaurant ?? null,
+    (Array.isArray(cart) ? cart : []).map((item) => [
+      item?.id, item?.quantity, item?.price, item?.special_instructions ?? null,
+    ]),
+  ]);
+  // Any cart change (manual or voice-driven) invalidates the customer's review.
+  React.useEffect(() => {
+    setReviewConfirmed(false);
+  }, [cartReviewSignature]);
   const deliveryInfo = checkoutDelivery || localDeliveryInfo;
   const setDeliveryInfo = (next) => {
     const value = typeof next === 'function' ? next(deliveryInfo) : next;
@@ -130,8 +140,8 @@ export default function Cart() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!deliveryConfirmed) {
-      alert('Potwierdź dane dostawy przed złożeniem zamówienia.');
+    if (!reviewConfirmed) {
+      alert('Sprawdź pozycje, ilości i dane dostawy przed złożeniem zamówienia.');
       return;
     }
     const result = await submitOrder(deliveryInfo);
@@ -145,7 +155,7 @@ export default function Cart() {
         notes: ''
       });
       setDeliveryTouched(false);
-      setDeliveryConfirmed(false);
+      setReviewConfirmed(false);
       // Przejdz do panelu klienta
       navigate(ROUTES.PANEL_CLIENT);
     }
@@ -508,7 +518,7 @@ export default function Cart() {
                           value={deliveryInfo.name}
                           onChange={(e) => {
                             setDeliveryTouched(true);
-                            setDeliveryConfirmed(false);
+                            setReviewConfirmed(false);
                             setDeliveryInfo({ ...deliveryInfo, name: e.target.value });
                           }}
                           required
@@ -520,7 +530,7 @@ export default function Cart() {
                           value={deliveryInfo.phone}
                           onChange={(e) => {
                             setDeliveryTouched(true);
-                            setDeliveryConfirmed(false);
+                            setReviewConfirmed(false);
                             setDeliveryInfo({ ...deliveryInfo, phone: e.target.value });
                           }}
                           required
@@ -534,7 +544,7 @@ export default function Cart() {
                         value={deliveryInfo.address}
                         onChange={(e) => {
                           setDeliveryTouched(true);
-                          setDeliveryConfirmed(false);
+                          setReviewConfirmed(false);
                           setDeliveryInfo({ ...deliveryInfo, address: e.target.value });
                         }}
                         required
@@ -544,19 +554,13 @@ export default function Cart() {
                       <textarea
                         placeholder="Uwagi do zamówienia (opcjonalnie)"
                         value={deliveryInfo.notes}
-                        onChange={(e) => setDeliveryInfo({ ...deliveryInfo, notes: e.target.value })}
+                        onChange={(e) => {
+                          setReviewConfirmed(false);
+                          setDeliveryInfo({ ...deliveryInfo, notes: e.target.value });
+                        }}
                         rows={2}
                         className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-2 text-white placeholder-slate-500 focus:border-cyan-500/50 focus:outline-none resize-none"
                       />
-                      <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-300">
-                        <input
-                          type="checkbox"
-                          checked={deliveryConfirmed}
-                          onChange={(e) => setDeliveryConfirmed(e.target.checked)}
-                          className="mt-0.5"
-                        />
-                        <span>Potwierdzam dane dostawy.</span>
-                      </label>
                     </div>
 
                     {/* Total */}
@@ -564,6 +568,16 @@ export default function Cart() {
                       <span className="text-lg text-slate-300">Łącznie:</span>
                       <span className="text-2xl font-bold text-white">{formatCartPrice(total)}</span>
                     </div>
+
+                    <label className="flex items-start gap-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={reviewConfirmed}
+                        onChange={(e) => setReviewConfirmed(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>Sprawdziłem pozycje, ilości i dane dostawy.</span>
+                    </label>
 
                     {/* Actions */}
                     <div className="flex flex-wrap items-center gap-3">
@@ -578,14 +592,10 @@ export default function Cart() {
                       <div className="flex-1" />
                       <button
                         type="button"
-                        disabled={isSubmitting || !!checkoutError}
+                        disabled={isSubmitting || !!checkoutError || !reviewConfirmed}
                         onClick={() => {
                           if (!deliveryInfo.name || !deliveryInfo.phone || !deliveryInfo.address) {
                             alert("Uzupełnij dane dostawy:\n- Imię i nazwisko\n- Telefon\n- Adres");
-                            return;
-                          }
-                          if (!deliveryConfirmed) {
-                            alert('Potwierdź dane dostawy przed złożeniem zamówienia.');
                             return;
                           }
                           handleSubmit({ preventDefault: () => { } });

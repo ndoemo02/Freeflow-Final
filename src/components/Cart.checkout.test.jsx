@@ -46,3 +46,27 @@ it('shows restored checkout fields, persists manual edits and requires fresh man
   expect(screen.getByPlaceholderText('Adres dostawy').value).toBe('Test 2');
   expect(screen.getByRole('checkbox').checked).toBe(false);
 });
+
+it('blocks order submission until the cart is reviewed and resets the review when the cart changes', () => {
+  localStorage.setItem('amber-session-id', 'sess_new_live');
+  localStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({
+    version: 1, ownerId: 'a', id: 'draft-2',
+    cart: [{ id: 'dish-1', name: 'Pierogi', price: 12, quantity: 2 }],
+    restaurant: { id: 'demo', name: 'Demo' },
+    deliveryInfo: { name: 'Test', phone: '123', address: 'Test 1', notes: '' },
+    submission: null,
+  }));
+  render(<MemoryRouter><CartProvider><Cart /></CartProvider></MemoryRouter>);
+  const submit = screen.getByRole('button', { name: 'Złóż zamówienie' });
+  const review = screen.getByRole('checkbox', { name: 'Sprawdziłem pozycje, ilości i dane dostawy.' });
+  expect(submit.disabled).toBe(true);
+  fireEvent.click(review);
+  expect(review.checked).toBe(true);
+  expect(submit.disabled).toBe(false);
+  fireEvent.click(screen.getByRole('button', { name: '+' }));
+  expect(review.checked).toBe(false);
+  expect(submit.disabled).toBe(true);
+  fireEvent.click(review);
+  fireEvent.change(screen.getByPlaceholderText('Uwagi do zamówienia (opcjonalnie)'), { target: { value: 'Bez cebuli' } });
+  expect(review.checked).toBe(false);
+});
