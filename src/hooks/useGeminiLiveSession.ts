@@ -1500,7 +1500,9 @@ export function useGeminiLiveSession({
       textTurnSenderRef.current = (text, textTurnId) => {
         turnId = textTurnId;
         assistantTranscriptBuffer = '';
-        firstAudioFrameAt = 0;
+        // Non-zero keeps open-mic chunks (even silence) from opening a new audio
+        // turn that would replace this typed turn before its tool call arrives.
+        firstAudioFrameAt = Date.now();
         lastTranscriptAt = Date.now();
         latestUserTranscriptRef.current = text;
         latestUserTranscriptTurnIdRef.current = textTurnId;
