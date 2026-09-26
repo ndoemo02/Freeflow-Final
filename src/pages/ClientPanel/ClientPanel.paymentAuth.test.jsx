@@ -61,3 +61,18 @@ it.each(['checkout', 'verify'])('%s refuses a request without JWT', async endpoi
   await waitFor(() => expect(mock.push).toHaveBeenCalledWith(expect.stringMatching(/zalog/i), 'error'));
   expect(mock.fetch).not.toHaveBeenCalled();
 });
+
+it('finalize after a verified payment sends Authorization and the Stripe checkout id', async () => {
+  // Production 2026-09-26: finalize went without Authorization -> 401, so only the
+  // Stripe webhook could confirm a paid order.
+  mock.getSession.mockResolvedValue({ data: { session: { access_token: 'jwt-return' } } });
+  mock.fetch.mockImplementation(async (url) => url === '/api/payments/verify-session'
+    ? new Response(JSON.stringify({ ok: true, paid: true, order_id: 'order-1' }), { status: 200 })
+    : new Response(JSON.stringify({ ok: true, order_id: 'order-1', status: 'confirmed' }), { status: 200 }));
+  mount('&stripe=success&order_id=order-1&session_id=cs_test_1');
+  await waitFor(() => expect(mock.fetch).toHaveBeenCalledWith('/api/orders/finalize', expect.anything()));
+  const [, init] = mock.fetch.mock.calls.find(([url]) => url === '/api/orders/finalize');
+  expect(init.method).toBe('POST');
+  expect(init.headers.Authorization).toBe('Bearer jwt-return');
+  expect(JSON.parse(init.body)).toEqual({ order_id: 'order-1', checkout_session_id: 'cs_test_1' });
+});

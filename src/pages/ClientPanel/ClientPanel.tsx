@@ -449,17 +449,18 @@ export default function ClientPanel() {
                 //   2. Stan platnosci wyraza teraz status 'confirmed' + confirmed_at,
                 //      ustawiane po stronie backendu w finalizeOrder.js.
                 // -- Finalize: status + confirmed_at, sesja backendu, stan frontendu --
-                const brainSessionId = useConversationStore.getState().sessionId;
+                // finalizeOrder.js requires the owner JWT and the Stripe checkout id.
+                // The brain session_id is not sent: after the Stripe redirect the
+                // page may hold a new session, and a mismatch is rejected as 404.
                 try {
                   const finalizeResponse = await fetch(getApiUrl('/api/orders/finalize'), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_id: orderId, session_id: brainSessionId }),
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+                    body: JSON.stringify({ order_id: orderId, checkout_session_id: sessionId }),
                   });
-                  const finalizePayload = await finalizeResponse.json().catch(() => ({}));
-                  if (finalizeResponse.ok && finalizePayload?.newSessionId) {
-                    useConversationStore.getState().setSessionId(finalizePayload.newSessionId);
-                    console.log('[STRIPE_FINALIZE] Session reset to:', finalizePayload.newSessionId.slice(0, 8) + '...');
+                  if (!finalizeResponse.ok) {
+                    const finalizePayload = await finalizeResponse.json().catch(() => ({}));
+                    console.warn('[STRIPE_FINALIZE] Confirmation deferred to webhook:', finalizeResponse.status, finalizePayload?.error);
                   }
                   useConversationStore.getState().handleOrderSuccess();
                   console.log('[STRIPE_FINALIZE] Frontend state cleared after payment');
